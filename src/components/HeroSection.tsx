@@ -34,7 +34,7 @@ export default function HeroSection() {
 
         <div className="flex items-center gap-6">
           <Link
-            href="/Waitlistpage"
+            href="/join-waitlist"
             className="flex items-center gap-2 bg-[#1a237e] text-white font-semibold px-7 py-4 rounded-xl hover:bg-[#151c6b] transition-colors text-sm"
           >
             Explore Properties

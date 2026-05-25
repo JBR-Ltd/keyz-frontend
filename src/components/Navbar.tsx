@@ -58,7 +58,7 @@ export default function Navbar() {
 
       {/* CTA */}
       <Link
-        href="/Waitlistpage"
+        href="/join-waitlist"
         className="bg-[#1a237e] text-white text-sm font-semibold px-6 py-3 rounded-lg hover:bg-[#151c6b] transition-colors"
       >
         Sign Up
