@@ -12,27 +12,27 @@ function WaitlistNavbar() {
         <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
           <path
             d="M16 3L3 13V29H12V20H20V29H29V13L16 3Z"
-            stroke="#C9A84C"
+            stroke="var(--color-accent)"
             strokeWidth="2"
             fill="none"
           />
         </svg>
         <div className="leading-tight">
-          <p className="font-bold text-[#1a237e] text-lg tracking-wide">KEYZ</p>
+          <p className="font-bold text-primary text-lg tracking-wide">KEYZ</p>
           <p className="text-xs text-gray-500">Real Estate</p>
         </div>
       </Link>
 
-      <div className="flex items-center gap-2 border border-[#C9A84C] text-[#C9A84C] text-sm font-medium px-4 py-2 rounded-full">
+      <div className="flex items-center gap-2 border border-accent text-accent text-sm font-medium px-4 py-2 rounded-full">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
           <path
             d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"
-            stroke="#C9A84C"
+            stroke="var(--color-accent)"
             strokeWidth="1.8"
           />
           <path
             d="M13.73 21a2 2 0 0 1-3.46 0"
-            stroke="#C9A84C"
+            stroke="var(--color-accent)"
             strokeWidth="1.8"
           />
         </svg>
@@ -51,12 +51,12 @@ const PERKS = [
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
         <path
           d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"
-          stroke="#C9A84C"
+          stroke="var(--color-accent)"
           strokeWidth="1.8"
         />
         <path
           d="M13.73 21a2 2 0 0 1-3.46 0"
-          stroke="#C9A84C"
+          stroke="var(--color-accent)"
           strokeWidth="1.8"
         />
       </svg>
@@ -69,7 +69,7 @@ const PERKS = [
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
         <path
           d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"
-          stroke="#C9A84C"
+          stroke="var(--color-accent)"
           strokeWidth="1.8"
         />
         <line
@@ -77,7 +77,7 @@ const PERKS = [
           y1="7"
           x2="7.01"
           y2="7"
-          stroke="#C9A84C"
+          stroke="var(--color-accent)"
           strokeWidth="2"
           strokeLinecap="round"
         />
@@ -91,10 +91,14 @@ const PERKS = [
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
         <path
           d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"
-          stroke="#C9A84C"
+          stroke="var(--color-accent)"
           strokeWidth="1.8"
         />
-        <polyline points="22,6 12,13 2,6" stroke="#C9A84C" strokeWidth="1.8" />
+        <polyline
+          points="22,6 12,13 2,6"
+          stroke="var(--color-accent)"
+          strokeWidth="1.8"
+        />
       </svg>
     ),
   },
@@ -213,14 +217,14 @@ function WaitlistForm() {
               placeholder="First Name"
               value={form.firstName}
               onChange={(e) => setForm({ ...form, firstName: e.target.value })}
-              className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#1a237e] transition-colors"
+              className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-primary transition-colors"
             />
             <input
               type="text"
               placeholder="Last Name"
               value={form.lastName}
               onChange={(e) => setForm({ ...form, lastName: e.target.value })}
-              className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#1a237e] transition-colors"
+              className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-primary transition-colors"
             />
           </div>
 
@@ -229,17 +233,17 @@ function WaitlistForm() {
             placeholder="Email Address"
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
-            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#1a237e] transition-colors mb-4"
+            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-primary transition-colors mb-4"
           />
 
           {/* Phone with Nigeria flag */}
-          <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden mb-4 focus-within:border-[#1a237e] transition-colors">
+          <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden mb-4 focus-within:border-primary transition-colors">
             <div className="flex items-center gap-2 px-3 py-3 border-r border-gray-200 bg-gray-50">
               {/* Nigerian flag */}
               <span className="flex h-4 w-6 overflow-hidden rounded-sm">
-                <span className="flex-1 bg-[#008751]" />
+                <span className="flex-1 bg-success" />
                 <span className="flex-1 bg-white" />
-                <span className="flex-1 bg-[#008751]" />
+                <span className="flex-1 bg-success" />
               </span>
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                 <path
@@ -265,7 +269,7 @@ function WaitlistForm() {
               type="checkbox"
               checked={form.consent}
               onChange={(e) => setForm({ ...form, consent: e.target.checked })}
-              className="mt-0.5 accent-[#1a237e]"
+              className="mt-0.5 accent-primary"
             />
             <span className="text-xs text-gray-500 leading-relaxed">
               I agree to receive updates about KEYZ Real Estate. You can
@@ -276,7 +280,7 @@ function WaitlistForm() {
           <button
             onClick={handleSubmit}
             disabled={!form.email || !form.consent}
-            className="w-full bg-[#3d4f2e] hover:bg-[#2e3c22] disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-white font-semibold py-4 rounded-xl text-base"
+            className="w-full bg-accent-strong hover-bg-accent-dark disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-white font-semibold py-4 rounded-xl text-base"
           >
             Join Waitlist
           </button>
@@ -417,7 +421,7 @@ export default function WaitlistPage() {
         <div className="relative z-10 max-w-6xl mx-auto px-8 pt-32 pb-20 grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
           {/* Left: copy */}
           <div>
-            <p className="text-[#C9A84C] font-semibold text-xs tracking-widest uppercase mb-4">
+            <p className="text-accent font-semibold text-xs tracking-widest uppercase mb-4">
               A better way to buy, sell &amp; rent
             </p>
             <h1 className="text-5xl font-bold text-gray-900 leading-tight mb-5">
@@ -454,16 +458,16 @@ export default function WaitlistPage() {
       </section>
 
       {/* Early access perks */}
-      <section className="bg-[#f7f5f2] py-16 px-8">
+      <section className="bg-surface-muted py-16 px-8">
         <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
           <div>
-            <p className="text-[#C9A84C] font-semibold text-xs tracking-widest uppercase mb-6">
+            <p className="text-accent font-semibold text-xs tracking-widest uppercase mb-6">
               You'll get early access to:
             </p>
             <div className="flex flex-col gap-6">
               {PERKS.map(({ label, desc, icon }) => (
                 <div key={label} className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-full bg-[#ede8e0] flex items-center justify-center flex-shrink-0">
+                  <div className="w-12 h-12 rounded-full bg-surface-soft flex items-center justify-center flex-shrink-0">
                     {icon}
                   </div>
                   <div>

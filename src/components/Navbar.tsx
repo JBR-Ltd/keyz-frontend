@@ -25,19 +25,19 @@ export default function Navbar() {
         >
           <path
             d="M16 3L3 13V29H12V20H20V29H29V13L16 3Z"
-            stroke="#C9A84C"
+            stroke="var(--color-accent)"
             strokeWidth="2"
             fill="none"
           />
           <path
             d="M16 3L3 13"
-            stroke="#C9A84C"
+            stroke="var(--color-accent)"
             strokeWidth="2"
             strokeLinecap="round"
           />
         </svg>
         <div className="leading-tight">
-          <p className="font-bold text-[#1a237e] text-lg tracking-wide">KEYZ</p>
+          <p className="font-bold text-primary text-lg tracking-wide">KEYZ</p>
           <p className="text-xs text-gray-500">Real Estate</p>
         </div>
       </Link>
@@ -48,7 +48,7 @@ export default function Navbar() {
           <li key={link}>
             <Link
               href="#"
-              className="text-sm text-gray-700 hover:text-[#1a237e] transition-colors font-medium"
+              className="text-sm text-gray-700 hover-text-primary transition-colors font-medium"
             >
               {link}
             </Link>
@@ -59,7 +59,7 @@ export default function Navbar() {
       {/* CTA */}
       <Link
         href="/join-waitlist"
-        className="bg-[#1a237e] text-white text-sm font-semibold px-6 py-3 rounded-lg hover:bg-[#151c6b] transition-colors"
+        className="bg-primary text-white text-sm font-semibold px-6 py-3 rounded-lg hover-bg-primary-dark transition-colors"
       >
         Sign Up
       </Link>

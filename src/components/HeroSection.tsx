@@ -35,7 +35,7 @@ export default function HeroSection() {
         <div className="flex items-center gap-6">
           <Link
             href="/join-waitlist"
-            className="flex items-center gap-2 bg-[#1a237e] text-white font-semibold px-7 py-4 rounded-xl hover:bg-[#151c6b] transition-colors text-sm"
+            className="flex items-center gap-2 bg-primary text-white font-semibold px-7 py-4 rounded-xl hover-bg-primary-dark transition-colors text-sm"
           >
             Explore Properties
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -49,8 +49,8 @@ export default function HeroSection() {
             </svg>
           </Link>
 
-          <button className="flex items-center gap-3 text-[#1a237e] font-semibold text-sm">
-            <span className="w-10 h-10 rounded-full border-2 border-[#1a237e] flex items-center justify-center hover:bg-[#1a237e] hover:text-white transition-colors">
+          <button className="flex items-center gap-3 text-primary font-semibold text-sm">
+            <span className="w-10 h-10 rounded-full border-2 border-primary flex items-center justify-center hover-bg-primary hover:text-white transition-colors">
               ▶
             </span>
             How It Works

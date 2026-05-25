@@ -1,34 +1,81 @@
 const ADVANTAGES = [
   {
     title: "Verified listings",
-    description: "Every property and user is verified for a safe and trustworthy experience",
+    description:
+      "Every property and user is verified for a safe and trustworthy experience",
     icon: (
       <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
-        <path d="M22 4L8 10V22C8 30.837 14.268 39.066 22 41C29.732 39.066 36 30.837 36 22V10L22 4Z" stroke="#1a237e" strokeWidth="2" />
-        <path d="M16 22L20 26L28 18" stroke="#1a237e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        <path
+          d="M22 4L8 10V22C8 30.837 14.268 39.066 22 41C29.732 39.066 36 30.837 36 22V10L22 4Z"
+          stroke="var(--color-primary)"
+          strokeWidth="2"
+        />
+        <path
+          d="M16 22L20 26L28 18"
+          stroke="var(--color-primary)"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
       </svg>
     ),
   },
   {
     title: "Secure Escrow Payments",
-    description: "Your payments are protected with escrow until both parties fulfill their commitments",
+    description:
+      "Your payments are protected with escrow until both parties fulfill their commitments",
     icon: (
       <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
-        <rect x="10" y="20" width="24" height="18" rx="2" stroke="#1a237e" strokeWidth="2" />
-        <path d="M15 20V15C15 10.582 18.582 7 23 7V7C27.418 7 31 10.582 31 15V20" stroke="#1a237e" strokeWidth="2" />
-        <circle cx="23" cy="29" r="3" stroke="#1a237e" strokeWidth="2" />
-        <path d="M23 32V35" stroke="#1a237e" strokeWidth="2" strokeLinecap="round" />
+        <rect
+          x="10"
+          y="20"
+          width="24"
+          height="18"
+          rx="2"
+          stroke="var(--color-primary)"
+          strokeWidth="2"
+        />
+        <path
+          d="M15 20V15C15 10.582 18.582 7 23 7V7C27.418 7 31 10.582 31 15V20"
+          stroke="var(--color-primary)"
+          strokeWidth="2"
+        />
+        <circle
+          cx="23"
+          cy="29"
+          r="3"
+          stroke="var(--color-primary)"
+          strokeWidth="2"
+        />
+        <path
+          d="M23 32V35"
+          stroke="var(--color-primary)"
+          strokeWidth="2"
+          strokeLinecap="round"
+        />
       </svg>
     ),
   },
   {
     title: "Dispute Resolution",
-    description: "Our support team is here to help resolve issues quickly and fairly.",
+    description:
+      "Our support team is here to help resolve issues quickly and fairly.",
     icon: (
       <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
-        <circle cx="22" cy="22" r="14" stroke="#1a237e" strokeWidth="2" />
-        <path d="M18 18C18 15.791 19.791 14 22 14C24.209 14 26 15.791 26 18C26 20.5 24 21.5 22 22V24" stroke="#1a237e" strokeWidth="2" strokeLinecap="round" />
-        <circle cx="22" cy="28" r="1.5" fill="#1a237e" />
+        <circle
+          cx="22"
+          cy="22"
+          r="14"
+          stroke="var(--color-primary)"
+          strokeWidth="2"
+        />
+        <path
+          d="M18 18C18 15.791 19.791 14 22 14C24.209 14 26 15.791 26 18C26 20.5 24 21.5 22 22V24"
+          stroke="var(--color-primary)"
+          strokeWidth="2"
+          strokeLinecap="round"
+        />
+        <circle cx="22" cy="28" r="1.5" fill="var(--color-primary)" />
       </svg>
     ),
   },
@@ -36,12 +83,12 @@ const ADVANTAGES = [
 
 export default function KeyzAdvantage() {
   return (
-    <section className="py-24 px-4 bg-[#f7f7f8]">
+    <section className="py-24 px-4 bg-surface-muted">
       <div className="max-w-5xl mx-auto text-center">
         <p className="text-gray-800 font-semibold tracking-[0.25em] uppercase text-sm mb-4">
           Keyz Advantage
         </p>
-        <h2 className="text-[#1a237e] text-3xl font-bold mb-16">
+        <h2 className="text-primary text-3xl font-bold mb-16">
           Built for trust. Designed for you
         </h2>
 
@@ -54,8 +101,12 @@ export default function KeyzAdvantage() {
               <div className="w-20 h-20 rounded-full bg-[#fdf6ee] flex items-center justify-center mb-6">
                 {icon}
               </div>
-              <h3 className="font-semibold text-gray-900 text-base mb-3">{title}</h3>
-              <p className="text-gray-500 text-sm leading-relaxed">{description}</p>
+              <h3 className="font-semibold text-gray-900 text-base mb-3">
+                {title}
+              </h3>
+              <p className="text-gray-500 text-sm leading-relaxed">
+                {description}
+              </p>
             </div>
           ))}
         </div>

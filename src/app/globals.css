@@ -1,11 +1,81 @@
 @import "tailwindcss";
 
 :root {
-  --color-navy: #0a1628;
-  --color-amber: #f5a623;
-  --color-warm: #f9f6f0;
-  --color-black: #0d0d0d;
-  --color-white: #ffffff;
+  --color-primary: #1a237e;
+  --color-primary-dark: #151c6b;
+  --color-accent: #c9a84c;
+  --color-accent-strong: #3d4f2e;
+  --color-accent-dark: #2e3c22;
+  --color-success: #008751;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f7f5f2;
+  --color-surface-alt: #f5f0e8;
+  --color-surface-soft: #ede8e0;
+  --color-border: #e5e7eb;
+  --color-text: #111827;
+  --color-text-muted: #6b7280;
+  --color-body: #f9fafb;
+}
+
+.bg-primary {
+  background-color: var(--color-primary);
+}
+.bg-primary-dark {
+  background-color: var(--color-primary-dark);
+}
+.hover-bg-primary-dark:hover {
+  background-color: var(--color-primary-dark);
+}
+.hover-bg-primary:hover {
+  background-color: var(--color-primary);
+}
+.text-primary {
+  color: var(--color-primary);
+}
+.hover-text-primary:hover {
+  color: var(--color-primary);
+}
+.text-accent {
+  color: var(--color-accent);
+}
+.border-primary {
+  border-color: var(--color-primary);
+}
+.border-accent {
+  border-color: var(--color-accent);
+}
+.bg-accent-strong {
+  background-color: var(--color-accent-strong);
+}
+.hover-bg-accent-dark:hover {
+  background-color: var(--color-accent-dark);
+}
+.bg-success {
+  background-color: var(--color-success);
+}
+.accent-primary {
+  accent-color: var(--color-primary);
+}
+.bg-surface {
+  background-color: var(--color-surface);
+}
+.bg-surface-muted {
+  background-color: var(--color-surface-muted);
+}
+.bg-surface-alt {
+  background-color: var(--color-surface-alt);
+}
+.bg-surface-soft {
+  background-color: var(--color-surface-soft);
+}
+.border-border {
+  border-color: var(--color-border);
+}
+.text-text {
+  color: var(--color-text);
+}
+.text-text-muted {
+  color: var(--color-text-muted);
 }
 
 html {
@@ -15,8 +85,8 @@ html {
 
 body {
   min-height: 100vh;
-  background: var(--color-white);
-  color: var(--color-black);
+  background: var(--color-surface);
+  color: var(--color-text);
   font-family: var(--font-nunito), sans-serif;
 }
 
