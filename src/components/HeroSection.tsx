@@ -28,18 +28,24 @@ export default function HeroSection() {
         </h1>
 
         <p className="text-gray-600 text-base max-w-sm mb-8 leading-relaxed">
-          Discover verified properties, secure payments and a seamless experience
-          for tenants and landlords
+          Discover verified properties, secure payments and a seamless
+          experience for tenants and landlords
         </p>
 
         <div className="flex items-center gap-6">
           <Link
-            href="#"
+            href="/Waitlistpage"
             className="flex items-center gap-2 bg-[#1a237e] text-white font-semibold px-7 py-4 rounded-xl hover:bg-[#151c6b] transition-colors text-sm"
           >
             Explore Properties
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M3 8H13M13 8L9 4M13 8L9 12" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path
+                d="M3 8H13M13 8L9 4M13 8L9 12"
+                stroke="white"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
           </Link>
 
