@@ -7,7 +7,7 @@ export default function HeroSection() {
       {/* Background hero image — replace src with your actual asset */}
       <div className="absolute inset-0 z-0">
         <Image
-          src="/images/hero-house.jpg"
+          src="/images/landing-page-hero-pic.png"
           alt="Luxury property"
           fill
           className="object-cover object-center"

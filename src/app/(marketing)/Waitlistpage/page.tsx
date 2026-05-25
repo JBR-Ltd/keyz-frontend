@@ -405,7 +405,7 @@ export default function WaitlistPage() {
         {/* Background property image — right half */}
         <div className="absolute top-0 right-0 w-1/2 h-full z-0">
           <Image
-            src="/images/waitlist-hero.jpg"
+            src="/images/waitling-list-hero-pic.png"
             alt="Modern building"
             fill
             className="object-cover object-center"
@@ -482,7 +482,7 @@ export default function WaitlistPage() {
           {/* Placeholder for right-side illustration / property image */}
           <div className="hidden md:block rounded-2xl overflow-hidden h-64 bg-gray-200 relative">
             <Image
-              src="/images/waitlist-interior.jpg"
+              src="/images/landing-page-hero-pic.png"
               alt="Property interior"
               fill
               className="object-cover"
