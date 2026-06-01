@@ -1,0 +1,105 @@
+"use client";
+
+import { useState } from "react";
+
+const FAQS = [
+  { q: "Are all properties verified?" },
+  { q: "Can I schedule inspections online?" },
+  { q: "Do you offer payment plans?" },
+  { q: "Is the platform available outside Nigeria?" },
+  { q: "Can I list my own property?" },
+  { q: "How do I contact an agent?" },
+  { q: "Are there luxury-only listings?" },
+  { q: "Is my payment secure?" },
+];
+
+const ANSWERS: Record<string, string> = {
+  "Are all properties verified?":
+    "Yes. Every listing on Keyz goes through a manual verification process before it goes live, including document checks and site confirmations.",
+  "Can I schedule inspections online?":
+    "Absolutely. You can request a physical or virtual inspection directly from any listing page, and our team will coordinate with the agent.",
+  "Do you offer payment plans?":
+    "We partner with select financial institutions to offer flexible payment plans on qualifying properties. Reach out to us for details.",
+  "Is the platform available outside Nigeria?":
+    "Currently we focus on the Nigerian market, but we're actively expanding. Sign up to be notified when we launch in your region.",
+  "Can I list my own property?":
+    "Yes. Landlords and agents can create an account and list properties directly. Listings are reviewed before going live.",
+  "How do I contact an agent?":
+    "Each property page has a direct message and call button connected to the listing agent. You can also use our Agent Directory.",
+  "Are there luxury-only listings?":
+    "We have a curated Luxury collection featuring penthouses, smart homes, and premium estates. You can filter for them in search.",
+  "Is my payment secure?":
+    "All transactions go through our escrow system, meaning funds are held securely until both parties fulfil their commitments.",
+};
+
+function FAQItem({ number, question }: { number: number; question: string }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="border border-gray-100 rounded-lg overflow-hidden">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center gap-4 p-4 text-left hover:bg-gray-50 transition-colors"
+      >
+        {/* Number badge */}
+        <div className="w-9 h-9 rounded-lg bg-primary-soft text-white text-sm font-bold flex items-center justify-center flex-shrink-0">
+          {number}
+        </div>
+        <span className="flex-1 text-sm text-gray-800 font-medium leading-snug">
+          {question}
+        </span>
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 16 16"
+          fill="none"
+          className={`flex-shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
+        >
+          <path
+            d="M4 6l4 4 4-4"
+            stroke="currentColor"
+            className="stroke-accent"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+          />
+        </svg>
+      </button>
+
+      {open && (
+        <div className="px-4 pb-4 pl-[3.75rem]">
+          <p className="text-gray-500 text-sm leading-relaxed">
+            {ANSWERS[question]}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function FAQSection() {
+  const left = FAQS.slice(0, 4);
+  const right = FAQS.slice(4);
+
+  return (
+    <section className="py-20 px-4 bg-white">
+      <div className="max-w-6xl mx-auto">
+        <h2 className="text-center font-bold tracking-[0.18em] uppercase text-gray-900 text-base mb-12">
+          Frequently Asked Questions
+        </h2>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="flex flex-col gap-4">
+            {left.map((faq, i) => (
+              <FAQItem key={faq.q} number={i + 1} question={faq.q} />
+            ))}
+          </div>
+          <div className="flex flex-col gap-4">
+            {right.map((faq, i) => (
+              <FAQItem key={faq.q} number={i + 5} question={faq.q} />
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
