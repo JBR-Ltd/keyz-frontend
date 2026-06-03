@@ -39,21 +39,21 @@ function FAQItem({ number, question }: { number: number; question: string }) {
     <div className="border border-gray-100 rounded-lg overflow-hidden">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center gap-4 p-4 text-left hover:bg-gray-50 transition-colors"
+        className="w-full flex items-center gap-4 p-5 text-left hover:bg-gray-50 transition-colors"
       >
         {/* Number badge */}
-        <div className="w-9 h-9 rounded-lg bg-primary-soft text-white text-sm font-bold flex items-center justify-center flex-shrink-0">
+        <div className="w-10 h-10 rounded-lg bg-primary-soft text-white text-base font-bold flex items-center justify-center flex-shrink-0">
           {number}
         </div>
-        <span className="flex-1 text-sm text-gray-800 font-medium leading-snug">
+        <span className="flex-1 text-base md:text-lg text-gray-800 font-semibold leading-snug">
           {question}
         </span>
         <svg
-          width="16"
-          height="16"
+          width="18"
+          height="18"
           viewBox="0 0 16 16"
           fill="none"
-          className={`flex-shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
+          className={`flex-shrink-0 transition-transform duration-300 ${open ? "rotate-180" : ""}`}
         >
           <path
             d="M4 6l4 4 4-4"
@@ -65,13 +65,18 @@ function FAQItem({ number, question }: { number: number; question: string }) {
         </svg>
       </button>
 
-      {open && (
-        <div className="px-4 pb-4 pl-[3.75rem]">
-          <p className="text-gray-500 text-sm leading-relaxed">
+      <div
+        className="overflow-hidden transition-all duration-300 ease-in-out"
+        style={{
+          maxHeight: open ? "200px" : "0px",
+        }}
+      >
+        <div className="px-5 pb-4 pl-[3.75rem]">
+          <p className="text-gray-600 text-base md:text-lg leading-relaxed">
             {ANSWERS[question]}
           </p>
         </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -83,7 +88,7 @@ export default function FAQSection() {
   return (
     <section className="py-20 px-4 bg-white">
       <div className="max-w-6xl mx-auto">
-        <h2 className="text-center font-bold tracking-[0.18em] uppercase text-gray-900 text-base mb-12">
+        <h2 className="text-center font-bold tracking-[0.18em] uppercase text-gray-900 text-lg md:text-xl mb-12">
           Frequently Asked Questions
         </h2>
 

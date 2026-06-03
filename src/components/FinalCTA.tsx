@@ -16,18 +16,18 @@ export default function FinalCTA() {
       </div>
 
       <div className="relative z-10 max-w-3xl mx-auto">
-        <h2 className="text-4xl md:text-5xl font-bold text-white leading-tight mb-5">
+        <h2 className="text-5xl md:text-6xl font-bold text-white leading-tight mb-6">
           Your Dream Property
           <br />
           Is closer Than You Think
         </h2>
-        <p className="text-white/70 text-base leading-relaxed mb-10 max-w-lg">
+        <p className="text-white/70 text-lg md:text-xl leading-relaxed mb-10 max-w-xl">
           Join thousands of satisfied clients discovering smarter ways to buy,
           rent and invest in real estate
         </p>
         <Link
           href="#"
-          className="inline-block bg-accent hover:bg-accent-alt transition-colors text-white font-semibold px-10 py-4 rounded text-base"
+          className="inline-block bg-accent hover:bg-accent-alt transition-colors text-white font-semibold px-10 py-4 rounded text-lg"
         >
           Start Exploring
         </Link>

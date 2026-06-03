@@ -22,7 +22,9 @@ export default function LandingPage() {
       <ExperienceSection />
       <FAQSection />
       <NewsletterBanner />
-      <FinalCTA />
+      <div className="pt-10 md:pt-16 bg-primary-dark">
+        <FinalCTA />
+      </div>
       <Footer />
     </main>
   );

@@ -90,10 +90,10 @@ export default function Footer() {
                 </svg>
               </div>
               <div>
-                <p className="text-white font-bold text-sm tracking-[0.2em] uppercase">
+                <p className="text-white font-bold text-base tracking-[0.2em] uppercase">
                   KEYZ
                 </p>
-                <p className="text-white/40 text-[10px] tracking-widest uppercase">
+                <p className="text-white/40 text-xs tracking-widest uppercase">
                   Estate
                 </p>
               </div>
@@ -117,13 +117,13 @@ export default function Footer() {
           {/* Nav columns */}
           {Object.entries(FOOTER_LINKS).map(([heading, links]) => (
             <div key={heading}>
-              <p className="text-white font-bold text-sm mb-4">{heading}</p>
+              <p className="text-white font-bold text-base mb-4">{heading}</p>
               <ul className="space-y-3">
                 {links.map((link) => (
                   <li key={link}>
                     <Link
                       href="#"
-                      className="text-white/50 text-sm hover:text-accent transition-colors"
+                      className="text-white/50 text-base hover:text-accent transition-colors"
                     >
                       {link}
                     </Link>
@@ -135,7 +135,7 @@ export default function Footer() {
         </div>
 
         <div className="border-t border-white/10 pt-6 text-center">
-          <p className="text-white/30 text-xs">
+          <p className="text-white/30 text-sm">
             © 2026 Keyz Real Estate. All rights reserved
           </p>
         </div>

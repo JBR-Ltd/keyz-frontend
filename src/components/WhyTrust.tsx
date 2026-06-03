@@ -4,8 +4,8 @@ const FEATURES = [
     desc: "We ensure every property is professionally reviewed and verified to protect buyers and investors from scam and misinformation",
     icon: (
       <svg
-        width="40"
-        height="40"
+        width="48"
+        height="48"
         viewBox="0 0 40 40"
         fill="none"
         className="stroke-accent"
@@ -30,8 +30,8 @@ const FEATURES = [
     desc: "Advanced filters help users discover properties based on budget, location, amenities, lifestyle preferences and investment goals.",
     icon: (
       <svg
-        width="40"
-        height="40"
+        width="48"
+        height="48"
         viewBox="0 0 40 40"
         fill="none"
         className="stroke-accent"
@@ -63,8 +63,8 @@ const FEATURES = [
     desc: "Experience immersive walkthroughs from anywhere before scheduling Physical inspections.",
     icon: (
       <svg
-        width="40"
-        height="40"
+        width="48"
+        height="48"
         viewBox="0 0 40 40"
         fill="none"
         className="stroke-accent"
@@ -95,8 +95,8 @@ const FEATURES = [
     desc: "From the interface to customer support, every interaction is designed to feel premium, seamless and stress free.",
     icon: (
       <svg
-        width="40"
-        height="40"
+        width="48"
+        height="48"
         viewBox="0 0 40 40"
         fill="none"
         className="stroke-accent"
@@ -116,7 +116,7 @@ export default function WhyTrust() {
   return (
     <section className="py-20 px-4 bg-white">
       <div className="max-w-6xl mx-auto">
-        <h2 className="text-center text-gray-900 font-bold tracking-[0.18em] uppercase text-base mb-12">
+        <h2 className="text-center text-gray-900 font-bold tracking-[0.18em] uppercase text-lg mb-12">
           Why Thousands Trust Our Platform
         </h2>
 
@@ -124,11 +124,13 @@ export default function WhyTrust() {
           {FEATURES.map(({ title, desc, icon }) => (
             <div
               key={title}
-              className="border border-gray-100 rounded-xl p-7 flex flex-col gap-5 hover:shadow-md transition-shadow"
+              className="border border-gray-100 rounded-xl p-7 flex flex-col items-center text-center gap-5 hover:shadow-md transition-shadow"
             >
-              <div>{icon}</div>
-              <h3 className="font-bold text-gray-900 text-base">{title}</h3>
-              <p className="text-gray-500 text-sm leading-relaxed">{desc}</p>
+              <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-accent/10 text-accent">
+                {icon}
+              </div>
+              <h3 className="font-bold text-gray-900 text-xl">{title}</h3>
+              <p className="text-gray-500 text-base leading-relaxed">{desc}</p>
             </div>
           ))}
         </div>

@@ -3,7 +3,7 @@ import Link from "next/link";
 
 export default function HeroSection() {
   return (
-    <section className="relative w-full min-h-[560px] flex items-center overflow-hidden">
+    <section className="relative w-full min-h-[420px] flex items-center overflow-hidden">
       {/* Background property image */}
       <div className="absolute inset-0 z-0">
         <Image
@@ -17,10 +17,10 @@ export default function HeroSection() {
       </div>
 
       {/* Content */}
-      <div className="relative z-10 max-w-7xl mx-auto px-8 py-24 w-full">
+      <div className="relative z-10 max-w-7xl mx-auto px-8 py-12 w-full">
         <div className="max-w-lg">
           {/* Headline */}
-          <h1 className="text-4xl md:text-5xl font-bold text-white leading-tight mb-4">
+          <h1 className="text-3xl md:text-4xl font-bold text-white leading-snug mb-4">
             Find More Than a Home
             <br />
             Discover a{" "}
@@ -37,25 +37,25 @@ export default function HeroSection() {
           </div>
 
           {/* Sub-headline + body */}
-          <p className="text-white/70 text-sm font-medium mb-2">
+          <p className="text-white/70 text-base font-medium mb-2">
             Your key to finding home
           </p>
-          <p className="text-white/60 text-sm leading-relaxed mb-8 max-w-sm">
+          <p className="text-white/60 text-base leading-relaxed mb-8 max-w-sm">
             Explore premium apartments, penthouses and investment properties in
             the most desirable locations. Whether you're buying, renting or
-            investing, We help you unlock luxury living with confidence
+            investing, we help you unlock luxury living with confidence.
           </p>
 
           {/* CTAs */}
           <div className="flex items-center gap-6">
             <Link
               href="#"
-              className="bg-accent hover:bg-accent-alt transition-colors text-white font-semibold px-7 py-4 rounded text-sm"
+              className="bg-accent hover:bg-accent-alt transition-colors text-white font-semibold px-7 py-4 rounded text-base"
             >
               Browse Properties
             </Link>
 
-            <button className="flex items-center gap-3 text-accent font-semibold text-sm">
+            <button className="flex items-center gap-3 text-accent font-semibold text-base">
               <span className="w-11 h-11 rounded-full border-2 border-white/60 bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors text-white text-base">
                 ▶
               </span>
