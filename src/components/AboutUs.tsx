@@ -8,10 +8,10 @@ const VALUES = [
 
 export default function AboutUs() {
   return (
-    <section className="py-20 px-4 bg-white">
+    <section className="py-16 md:py-20 px-4 bg-white">
       <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-0 items-stretch">
         {/* Left: property interior image */}
-        <div className="relative min-h-[420px] rounded-l-2xl overflow-hidden">
+        <div className="relative min-h-[300px] md:min-h-[420px] rounded-t-2xl md:rounded-l-2xl md:rounded-tr-none overflow-hidden">
           <Image
             src="/images/about-interior.jpg"
             alt="Luxury property interior"
@@ -21,7 +21,7 @@ export default function AboutUs() {
         </div>
 
         {/* Right: copy */}
-        <div className="bg-white border border-gray-100 rounded-r-2xl p-10 flex flex-col justify-center">
+        <div className="bg-white border border-gray-100 rounded-b-2xl md:rounded-r-2xl md:rounded-bl-none p-6 sm:p-8 md:p-10 flex flex-col justify-center">
           <p className="text-accent font-bold text-sm tracking-widest uppercase mb-3">
             About Us
           </p>
@@ -35,7 +35,7 @@ export default function AboutUs() {
             investors.
           </p>
           <p className="text-gray-500 text-base md:text-lg leading-relaxed mb-8">
-            Whether you're searching for a luxury apartment in the city, a
+            Whether you&apos;re searching for a luxury apartment in the city, a
             peaceful family home, or your next investment opportunity. We
             provide access to premium listings and personalized support that
             makes every decision easier.

@@ -71,7 +71,7 @@ function FAQItem({ number, question }: { number: number; question: string }) {
           maxHeight: open ? "200px" : "0px",
         }}
       >
-        <div className="px-5 pb-4 pl-[3.75rem]">
+        <div className="px-5 pb-4 sm:pl-[3.75rem]">
           <p className="text-gray-600 text-base md:text-lg leading-relaxed">
             {ANSWERS[question]}
           </p>

@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 
 const FOOTER_LINKS = {
   Company: ["About Us", "Careers", "Blog", "Contact Us"],

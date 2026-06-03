@@ -3,7 +3,7 @@ import Link from "next/link";
 
 export default function HeroSection() {
   return (
-    <section className="relative w-full min-h-[420px] flex items-center overflow-hidden">
+    <section className="relative w-full min-h-[560px] md:min-h-[420px] flex items-center overflow-hidden">
       {/* Background property image */}
       <div className="absolute inset-0 z-0">
         <Image
@@ -17,10 +17,10 @@ export default function HeroSection() {
       </div>
 
       {/* Content */}
-      <div className="relative z-10 max-w-7xl mx-auto px-8 py-12 w-full">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-12 w-full">
         <div className="max-w-lg">
           {/* Headline */}
-          <h1 className="text-3xl md:text-4xl font-bold text-white leading-snug mb-4">
+          <h1 className="text-4xl sm:text-5xl md:text-4xl font-bold text-white leading-tight md:leading-snug mb-4">
             Find More Than a Home
             <br />
             Discover a{" "}
@@ -42,15 +42,15 @@ export default function HeroSection() {
           </p>
           <p className="text-white/60 text-base leading-relaxed mb-8 max-w-sm">
             Explore premium apartments, penthouses and investment properties in
-            the most desirable locations. Whether you're buying, renting or
+            the most desirable locations. Whether you&apos;re buying, renting or
             investing, we help you unlock luxury living with confidence.
           </p>
 
           {/* CTAs */}
-          <div className="flex items-center gap-6">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
             <Link
               href="#"
-              className="bg-accent hover:bg-accent-alt transition-colors text-white font-semibold px-7 py-4 rounded text-base"
+              className="inline-flex justify-center bg-accent hover:bg-accent-alt transition-colors text-white font-semibold px-7 py-4 rounded text-base"
             >
               Browse Properties
             </Link>

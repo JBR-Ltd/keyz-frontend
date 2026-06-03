@@ -8,20 +8,21 @@ export default function NewsletterBanner() {
   const [sent, setSent] = useState(false);
 
   return (
-    <section className="relative py-14 px-4 overflow-hidden bg-primary-dark">
+    <section className="relative py-14 md:py-16 px-4 overflow-hidden bg-primary-dark">
       {/* Background house image — left side */}
-      <div className="absolute left-0 top-0 w-1/3 h-full z-0">
+      <div className="absolute inset-0 md:left-0 md:top-0 md:w-1/3 md:h-full z-0">
         <Image
           src="/images/newsletter-house.jpg"
           alt="Luxury property"
           fill
-          className="object-cover object-center opacity-80"
+          className="object-cover object-center opacity-25 md:opacity-80"
         />
-        <div className="absolute inset-0 newsletter-overlay" />
+        <div className="absolute inset-0 bg-primary-dark/70 md:hidden" />
+        <div className="absolute inset-0 hidden md:block newsletter-overlay" />
       </div>
 
-      <div className="relative z-10 max-w-6xl mx-auto flex items-center justify-end lg:justify-start lg:pl-[38%]">
-        <div className="max-w-sm">
+      <div className="relative z-10 max-w-6xl mx-auto flex items-center justify-start lg:pl-[38%]">
+        <div className="max-w-xl lg:max-w-sm">
           <h2 className="text-white font-bold text-2xl md:text-3xl mb-4 tracking-tight">
             STAY UPDATED ON
             <br />
@@ -35,21 +36,21 @@ export default function NewsletterBanner() {
 
           {sent ? (
             <p className="text-accent font-semibold text-base md:text-lg">
-              You're subscribed! We'll be in touch soon.
+              You&apos;re subscribed! We&apos;ll be in touch soon.
             </p>
           ) : (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
               <input
                 type="email"
                 placeholder="Enter your email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="flex-1 bg-white rounded px-4 py-3 text-base outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                className="w-full flex-1 bg-white rounded px-4 py-3 text-base outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
               />
               {/* Icon button */}
               <button
                 onClick={() => email && setSent(true)}
-                className="w-11 h-11 bg-primary-soft rounded flex items-center justify-center hover:bg-accent transition-colors flex-shrink-0"
+                className="hidden sm:flex w-11 h-11 bg-primary-soft rounded items-center justify-center hover:bg-accent transition-colors flex-shrink-0"
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                   <path

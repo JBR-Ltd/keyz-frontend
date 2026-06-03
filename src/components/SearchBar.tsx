@@ -31,7 +31,7 @@ function Dropdown({
   const [selected, setSelected] = useState(sublabel);
 
   return (
-    <div className="relative flex-1">
+    <div className="relative flex-1 min-w-0">
       <button
         onClick={() => setOpen((o) => !o)}
         className="w-full flex items-center justify-between gap-2 py-3 px-1"
@@ -80,10 +80,10 @@ function Dropdown({
 
 export default function SearchBar() {
   return (
-    <div className="max-w-6xl mx-auto -mt-8 relative z-20 px-4">
-      <div className="bg-white rounded-xl shadow-xl border border-gray-100 px-6 py-4 flex items-center gap-4">
+    <div className="max-w-6xl mx-auto -mt-10 md:-mt-8 relative z-20 px-4">
+      <div className="bg-white rounded-xl shadow-xl border border-gray-100 px-4 sm:px-6 py-4 flex flex-col lg:flex-row lg:items-center gap-4">
         {/* Location */}
-        <div className="flex-1 flex items-center gap-3 border-r border-gray-200 pr-4">
+        <div className="w-full lg:flex-1 flex items-center gap-3 border-b lg:border-b-0 lg:border-r border-gray-200 pb-4 lg:pb-0 lg:pr-4">
           <svg
             width="18"
             height="18"
@@ -106,7 +106,7 @@ export default function SearchBar() {
           </div>
         </div>
 
-        <div className="flex-1 border-r border-gray-200 pr-4 flex items-center gap-2">
+        <div className="w-full lg:flex-1 border-b lg:border-b-0 lg:border-r border-gray-200 pb-4 lg:pb-0 lg:pr-4 flex items-center gap-2">
           <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
             <path
               d="M3 10L10 3L17 10V17H13V13H7V17H3V10Z"
@@ -123,7 +123,7 @@ export default function SearchBar() {
           />
         </div>
 
-        <div className="flex-1 border-r border-gray-200 pr-4 flex items-center gap-2">
+        <div className="w-full lg:flex-1 border-b lg:border-b-0 lg:border-r border-gray-200 pb-4 lg:pb-0 lg:pr-4 flex items-center gap-2">
           <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
             <circle
               cx="10"
@@ -144,7 +144,7 @@ export default function SearchBar() {
           <Dropdown label="Price Range" sublabel="Any" options={PRICE_RANGES} />
         </div>
 
-        <div className="flex-1 pr-4 flex items-center gap-2">
+        <div className="w-full lg:flex-1 lg:pr-4 flex items-center gap-2">
           <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
             <rect
               x="2"
@@ -167,7 +167,7 @@ export default function SearchBar() {
         </div>
 
         {/* Search button — dark teal */}
-        <button className="button-fill-hover bg-primary-soft text-white w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0">
+        <button className="button-fill-hover bg-primary-soft text-white w-full lg:w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0">
           <span className="relative z-10 flex items-center justify-center">
             <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
               <circle cx="9" cy="9" r="6" stroke="white" strokeWidth="1.8" />

@@ -250,7 +250,7 @@ export default function ExperienceSection() {
   }, [isTransitioning, currentIndex]);
 
   return (
-    <section className="py-20 px-4 bg-surface-soft">
+    <section className="py-16 md:py-20 px-4 bg-surface-soft">
       <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
         {/* Left: copy */}
         <div>
@@ -265,8 +265,24 @@ export default function ExperienceSection() {
           </p>
         </div>
 
+        <div className="grid grid-cols-2 gap-3 sm:hidden">
+          {AMENITIES.slice(0, 4).map(({ label, icon }) => (
+            <div
+              key={label}
+              className="bg-white border border-gray-100 rounded-xl p-5 flex flex-col items-center gap-3 text-center shadow-md"
+            >
+              <div className="flex justify-center items-center h-14 w-14">
+                {icon}
+              </div>
+              <p className="text-accent text-base font-semibold leading-tight">
+                {label}
+              </p>
+            </div>
+          ))}
+        </div>
+
         {/* Right: carousel */}
-        <div className="relative h-64 overflow-hidden">
+        <div className="hidden sm:block relative h-64 overflow-hidden">
           <div
             className={`flex h-full ${isTransitioning ? "transition-transform duration-1000 ease-in-out" : "transition-none"}`}
             style={{
