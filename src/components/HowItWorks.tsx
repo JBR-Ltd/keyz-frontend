@@ -1,3 +1,5 @@
+import ScrollReveal from "@/components/ScrollReveal";
+
 const STEPS = [
   {
     number: 1,
@@ -102,7 +104,7 @@ export default function HowItWorks() {
   return (
     <section className="bg-primary-dark py-24 px-4">
       <div className="max-w-6xl mx-auto">
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-14">
+        <ScrollReveal className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-14">
           <div className="max-w-2xl">
             <p className="text-accent text-base font-bold tracking-[0.25em] uppercase mb-3">
               How It Works
@@ -115,35 +117,34 @@ export default function HowItWorks() {
             A guided process built to help you discover, inspect and secure the
             right property with confidence.
           </p>
-        </div>
+        </ScrollReveal>
 
         <div className="relative grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           <div className="hidden lg:block absolute left-[12%] right-[12%] top-12 h-px bg-white/15" />
-          {STEPS.map(({ number, label, desc, icon }) => (
-            <div
-              key={number}
-              className="relative rounded-xl border border-white/10 bg-white/[0.04] p-6 flex flex-col gap-5 transition-colors hover:border-accent/60 hover:bg-white/[0.07]"
-            >
-              <div className="flex items-center justify-between gap-4">
-                <div className="w-16 h-16 rounded-full bg-accent/10 border border-accent/30 flex items-center justify-center text-accent">
-                  {icon}
+          {STEPS.map(({ number, label, desc, icon }, index) => (
+            <ScrollReveal key={number} delay={index * 0.08}>
+              <div className="relative rounded-xl border border-white/10 bg-white/[0.04] p-6 flex flex-col gap-5 transition-colors hover:border-accent/60 hover:bg-white/[0.07]">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="w-16 h-16 rounded-full bg-accent/10 border border-accent/30 flex items-center justify-center text-accent">
+                    {icon}
+                  </div>
+                  <div className="w-11 h-11 rounded-full bg-primary-dark border border-accent flex items-center justify-center flex-shrink-0">
+                    <span className="text-accent font-bold text-lg">
+                      {number}
+                    </span>
+                  </div>
                 </div>
-                <div className="w-11 h-11 rounded-full bg-primary-dark border border-accent flex items-center justify-center flex-shrink-0">
-                  <span className="text-accent font-bold text-lg">
-                    {number}
-                  </span>
-                </div>
-              </div>
 
-              <div>
-                <h3 className="text-white font-semibold text-2xl mb-3">
-                  {label}
-                </h3>
-                <p className="text-white/65 text-base leading-relaxed">
-                  {desc}
-                </p>
+                <div>
+                  <h3 className="text-white font-semibold text-2xl mb-3">
+                    {label}
+                  </h3>
+                  <p className="text-white/65 text-base leading-relaxed">
+                    {desc}
+                  </p>
+                </div>
               </div>
-            </div>
+            </ScrollReveal>
           ))}
         </div>
       </div>

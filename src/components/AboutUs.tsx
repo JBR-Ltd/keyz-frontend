@@ -1,4 +1,5 @@
 import Image from "next/image";
+import ScrollReveal from "@/components/ScrollReveal";
 
 const VALUES = [
   "Transparent & reliable",
@@ -11,17 +12,20 @@ export default function AboutUs() {
     <section className="py-16 md:py-20 px-4 bg-white">
       <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-0 items-stretch">
         {/* Left: property interior image */}
-        <div className="relative min-h-[300px] md:min-h-[420px] rounded-t-2xl md:rounded-l-2xl md:rounded-tr-none overflow-hidden">
+        <ScrollReveal className="relative min-h-[300px] md:min-h-[420px] rounded-t-2xl md:rounded-l-2xl md:rounded-tr-none overflow-hidden">
           <Image
             src="/images/about-interior.jpg"
             alt="Luxury property interior"
             fill
             className="object-cover"
           />
-        </div>
+        </ScrollReveal>
 
         {/* Right: copy */}
-        <div className="bg-white border border-gray-100 rounded-b-2xl md:rounded-r-2xl md:rounded-bl-none p-6 sm:p-8 md:p-10 flex flex-col justify-center">
+        <ScrollReveal
+          className="bg-white border border-gray-100 rounded-b-2xl md:rounded-r-2xl md:rounded-bl-none p-6 sm:p-8 md:p-10 flex flex-col justify-center"
+          delay={0.1}
+        >
           <p className="text-accent font-bold text-sm tracking-widest uppercase mb-3">
             About Us
           </p>
@@ -62,7 +66,7 @@ export default function AboutUs() {
               </div>
             ))}
           </div>
-        </div>
+        </ScrollReveal>
       </div>
     </section>
   );

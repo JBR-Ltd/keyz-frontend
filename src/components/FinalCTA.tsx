@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import ScrollReveal from "@/components/ScrollReveal";
 
 export default function FinalCTA() {
   return (
@@ -15,7 +16,7 @@ export default function FinalCTA() {
         <div className="absolute inset-0 cta-overlay" />
       </div>
 
-      <div className="relative z-10 max-w-3xl mx-auto">
+      <ScrollReveal className="relative z-10 max-w-3xl mx-auto">
         <h2 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white leading-tight mb-6">
           Your Dream Property
           <br />
@@ -31,7 +32,7 @@ export default function FinalCTA() {
         >
           Start Exploring
         </Link>
-      </div>
+      </ScrollReveal>
     </section>
   );
 }

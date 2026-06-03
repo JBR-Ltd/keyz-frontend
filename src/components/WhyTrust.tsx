@@ -1,3 +1,5 @@
+import ScrollReveal from "@/components/ScrollReveal";
+
 const FEATURES = [
   {
     title: "Verified Listings",
@@ -116,22 +118,25 @@ export default function WhyTrust() {
   return (
     <section className="py-20 px-4 bg-white">
       <div className="max-w-6xl mx-auto">
-        <h2 className="text-center text-gray-900 font-bold tracking-[0.18em] uppercase text-lg mb-12">
-          Why Thousands Trust Our Platform
-        </h2>
+        <ScrollReveal>
+          <h2 className="text-center text-gray-900 font-bold tracking-[0.18em] uppercase text-lg mb-12">
+            Why Thousands Trust Our Platform
+          </h2>
+        </ScrollReveal>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-          {FEATURES.map(({ title, desc, icon }) => (
-            <div
-              key={title}
-              className="border border-gray-100 rounded-xl p-7 flex flex-col items-center text-center gap-5 hover:shadow-md transition-shadow"
-            >
-              <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-accent/10 text-accent">
-                {icon}
+          {FEATURES.map(({ title, desc, icon }, index) => (
+            <ScrollReveal key={title} delay={index * 0.08}>
+              <div className="border border-gray-100 rounded-xl p-7 flex flex-col items-center text-center gap-5 hover:shadow-md transition-shadow">
+                <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-accent/10 text-accent">
+                  {icon}
+                </div>
+                <h3 className="font-bold text-gray-900 text-xl">{title}</h3>
+                <p className="text-gray-500 text-base leading-relaxed">
+                  {desc}
+                </p>
               </div>
-              <h3 className="font-bold text-gray-900 text-xl">{title}</h3>
-              <p className="text-gray-500 text-base leading-relaxed">{desc}</p>
-            </div>
+            </ScrollReveal>
           ))}
         </div>
       </div>
