@@ -123,7 +123,7 @@ export default function HowItWorks() {
           <div className="hidden lg:block absolute left-[12%] right-[12%] top-12 h-px bg-white/15" />
           {STEPS.map(({ number, label, desc, icon }, index) => (
             <ScrollReveal key={number} delay={index * 0.08}>
-              <div className="relative rounded-xl border border-white/10 bg-white/[0.04] p-6 flex flex-col gap-5 transition-colors hover:border-accent/60 hover:bg-white/[0.07]">
+              <div className="relative rounded-xl border border-white/10 bg-white/[0.04] p-6 flex flex-col gap-5 transition-colors hover:border-accent/60 hover:bg-white/[0.07] h-full">
                 <div className="flex items-center justify-between gap-4">
                   <div className="w-16 h-16 rounded-full bg-accent/10 border border-accent/30 flex items-center justify-center text-accent">
                     {icon}
