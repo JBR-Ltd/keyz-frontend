@@ -127,7 +127,7 @@ export default function WhyTrust() {
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
           {FEATURES.map(({ title, desc, icon }, index) => (
             <ScrollReveal key={title} delay={index * 0.08}>
-              <div className="border border-gray-100 rounded-xl p-7 flex flex-col items-center text-center gap-5 hover:shadow-md transition-shadow">
+              <div className="border border-gray-100 rounded-xl p-7 flex flex-col items-center text-center gap-5 hover:shadow-md transition-shadow h-full">
                 <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-accent/10 text-accent">
                   {icon}
                 </div>

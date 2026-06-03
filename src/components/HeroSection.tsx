@@ -37,10 +37,7 @@ export default function HeroSection() {
           </div>
 
           {/* Sub-headline + body */}
-          <p className="text-white/70 text-base font-medium mb-2">
-            Your key to finding home
-          </p>
-          <p className="text-white/60 text-base leading-relaxed mb-8 max-w-sm">
+          <p className="text-white/75 text-lg leading-relaxed mb-8 max-w-sm">
             Explore premium apartments, penthouses and investment properties in
             the most desirable locations. Whether you&apos;re buying, renting or
             investing, we help you unlock luxury living with confidence.
@@ -55,12 +52,12 @@ export default function HeroSection() {
               Browse Properties
             </Link>
 
-            <button className="flex items-center gap-3 text-accent font-semibold text-base">
+            {/* <button className="flex items-center gap-3 text-accent font-semibold text-base">
               <span className="w-11 h-11 rounded-full border-2 border-white/60 bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors text-white text-base">
                 ▶
               </span>
               How It Works
-            </button>
+            </button> */}
           </div>
         </div>
       </div>
