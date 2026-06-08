@@ -25,16 +25,14 @@ export default function HeroSection() {
             <br />
             Discover a{" "}
             <span className="text-accent">
-              Lifestyle Designed
-              <br />
-              For You
+              Lifestyle Designed For You
             </span>
           </h1>
 
           {/* Badge */}
-          <div className="inline-block border border-white/40 text-white/80 text-xs tracking-widest uppercase px-4 py-2 rounded mb-5">
+          {/* <div className="inline-block border border-white/40 text-white/80 text-xs tracking-widest uppercase px-4 py-2 rounded mb-5">
             Find, Rent, Own with Keyz
-          </div>
+          </div> */}
 
           {/* Sub-headline + body */}
           <p className="text-white/75 text-lg leading-relaxed mb-8 max-w-sm">

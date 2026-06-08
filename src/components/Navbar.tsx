@@ -52,9 +52,7 @@ export default function Navbar() {
               <Link
                 href="#"
                 className={`nav-link text-base font-medium transition-colors hover:text-white focus-visible:text-white ${
-                  link === "Home"
-                    ? "text-white font-semibold"
-                    : "text-white/70"
+                  link === "Home" ? "text-white font-semibold" : "text-white/70"
                 }`}
               >
                 {link}
@@ -72,7 +70,7 @@ export default function Navbar() {
             <span className="relative z-10">Sign In</span>
           </Link>
           <Link
-            href="#"
+            href="/marketing/join-waitlist"
             className="bg-accent text-white text-base font-semibold px-5 py-2.5 rounded-lg hover:bg-accent-alt transition-colors"
           >
             Join Waitlist
@@ -115,7 +113,7 @@ export default function Navbar() {
               <span className="relative z-10">Sign In</span>
             </Link>
             <Link
-              href="#"
+              href="/marketing/join-waitlist"
               onClick={() => setMenuOpen(false)}
               className="inline-flex items-center justify-center bg-accent text-white text-base font-semibold px-5 py-3 rounded-lg hover:bg-accent-alt transition-colors"
             >
