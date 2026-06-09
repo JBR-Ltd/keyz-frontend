@@ -1,3 +1,6 @@
+"use client";
+
+import { motion } from "framer-motion";
 import Link from "next/link";
 import { Check, Mail, MapPin, ShieldCheck } from "lucide-react";
 import Navbar from "@/components/Navbar";
@@ -38,7 +41,16 @@ export default function JoinWaitlistPage() {
       <section className="relative overflow-hidden bg-primary text-white py-16 md:py-24">
         <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.18),_transparent_45%)]" />
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid gap-12 lg:grid-cols-[1.3fr_0.9fr] items-center">
+          <motion.div
+            className="grid gap-12 lg:grid-cols-[1.3fr_0.9fr] items-center"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.2 }}
+            variants={{
+              hidden: {},
+              visible: { transition: { staggerChildren: 0.12 } },
+            }}
+          >
             <div className="max-w-2xl">
               <p className="mb-4 text-sm uppercase tracking-[0.32em] text-accent">
                 Join the waitlist
@@ -56,9 +68,13 @@ export default function JoinWaitlistPage() {
                 {perks.slice(0, 2).map((perk) => {
                   const Icon = perk.icon;
                   return (
-                    <div
+                    <motion.div
                       key={perk.title}
                       className="rounded-3xl border border-white/10 bg-white/10 p-5"
+                      variants={{
+                        hidden: { opacity: 0, y: 12 },
+                        visible: { opacity: 1, y: 0 },
+                      }}
                     >
                       <div className="flex items-center gap-3">
                         <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 text-accent">
@@ -71,13 +87,19 @@ export default function JoinWaitlistPage() {
                       <p className="mt-3 text-sm text-white/80">
                         {perk.description}
                       </p>
-                    </div>
+                    </motion.div>
                   );
                 })}
               </div>
             </div>
 
-            <div className="rounded-[2rem] border border-white/10 bg-white/95 p-8 shadow-2xl shadow-slate-950/10">
+            <motion.div
+              className="rounded-[2rem] border border-white/10 bg-white/95 p-8 shadow-2xl shadow-slate-950/10"
+              initial={{ opacity: 0, y: 14 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, ease: "easeOut" }}
+              viewport={{ once: true, amount: 0.2 }}
+            >
               <div className="space-y-4">
                 <p className="text-sm uppercase tracking-[0.28em] text-slate-500">
                   Early access form
@@ -91,7 +113,10 @@ export default function JoinWaitlistPage() {
                 </p>
               </div>
 
-              <form className="mt-8 grid gap-4">
+              <form
+                className="mt-8 grid gap-4"
+                onSubmit={(e) => e.preventDefault()}
+              >
                 <label className="block">
                   <span className="text-sm font-medium text-slate-700">
                     Full name
@@ -133,12 +158,17 @@ export default function JoinWaitlistPage() {
                     <option>Investment portfolios</option>
                   </select>
                 </label>
-                <button
+                <motion.button
                   type="submit"
                   className="inline-flex w-full items-center justify-center rounded-3xl bg-accent px-5 py-4 text-base font-semibold text-white transition hover:bg-accent-alt"
+                  whileTap={{ scale: 0.98 }}
+                  whileHover={{ scale: 1.02 }}
+                  onClick={() => {
+                    // placeholder action: show a subtle animation; actual submit handled elsewhere
+                  }}
                 >
                   Join the waitlist
-                </button>
+                </motion.button>
               </form>
 
               <div className="mt-8 grid gap-3 rounded-3xl bg-slate-100 p-5 text-sm text-slate-600">
@@ -163,8 +193,8 @@ export default function JoinWaitlistPage() {
                 We respect your privacy. No spam, only the best listings and
                 launch alerts.
               </p>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         </div>
       </section>
 
