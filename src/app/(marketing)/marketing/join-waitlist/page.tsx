@@ -1,10 +1,12 @@
 "use client";
 
+import { FormEvent, useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { Check, Mail, MapPin, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Check, Mail, MapPin, ShieldCheck } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { useToast } from "@/components/ui/toast";
 
 const perks = [
   {
@@ -33,7 +35,68 @@ const perks = [
   },
 ];
 
+type FormStatus = "idle" | "submitting" | "success" | "error";
+
 export default function JoinWaitlistPage() {
+  const [status, setStatus] = useState<FormStatus>("idle");
+  const [message, setMessage] = useState("");
+  const { notify } = useToast();
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    setStatus("submitting");
+    setMessage("");
+
+    const formData = new FormData(form);
+    const payload = {
+      firstName: String(formData.get("firstName") ?? ""),
+      lastName: String(formData.get("lastName") ?? ""),
+      email: String(formData.get("email") ?? ""),
+      phone: String(formData.get("phone") ?? ""),
+    };
+
+    try {
+      const response = await fetch("/api/waitlist", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(
+          data?.message ?? "We could not join the waitlist right now.",
+        );
+      }
+
+      setStatus("success");
+      setMessage("You're on the waitlist. We'll be in touch soon.");
+      notify({
+        title: "Joined the waitlist",
+        description: "You're on the list. We'll be in touch soon.",
+        variant: "success",
+      });
+      form.reset();
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "We could not join the waitlist right now.";
+
+      setStatus("error");
+      setMessage(errorMessage);
+      notify({
+        title: "Could not join waitlist",
+        description: errorMessage,
+        variant: "error",
+      });
+    }
+  }
+
   return (
     <main className="min-h-screen bg-surface-soft text-slate-900">
       <Navbar />
@@ -113,61 +176,83 @@ export default function JoinWaitlistPage() {
                 </p>
               </div>
 
-              <form
-                className="mt-8 grid gap-4"
-                onSubmit={(e) => e.preventDefault()}
-              >
-                <label className="block">
-                  <span className="text-sm font-medium text-slate-700">
-                    Full name
-                  </span>
-                  <input
-                    type="text"
-                    placeholder="Alex Morgan"
-                    className="mt-2 w-full rounded-3xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20"
-                  />
-                </label>
+              <form className="mt-8 grid gap-4" onSubmit={handleSubmit}>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="block">
+                    <span className="text-sm font-medium text-slate-700">
+                      First name
+                    </span>
+                    <input
+                      type="text"
+                      name="firstName"
+                      placeholder="Best"
+                      autoComplete="given-name"
+                      required
+                      className="mt-2 w-full rounded-3xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="text-sm font-medium text-slate-700">
+                      Last name
+                    </span>
+                    <input
+                      type="text"
+                      name="lastName"
+                      placeholder="Bisong"
+                      autoComplete="family-name"
+                      required
+                      className="mt-2 w-full rounded-3xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20"
+                    />
+                  </label>
+                </div>
                 <label className="block">
                   <span className="text-sm font-medium text-slate-700">
                     Email address
                   </span>
                   <input
                     type="email"
-                    placeholder="alex@example.com"
+                    name="email"
+                    placeholder="bisongbest04@gmail.com"
+                    autoComplete="email"
+                    required
                     className="mt-2 w-full rounded-3xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20"
                   />
                 </label>
                 <label className="block">
                   <span className="text-sm font-medium text-slate-700">
-                    Preferred city
+                    Phone number
                   </span>
                   <input
-                    type="text"
-                    placeholder="Dubai, London, Miami"
+                    type="tel"
+                    name="phone"
+                    placeholder="+1234567890"
+                    autoComplete="tel"
+                    required
                     className="mt-2 w-full rounded-3xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20"
                   />
                 </label>
-                <label className="block">
-                  <span className="text-sm font-medium text-slate-700">
-                    Property interest
-                  </span>
-                  <select className="mt-2 w-full rounded-3xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20">
-                    <option>Luxury apartments</option>
-                    <option>Beach villas</option>
-                    <option>Urban penthouses</option>
-                    <option>Investment portfolios</option>
-                  </select>
-                </label>
+                {message ? (
+                  <p
+                    className={`rounded-3xl px-4 py-3 text-sm ${
+                      status === "success"
+                        ? "bg-emerald-50 text-emerald-700"
+                        : "bg-red-50 text-red-700"
+                    }`}
+                    role="status"
+                  >
+                    {message}
+                  </p>
+                ) : null}
                 <motion.button
                   type="submit"
-                  className="inline-flex w-full items-center justify-center rounded-3xl bg-accent px-5 py-4 text-base font-semibold text-white transition hover:bg-accent-alt"
+                  disabled={status === "submitting"}
+                  className="inline-flex w-full items-center justify-center rounded-3xl bg-accent px-5 py-4 text-base font-semibold text-white transition hover:bg-accent-alt disabled:cursor-not-allowed disabled:opacity-70"
                   whileTap={{ scale: 0.98 }}
                   whileHover={{ scale: 1.02 }}
-                  onClick={() => {
-                    // placeholder action: show a subtle animation; actual submit handled elsewhere
-                  }}
                 >
-                  Join the waitlist
+                  {status === "submitting"
+                    ? "Joining..."
+                    : "Join the waitlist"}
                 </motion.button>
               </form>
 
@@ -267,14 +352,19 @@ export default function JoinWaitlistPage() {
         </div>
       </section>
 
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-10">
+      <nav
+        className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-10"
+        aria-label="Waitlist page navigation"
+      >
         <Link
-          href="/marketing"
-          className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-900 transition hover:border-accent hover:text-accent"
+          href="/"
+          aria-label="Back to the Keyz Estate landing page"
+          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-900 transition hover:border-accent hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-surface-soft"
         >
-          Back to marketing page
+          <ArrowLeft size={18} aria-hidden="true" />
+          Back to landing page
         </Link>
-      </div>
+      </nav>
 
       <Footer />
     </main>
