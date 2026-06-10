@@ -63,12 +63,12 @@ export default function Navbar() {
 
         {/* CTAs */}
         <div className="hidden lg:flex items-center gap-3">
-          <Link
+          {/* <Link
             href="#"
             className="button-fill-hover inline-flex items-center justify-center border border-accent text-accent text-base font-semibold px-5 py-2.5 rounded-lg hover:text-white focus-visible:text-white"
           >
             <span className="relative z-10">Sign In</span>
-          </Link>
+          </Link> */}
           <Link
             href="/marketing/join-waitlist"
             className="bg-accent text-white text-base font-semibold px-5 py-2.5 rounded-lg hover:bg-accent-alt transition-colors"
@@ -105,13 +105,13 @@ export default function Navbar() {
           </ul>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Link
+            {/* <Link
               href="#"
               onClick={() => setMenuOpen(false)}
               className="button-fill-hover inline-flex items-center justify-center border border-accent text-accent text-base font-semibold px-5 py-3 rounded-lg hover:text-white focus-visible:text-white"
             >
               <span className="relative z-10">Sign In</span>
-            </Link>
+            </Link> */}
             <Link
               href="/marketing/join-waitlist"
               onClick={() => setMenuOpen(false)}
