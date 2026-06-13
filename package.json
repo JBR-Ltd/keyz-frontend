@@ -1,5 +1,5 @@
 {
-  "name": "keyz",
+  "name": "rello",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
+    "@iconify/tailwind4": "^1.2.3",
     "@vis.gl/react-google-maps": "^1.8.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -28,6 +29,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@iconify-json/line-md": "^1.2.16",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

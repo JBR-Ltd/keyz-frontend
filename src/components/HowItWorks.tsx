@@ -102,14 +102,14 @@ const STEPS = [
 
 export default function HowItWorks() {
   return (
-    <section className="bg-primary-dark py-24 px-4">
+    <section id="how-it-works" className="bg-primary-dark py-24 md:py-32 px-4">
       <div className="max-w-6xl mx-auto">
         <ScrollReveal className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-14">
           <div className="max-w-2xl">
             <p className="text-accent text-base font-bold tracking-[0.25em] uppercase mb-3">
               How It Works
             </p>
-            <h2 className="text-white text-4xl md:text-5xl font-semibold leading-tight">
+            <h2 className="font-display text-white text-4xl md:text-6xl font-semibold leading-tight">
               From search to keys, without the guesswork.
             </h2>
           </div>
@@ -123,7 +123,7 @@ export default function HowItWorks() {
           <div className="hidden lg:block absolute left-[12%] right-[12%] top-12 h-px bg-white/15" />
           {STEPS.map(({ number, label, desc, icon }, index) => (
             <ScrollReveal key={number} delay={index * 0.08}>
-              <div className="relative rounded-xl border border-white/10 bg-white/[0.04] p-6 flex flex-col gap-5 transition-colors hover:border-accent/60 hover:bg-white/[0.07] h-full">
+              <div className="premium-hover relative rounded-2xl border border-white/10 bg-white/[0.07] p-6 flex flex-col gap-5 backdrop-blur-md hover:border-accent/60 h-full">
                 <div className="flex items-center justify-between gap-4">
                   <div className="w-16 h-16 rounded-full bg-accent/10 border border-accent/30 flex items-center justify-center text-accent">
                     {icon}
@@ -136,7 +136,7 @@ export default function HowItWorks() {
                 </div>
 
                 <div>
-                  <h3 className="text-white font-semibold text-2xl mb-3">
+                  <h3 className="font-display text-white font-semibold text-3xl mb-3">
                     {label}
                   </h3>
                   <p className="text-white/65 text-base leading-relaxed">

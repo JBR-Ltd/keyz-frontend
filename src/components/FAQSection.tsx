@@ -15,7 +15,7 @@ const FAQS = [
 
 const ANSWERS: Record<string, string> = {
   "Are all properties verified?":
-    "Yes. Every listing on Keyz goes through a manual verification process before it goes live, including document checks and site confirmations.",
+    "Yes. Every listing on Rello goes through a manual verification process before it goes live, including document checks and site confirmations.",
   "Can I schedule inspections online?":
     "Absolutely. You can request a physical or virtual inspection directly from any listing page, and our team will coordinate with the agent.",
   "Do you offer payment plans?":
@@ -36,10 +36,10 @@ function FAQItem({ number, question }: { number: number; question: string }) {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="border border-gray-100 rounded-lg overflow-hidden">
+    <div className="premium-hover border border-gray-100 rounded-2xl overflow-hidden bg-white/[0.85] backdrop-blur">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center gap-4 p-5 text-left hover:bg-gray-50 transition-colors"
+        className="w-full flex items-center gap-4 p-5 text-left hover:bg-gray-50 transition-all duration-200 ease-in-out"
       >
         {/* Number badge */}
         <div className="w-10 h-10 rounded-lg bg-primary-soft text-white text-base font-bold flex items-center justify-center flex-shrink-0">
@@ -86,10 +86,10 @@ export default function FAQSection() {
   const right = FAQS.slice(4);
 
   return (
-    <section className="py-20 px-4 bg-white">
+    <section className="py-24 md:py-32 px-4 bg-white">
       <div className="max-w-6xl mx-auto">
-        <h2 className="text-center font-bold tracking-[0.18em] uppercase text-gray-900 text-lg md:text-xl mb-12">
-          Frequently Asked Questions
+        <h2 className="font-display mx-auto mb-12 max-w-3xl text-center text-4xl font-bold leading-tight text-gray-900 md:text-5xl">
+          Questions before you join Rello?
         </h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -1,7 +1,10 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap");
 @import "tailwindcss";
+@plugin "@iconify/tailwind4";
 
 :root {
+  --font-display: var(--rello-font-display);
+  --font-body: var(--rello-font-body);
+  --font-accent: var(--rello-font-accent);
   --color-primary: #04344c;
   --color-primary-dark: #04344c;
   --color-primary-soft: #04344c;
@@ -17,12 +20,16 @@
 }
 
 @layer base {
+  * {
+    box-sizing: border-box;
+  }
+
   html {
     scroll-behavior: smooth;
   }
 
   body {
-    font-family: "Inter", sans-serif;
+    font-family: var(--font-body), sans-serif;
     font-optical-sizing: auto;
     font-style: normal;
     color: var(--color-text);
@@ -32,7 +39,7 @@
   h1,
   h2,
   h3 {
-    font-family: "Inter", sans-serif;
+    font-family: var(--font-display), serif;
     font-optical-sizing: auto;
     font-style: normal;
   }
@@ -40,13 +47,19 @@
 
 @layer utilities {
   .font-display {
-    font-family: "Inter", sans-serif;
+    font-family: var(--font-display), serif;
     font-optical-sizing: auto;
     font-style: normal;
   }
 
-  .font-sans {
-    font-family: "Inter", sans-serif;
+  .font-body {
+    font-family: var(--font-body), sans-serif;
+    font-optical-sizing: auto;
+    font-style: normal;
+  }
+
+  .font-accent {
+    font-family: var(--font-accent), sans-serif;
     font-optical-sizing: auto;
     font-style: normal;
   }
@@ -87,6 +100,10 @@
     color: var(--color-primary-soft);
   }
 
+  .text-primary {
+    color: var(--color-primary);
+  }
+
   .text-accent {
     color: var(--color-accent);
   }
@@ -103,6 +120,10 @@
     border-color: var(--color-accent);
   }
 
+  .border-primary {
+    border-color: var(--color-primary);
+  }
+
   .border-surface {
     border-color: var(--color-border);
   }
@@ -117,6 +138,16 @@
 
   .stroke-muted {
     stroke: var(--color-text-muted);
+  }
+
+  .from-primary {
+    --tw-gradient-from: var(--color-primary) var(--tw-gradient-from-position);
+    --tw-gradient-to: rgb(4 52 76 / 0) var(--tw-gradient-to-position);
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+  }
+
+  .to-primary-dark {
+    --tw-gradient-to: var(--color-primary-dark) var(--tw-gradient-to-position);
   }
 
   .nav-link {
@@ -174,6 +205,55 @@
     );
   }
 
+  .premium-hover {
+    transition-property: all;
+    transition-duration: 200ms;
+    transition-timing-function: ease-in-out;
+  }
+
+  .premium-hover:hover,
+  .premium-hover:focus-visible {
+    transform: translateY(-2px);
+    box-shadow: 4px 4px 0 var(--color-primary);
+  }
+
+  .hero-mesh {
+    background:
+      radial-gradient(
+        circle at 16% 18%,
+        rgba(201, 145, 58, 0.28),
+        transparent 28%
+      ),
+      radial-gradient(
+        circle at 78% 18%,
+        rgba(4, 52, 76, 0.18),
+        transparent 30%
+      ),
+      radial-gradient(
+        circle at 48% 82%,
+        rgba(201, 145, 58, 0.18),
+        transparent 34%
+      ),
+      linear-gradient(135deg, rgba(4, 52, 76, 0.92), rgba(4, 52, 76, 0.34));
+    animation: hero-mesh-shift 14s ease-in-out infinite alternate;
+    background-size: 120% 120%;
+  }
+
+  .page-mesh {
+    background:
+      radial-gradient(
+        circle at 12% 10%,
+        rgba(201, 145, 58, 0.16),
+        transparent 26%
+      ),
+      radial-gradient(
+        circle at 86% 12%,
+        rgba(4, 52, 76, 0.12),
+        transparent 26%
+      ),
+      var(--color-bg);
+  }
+
   .newsletter-overlay {
     background: linear-gradient(
       to right,
@@ -184,5 +264,36 @@
 
   .cta-overlay {
     background: rgba(4, 52, 76, 0.75);
+  }
+
+  .rello-marquee {
+    animation: rello-marquee 24s linear infinite;
+  }
+}
+
+@keyframes rello-marquee {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-33.333%);
+  }
+}
+
+@keyframes hero-mesh-shift {
+  from {
+    background-position: 0% 0%;
+  }
+
+  to {
+    background-position: 100% 70%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-mesh,
+  .rello-marquee {
+    animation: none;
   }
 }

@@ -1,62 +1,100 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
+import { motion, useReducedMotion } from "framer-motion";
 
 export default function HeroSection() {
+  const reduceMotion = useReducedMotion();
+
   return (
-    <section className="relative w-full min-h-[560px] md:min-h-[420px] flex items-center overflow-hidden">
-      {/* Background property image */}
+    <section className="relative w-full min-h-[680px] md:min-h-[720px] flex items-center overflow-hidden">
       <div className="absolute inset-0 z-0">
         <Image
           src="/images/hero-house.jpg"
           alt="Luxury property with pool"
           fill
           className="object-cover object-center"
+          sizes="100vw"
           priority
         />
         <div className="absolute inset-0 hero-overlay" />
       </div>
+      <div className="hero-mesh absolute inset-0 z-[1] opacity-70 mix-blend-screen" />
 
-      {/* Content */}
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-12 w-full">
-        <div className="max-w-lg">
-          {/* Headline */}
-          <h1 className="text-4xl sm:text-5xl md:text-4xl font-bold text-white leading-tight md:leading-snug mb-4">
-            Find More Than a Home
-            <br />
-            Discover a{" "}
-            <span className="text-accent">
-              Lifestyle Designed For You
-            </span>
-          </h1>
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 md:py-28 w-full">
+        <div className="max-w-3xl">
+          <motion.p
+            className="mb-5 text-sm font-semibold uppercase tracking-[0.32em] text-accent"
+            initial={
+              reduceMotion ? false : { opacity: 0, y: 18, filter: "blur(8px)" }
+            }
+            animate={
+              reduceMotion
+                ? undefined
+                : { opacity: 1, y: 0, filter: "blur(0px)" }
+            }
+            transition={{ duration: 0.7, ease: "easeOut" }}
+          >
+            Rello Estate
+          </motion.p>
 
-          {/* Badge */}
-          {/* <div className="inline-block border border-white/40 text-white/80 text-xs tracking-widest uppercase px-4 py-2 rounded mb-5">
-            Find, Rent, Own with Keyz
-          </div> */}
+          <motion.h1
+            className="font-display text-5xl font-bold leading-[0.95] text-white sm:text-6xl md:text-7xl lg:text-8xl"
+            initial={
+              reduceMotion ? false : { opacity: 0, y: 26, filter: "blur(10px)" }
+            }
+            animate={
+              reduceMotion
+                ? undefined
+                : { opacity: 1, y: 0, filter: "blur(0px)" }
+            }
+            transition={{ duration: 0.8, ease: "easeOut", delay: 0.08 }}
+          >
+            Find, tour, and secure a home that feels rare.
+          </motion.h1>
 
-          {/* Sub-headline + body */}
-          <p className="text-white/75 text-lg leading-relaxed mb-8 max-w-sm">
-            Explore premium apartments, penthouses and investment properties in
-            the most desirable locations. Whether you&apos;re buying, renting or
-            investing, we help you unlock luxury living with confidence.
-          </p>
+          <motion.p
+            className="mt-7 max-w-2xl text-lg font-light leading-8 text-white/[0.78] md:text-xl md:leading-9"
+            initial={
+              reduceMotion ? false : { opacity: 0, y: 22, filter: "blur(8px)" }
+            }
+            animate={
+              reduceMotion
+                ? undefined
+                : { opacity: 1, y: 0, filter: "blur(0px)" }
+            }
+            transition={{ duration: 0.75, ease: "easeOut", delay: 0.18 }}
+          >
+            Rello curates premium apartments, penthouses, and investment-ready
+            homes with verified listings, guided tours, and calm expert support.
+          </motion.p>
 
-          {/* CTAs */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
+          <motion.div
+            className="mt-10 flex flex-row gap-4 sm:flex-col sm:items-center sm:gap-5"
+            initial={
+              reduceMotion ? false : { opacity: 0, y: 20, filter: "blur(8px)" }
+            }
+            animate={
+              reduceMotion
+                ? undefined
+                : { opacity: 1, y: 0, filter: "blur(0px)" }
+            }
+            transition={{ duration: 0.72, ease: "easeOut", delay: 0.28 }}
+          >
             <Link
-              href="#"
-              className="inline-flex justify-center bg-accent hover:bg-accent-alt transition-colors text-white font-semibold px-7 py-4 rounded text-base"
+              href="/marketing/waitlist"
+              className="premium-hover inline-flex min-h-14 justify-center rounded-full bg-gradient-to-r from-accent to-accent-alt px-8 py-4 text-base font-semibold text-white"
             >
-              Browse Properties
+              Join the waitlist
             </Link>
-
-            {/* <button className="flex items-center gap-3 text-accent font-semibold text-base">
-              <span className="w-11 h-11 rounded-full border-2 border-white/60 bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors text-white text-base">
-                ▶
-              </span>
-              How It Works
-            </button> */}
-          </div>
+            <Link
+              href="#how-it-works"
+              className="premium-hover inline-flex min-h-14 justify-center rounded-full border border-white/25 bg-white/10 px-8 py-4 text-base font-semibold text-white backdrop-blur-md"
+            >
+              See how it works
+            </Link>
+          </motion.div>
         </div>
       </div>
     </section>

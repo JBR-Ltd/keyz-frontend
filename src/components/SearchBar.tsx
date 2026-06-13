@@ -34,7 +34,7 @@ function Dropdown({
     <div className="relative flex-1 min-w-0">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between gap-2 py-3 px-1"
+        className="premium-hover w-full flex items-center justify-between gap-2 rounded-lg py-3 px-1"
       >
         <div className="text-left">
           <p className="text-sm font-bold text-gray-800">{label}</p>
@@ -66,7 +66,7 @@ function Dropdown({
                   setSelected(opt);
                   setOpen(false);
                 }}
-                className="w-full text-left px-4 py-3 text-base hover:bg-gray-50 text-gray-700"
+                className="premium-hover w-full text-left px-4 py-3 text-base hover:bg-gray-50 text-gray-700"
               >
                 {opt}
               </button>
@@ -81,7 +81,7 @@ function Dropdown({
 export default function SearchBar() {
   return (
     <div className="max-w-6xl mx-auto -mt-10 md:-mt-8 relative z-20 px-4">
-      <div className="bg-white rounded-xl shadow-xl border border-gray-100 px-4 sm:px-6 py-4 flex flex-col lg:flex-row lg:items-center gap-4">
+      <div className="bg-white/[0.92] rounded-2xl shadow-2xl shadow-slate-950/10 border border-white/70 backdrop-blur-xl px-4 sm:px-6 py-5 flex flex-col lg:flex-row lg:items-center gap-4">
         {/* Location */}
         <div className="w-full lg:flex-1 flex items-center gap-3 border-b lg:border-b-0 lg:border-r border-gray-200 pb-4 lg:pb-0 lg:pr-4">
           <svg
@@ -101,7 +101,7 @@ export default function SearchBar() {
             <input
               type="text"
               placeholder="Enter city or area"
-              className="text-base text-gray-400 outline-none w-full bg-transparent"
+              className="text-base text-gray-500 outline-none w-full bg-transparent transition-all duration-200 ease-in-out focus:text-gray-900"
             />
           </div>
         </div>
@@ -166,8 +166,8 @@ export default function SearchBar() {
           <Dropdown label="Bedrooms" sublabel="Any" options={BEDROOMS} />
         </div>
 
-        {/* Search button — dark teal */}
-        <button className="button-fill-hover bg-primary-soft text-white w-full lg:w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0">
+        {/* Search button */}
+        <button className="premium-hover button-fill-hover bg-gradient-to-r from-accent to-accent-alt text-white w-full lg:w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0">
           <span className="relative z-10 flex items-center justify-center">
             <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
               <circle cx="9" cy="9" r="6" stroke="white" strokeWidth="1.8" />

@@ -9,7 +9,7 @@ const VALUES = [
 
 export default function AboutUs() {
   return (
-    <section className="py-16 md:py-20 px-4 bg-white">
+    <section className="py-24 md:py-32 px-4 bg-white">
       <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-0 items-stretch">
         {/* Left: property interior image */}
         <ScrollReveal className="relative min-h-[300px] md:min-h-[420px] rounded-t-2xl md:rounded-l-2xl md:rounded-tr-none overflow-hidden">
@@ -18,6 +18,7 @@ export default function AboutUs() {
             alt="Luxury property interior"
             fill
             className="object-cover"
+            sizes="(min-width: 768px) 50vw, 100vw"
           />
         </ScrollReveal>
 
@@ -26,13 +27,13 @@ export default function AboutUs() {
           className="bg-white border border-gray-100 rounded-b-2xl md:rounded-r-2xl md:rounded-bl-none p-6 sm:p-8 md:p-10 flex flex-col justify-center"
           delay={0.1}
         >
-          <p className="text-accent font-bold text-sm tracking-widest uppercase mb-3">
+          <p className="text-accent font-bold text-sm tracking-widest uppercase mb-4">
             About Us
           </p>
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-            Redefining Modern Real Estate Experiences.
+          <h2 className="font-display text-4xl md:text-5xl font-bold leading-tight text-gray-900 mb-5">
+            Real estate guidance with polish, proof, and pace.
           </h2>
-          <p className="text-gray-500 text-base md:text-lg leading-relaxed mb-4">
+          <p className="text-gray-500 text-base md:text-lg leading-relaxed mb-5">
             We believe finding the perfect property should feel effortless. Our
             platform combines technology, elegant design and industry expertise
             to simplify the real estate journey for buyers, renters, agents and
@@ -49,7 +50,7 @@ export default function AboutUs() {
           <div className="border-t border-gray-100 pt-6 flex flex-col gap-4">
             {VALUES.map((v) => (
               <div key={v} className="flex items-center gap-4">
-                <div className="w-9 h-9 rounded-full bg-primary-soft flex items-center justify-center flex-shrink-0">
+                <div className="premium-hover w-9 h-9 rounded-full bg-primary-soft flex items-center justify-center flex-shrink-0">
                   <svg width="18" height="18" viewBox="0 0 14 14" fill="none">
                     <path
                       d="M3 7L6 10L11 4"
