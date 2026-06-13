@@ -1,4 +1,4 @@
-# keyz
+# rello
 
 A small Next.js (App Router) marketing/landing site scaffolded with `create-next-app` and using a component-based layout in `src/components`.
 

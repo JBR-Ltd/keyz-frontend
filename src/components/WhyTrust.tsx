@@ -116,18 +116,18 @@ const FEATURES = [
 
 export default function WhyTrust() {
   return (
-    <section className="py-20 px-4 bg-white">
+    <section className="py-24 md:py-32 px-4 bg-white">
       <div className="max-w-6xl mx-auto">
         <ScrollReveal>
-          <h2 className="text-center text-gray-900 font-bold tracking-[0.18em] uppercase text-lg mb-12">
-            Why Thousands Trust Our Platform
+          <h2 className="font-display mx-auto mb-14 max-w-3xl text-center text-4xl font-bold leading-tight text-gray-900 md:text-5xl">
+            Premium search, verified access, and fewer unknowns.
           </h2>
         </ScrollReveal>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">
           {FEATURES.map(({ title, desc, icon }, index) => (
             <ScrollReveal key={title} delay={index * 0.08}>
-              <div className="border border-gray-100 rounded-xl p-7 flex flex-col items-center text-center gap-5 hover:shadow-md transition-shadow h-full">
+              <div className="premium-hover border border-gray-100 rounded-2xl bg-white/80 p-7 flex flex-col items-center text-center gap-5 shadow-sm backdrop-blur h-full">
                 <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-accent/10 text-accent">
                   {icon}
                 </div>

@@ -6,6 +6,7 @@ type WaitlistPayload = {
   lastName: string;
   email: string;
   phone: string;
+  city: string;
 };
 
 function isWaitlistPayload(value: unknown): value is WaitlistPayload {
@@ -20,14 +21,16 @@ function isWaitlistPayload(value: unknown): value is WaitlistPayload {
     typeof payload.lastName === "string" &&
     typeof payload.email === "string" &&
     typeof payload.phone === "string" &&
+    typeof payload.city === "string" &&
     payload.firstName.trim().length > 0 &&
     payload.lastName.trim().length > 0 &&
     payload.email.trim().length > 0 &&
-    payload.phone.trim().length > 0
+    payload.phone.trim().length > 0 &&
+    payload.city.trim().length > 0
   );
 }
 
-async function readResponseBody(response: Response) {
+async function readResponseBody(response: Response): Promise<unknown> {
   const text = await response.text();
 
   if (!text) {
@@ -41,7 +44,7 @@ async function readResponseBody(response: Response) {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: Request): Promise<Response> {
   let body: unknown;
 
   try {
@@ -52,16 +55,17 @@ export async function POST(request: Request) {
 
   if (!isWaitlistPayload(body)) {
     return Response.json(
-      { message: "Please provide your first name, last name, email, and phone." },
+      { message: "Please provide your name, email, phone, and city." },
       { status: 400 },
     );
   }
 
-  const payload: WaitlistPayload = {
+  const payload = {
     firstName: body.firstName.trim(),
     lastName: body.lastName.trim(),
     email: body.email.trim(),
     phone: body.phone.trim(),
+    city: body.city.trim(),
   };
 
   try {

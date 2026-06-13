@@ -1,142 +1,102 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
+import { useState } from "react";
+import relloLogo from "../../public/rello-logo-cropped.svg";
 
-const FOOTER_LINKS = {
-  Company: ["About Us", "Careers", "Blog", "Contact Us"],
-  Explore: ["Buy", "Rent", "List Property", "How It Works"],
-  Support: [
-    "Help Center",
-    "Dispute Resolution",
-    "Terms of Service",
-    "Privacy Policy",
-  ],
-};
+const FOOTER_LINKS = [
+  { label: "Why Rello", href: "/#why-rello" },
+  { label: "How It Works", href: "/#how-it-works" },
+  { label: "Cities", href: "/#cities" },
+  { label: "Waitlist", href: "/waitlist" },
+];
 
 const SOCIALS = [
   {
     label: "LinkedIn",
-    href: "#",
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
-        <path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z" />
-        <circle cx="4" cy="4" r="2" />
-      </svg>
-    ),
-    bg: "bg-[#0077b5]",
+    href: "https://www.linkedin.com/company/rello-jbr/",
+    icon: "icon-[line-md--linkedin]",
   },
   {
     label: "Instagram",
-    href: "#",
-    icon: (
-      <svg
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="white"
-        strokeWidth="2"
-      >
-        <rect x="2" y="2" width="20" height="20" rx="5" />
-        <circle cx="12" cy="12" r="4" />
-        <circle cx="17.5" cy="6.5" r="1" fill="white" stroke="none" />
-      </svg>
-    ),
-    bg: "bg-gradient-to-br from-[#f09433] via-[#e6683c] to-[#dc2743]",
+    href: "https://www.instagram.com/rello.jbr?utm_source=qr",
+    icon: "icon-[line-md--instagram]",
   },
   {
     label: "Facebook",
-    href: "#",
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
-        <path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z" />
-      </svg>
-    ),
-    bg: "bg-[#1877f2]",
+    href: "https://www.facebook.com/profile.php?id=61590472272578",
+    icon: "icon-[line-md--facebook]",
   },
   {
     label: "X / Twitter",
-    href: "#",
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
-        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-      </svg>
-    ),
-    bg: "bg-black",
+    href: "https://x.com/rello_online",
+    icon: "icon-[line-md--twitter-x]",
   },
 ];
 
 export default function Footer() {
+  const [iconReplayKey, setIconReplayKey] = useState<Record<string, number>>({});
+
+  function replayIcon(label: string): void {
+    setIconReplayKey((current) => ({
+      ...current,
+      [label]: (current[label] ?? 0) + 1,
+    }));
+  }
+
   return (
-    <footer className="bg-footer pt-16 pb-8 px-4">
-      <div className="max-w-6xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
-          {/* Brand */}
-          <div>
-            <Link href="/" className="flex items-center gap-3 mb-5">
-              <div className="w-14 h-14 rounded-full bg-primary-soft border-2 border-accent flex items-center justify-center">
-                <svg
-                  width="28"
-                  height="28"
-                  viewBox="0 0 32 32"
-                  fill="none"
-                  className="fill-accent"
-                >
-                  <path
-                    d="M16 4L4 13V28H12V20H20V28H28V13L16 4Z"
-                    fill="currentColor"
-                  />
-                </svg>
-              </div>
-              <div>
-                <p className="text-white font-bold text-base tracking-[0.2em] uppercase">
-                  KEYZ
-                </p>
-                <p className="text-white/40 text-xs tracking-widest uppercase">
-                  Estate
-                </p>
-              </div>
-            </Link>
+    <footer id="footer" className="bg-footer py-10 pl-2 pr-2 text-white sm:pr-3 lg:pr-4 lg:pl-4">
+      <div className="mx-auto max-w-[calc(100vw-1rem)]">
+        <div className="grid justify-items-center gap-8 border-b border-white/20 pb-8 text-center lg:grid-cols-[1fr_auto] lg:items-end lg:justify-items-stretch lg:text-left">
+          <Link
+            href="/"
+            className="inline-flex w-fit justify-center transition-all duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-accent lg:justify-start"
+          >
+            <Image
+              src={relloLogo}
+              alt="Rello"
+              className="h-44 w-[26rem] max-w-[calc(100vw-0.5rem)] object-contain sm:h-48 sm:w-[30rem]"
+            />
+          </Link>
 
-            {/* Social icons */}
-            <div className="flex items-center gap-2 mt-4">
-              {SOCIALS.map(({ label, href, icon, bg }) => (
-                <a
-                  key={label}
-                  href={href}
-                  aria-label={label}
-                  className={`w-8 h-8 rounded-full ${bg} flex items-center justify-center hover:opacity-80 transition-opacity`}
-                >
-                  {icon}
-                </a>
+          <nav aria-label="Footer navigation">
+            <ul className="flex flex-wrap justify-center gap-x-7 gap-y-3 lg:justify-end">
+              {FOOTER_LINKS.map((link) => (
+                <li key={link.label}>
+                  <Link
+                    href={link.href}
+                    className="font-accent text-xs font-bold uppercase tracking-[0.22em] text-white/65 transition-all duration-200 ease-in-out hover:text-accent focus:outline-none focus-visible:text-accent"
+                  >
+                    {link.label}
+                  </Link>
+                </li>
               ))}
-            </div>
-          </div>
-
-          {/* Nav columns */}
-          {Object.entries(FOOTER_LINKS).map(([heading, links]) => (
-            <div key={heading}>
-              <p className="text-white font-bold text-base mb-4">{heading}</p>
-              <ul className="space-y-3">
-                {links.map((link) => (
-                  <li key={link}>
-                    <Link
-                      href="#"
-                      className="text-white/50 text-base hover:text-accent transition-colors"
-                    >
-                      {link}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+            </ul>
+          </nav>
         </div>
 
-        <div className="border-t border-white/10 pt-6 text-center">
-          <p className="text-white/30 text-sm">
-            © 2026 Keyz Real Estate. All rights reserved
-          </p>
+        <div className="grid gap-6 pt-6 text-sm text-white/50 sm:grid-cols-[1fr_auto] sm:items-center">
+          <p>© 2026 Rello. All rights reserved.</p>
+
+          <div className="flex items-center gap-2 sm:justify-end">
+            {SOCIALS.map(({ label, href, icon }) => (
+              <a
+                key={label}
+                href={href}
+                aria-label={label}
+                onMouseEnter={() => replayIcon(label)}
+                onFocus={() => replayIcon(label)}
+                className="flex h-10 w-10 items-center justify-center border border-white/20 text-white transition-all duration-200 ease-in-out hover:border-accent hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                <span
+                  key={`${label}-${iconReplayKey[label] ?? 0}`}
+                  className={`${icon} h-5 w-5`}
+                  aria-hidden="true"
+                />
+              </a>
+            ))}
+          </div>
         </div>
       </div>
     </footer>

@@ -8,14 +8,15 @@ export default function NewsletterBanner() {
   const [sent, setSent] = useState(false);
 
   return (
-    <section className="relative py-14 md:py-16 px-4 overflow-hidden bg-primary-dark">
-      {/* Background house image — left side */}
+    <section className="relative py-20 md:py-28 px-4 overflow-hidden bg-primary-dark">
+      {/* Background house image */}
       <div className="absolute inset-0 md:left-0 md:top-0 md:w-1/3 md:h-full z-0">
         <Image
           src="/images/newsletter-house.jpg"
           alt="Luxury property"
           fill
           className="object-cover object-center opacity-25 md:opacity-80"
+          sizes="(min-width: 768px) 33vw, 100vw"
         />
         <div className="absolute inset-0 bg-primary-dark/70 md:hidden" />
         <div className="absolute inset-0 hidden md:block newsletter-overlay" />
@@ -23,7 +24,7 @@ export default function NewsletterBanner() {
 
       <div className="relative z-10 max-w-6xl mx-auto flex items-center justify-start lg:pl-[38%]">
         <div className="max-w-xl lg:max-w-sm">
-          <h2 className="text-white font-bold text-2xl md:text-3xl mb-4 tracking-tight">
+          <h2 className="font-display text-white font-bold text-4xl md:text-5xl mb-4 leading-tight">
             STAY UPDATED ON
             <br />
             PREMIUM LISTINGS
@@ -45,12 +46,12 @@ export default function NewsletterBanner() {
                 placeholder="Enter your email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full flex-1 bg-white rounded px-4 py-3 text-base outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                className="w-full flex-1 bg-white/95 rounded-full px-5 py-3 text-base outline-none transition-all duration-200 ease-in-out focus:-translate-y-0.5 focus:ring-2 focus:ring-[var(--color-accent)]"
               />
               {/* Icon button */}
               <button
                 onClick={() => email && setSent(true)}
-                className="hidden sm:flex w-11 h-11 bg-primary-soft rounded items-center justify-center hover:bg-accent transition-colors flex-shrink-0"
+                className="premium-hover hidden sm:flex w-11 h-11 bg-primary-soft rounded-full items-center justify-center hover:bg-accent flex-shrink-0"
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                   <path
@@ -72,7 +73,7 @@ export default function NewsletterBanner() {
               </button>
               <button
                 onClick={() => email && setSent(true)}
-                className="bg-accent hover:bg-accent-alt transition-colors text-white text-base font-semibold px-5 py-3 rounded whitespace-nowrap"
+                className="premium-hover bg-gradient-to-r from-accent to-accent-alt text-white text-base font-semibold px-6 py-3 rounded-full whitespace-nowrap"
               >
                 Subscribe Now
               </button>

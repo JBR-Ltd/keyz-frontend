@@ -250,7 +250,7 @@ export default function ExperienceSection() {
   }, [isTransitioning, currentIndex]);
 
   return (
-    <section className="py-16 md:py-20 px-4 bg-surface-soft">
+    <section className="py-24 md:py-32 px-4 bg-surface-soft">
       <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
         {/* Left: copy */}
         <div>
@@ -259,7 +259,10 @@ export default function ExperienceSection() {
             <br />
             Like Never Before
           </p>
-          <p className="text-gray-600 text-xl leading-relaxed max-w-xl">
+          <h2 className="font-display text-4xl font-bold leading-tight text-gray-950 md:text-6xl">
+            Every detail should make the decision easier.
+          </h2>
+          <p className="mt-6 text-gray-600 text-xl leading-relaxed max-w-xl">
             From high-end penthouses to modern smart homes equipped with premium
             amenities, we showcase properties that elevate your lifestyle
           </p>
@@ -269,7 +272,7 @@ export default function ExperienceSection() {
           {AMENITIES.slice(0, 4).map(({ label, icon }) => (
             <div
               key={label}
-              className="bg-white border border-gray-100 rounded-xl p-5 flex flex-col items-center gap-3 text-center shadow-md"
+              className="premium-hover bg-white/[0.85] border border-white/70 rounded-2xl p-5 flex flex-col items-center gap-3 text-center shadow-md backdrop-blur"
             >
               <div className="flex justify-center items-center h-14 w-14">
                 {icon}
@@ -294,7 +297,7 @@ export default function ExperienceSection() {
                 key={`${label}-${idx}`}
                 className="flex-shrink-0 w-1/3 h-full px-1.5 flex items-center justify-center"
               >
-                <div className="bg-white border border-gray-100 rounded-xl p-8 flex flex-col items-center gap-4 text-center w-full h-full shadow-lg hover:shadow-xl transition-shadow">
+                <div className="premium-hover bg-white/[0.85] border border-white/70 rounded-2xl p-8 flex flex-col items-center gap-4 text-center w-full h-full shadow-lg backdrop-blur">
                   <div className="flex justify-center items-center h-20 w-20">
                     {icon}
                   </div>
