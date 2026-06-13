@@ -202,7 +202,7 @@ export default function WaitlistPage() {
                     <input
                       type="text"
                       name="firstName"
-                      placeholder="Best"
+                      placeholder="Tunde"
                       autoComplete="given-name"
                       required
                       className="mt-2 min-h-14 w-full border border-primary bg-white px-4 py-3 font-body text-base text-slate-950 outline-none transition-all duration-200 ease-in-out placeholder:text-slate-400 focus:border-accent focus:ring-2 focus:ring-accent/30"
@@ -216,7 +216,7 @@ export default function WaitlistPage() {
                     <input
                       type="text"
                       name="lastName"
-                      placeholder="Bisong"
+                      placeholder="Musa"
                       autoComplete="family-name"
                       required
                       className="mt-2 min-h-14 w-full border border-primary bg-white px-4 py-3 font-body text-base text-slate-950 outline-none transition-all duration-200 ease-in-out placeholder:text-slate-400 focus:border-accent focus:ring-2 focus:ring-accent/30"
@@ -244,7 +244,7 @@ export default function WaitlistPage() {
                     <input
                       type="tel"
                       name="phone"
-                      placeholder="+1234567890"
+                      placeholder="+2341234567890"
                       autoComplete="tel"
                       required
                       className="mt-2 min-h-14 w-full border border-primary bg-white px-4 py-3 font-body text-base text-slate-950 outline-none transition-all duration-200 ease-in-out placeholder:text-slate-400 focus:border-accent focus:ring-2 focus:ring-accent/30"
