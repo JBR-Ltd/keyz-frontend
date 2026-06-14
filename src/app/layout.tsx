@@ -4,6 +4,7 @@ import "./globals.css";
 import { cn } from "@/lib/utils";
 import { ToastProvider } from "@/components/ui/toast";
 import { LoadingScreenGate } from "@/components/LoadingScreenGate";
+import { Analytics } from "@vercel/analytics/next";
 
 const dmSans = DM_Sans({
   subsets: ["latin"],
@@ -64,6 +65,7 @@ export default function RootLayout({
         <LoadingScreenGate>
           <ToastProvider>{children}</ToastProvider>
         </LoadingScreenGate>
+        <Analytics />
       </body>
     </html>
   );
