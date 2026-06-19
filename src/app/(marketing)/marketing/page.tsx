@@ -63,8 +63,8 @@ const steps = [
 ];
 
 const marqueeItems = [
-  "500+ Listings",
-  "Lagos & Abuja",
+  "Premium Listings",
+  "Across Nigeria",
   "Verified Landlords",
   "Regulated Agent Fees",
   "Early Access",
