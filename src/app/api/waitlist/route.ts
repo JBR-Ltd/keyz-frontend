@@ -1,5 +1,5 @@
 const WAITLIST_ENDPOINT =
-  "https://waiting-list-backend-h3xn.onrender.com/api/subscribe";
+  process.env.WAITLIST_ENDPOINT;
 
 type WaitlistPayload = {
   firstName: string;
@@ -45,6 +45,13 @@ async function readResponseBody(response: Response): Promise<unknown> {
 }
 
 export async function POST(request: Request): Promise<Response> {
+  if (!WAITLIST_ENDPOINT) {
+    return Response.json(
+      { message: "WAITLIST_ENDPOINT is not configured." },
+      { status: 500 },
+    );
+  }
+
   let body: unknown;
 
   try {
