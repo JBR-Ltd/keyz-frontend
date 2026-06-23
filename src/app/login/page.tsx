@@ -17,7 +17,7 @@ interface LoginFormValues {
 
 interface LoginResponseData {
   token: string;
-  role: string;
+  role?: string;
 }
 
 interface ApiEnvelope<TData> {
@@ -35,15 +35,41 @@ function isApiEnvelope(value: unknown): value is ApiEnvelope<unknown> {
   );
 }
 
-function isLoginData(value: unknown): value is LoginResponseData {
-  return (
-    value !== null &&
-    typeof value === "object" &&
-    "token" in value &&
-    typeof value.token === "string" &&
-    "role" in value &&
-    typeof value.role === "string"
-  );
+function getStringProperty(
+  value: unknown,
+  property: string,
+): string | undefined {
+  if (value === null || typeof value !== "object" || !(property in value)) {
+    return undefined;
+  }
+
+  const propertyValue = value[property as keyof typeof value];
+
+  return typeof propertyValue === "string" ? propertyValue : undefined;
+}
+
+function getObjectProperty(value: unknown, property: string): unknown {
+  if (value === null || typeof value !== "object" || !(property in value)) {
+    return null;
+  }
+
+  return value[property as keyof typeof value];
+}
+
+function getLoginData(value: unknown): LoginResponseData | null {
+  const token =
+    getStringProperty(value, "token") ??
+    getStringProperty(value, "accessToken") ??
+    getStringProperty(value, "jwt");
+  const user = getObjectProperty(value, "user");
+  const role =
+    getStringProperty(value, "role") ?? getStringProperty(user, "role");
+
+  if (!token) {
+    return null;
+  }
+
+  return { token, role };
 }
 
 function getApiMessage(value: unknown, fallback: string): string {
@@ -130,14 +156,25 @@ export default function LoginPage() {
         throw new Error(getApiMessage(data, "Login failed"));
       }
 
-      if (isApiEnvelope(data) && isLoginData(data.data)) {
-        localStorage.setItem("rello_token", data.data.token);
+      if (isApiEnvelope(data) && data.success) {
+        const loginData = getLoginData(data.data);
+
+        if (!loginData) {
+          throw new Error("Login succeeded, but no auth token was returned.");
+        }
+
+        localStorage.setItem("rello_token", loginData.token);
+
+        if (loginData.role) {
+          localStorage.setItem("rello_role", loginData.role);
+        }
+
         notify({
           title: "Logged in",
           description: getApiMessage(data, "Login successful"),
           variant: "success",
         });
-        router.push("/");
+        router.push("/profile");
         return;
       }
 

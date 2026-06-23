@@ -269,6 +269,24 @@
   .rello-marquee {
     animation: rello-marquee 24s linear infinite;
   }
+
+  .rello-scrollbar {
+    scrollbar-color: var(--color-accent) var(--color-primary);
+    scrollbar-width: thin;
+  }
+
+  .rello-scrollbar::-webkit-scrollbar {
+    width: 0.5rem;
+  }
+
+  .rello-scrollbar::-webkit-scrollbar-track {
+    background: var(--color-primary);
+  }
+
+  .rello-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--color-accent);
+    border: 2px solid var(--color-primary);
+  }
 }
 
 @keyframes rello-marquee {
