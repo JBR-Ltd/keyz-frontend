@@ -61,21 +61,16 @@ fontFamily: {
 }
 ```
 
-Hardcoded colors appear in active pages and retained components.
+Hardcoded colors appear in documented pages and retained components.
 
 ```txt
 bg-black/10
 bg-black/50
-bg-emerald-50
-bg-red-50
-bg-red-50
-bg-slate-100
 bg-white
-text-emerald-700
+text-red-500
 text-red-700
 text-slate-400
 text-slate-600
-text-slate-700
 text-slate-950
 text-white
 text-white/50
@@ -83,13 +78,11 @@ text-white/65
 text-white/70
 text-white/75
 text-white/[0.12]
-border-emerald-200
-border-red-200
+border-red-500
 border-red-700
 border-white
 border-white/20
 border-white/30
-shadow-slate-950/10
 ```
 
 ## 3. Typography
@@ -110,7 +103,7 @@ Font weights loaded from `next/font/google`.
 | `Fraunces` | `500`, `600`, `700`, `800`. |
 | `Syne` | `500`, `600`, `700`, `800`. |
 
-Type scale actively used by active pages and retained components.
+Type scale actively used by documented pages and retained components.
 
 | Tailwind Class | Context |
 |----------------|---------|
@@ -118,12 +111,12 @@ Type scale actively used by active pages and retained components.
 | `text-sm` | Buttons, labels, mobile nav links, footer meta text, and toast text. |
 | `text-base` | Body copy, form controls, buttons, feature copy, and property price text. |
 | `text-lg` | Section body text, waitlist copy, success copy, and button responsive sizes. |
-| `text-xl` | Hero body copy at `md` and feature titles. |
+| `text-xl` | Hero body copy at `md`, feature titles, and verify email OTP cells. |
 | `text-2xl` | Active landing step titles. |
 | `text-3xl` | Property card titles. |
 | `text-4xl` | Active section headings. |
 | `text-5xl` | Hero headings, waitlist headings, CTA headings, and responsive section headings. |
-| `text-6xl` | Responsive hero, waitlist, section, and CTA headings. |
+| `text-6xl` | Responsive hero, waitlist, auth, section, and CTA headings. |
 | `text-7xl` | Responsive hero and large active section headings. |
 | `text-8xl` | Active hero headings, CTA headings, and active step numerals. |
 | `text-9xl` | Active step numerals at `lg`. |
@@ -171,7 +164,7 @@ leading-tight
 
 ## 4. Spacing & Layout
 
-Base spacing scale used in active pages and retained components.
+Base spacing scale used in documented pages and retained components.
 
 ```txt
 0.5
@@ -208,6 +201,7 @@ Max-width containers.
 | `max-w-sm` | Toast viewport. |
 | `max-w-md` | Waitlist success copy. |
 | `max-w-xl` | Waitlist form column. |
+| `max-w-none` | Auth watermark image. |
 | `max-w-2xl` | Active hero copy and active section body copy. |
 | `max-w-3xl` | Active section headers. |
 | `max-w-4xl` | Active why section headline. |
@@ -240,7 +234,11 @@ px-4
 py-16
 sm:px-6
 lg:px-12
-``` | Waitlist form side. |
+``` | Waitlist form side and auth right panel. |
+| ```txt
+px-12
+py-20
+``` | Auth left panel content. |
 | ```txt
 py-10
 pl-2
@@ -257,7 +255,13 @@ Grid patterns.
 | ```txt
 grid
 lg:grid-cols-2
-``` | Waitlist page split image and form layout. |
+``` | Waitlist page split image and form layout, and auth split layout. |
+| ```txt
+grid
+grid-cols-6
+gap-2
+sm:gap-3
+``` | Verify email OTP input row. |
 | ```txt
 grid
 max-w-7xl
@@ -279,7 +283,7 @@ lg:grid-cols-[1fr_0.75fr]
 | ```txt
 grid
 grid-cols-6
-``` | Active CTA dot matrix decoration. |
+``` | Active CTA and auth dot matrix decoration. |
 | ```txt
 grid
 lg:grid-cols-[1fr_auto]
@@ -291,7 +295,7 @@ Breakpoints actively used.
 |------------|---------------------|
 | `sm` | Increases horizontal padding, button sizes, type sizes, logo widths, toast position, and footer layout. |
 | `md` | Increases hero type sizes and active hero headline size. |
-| `lg` | Enables desktop nav, waitlist split layout, active marketing section grids, footer desktop alignment, and desktop-only decorative elements. |
+| `lg` | Enables desktop nav, waitlist and auth split layouts, active marketing section grids, footer desktop alignment, and desktop-only decorative elements. |
 
 ## 5. Component Inventory
 
@@ -319,6 +323,30 @@ Breakpoints actively used.
 - **Animation**: Delegates animation to `LoadingScreen`.
 - **Dependencies**: React `useEffect`, React `useState`, `LoadingScreen`.
 
+### AuthBanner
+- **File**: `src/components/auth/AuthBanner.tsx`
+- **Purpose**: Renders dismissible auth feedback banners inside auth forms.
+- **Props**: `message: string`, `type: "error" | "success"`.
+- **Variants**: Error banners use `border-red-500 text-red-500`; success banners use `border-accent text-primary`.
+- **Animation**: Uses `AnimatePresence` with y-offset and opacity transitions unless reduced motion is active.
+- **Dependencies**: `framer-motion`, `lucide-react`, React `useState`.
+
+### AuthInput
+- **File**: `src/components/auth/AuthInput.tsx`
+- **Purpose**: Renders typed auth form inputs with labels, validation messages, and optional password visibility toggle.
+- **Props**: Generic `AuthInputProps<TFieldValues extends FieldValues>` with `label`, `name`, `type`, `placeholder`, `error`, `register`, optional `rules`, `showToggle`, and `autoComplete`.
+- **Variants**: Password inputs can show an `EyeIcon` or `EyeOffIcon` toggle; validation messages use `text-red-500`.
+- **Animation**: Error messages use `AnimatePresence` with y-offset and opacity transitions unless reduced motion is active.
+- **Dependencies**: `framer-motion`, `lucide-react`, React `useState`, `react-hook-form`.
+
+### AuthSplitLayout
+- **File**: `src/components/auth/AuthSplitLayout.tsx`
+- **Purpose**: Provides the reusable two-column auth layout with a dark primary editorial panel and a light form panel.
+- **Props**: `leftContent: ReactNode`, `rightContent: ReactNode`, `showWatermark?: boolean`.
+- **Variants**: The left panel is hidden below `lg`; the right panel can show a low-opacity oversized Rello watermark.
+- **Animation**: Left and right panels fade or slide in unless reduced motion is active.
+- **Dependencies**: `framer-motion`, `next/image`, React `ReactNode`, `public/FullLogo_Transparent (2).png`.
+
 ### Navbar
 - **File**: `src/components/Navbar.tsx`
 - **Purpose**: Renders sticky navigation with desktop links, CTA, and mobile menu.
@@ -331,9 +359,9 @@ Breakpoints actively used.
 - **File**: `src/components/ui/toast.tsx`
 - **Purpose**: Provides toast notifications and a `useToast` hook.
 - **Props**: `ToastProvider` uses `children: ReactNode`; `notify` accepts `{ title: string; description?: string; variant: "success" | "error" }`.
-- **Variants**: Success toasts use `CheckCircle2`, emerald colors, and `border-emerald-200`; error toasts use `XCircle`, red colors, and `border-red-200`.
+- **Variants**: Toast containers use `border-primary`, `bg-[var(--color-bg)]`, and a primary shadow. Success icons use `CheckCircle2`, `border-accent`, and `text-accent`; error icons use `XCircle`, `border-red-500`, and `text-red-500`.
 - **Animation**: Toast dismissal is timed with `window.setTimeout(..., 5000)` and no Framer Motion animation is used.
-- **Dependencies**: React context hooks and `lucide-react`.
+- **Dependencies**: React context hooks and `lucide-react` icons `CheckCircle2`, `X`, and `XCircle`.
 
 ## 6. Animation System
 
@@ -367,6 +395,21 @@ Standard duration values used.
 24s
 ```
 
+Submitting auth buttons pulse opacity while a request is in progress.
+
+```tsx
+animate={
+  isSubmitting && !reduceMotion
+    ? { opacity: [1, 0.6, 1] }
+    : { opacity: 1 }
+}
+transition={
+  isSubmitting && !reduceMotion
+    ? { duration: 1, repeat: Infinity, ease: "easeInOut" }
+    : { duration: 0.2 }
+}
+```
+
 Recurring Framer Motion variant objects.
 
 ```ts
@@ -387,6 +430,13 @@ transition={{ duration: 0.5, ease: "easeOut" }}
 initial={{ opacity: 0, x: -32 }}
 animate={{ opacity: 1, x: 0 }}
 exit={{ opacity: 0, x: -32 }}
+transition={{ duration: 0.2, ease: "easeOut" }}
+```
+
+```tsx
+initial={reduceMotion ? false : { opacity: 0, y: -4 }}
+animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+exit={reduceMotion ? undefined : { opacity: 0, y: -4 }}
 transition={{ duration: 0.2, ease: "easeOut" }}
 ```
 
@@ -479,6 +529,28 @@ Source: `src/app/(marketing)/waitlist/page.tsx`.
 | 5 | Success State | Replaces form with bordered white success panel, animated checkmark, heading, and message. | `useToast` |
 | 6 | Footer | Dark footer with logo, nav, copyright, and social icons. | `Footer` |
 
+### Auth Pages
+
+Sources: `src/app/login/page.tsx`, `src/app/register/page.tsx`, `src/app/forgot-password/page.tsx`, `src/app/reset-password/page.tsx`, and `src/app/verify-email/page.tsx`.
+
+Shared layout pattern.
+
+| Order | Section | Layout Structure | Key Components Used |
+|-------|---------|------------------|---------------------|
+| 1 | Auth Split | `lg:grid-cols-2` full-screen split layout with a hidden-mobile dark primary editorial panel and a light form panel. | `AuthSplitLayout` |
+| 2 | Left Panel | Primary background, accent outlined square, dot matrix decoration, uppercase eyebrow, display heading, and supporting copy. | `AuthSplitLayout` |
+| 3 | Right Panel | Centered `max-w-xl` form column with uppercase eyebrow, display heading, form controls, banners, submit button, and secondary navigation link. | `AuthSplitLayout`, `AuthInput`, `AuthBanner`, `useToast` |
+
+Route-specific form patterns.
+
+| Route | Form Structure | Notes |
+|-------|----------------|-------|
+| `/login` | Email and password fields, success or error banner, submit button, forgot password link, and register link. | Uses `showWatermark` on `AuthSplitLayout` and redirects to `/` after login. |
+| `/register` | First name, last name, email, password, role select, error banner, submit button, and login link. | Uses `showWatermark` and stores the email before routing to verification. |
+| `/forgot-password` | Email field, success or error banner, submit button, and login link. | Uses the standard split layout without watermark. |
+| `/reset-password` | Reset token field, new password field, error banner, submit button, and login link. | Reads an initial token from the query string when present. |
+| `/verify-email` | Optional email field, six single-character OTP inputs, OTP error text, error banner, submit button, and login link. | Uses `grid-cols-6` OTP cells with square aspect ratio and numeric input mode. |
+
 ## 8. Loading Screen
 
 - **File**: `src/components/LoadingScreen.tsx`
@@ -526,8 +598,8 @@ Implicit implementation rules.
 
 | Pattern | Evidence |
 |---------|----------|
-| Active pages favor square edges and visible rule borders. | Active `Navbar`, landing sections, property cards, waitlist form, and waitlist success panel use no rounded classes. |
-| Gold accent is reserved for CTAs, labels, icons, focus rings, badges, and decorative marks. | `text-accent`, `bg-accent`, `border-accent`, `stroke-accent`, and `fill-accent` are repeated across active pages and retained components. |
+| Documented pages favor square edges and visible rule borders. | Active `Navbar`, landing sections, property cards, waitlist form, waitlist success panel, and auth forms use no rounded classes. |
+| Gold accent is reserved for CTAs, labels, icons, focus rings, badges, and decorative marks. | `text-accent`, `bg-accent`, `border-accent`, `stroke-accent`, and `fill-accent` are repeated across documented pages and retained components. |
 | Large serif display type anchors page hierarchy. | `font-display` appears on active hero, section, waitlist, CTA, and property headings. |
 | Accent font is used for navigation and editorial labels. | `font-accent` appears in nav links, footer links, marquee, badges, and eyebrows. |
 | Active pages use remote property images. | Landing and waitlist pages use Unsplash background URLs. |
@@ -545,7 +617,7 @@ Implementation inconsistencies.
 
 | Inconsistency | Source |
 |---------------|--------|
-| Active pages use token utilities and hardcoded Tailwind palette colors together. | `src/app/(marketing)/marketing/page.tsx`, `src/app/(marketing)/waitlist/page.tsx`, `src/components` |
+| Documented pages use token utilities and hardcoded Tailwind palette colors together. | `src/app/(marketing)/marketing/page.tsx`, `src/app/(marketing)/waitlist/page.tsx`, `src/app/login/page.tsx`, `src/app/register/page.tsx`, `src/app/forgot-password/page.tsx`, `src/app/reset-password/page.tsx`, `src/app/verify-email/page.tsx`, `src/components` |
 | `--color-primary`, `--color-primary-dark`, `--color-primary-soft`, `--color-surface`, and `--color-footer` all resolve to `#04344c`. | `src/app/globals.css` |
 | `LoadingScreen` uses hardcoded `rgb(227,148,59)` instead of `--color-accent` value `#c9913a`. | `src/components/LoadingScreen.tsx`, `src/app/globals.css` |
 | `Footer` uses Iconify animated icons while `Navbar` and toasts use `lucide-react`. | `src/components/Footer.tsx`, `src/components/Navbar.tsx`, `src/components/ui/toast.tsx` |
