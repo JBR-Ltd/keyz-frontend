@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { SubmitHandler, useForm } from "react-hook-form";
 import AuthBanner from "@/components/auth/AuthBanner";
 import AuthInput from "@/components/auth/AuthInput";
+import { isAccountRole } from "@/components/auth/RoleGuard";
 import AuthSplitLayout from "@/components/auth/AuthSplitLayout";
 import { useToast } from "@/components/ui/toast";
 
@@ -16,8 +17,8 @@ interface LoginFormValues {
 }
 
 interface LoginResponseData {
-  token: string;
-  role: string;
+  accessToken: string;
+  role: unknown;
 }
 
 interface ApiEnvelope<TData> {
@@ -39,10 +40,9 @@ function isLoginData(value: unknown): value is LoginResponseData {
   return (
     value !== null &&
     typeof value === "object" &&
-    "token" in value &&
-    typeof value.token === "string" &&
-    "role" in value &&
-    typeof value.role === "string"
+    "accessToken" in value &&
+    typeof value.accessToken === "string" &&
+    "role" in value
   );
 }
 
@@ -131,17 +131,31 @@ export default function LoginPage() {
       }
 
       if (isApiEnvelope(data) && isLoginData(data.data)) {
-        localStorage.setItem("rello_token", data.data.token);
+        if (!isAccountRole(data.data.role)) {
+          throw new Error(
+            "Unable to determine account type, please contact support",
+          );
+        }
+
+        const role = data.data.role.toUpperCase();
+        const rolePath = role.toLowerCase();
+
+        localStorage.setItem("rello_token", data.data.accessToken);
+        localStorage.setItem("rello_role", role);
         notify({
           title: "Logged in",
           description: getApiMessage(data, "Login successful"),
           variant: "success",
         });
-        router.push("/");
+        router.replace(`/${rolePath}/dashboard`);
         return;
       }
 
-      throw new Error(getApiMessage(data, "Login failed"));
+      throw new Error(
+        isApiEnvelope(data) && data.success
+          ? "Unable to determine account type, please contact support"
+          : getApiMessage(data, "Login failed"),
+      );
     } catch (error) {
       const message = error instanceof Error ? error.message : "Login failed";
 
