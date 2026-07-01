@@ -31,28 +31,22 @@ export default function SettingsStatStrip({
   role,
 }: SettingsStatStripProps) {
   return (
-    <section className="grid border border-primary bg-[var(--color-bg)] sm:grid-cols-3">
-      {ROLE_STATS[role].map(({ value, label, icon: Icon }, index) => (
-        <div
+    <section className="mt-8 grid gap-5 sm:grid-cols-3">
+      {ROLE_STATS[role].map(({ value, label, icon: Icon }) => (
+        <article
           key={label}
-          className={`grid grid-cols-[2.75rem_1fr] items-center gap-4 px-5 py-5 sm:grid-cols-[2.75rem_1fr] sm:px-6 ${
-            index > 0
-              ? "border-t border-primary sm:border-l sm:border-t-0"
-              : ""
-          }`}
+          className="min-w-0 rounded-lg border border-primary/15 bg-[var(--color-bg)] p-5 shadow-sm transition-all duration-200 ease-in-out hover:-translate-y-0.5 hover:bg-surface-soft hover:shadow-md"
         >
-          <span className="flex h-11 w-11 items-center justify-center text-accent-alt">
-            <Icon size={25} strokeWidth={1.7} />
+          <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-surface-soft text-accent-alt">
+            <Icon size={24} strokeWidth={1.7} />
           </span>
-          <div>
-            <p className="font-display text-3xl font-bold leading-none text-primary">
-              {value}
-            </p>
-            <p className="mt-2 font-body text-xs text-muted sm:text-sm">
-              {label}
-            </p>
-          </div>
-        </div>
+          <p className="mt-4 font-display text-3xl font-bold leading-none text-primary">
+            {value}
+          </p>
+          <p className="mt-2 font-body text-xs font-medium uppercase tracking-[0.14em] text-muted">
+            {label}
+          </p>
+        </article>
       ))}
     </section>
   );

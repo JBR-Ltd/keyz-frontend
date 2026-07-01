@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useSyncExternalStore } from "react";
+import { ReactNode, useState, useSyncExternalStore } from "react";
 import RoleSidebar from "@/components/dashboard/RoleSidebar";
 import TenantSidebar from "@/components/dashboard/TenantSidebar";
 
@@ -37,6 +37,7 @@ export default function DashboardShell({
     getSidebarSnapshot,
     () => false,
   );
+  const [isTenantCollapsed, setIsTenantCollapsed] = useState(false);
 
   const toggleSidebar = () => {
     const nextValue = !isCollapsed;
@@ -45,12 +46,21 @@ export default function DashboardShell({
     window.dispatchEvent(new Event(SIDEBAR_EVENT));
   };
 
+  const sidebarOffset =
+    rolePath === "tenant"
+      ? isTenantCollapsed
+        ? "lg:ml-20"
+        : "lg:ml-72"
+      : isCollapsed
+        ? "lg:ml-24"
+        : "lg:ml-72";
+
   return (
     <div className="min-h-screen bg-[var(--color-bg)]">
       {rolePath === "tenant" ? (
         <TenantSidebar
-          isCollapsed={isCollapsed}
-          onCollapseToggle={toggleSidebar}
+          isCollapsed={isTenantCollapsed}
+          onCollapseToggle={() => setIsTenantCollapsed((current) => !current)}
         />
       ) : (
         <RoleSidebar
@@ -61,9 +71,7 @@ export default function DashboardShell({
         />
       )}
       <div
-        className={`min-w-0 transition-[margin] duration-200 ease-in-out ${
-          isCollapsed ? "lg:ml-24" : "lg:ml-72"
-        }`}
+        className={`min-w-0 transition-[margin] duration-200 ease-in-out ${sidebarOffset}`}
       >
         {children}
       </div>

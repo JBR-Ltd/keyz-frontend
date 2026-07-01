@@ -15,9 +15,8 @@ This is the comprehensive API specification for the **Keyz Real Estate Platform*
    - [5. Reviews (`/api/reviews`)](#5-reviews-apireviews)
    - [6. KYC & Verifications (`/api/verification`)](#6-kyc--verifications-apiverification)
    - [7. Virtual 3D & Video Tours (`/api/tours`)](#7-virtual-3d--video-tours-apitours)
-   - [8. Admin Verification Workflows (`/api/admin/verification`)](#8-admin-verification-workflows-apiadminverification)
-   - [9. Zero-Knowledge Marketplace Chat Relay (`/api/chat`)](#9-zero-knowledge-marketplace-chat-relay-apichat)
-   - [10. System Health (`/api/health`)](#10-system-health-apihealth)
+   - [8. Zero-Knowledge Marketplace Chat Relay (`/api/chat`)](#8-zero-knowledge-marketplace-chat-relay-apichat)
+   - [9. System Health (`/api/health`)](#9-system-health-apihealth)
 4. [Standardized Error Codes](#-standardized-error-codes)
 
 ---
@@ -111,10 +110,10 @@ Creates a new user profile on the system.
       "lastName": "Doe",
       "email": "john@example.com",
       "password": "SecurePassword123!",
-      "role": "BUYER"
+      "role": "TENANT"
     }
     ```
-    *(Note: `role` must be one of `"LANDLORD"`, `"AGENT"`, or `"TENANT"`)*
+    *(Note: role must be one of `"LANDLORD"`, `"AGENT"`, or `"TENANT"`)*
 *   **Response (`200 OK` - New Registration):**
     ```json
     {
@@ -149,11 +148,14 @@ Authenticates credentials and registers the client's device fingerprint.
 *   **Response (`200 OK`):**
     ```json
     {
-      "success": true,
       "message": "Login successful",
       "data": {
-        "token": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJqb2hu...",
-        "role": "BUYER"
+        "accessToken": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJqb2hu...",
+        "role": "TENANT",
+        "userId": 1,
+        "email": "john@example.com",
+        "firstName": "John",
+        "lastName": "Doe"
       }
     }
     ```
@@ -175,10 +177,10 @@ Consumes the 6-digit numeric verification OTP sent to the user's email upon regi
     }
     ```
 
-#### C. Forgot Password Link Request
+#### D. Forgot Password OTP Request
 `POST /api/auth/forgot-password`
 
-Triggers password recovery. Sends a recovery link containing a token via Resend.
+Triggers password recovery. Sends a 6-digit verification OTP code via Resend.
 
 *   **Request Body:**
     ```json
@@ -195,15 +197,15 @@ Triggers password recovery. Sends a recovery link containing a token via Resend.
     }
     ```
 
-#### D. Password Reset
+#### E. Password Reset
 `POST /api/auth/reset-password`
 
-Applies the password changes using the token received in the email.
+Applies the password changes using the 6-digit OTP code received in the email.
 
 *   **Request Body:**
     ```json
     {
-      "token": "a1b2c3d4-email-token",
+      "token": "482915",
       "newPassword": "NewSecurePassword456!"
     }
     ```
@@ -301,7 +303,32 @@ Creates a new property listing. The property starts as **unverified** (`isVerifi
       "data": {
         "id": 2,
         "title": "Stunning Ikoyi Duplex",
-        "isVerified": false,
+        "description": "Exquisite luxury duplex",
+        "address": "4 Waterfront Road, Ikoyi",
+        "price": 600000.00,
+        "bedrooms": 5,
+        "bathrooms": 6,
+        "squareFootage": 4500.0,
+        "status": "FOR_SALE",
+        "virtualTourUrl": null,
+        "videoWalkthroughUrl": null,
+        "seller": {
+          "id": 5,
+          "firstName": "John",
+          "lastName": "Doe",
+          "email": "john@example.com",
+          "role": "AGENT",
+          "sellerRating": 0.0,
+          "isEmailVerified": true
+        },
+        "latitude": null,
+        "longitude": null,
+        "proofLatitude": null,
+        "proofLongitude": null,
+        "imageUrl": null,
+        "imageHash": null,
+        "verified": false,
+        "flaggedAsDuplicate": false
       }
     }
     ```
@@ -316,20 +343,49 @@ Uploads a property listing photo, processes its EXIF metadata for geofence valid
     *   `id` (Long): The target property listing ID.
 *   **Content-Type:** `multipart/form-data`
 *   **Request Body (Form Data):**
-    *   `file` (File Binary): The property image file (e.g. `house_front.jpg`).
+    *   `image` (File Binary): The property image file (e.g. `house_front.jpg`).
 *   **Response (`200 OK` - Success, Clean Visual Fingerprint):**
     ```json
     {
       "success": true,
       "message": "Property listing photograph uploaded and verified successfully! No duplicate footprints found.",
-      "data": "https://keyz-walkthroughs.s3.amazonaws.com/properties/photos_2_..."
+      "data": {
+        "id": 2,
+        "title": "Stunning Ikoyi Duplex",
+        "description": "Exquisite luxury duplex",
+        "address": "4 Waterfront Road, Ikoyi",
+        "price": 600000.00,
+        "bedrooms": 5,
+        "bathrooms": 6,
+        "squareFootage": 4500.0,
+        "status": "FOR_SALE",
+        "virtualTourUrl": null,
+        "videoWalkthroughUrl": null,
+        "seller": {
+          "id": 5,
+          "firstName": "John",
+          "lastName": "Doe",
+          "email": "john@example.com",
+          "role": "AGENT",
+          "sellerRating": 0.0,
+          "isEmailVerified": true
+        },
+        "latitude": null,
+        "longitude": null,
+        "proofLatitude": null,
+        "proofLongitude": null,
+        "imageUrl": "https://keyz-walkthroughs.s3.amazonaws.com/properties/photos_2",
+        "imageHash": "a1b2c3d4e5f6g7h8",
+        "verified": false,
+        "flaggedAsDuplicate": false
+      }
     }
     ```
-*   **Response (`200 OK` - Warning, Stolen/Duplicate Photo Flagged):**
+*   **Response (`400 Bad Request` - Warning, Stolen/Duplicate Photo Flagged):**
     ```json
     {
-      "success": true,
-      "message": "Security Warning: Stolen visual footprint detected. This image has already been listed by another seller. This property listing has been flagged and deactivated.",
+      "success": false,
+      "message": "Security Alert: This listing photograph matches an existing verified property listing (Property ID: 1) by a different host. Listing flagged and deactivated.",
       "data": null
     }
     ```
@@ -621,7 +677,7 @@ Analyzes a captured live selfie for physical liveness (anti-spoofing) via Smile 
 #### E. Submit Agent Verification (Compound Biometric Check)
 `POST /api/verification/agent`
 
-A unified compound endpoint for users registered with the `AGENT` role. It runs Standalone NIN verification, BVN verification, and a Selfie Liveness check. If all succeed, it uploads the selfie to S3 and registers a pending `AgentVerification` entry.
+A unified compound endpoint for users registered with the `AGENT` role. It runs Standalone NIN verification, BVN verification, and a Selfie Liveness check. If all succeed, it uploads the selfie to S3 and registers an approved `AgentVerification` entry.
 
 *   **Authorization:** Bearer JWT required (Must have `AGENT` role)
 *   **Content-Type:** `multipart/form-data`
@@ -630,19 +686,31 @@ A unified compound endpoint for users registered with the `AGENT` role. It runs 
     *   `nin` (String): The agent's 11-digit NIN.
     *   `bvn` (String): The agent's 11-digit BVN.
     *   `userId` (Long): The authenticated user ID.
+    *   `latitude` (Double, optional): The agent's physical latitude location.
+    *   `longitude` (Double, optional): The agent's physical longitude location.
 *   **Response (`200 OK`):**
     ```json
     {
       "success": true,
-      "message": "Agent identity checks passed. Verification submitted and pending admin approval.",
+      "message": "Agent identity checks passed. Verification successfully auto-approved via Smile ID biometric trust.",
       "data": {
         "id": 1,
-        "user": { "id": 6 },
+        "user": {
+          "id": 6,
+          "firstName": "Alice",
+          "lastName": "Agent",
+          "email": "alice@agent.com",
+          "role": "AGENT",
+          "sellerRating": 0.0,
+          "isEmailVerified": true
+        },
         "nin": "12345678901",
         "bvn": "98765432109",
-        "selfieUrl": "https://bucket.s3.region.amazonaws.com/selfies/agent_6/...",
+        "selfieUrl": "https://bucket.s3.region.amazonaws.com/selfies/agent_6",
         "smileTxId": "sm_tx_4c8efa7a",
-        "status": "PENDING"
+        "status": "APPROVED",
+        "latitude": null,
+        "longitude": null
       }
     }
     ```
@@ -842,120 +910,7 @@ Binds an interactive Matterport 3D virtual tour link to the property.
 
 ---
 
-### 8. Admin Verification Workflows (`/api/admin/verification`)
-
-These administrative endpoints permit system operators to review and act on pending trust submissions.
-
-#### A. Approve Landlord KYB
-`POST /api/admin/verification/kyb/{id}/approve`
-
-*   **Authorization:** Bearer JWT required (Must have the `ADMIN` role)
-*   **Response (`200 OK`):**
-    ```json
-    {
-      "success": true,
-      "message": "KYB verification successfully approved.",
-      "data": {
-        "id": 1,
-        "status": "APPROVED",
-        "documentUrl": "https://..."
-      }
-    }
-    ```
-
-#### B. Reject Landlord KYB
-`POST /api/admin/verification/kyb/{id}/reject`
-
-*   **Authorization:** Bearer JWT required (Must have the `ADMIN` role)
-*   **Query Parameters:**
-    *   `reason` (String): Reason for rejection (e.g., "Illegible document ID").
-*   **Response (`200 OK`):**
-    ```json
-    {
-      "success": true,
-      "message": "KYB verification rejected. Reason: Illegible document ID",
-      "data": {
-        "id": 1,
-        "status": "REJECTED",
-        "documentUrl": "https://..."
-      }
-    }
-    ```
-
-#### C. Approve Agent Verification
-`POST /api/admin/verification/agent/{id}/approve`
-
-*   **Authorization:** Bearer JWT required (Must have the `ADMIN` role)
-*   **Response (`200 OK`):**
-    ```json
-    {
-      "success": true,
-      "message": "Agent verification successfully approved.",
-      "data": {
-        "id": 2,
-        "status": "APPROVED",
-        "nin": "12345678901",
-        "bvn": "98765432109"
-      }
-    }
-    ```
-
-#### D. Reject Agent Verification
-`POST /api/admin/verification/agent/{id}/reject`
-
-*   **Authorization:** Bearer JWT required (Must have the `ADMIN` role)
-*   **Query Parameters:**
-    *   `reason` (String): Reason for rejection.
-*   **Response (`200 OK`):**
-    ```json
-    {
-      "success": true,
-      "message": "Agent verification rejected. Reason: Signature mismatch",
-      "data": {
-        "id": 2,
-        "status": "REJECTED",
-        "rejectionReason": "Signature mismatch"
-      }
-    }
-    ```
-
-#### E. Approve Property Verification (Makes Property Public)
-`POST /api/admin/verification/property/{id}/approve`
-
-*   **Authorization:** Bearer JWT required (Must have the `ADMIN` role)
-*   **Response (`200 OK`):**
-    ```json
-    {
-      "success": true,
-      "message": "Property verification approved. Listing is now live and public.",
-      "data": {
-        "id": 4,
-        "status": "APPROVED"
-      }
-    }
-    ```
-
-#### F. Reject Property Verification
-`POST /api/admin/verification/property/{id}/reject`
-
-*   **Authorization:** Bearer JWT required (Must have the `ADMIN` role)
-*   **Query Parameters:**
-    *   `reason` (String): Reason for rejection.
-*   **Response (`200 OK`):**
-    ```json
-    {
-      "success": true,
-      "message": "Property verification rejected. Listing remains offline. Reason: Deed invalid",
-      "data": {
-        "id": 4,
-        "status": "REJECTED"
-      }
-    }
-    ```
-
----
-
-### 9. Zero-Knowledge Marketplace Chat Relay (`/api/chat`)
+### 8. Zero-Knowledge Marketplace Chat Relay (`/api/chat`)
 
 Keyz utilizes a **Zero-Knowledge privacy-first messaging architecture** (similar to WhatsApp and Signal). 
 
@@ -1037,7 +992,7 @@ Returns the count of pending offline messages waiting in the user's transit mail
 
 ---
 
-### 10. System Health (`/api/health`)
+### 9. System Health (`/api/health`)
 
 Endpoints in this group do not require any Authorization token and are designed for uptime monitors and keep-alive cronjobs.
 

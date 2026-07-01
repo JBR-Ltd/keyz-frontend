@@ -41,7 +41,7 @@ export default function ConfirmActionModal({
           aria-labelledby="confirm-action-title"
         >
           <motion.div
-            className="w-full max-w-lg border border-red-700 bg-[var(--color-bg)] shadow-[8px_8px_0_var(--color-primary)]"
+            className="w-full max-w-lg overflow-hidden rounded-lg border border-red-700 bg-[var(--color-bg)] shadow-md"
             initial={reduceMotion ? false : { opacity: 0, y: 20 }}
             animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
             exit={reduceMotion ? undefined : { opacity: 0, y: 20 }}
@@ -53,7 +53,7 @@ export default function ConfirmActionModal({
                 type="button"
                 onClick={props.onCancel}
                 aria-label="Close confirmation"
-                className="flex h-10 w-10 items-center justify-center border border-white/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-white/50 transition-all duration-200 ease-in-out hover:bg-white hover:text-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
               >
                 <X size={19} />
               </button>
@@ -64,47 +64,56 @@ export default function ConfirmActionModal({
               </p>
               <h2
                 id="confirm-action-title"
-                className="mt-4 font-display text-4xl font-bold leading-none text-primary"
+                className={`mt-4 font-display text-4xl font-bold leading-none ${
+                  isAccountMode ? "text-red-700" : "text-primary"
+                }`}
               >
-                {isAccountMode ? "Manage your account" : props.title}
+                {isAccountMode ? "Danger Zone" : props.title}
               </h2>
               <p className="mt-5 font-body leading-7 text-muted">
                 {isAccountMode
-                  ? "Choose whether to temporarily hide your account or permanently remove its data."
+                  ? "Choose whether to temporarily hide your account or permanently remove its data. Each option requires one more confirmation."
                   : props.description}
               </p>
               {isAccountMode ? (
                 <>
-                  <div className="mt-8 grid gap-px border border-red-700 bg-red-700">
-                    <button
-                      type="button"
-                      onClick={() => props.onAction("deactivate")}
-                      className="bg-[var(--color-bg)] p-5 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-red-500"
-                    >
-                      <span className="block font-body text-base font-bold text-red-700">
-                        Deactivate account
-                      </span>
-                      <span className="mt-2 block font-body text-sm leading-6 text-muted">
+                  <div className="mt-8 grid gap-4">
+                    <div className="rounded-lg border border-red-500/30 bg-red-500/5 p-5">
+                      <h3 className="font-body text-base font-bold text-red-700">
+                        Deactivate Account
+                      </h3>
+                      <p className="mt-2 font-body text-sm leading-6 text-muted">
                         Hide your profile until you sign in again.
-                      </span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => props.onAction("delete")}
-                      className="bg-red-700 p-5 text-left text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-red-500"
-                    >
-                      <span className="block font-body text-base font-bold">
-                        Delete account
-                      </span>
-                      <span className="mt-2 block font-body text-sm leading-6 text-white/70">
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => props.onAction("deactivate")}
+                        className="mt-4 min-h-11 rounded-full border border-red-700 px-5 py-2.5 font-body text-sm font-medium text-red-700 transition-all duration-200 ease-in-out hover:scale-[1.02] hover:bg-red-700 hover:text-white hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+                      >
+                        Deactivate account
+                      </button>
+                    </div>
+
+                    <div className="rounded-lg bg-red-700 p-5 text-white">
+                      <h3 className="font-body text-base font-bold">
+                        Delete Account
+                      </h3>
+                      <p className="mt-2 font-body text-sm leading-6 text-white/75">
                         Permanently remove your profile and account data.
-                      </span>
-                    </button>
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => props.onAction("delete")}
+                        className="mt-4 min-h-11 rounded-full bg-white px-5 py-2.5 font-body text-sm font-medium text-red-700 transition-all duration-200 ease-in-out hover:scale-[1.02] hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                      >
+                        Delete account
+                      </button>
+                    </div>
                   </div>
                   <button
                     type="button"
                     onClick={props.onCancel}
-                    className="mt-5 min-h-12 w-full border border-primary px-5 py-3 font-body text-sm font-bold text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    className="mt-5 min-h-12 w-full rounded-full border border-primary/30 px-5 py-3 font-body text-sm font-medium text-primary transition-all duration-200 ease-in-out hover:scale-[1.02] hover:bg-primary/10 hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                   >
                     Cancel
                   </button>
@@ -114,14 +123,14 @@ export default function ConfirmActionModal({
                   <button
                     type="button"
                     onClick={props.onCancel}
-                    className="min-h-12 border border-primary px-5 py-3 font-body text-sm font-bold text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    className="min-h-12 rounded-full border border-primary/30 px-5 py-3 font-body text-sm font-medium text-primary transition-all duration-200 ease-in-out hover:scale-[1.02] hover:bg-primary/10 hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                   >
                     Cancel
                   </button>
                   <button
                     type="button"
                     onClick={props.onConfirm}
-                    className="min-h-12 bg-red-700 px-5 py-3 font-body text-sm font-bold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+                    className="min-h-12 rounded-full bg-red-700 px-5 py-3 font-body text-sm font-medium text-white transition-all duration-200 ease-in-out hover:scale-[1.02] hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
                   >
                     {props.confirmLabel}
                   </button>

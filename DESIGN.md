@@ -1,11 +1,71 @@
 # Rello Design System
 
 ## 1. Design Philosophy
-- Rello's current UI is a squared editorial rental platform with full-bleed property photography, visible rule borders, dark teal surfaces, and gold accents.
-- The implementation uses large Fraunces display headings, compact Syne uppercase labels, and DM Sans body text to create a premium real estate feel.
-- Layouts favor strong section bands, asymmetric image grids, and direct CTAs over card-heavy composition.
+- Rello's design system has two distinct visual personalities that share the same underlying tokens: colors, fonts, and spacing.
+- Public surfaces, including the landing page and waitlist page, use "Warm Marketplace": photography-forward, soft and approachable, search-led. The direction is inspired by the best consumer marketplace apps like Airbnb and Flutterwave, but grounded in Nigerian visual context.
+- Large property photography does the emotional work on public surfaces. Typography stays clean and secondary. The search bar is always the primary hero CTA, not a button.
+- Cards on public surfaces are photo-forward, warm, and immediately scannable, with price, location, and verified status visible at a glance. Soft shadows, generous rounded corners, and whitespace create the approachable feel. Use 16px radius on large surfaces and 12px radius on cards.
+- Authenticated surfaces, including dashboards, settings, and auth, remain "utility-first, warm": compact, consistently sized cards for easy scanning. Rounded corners from 8px to 12px, soft shadows, and friendly hover states make the interface approachable without sacrificing information density.
+- The "less is more" principle applies to authenticated surfaces: nothing decorative that does not communicate something useful.
 
-## 2. Color Tokens
+## 2. Surface Types: Editorial vs. Utility
+
+Every screen in Rello belongs to one of two surface types. This determines how much editorial/magazine styling is appropriate versus how much the screen should prioritize speed, density, and scannability.
+
+### Editorial Surfaces
+
+Editorial surfaces exist to build trust, desire, and emotional buy-in. Users are browsing, dreaming, or being introduced to Rello, not trying to complete a specific task quickly. Large typography, generous whitespace, big imagery, and asymmetric layout are appropriate here.
+
+Pages that are editorial surfaces:
+- Landing page
+- Neighborhood/city guide pages, such as "Explore Lagos Living"
+- Featured/curated property spotlights
+- Blog or editorial content pages
+- Premium property detail pages, meaning the full listing page a user lands on after clicking a search result when presented as a rich, photo-forward story rather than a data sheet
+- Waitlist page
+
+Design treatment on editorial/public surfaces, Direction 3 Warm Marketplace:
+- Photography is the primary design element. Use high-quality Unsplash images of Nigerian homes, apartments, and cityscapes until real listing photography is available.
+- The search bar in the hero is always the primary CTA, not a button. Use a pill-shaped or generously rounded 16px search bar with location input, property type dropdown, and search action segmented within it.
+- Large Fraunces headlines are used sparingly, with 2 to 3 moments per page maximum, not every section.
+- Cards on public surfaces use 16px rounded corners, soft shadows, and photo-forward layout. Variable sizing, such as one featured double-wide card plus standard cards, is appropriate for Featured Properties sections.
+- Floating social proof cards, meaning small white cards overlaid on hero photography with a stat or trust signal, are an approved pattern on public surfaces only, not on utility or authenticated surfaces.
+- Do not use harsh borders between sections. Background color shifts and whitespace create rhythm instead.
+- City cards, with full-bleed photo background, gradient overlay, city name, and listing count, are a public-surface-specific pattern for geographic browsing.
+
+### Utility Surfaces
+
+Utility surfaces exist to help users complete a specific task as quickly and clearly as possible: finding a property, comparing options, filtering results, checking a map, contacting a landlord, completing a booking, or managing an account. Editorial styling that slows down scanning or hides practical information is a defect on these surfaces, not a feature.
+
+Pages that are utility surfaces:
+- Search results / listings browse page
+- Property card components, as they appear in any grid or list, including on editorial pages
+- Filter and search refinement screens
+- Map browsing view
+- Booking flow and contact/inquiry flow
+- All authenticated dashboards, including Tenant Dashboard, Landlord, Agent, and Admin
+- Settings/account pages
+- Auth pages, including Register and Login
+
+Design treatment on utility surfaces:
+- Prioritize information density and scanability: price, location, photo, room count, availability, distance, verified status, and a clear contact/inspect action must always be immediately visible without requiring the user to read prose or scroll past decorative content.
+- Typography stays clear and confident but does not dominate the layout the way it does on editorial surfaces. Data and actions take visual priority over large display type.
+- Whitespace and rounded corners, per the existing radius scale, are still used for a friendly, approachable feel, but never at the cost of hiding or de-prioritizing practical information.
+- Cards on utility surfaces, including property cards, booking rows, and stat tiles, stay compact and consistent in size for easy scanning. Avoid the asymmetric, single-dominant-element composition style used on editorial surfaces. Predictable, repeatable layouts let users compare items quickly.
+
+### Why this split exists
+
+A magazine-style visual language builds desire and trust on first impression, which matters for a rental platform where trust is a major barrier. But the same visual language, applied to search results or a booking flow, slows down the core task and frustrates users who are trying to compare options or get something done. Rello uses editorial styling deliberately and only on surfaces where storytelling and emotional buy-in are the actual job. Everywhere else, clarity and speed win.
+
+### Shared elements across both surface types
+
+Regardless of surface type, the following stay constant everywhere, since they are identity, not mood:
+- Color tokens (Section 3).
+- Font families: Fraunces, DM Sans, Syne (Section 4), though their relative size and visual weight differs by surface type as described above.
+- The border-radius scale (6/8/12px, or 16-20px on large editorial hero surfaces specifically). Utility surfaces use the standard scale, while editorial surfaces may use the larger end of it for hero moments.
+- Verified status treatment: a single Verified badge component, used consistently whether on a user profile, a property card, or a listing detail page. Do not create surface-specific variants of trust/verification indicators.
+
+## 3. Color Tokens
 
 Source: `src/app/globals.css`.
 
@@ -54,6 +114,12 @@ Source: `src/app/globals.css`.
 Tailwind extends font families through `tailwind.config.ts` but does not extend colors there.
 
 ```ts
+borderRadius: {
+  sm: "6px",
+  DEFAULT: "8px",
+  lg: "12px",
+}
+
 fontFamily: {
   display: ["var(--font-display)", "serif"],
   body: ["var(--font-body)", "sans-serif"],
@@ -85,7 +151,7 @@ border-white/20
 border-white/30
 ```
 
-## 3. Typography
+## 4. Typography
 
 Source: `src/app/layout.tsx`, `src/app/globals.css`, and `tailwind.config.ts`.
 
@@ -162,7 +228,7 @@ leading-[0.96]
 leading-tight
 ``` | Hero, CTA, waitlist, and active section headings. |
 
-## 4. Spacing & Layout
+## 5. Spacing & Layout
 
 Base spacing scale used in documented pages and retained components.
 
@@ -297,7 +363,7 @@ Breakpoints actively used.
 | `md` | Increases hero type sizes and active hero headline size. |
 | `lg` | Enables desktop nav, waitlist and auth split layouts, active marketing section grids, footer desktop alignment, and desktop-only decorative elements. |
 
-## 5. Component Inventory
+## 6. Component Inventory
 
 ### Footer
 - **File**: `src/components/Footer.tsx`
@@ -363,7 +429,42 @@ Breakpoints actively used.
 - **Animation**: Toast dismissal is timed with `window.setTimeout(..., 5000)` and no Framer Motion animation is used.
 - **Dependencies**: React context hooks and `lucide-react` icons `CheckCircle2`, `X`, and `XCircle`.
 
-## 6. Animation System
+### PropertyCard
+- **Target file (not yet created)**: `/components/public/PropertyCard.tsx`
+- **Purpose**: Displays a single rental listing with photo, verified badge, name, location, price, and bedroom/bathroom count.
+- **Props**: `name`, `location`, `price` (number, Naira), `bedrooms`, `bathrooms`, `imageUrl`, `verified` (boolean), `featured` (boolean, controls double-wide vs standard sizing).
+- **Variants**: featured (double-wide) vs standard.
+- **Animation**: hover `translateY(-4px)` plus shadow increase, `transition-all duration-200 ease-in-out`.
+
+### VerifiedBadge
+- **Target file (not yet created)**: `/components/ui/VerifiedBadge.tsx`
+- **Purpose**: Displays a verified status indicator consistently across property cards, user profiles, and any trust-signal context. Single shared component, no surface-specific variants.
+- **Props**: `size?: "sm" | "md"`.
+- **Variants**: sm (inline text context), md (card overlay).
+- **Animation**: none.
+
+### CityCard
+- **Target file (not yet created)**: `/components/public/CityCard.tsx`
+- **Purpose**: Displays a Nigerian city with full-bleed photo background, gradient overlay, city name, and listing count. Used in the city browsing strip on the landing page.
+- **Props**: `city`, `listingCount`, `imageUrl`.
+- **Variants**: none.
+- **Animation**: hover `scale-[1.02]` plus shadow increase.
+
+### HeroSearchBar
+- **Target file (not yet created)**: `/components/public/HeroSearchBar.tsx`
+- **Purpose**: The primary hero CTA on the landing page. A segmented search bar with location input, property type dropdown, and search action button. Placeholder UI only until search is built.
+- **Props**: none (placeholder UI, no functional props yet).
+- **Variants**: none.
+- **Animation**: none beyond standard focus/hover transitions.
+
+### SocialProofFloat
+- **Target file (not yet created)**: `/components/public/SocialProofFloat.tsx`
+- **Purpose**: A small floating card overlaid on hero photography displaying a trust stat or social proof signal. Public surfaces only.
+- **Props**: `icon`, `stat`, `label`.
+- **Variants**: none.
+- **Animation**: subtle entrance fade on mount.
+
+## 7. Animation System
 
 Animation library.
 
@@ -472,7 +573,7 @@ CSS animations and transitions.
 | `.button-fill-hover` | `transition: color 300ms ease`. |
 | `.button-fill-hover::before` | `transition: transform 300ms ease`. |
 | `.premium-hover` | `transition-duration: 200ms`, `transition-timing-function: ease-in-out`. |
-| `.premium-hover:hover` | `transform: translateY(-2px)`, `box-shadow: 4px 4px 0 var(--color-primary)`. |
+| `.premium-hover:hover` | `transform: translateY(-2px)`, `box-shadow: var(--shadow-md)`. |
 | `.hero-mesh` | `animation: hero-mesh-shift 14s ease-in-out infinite alternate`. |
 | `.rello-marquee` | `animation: rello-marquee 24s linear infinite`. |
 | `@media (prefers-reduced-motion: reduce)` | Disables `.hero-mesh` and `.rello-marquee` animation. |
@@ -499,7 +600,7 @@ CSS animations and transitions.
 }
 ```
 
-## 7. Page Layouts
+## 8. Page Layouts
 
 ### Landing Page (/)
 
@@ -551,7 +652,7 @@ Route-specific form patterns.
 | `/reset-password` | Reset token field, new password field, error banner, submit button, and login link. | Reads an initial token from the query string when present. |
 | `/verify-email` | Optional email field, six single-character OTP inputs, OTP error text, error banner, submit button, and login link. | Uses `grid-cols-6` OTP cells with square aspect ratio and numeric input mode. |
 
-## 8. Loading Screen
+## 9. Loading Screen
 
 - **File**: `src/components/LoadingScreen.tsx`
 - **Animation concept**: A full-screen primary-color loader draws the Rello mark, fills it with `rgb(227,148,59)`, then fades out.
@@ -569,7 +670,7 @@ type Phase = "draw" | "fillin" | "exit";
 sessionStorage.setItem("rello_loaded", "true");
 ```
 
-## 9. Design Constraints
+## 10. Design Constraints
 
 Explicit rules from `AGENTS.md`.
 
@@ -583,6 +684,17 @@ Explicit rules from `AGENTS.md`.
 | Do not use em dash characters in markdown, commit messages, PR descriptions, or documentation. | `AGENTS.md` |
 | Prefer bullets over long paragraphs. | `AGENTS.md` |
 | Do not write comments that describe what the code does. | `AGENTS.md` |
+
+Active surface standards.
+
+| Rule | Value |
+|------|-------|
+| Public surface radius | 16px on hero surfaces, mosaic photos, and city cards. 12px on property cards. 8px on inputs and standard buttons. |
+| Authenticated surface radius | 8px standard (`rounded-lg` equivalent). 12px for larger surfaces such as hero blocks and modals. 6px for badges and pills. |
+| Price format | Always Naira (₦), never USD ($) or unformatted numbers. |
+| Verified badge | Always use the shared `VerifiedBadge` component. Never build inline one-off verified indicators. |
+| Search bar placement | Always the primary CTA on public/landing surfaces. Never use a button alone. |
+| Photography | Unsplash source URLs with Nigerian home/city context until real listing photography is available. Always use `object-fit: cover`. |
 
 Explicit design guidance from `CONTEXT.md`.
 
@@ -598,13 +710,13 @@ Implicit implementation rules.
 
 | Pattern | Evidence |
 |---------|----------|
-| Documented pages favor square edges and visible rule borders. | Active `Navbar`, landing sections, property cards, waitlist form, waitlist success panel, and auth forms use no rounded classes. |
+| Documented pages favor moderate rounded corners and visible rule borders. | Active dashboard surfaces use the 6px, 8px, and 12px radius scale. Public surfaces may use 16px for hero surfaces, mosaic photos, and city cards. |
 | Gold accent is reserved for CTAs, labels, icons, focus rings, badges, and decorative marks. | `text-accent`, `bg-accent`, `border-accent`, `stroke-accent`, and `fill-accent` are repeated across documented pages and retained components. |
 | Large serif display type anchors page hierarchy. | `font-display` appears on active hero, section, waitlist, CTA, and property headings. |
 | Accent font is used for navigation and editorial labels. | `font-accent` appears in nav links, footer links, marquee, badges, and eyebrows. |
 | Active pages use remote property images. | Landing and waitlist pages use Unsplash background URLs. |
 
-## 10. Known Gaps / TODOs
+## 11. Known Gaps / TODOs
 
 Design intentions not fully implemented.
 

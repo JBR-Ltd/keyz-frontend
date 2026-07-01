@@ -3,7 +3,6 @@
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import SettingsDangerZone from "@/components/settings/SettingsDangerZone";
 import SettingsHero from "@/components/settings/SettingsHero";
 import SettingsSectionList from "@/components/settings/SettingsSectionList";
 import SettingsStatStrip from "@/components/settings/SettingsStatStrip";
@@ -42,10 +41,15 @@ export default function SettingsView() {
   };
 
   return (
-    <main className="min-h-screen overflow-x-hidden bg-[var(--color-bg)] px-5 py-10 sm:px-8 lg:px-10 lg:py-12">
+    <motion.main
+      className="min-h-screen overflow-x-hidden bg-surface-soft px-5 py-12 sm:px-8 lg:px-10 lg:py-14"
+      initial={reduceMotion ? false : { opacity: 0, y: 16 }}
+      animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
+    >
       <div className="mx-auto max-w-6xl">
         <header>
-          <h1 className="font-display text-4xl font-bold leading-[0.92] text-primary sm:text-5xl">
+          <h1 className="font-display text-4xl font-bold leading-[0.92] text-primary">
             Account Settings
           </h1>
           <p className="mt-3 font-body text-base text-muted">
@@ -53,17 +57,16 @@ export default function SettingsView() {
           </p>
         </header>
 
-        <div className="mt-7">
+        <div className="mt-8 overflow-hidden rounded-2xl border border-border bg-bg shadow-sm">
           <SettingsTabBar
             activeSection={activeSection}
             onSectionChange={showSection}
           />
+          <SettingsHero onViewProfile={() => showSection("profile")} />
         </div>
-
-        <SettingsHero onViewProfile={() => showSection("profile")} />
         <SettingsStatStrip role={role} />
 
-        <div className="mt-8">
+        <div className="mt-10">
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={isOverview ? "overview" : activeSection}
@@ -80,11 +83,7 @@ export default function SettingsView() {
             </motion.div>
           </AnimatePresence>
         </div>
-
-        <div className="mt-6">
-          <SettingsDangerZone />
-        </div>
       </div>
-    </main>
+    </motion.main>
   );
 }

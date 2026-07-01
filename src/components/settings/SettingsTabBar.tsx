@@ -29,12 +29,12 @@ export default function SettingsTabBar({
   onSectionChange,
 }: SettingsTabBarProps) {
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto rounded-t-2xl bg-bg">
       <nav
-        className="grid min-w-[44rem] grid-cols-5 border border-primary"
+        className="flex min-w-max border-b border-border"
         aria-label="Settings sections"
       >
-        {SETTINGS_TABS.map(({ id, label, icon: Icon }, index) => {
+        {SETTINGS_TABS.map(({ id, label, icon: Icon }) => {
           const isActive = id === activeSection;
 
           return (
@@ -43,12 +43,10 @@ export default function SettingsTabBar({
               type="button"
               onClick={() => onSectionChange(id)}
               aria-current={isActive ? "page" : undefined}
-              className={`flex min-h-13 items-center justify-center gap-3 px-4 py-3 font-body text-sm font-bold focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent ${
-                index > 0 ? "border-l border-primary" : ""
-              } ${
+              className={`relative flex min-h-14 items-center justify-center gap-3 rounded-none px-5 py-3 font-body text-sm font-bold transition-all duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent ${
                 isActive
-                  ? "bg-primary text-white"
-                  : "bg-[var(--color-bg)] text-muted transition-all duration-200 ease-in-out hover:bg-accent hover:text-primary"
+                  ? "bg-primary text-white after:absolute after:inset-x-0 after:-bottom-px after:h-px after:bg-primary"
+                  : "text-muted hover:bg-primary/5 hover:text-primary"
               }`}
             >
               <Icon size={18} strokeWidth={1.8} />

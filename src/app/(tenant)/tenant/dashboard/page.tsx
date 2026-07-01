@@ -1,3 +1,5 @@
+"use client";
+
 import {
   ArrowDownRight,
   ArrowUpRight,
@@ -9,11 +11,9 @@ import {
   MessageSquareText,
   WalletCards,
 } from "lucide-react";
-import Image, { StaticImageData } from "next/image";
+import { motion, useReducedMotion } from "framer-motion";
+import Image from "next/image";
 import Link from "next/link";
-import propertyOne from "../../../../../public/images/about-interior.jpg";
-import propertyTwo from "../../../../../public/images/cta-house.jpg";
-import propertyThree from "../../../../../public/images/newsletter-house.jpg";
 
 interface Booking {
   title: string;
@@ -21,7 +21,7 @@ interface Booking {
   status: "Escrow Held" | "Upcoming" | "Confirmed";
   dates: string;
   price: string;
-  image: StaticImageData;
+  image: string;
 }
 
 const STATS = [
@@ -31,8 +31,8 @@ const STATS = [
     trend: "+1 this month",
     direction: "up",
     icon: CalendarCheck,
-    tone: "bg-primary text-white",
-    tile: "border-white/30 bg-white/[0.12] text-accent",
+    tone: "bg-primary/5",
+    tile: "bg-primary text-white",
   },
   {
     label: "Incoming Requests",
@@ -40,8 +40,8 @@ const STATS = [
     trend: "+12% this week",
     direction: "up",
     icon: MessageSquareText,
-    tone: "bg-accent text-primary",
-    tile: "border-primary/30 bg-primary text-white",
+    tone: "bg-primary/5",
+    tile: "bg-primary/10 text-primary",
   },
   {
     label: "Escrow Held",
@@ -49,8 +49,8 @@ const STATS = [
     trend: "No change",
     direction: "down",
     icon: Landmark,
-    tone: "bg-surface-soft text-primary",
-    tile: "border-primary bg-primary text-white",
+    tone: "bg-surface-soft",
+    tile: "bg-primary text-white",
   },
   {
     label: "Saved Listings",
@@ -58,9 +58,16 @@ const STATS = [
     trend: "+3 this week",
     direction: "up",
     icon: Bookmark,
-    tone: "bg-[var(--color-bg)] text-primary",
-    tile: "border-accent bg-accent text-primary",
+    tone: "bg-[var(--color-bg)]",
+    tile: "bg-primary/10 text-primary",
   },
+];
+
+const PROPERTY_IMAGES = [
+  "https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=400&h=300&fit=crop&auto=format&q=80",
+  "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=400&h=300&fit=crop&auto=format&q=80",
+  "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=400&h=300&fit=crop&auto=format&q=80",
+  "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=400&h=300&fit=crop&auto=format&q=80",
 ];
 
 const BOOKINGS: Booking[] = [
@@ -70,7 +77,7 @@ const BOOKINGS: Booking[] = [
     status: "Escrow Held",
     dates: "Jul 04 to Jul 18",
     price: "₦480,000",
-    image: propertyOne,
+    image: PROPERTY_IMAGES[0],
   },
   {
     title: "Maitama Courtyard",
@@ -78,7 +85,7 @@ const BOOKINGS: Booking[] = [
     status: "Upcoming",
     dates: "Jul 22 to Aug 05",
     price: "₦620,000",
-    image: propertyTwo,
+    image: PROPERTY_IMAGES[1],
   },
   {
     title: "Harbour View Residence",
@@ -86,7 +93,7 @@ const BOOKINGS: Booking[] = [
     status: "Confirmed",
     dates: "Aug 14 to Aug 28",
     price: "₦710,000",
-    image: propertyThree,
+    image: PROPERTY_IMAGES[2],
   },
 ];
 
@@ -96,14 +103,14 @@ const ACTIVITIES = [
     description: "Payment secured for The Glass House.",
     time: "18 minutes ago",
     icon: WalletCards,
-    tone: "bg-primary text-accent",
+    tone: "bg-primary text-white",
   },
   {
     title: "Viewing confirmed",
     description: "Your Maitama Courtyard viewing is booked.",
     time: "2 hours ago",
     icon: CalendarCheck,
-    tone: "bg-accent text-primary",
+    tone: "bg-primary/10 text-primary",
   },
   {
     title: "Host replied",
@@ -116,49 +123,52 @@ const ACTIVITIES = [
 
 const STATUS_STYLES: Record<Booking["status"], string> = {
   "Escrow Held": "bg-primary text-white",
-  Upcoming: "bg-accent text-primary",
-  Confirmed: "border border-primary bg-[var(--color-bg)] text-primary",
+  Upcoming: "bg-primary/10 text-primary",
+  Confirmed: "border border-primary/20 bg-surface-soft text-primary",
 };
 
 export default function TenantDashboardPage() {
+  const reduceMotion = useReducedMotion();
+
   return (
-    <main className="min-h-screen overflow-x-hidden px-5 py-10 sm:px-8 lg:px-10 lg:py-14 xl:px-14">
-      <header className="border-b border-primary pb-9">
+    <motion.main
+      className="min-h-screen overflow-x-hidden px-5 py-12 sm:px-8 lg:px-10 lg:py-16 xl:px-14"
+      initial={reduceMotion ? false : { opacity: 0, y: 16 }}
+      animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
+    >
+      <header className="pb-10">
         <p className="font-accent text-xs font-bold uppercase tracking-[0.3em] text-accent-alt">
           Your rental desk
         </p>
-        <h1 className="mt-4 font-display text-5xl font-bold leading-[0.92] text-primary sm:text-6xl">
+        <h1 className="mt-4 font-display text-4xl font-bold leading-[0.92] text-primary sm:text-5xl">
           Tenant Dashboard
         </h1>
         <p className="mt-4 max-w-2xl font-body text-base leading-7 text-muted">
-          Welcome back, Amara! Here&apos;s what&apos;s happening with your
+          Welcome back, Jemimah! Here&apos;s what&apos;s happening with your
           bookings.
         </p>
       </header>
 
-      <section className="mt-8 grid border border-primary sm:grid-cols-2 xl:grid-cols-4">
-        {STATS.map(({ label, value, trend, direction, icon: Icon, tone, tile }, index) => {
+      <section className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+        {STATS.map(({ label, value, trend, direction, icon: Icon, tone, tile }) => {
           const TrendIcon = direction === "up" ? ArrowUpRight : ArrowDownRight;
 
           return (
             <article
               key={label}
-              className={`min-w-0 p-5 sm:p-6 ${tone} ${
-                index > 0
-                  ? "border-t border-primary sm:border-t-0 sm:odd:border-l xl:border-l"
-                  : ""
-              } ${index === 2 ? "sm:border-t xl:border-t-0" : ""}`}
+              className={`min-w-0 rounded-lg border border-primary/15 p-5 shadow-sm transition-all duration-200 ease-in-out hover:-translate-y-0.5 hover:shadow-md ${tone}`}
             >
-              <div className={`flex h-12 w-12 items-center justify-center border ${tile}`}>
+              <div className={`flex h-11 w-11 items-center justify-center rounded-lg ${tile}`}>
                 <Icon size={22} />
               </div>
-              <p className="mt-7 font-accent text-xs font-bold uppercase tracking-[0.2em] opacity-70">
+              <p className="mt-2 font-body text-xs font-medium uppercase tracking-[0.14em] text-muted">
                 {label}
               </p>
-              <p className="mt-2 break-words font-display text-4xl font-bold leading-none">
+              <p className="mt-4 break-words font-display text-3xl font-bold leading-none text-primary">
                 {value}
               </p>
-              <p className="mt-5 flex items-center gap-2 font-body text-xs font-bold">
+              <p className={`mt-4 flex items-center gap-2 font-body text-xs font-bold ${direction === "up" ? "text-accent-alt" : "text-muted"}`}>
                 <TrendIcon size={15} />
                 {trend}
               </p>
@@ -167,20 +177,20 @@ export default function TenantDashboardPage() {
         })}
       </section>
 
-      <div className="mt-10 grid gap-8 xl:grid-cols-[1.55fr_0.75fr]">
-        <section className="min-w-0 border border-primary">
-          <div className="flex items-end justify-between gap-5 border-b border-primary px-5 py-6 sm:px-7">
+      <div className="mt-10 grid gap-7 xl:grid-cols-[1.45fr_0.75fr]">
+        <section className="min-w-0 overflow-hidden rounded-lg border border-primary/15 bg-[var(--color-bg)] shadow-sm">
+          <div className="flex items-end justify-between gap-5 border-b border-primary/20 bg-surface-soft px-5 py-5 sm:px-6">
             <div>
               <p className="font-accent text-xs font-bold uppercase tracking-[0.25em] text-accent-alt">
                 Next stays
               </p>
-              <h2 className="mt-3 font-display text-3xl font-bold text-primary sm:text-4xl">
+              <h2 className="mt-2 font-display text-3xl font-bold text-primary">
                 Upcoming Bookings
               </h2>
             </div>
             <Link
               href="/tenant/bookings"
-              className="shrink-0 font-accent text-xs font-bold uppercase tracking-[0.18em] text-primary hover:text-accent-alt focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-full border border-primary/30 px-5 py-2 font-body text-sm font-medium text-primary transition-all duration-200 ease-in-out hover:bg-primary/10 hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             >
               View all
             </Link>
@@ -190,39 +200,39 @@ export default function TenantDashboardPage() {
             {BOOKINGS.map((booking) => (
               <article
                 key={booking.title}
-                className="grid gap-5 border-b border-primary p-5 last:border-b-0 sm:grid-cols-[9rem_1fr] sm:p-7"
+                className="grid gap-4 border-b border-primary/15 p-5 transition-all duration-200 ease-in-out last:border-b-0 hover:bg-surface-soft hover:shadow-md sm:grid-cols-[8rem_1fr] sm:items-center sm:p-6"
               >
-                <div className="relative aspect-[4/3] overflow-hidden border border-primary sm:aspect-auto sm:min-h-28">
+                <div className="relative h-28 overflow-hidden rounded-lg bg-surface-soft sm:w-full">
                   <Image
                     src={booking.image}
                     alt={booking.title}
                     fill
-                    sizes="(max-width: 640px) 100vw, 144px"
-                    className="object-cover"
+                    sizes="(max-width: 640px) 100vw, 128px"
+                    className="object-cover transition-all duration-200 ease-in-out"
                   />
                 </div>
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
+                    <div className="min-w-0">
                       <h3 className="font-body text-lg font-bold text-primary">
                         {booking.title}
                       </h3>
                       <p className="mt-2 flex items-center gap-2 font-body text-sm text-muted">
-                        <MapPin size={15} className="shrink-0 text-accent-alt" />
+                        <MapPin size={15} className="shrink-0 text-primary/60" />
                         {booking.location}
                       </p>
                     </div>
                     <span
-                      className={`px-3 py-2 font-accent text-xs font-bold uppercase tracking-[0.14em] ${STATUS_STYLES[booking.status]}`}
+                      className={`inline-flex shrink-0 items-center gap-2 rounded-full px-3 py-1.5 font-body text-xs font-medium ${STATUS_STYLES[booking.status]}`}
                     >
                       {booking.status}
                     </span>
                   </div>
-                  <div className="mt-5 flex flex-wrap items-end justify-between gap-4 border-t border-surface pt-4">
-                    <p className="flex items-center gap-2 font-body text-sm text-muted">
-                      <Clock3 size={15} className="text-accent-alt" />
-                      {booking.dates}
-                    </p>
+                  <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
+                    <div className="flex items-center gap-2 font-body text-sm text-muted">
+                      <Clock3 size={15} className="shrink-0 text-primary/60" />
+                      <span>{booking.dates}</span>
+                    </div>
                     <p className="font-display text-2xl font-bold text-primary">
                       {booking.price}
                     </p>
@@ -233,12 +243,12 @@ export default function TenantDashboardPage() {
           </div>
         </section>
 
-        <aside className="self-start border border-primary">
-          <div className="border-b border-primary bg-primary px-5 py-6 text-white sm:px-7">
+        <aside className="self-start overflow-hidden rounded-lg border border-primary/15 bg-[var(--color-bg)] shadow-sm">
+          <div className="border-b border-primary/20 bg-surface-soft px-5 py-5 sm:px-6">
             <p className="font-accent text-xs font-bold uppercase tracking-[0.25em] text-accent">
               Timeline
             </p>
-            <h2 className="mt-3 font-display text-3xl font-bold sm:text-4xl">
+            <h2 className="mt-2 font-display text-3xl font-bold text-primary">
               Recent Activity
             </h2>
           </div>
@@ -246,19 +256,19 @@ export default function TenantDashboardPage() {
             {ACTIVITIES.map(({ title, description, time, icon: Icon, tone }) => (
               <article
                 key={title}
-                className="grid grid-cols-[3rem_1fr] gap-4 border-b border-primary p-5 last:border-b-0 sm:p-6"
+                className="grid grid-cols-[3rem_1fr] gap-4 border-b border-primary/15 p-5 transition-all duration-200 ease-in-out last:border-b-0 hover:bg-surface-soft hover:shadow-md sm:p-6"
               >
-                <span className={`flex h-12 w-12 items-center justify-center ${tone}`}>
+                <span className={`flex h-12 w-12 items-center justify-center rounded-full ${tone}`}>
                   <Icon size={20} />
                 </span>
-                <div>
+                <div className="min-w-0">
                   <h3 className="font-body text-sm font-bold text-primary">
                     {title}
                   </h3>
                   <p className="mt-2 font-body text-sm leading-6 text-muted">
                     {description}
                   </p>
-                  <p className="mt-3 font-accent text-xs font-bold uppercase tracking-[0.14em] text-accent-alt">
+                  <p className="mt-3 font-body text-xs font-medium uppercase tracking-[0.12em] text-accent-alt">
                     {time}
                   </p>
                 </div>
@@ -267,6 +277,6 @@ export default function TenantDashboardPage() {
           </div>
         </aside>
       </div>
-    </main>
+    </motion.main>
   );
 }

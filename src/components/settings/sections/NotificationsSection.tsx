@@ -43,12 +43,12 @@ export default function NotificationsSection() {
   };
 
   return (
-    <section className="border border-primary">
-      <div className="border-b border-primary bg-surface-soft p-6 sm:p-8">
+    <section className="overflow-hidden rounded-xl border border-border bg-bg shadow-sm">
+      <div className="border-b border-border bg-surface-soft p-6 sm:p-8">
         <p className="font-accent text-xs font-bold uppercase tracking-[0.3em] text-accent-alt">
           Your attention
         </p>
-        <h2 className="mt-3 font-display text-4xl font-bold leading-none text-primary">
+        <h2 className="mt-3 font-display text-3xl font-bold leading-none text-primary sm:text-4xl">
           Notifications
         </h2>
         <p className="mt-4 max-w-2xl font-body text-sm leading-6 text-muted">
@@ -58,37 +58,37 @@ export default function NotificationsSection() {
       </div>
 
       <div className="px-5 sm:px-7">
-          {preferences.map((preference) => (
-            <div
-              key={preference.id}
-              className="grid gap-5 border-b border-primary py-7 sm:grid-cols-[1fr_auto] sm:items-center"
-            >
-              <div>
-                <h2 className="font-body text-lg font-bold text-primary">
-                  {preference.label}
-                </h2>
-                <p className="mt-2 max-w-2xl font-body text-sm leading-6 text-muted">
-                  {preference.description}
-                </p>
-              </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={preference.enabled}
-                aria-label={`Toggle ${preference.label}`}
-                onClick={() => togglePreference(preference.id)}
-                className={`relative h-8 w-16 border border-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
-                  preference.enabled ? "bg-accent" : "bg-white"
-                }`}
-              >
-                <span
-                  className={`absolute top-1 h-6 w-6 bg-primary ${
-                    preference.enabled ? "left-9" : "left-1"
-                  }`}
-                />
-              </button>
+        {preferences.map((preference) => (
+          <div
+            key={preference.id}
+            className="grid gap-5 border-b border-border py-7 transition-all duration-200 ease-in-out hover:bg-surface-soft hover:shadow-sm sm:grid-cols-[1fr_auto] sm:items-center"
+          >
+            <div>
+              <h2 className="font-body text-lg font-bold text-primary">
+                {preference.label}
+              </h2>
+              <p className="mt-2 max-w-2xl font-body text-sm leading-6 text-muted">
+                {preference.description}
+              </p>
             </div>
-          ))}
+            <button
+              type="button"
+              role="switch"
+              aria-checked={preference.enabled}
+              aria-label={`Toggle ${preference.label}`}
+              onClick={() => togglePreference(preference.id)}
+              className={`relative h-7 w-12 rounded-full transition-all duration-200 ease-in-out hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                preference.enabled ? "bg-accent" : "bg-border"
+              }`}
+            >
+              <span
+                className={`absolute left-1 top-1 h-5 w-5 rounded-full bg-white shadow-sm transition-all duration-200 ease-in-out ${
+                  preference.enabled ? "translate-x-5" : "translate-x-0"
+                }`}
+              />
+            </button>
+          </div>
+        ))}
       </div>
     </section>
   );

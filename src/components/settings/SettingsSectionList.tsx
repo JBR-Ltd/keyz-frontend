@@ -54,15 +54,15 @@ export default function SettingsSectionList({
   onSectionChange,
 }: SettingsSectionListProps) {
   return (
-    <section className="grid gap-3">
+    <section className="grid gap-4">
       {SETTINGS_SECTIONS.map(({ id, title, description, icon: Icon }) => (
         <button
           key={id}
           type="button"
           onClick={() => onSectionChange(id)}
-          className="grid w-full grid-cols-[3.5rem_1fr_auto] items-center gap-5 border border-surface bg-[var(--color-bg)] px-5 py-5 text-left transition-all duration-200 ease-in-out hover:border-primary hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent sm:px-7 sm:py-6"
+          className="grid w-full grid-cols-[3.25rem_1fr_auto] items-center gap-4 rounded-lg border border-primary/15 bg-[var(--color-bg)] px-4 py-4 text-left shadow-sm transition-all duration-200 ease-in-out hover:-translate-y-0.5 hover:bg-surface-soft hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-accent sm:grid-cols-[3.5rem_1fr_auto] sm:px-5"
         >
-          <span className="flex h-14 w-14 items-center justify-center bg-surface-soft text-primary">
+          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-soft text-primary sm:h-14 sm:w-14">
             <Icon size={24} strokeWidth={1.7} />
           </span>
           <span>
