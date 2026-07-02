@@ -45,6 +45,8 @@ const cities = [
   "Zamfara",
 ];
 
+const roles = ["Tenant", "Agent", "Landlord"];
+
 const waitlistImage =
   "https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=1800&q=85";
 
@@ -81,6 +83,7 @@ export default function WaitlistPage() {
       email: String(formData.get("email") ?? ""),
       phone: String(formData.get("phone") ?? ""),
       city: String(formData.get("city") ?? ""),
+      role: String(formData.get("role") ?? ""),
     };
 
     try {
@@ -101,11 +104,15 @@ export default function WaitlistPage() {
         );
       }
 
+      const successMessage =
+        getResponseMessage(data) ??
+        "You're on the list. We'll send city updates soon.";
+
       setStatus("success");
-      setMessage("You're on the list. We'll send city updates soon.");
+      setMessage(successMessage);
       notify({
         title: "Joined the waitlist",
-        description: "You're on the list. We'll send city updates soon.",
+        description: successMessage,
         variant: "success",
       });
       form.reset();
@@ -270,6 +277,27 @@ export default function WaitlistPage() {
                         </option>
                       ))}
                     </datalist>
+                  </label>
+
+                  <label className="block">
+                    <span className="font-body text-sm font-bold text-primary">
+                      Role
+                    </span>
+                    <select
+                      name="role"
+                      defaultValue=""
+                      required
+                      className="mt-2 min-h-14 w-full border border-primary bg-white px-4 py-3 font-body text-base text-slate-950 outline-none transition-all duration-200 ease-in-out focus:border-accent focus:ring-2 focus:ring-accent/30"
+                    >
+                      <option value="" disabled>
+                        Select your role
+                      </option>
+                      {roles.map((role) => (
+                        <option key={role} value={role}>
+                          {role}
+                        </option>
+                      ))}
+                    </select>
                   </label>
 
                   {status === "error" && message ? (

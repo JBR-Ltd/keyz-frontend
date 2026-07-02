@@ -7,6 +7,7 @@ type WaitlistPayload = {
   email: string;
   phone: string;
   city: string;
+  role: string;
 };
 
 function isWaitlistPayload(value: unknown): value is WaitlistPayload {
@@ -22,11 +23,13 @@ function isWaitlistPayload(value: unknown): value is WaitlistPayload {
     typeof payload.email === "string" &&
     typeof payload.phone === "string" &&
     typeof payload.city === "string" &&
+    typeof payload.role === "string" &&
     payload.firstName.trim().length > 0 &&
     payload.lastName.trim().length > 0 &&
     payload.email.trim().length > 0 &&
     payload.phone.trim().length > 0 &&
-    payload.city.trim().length > 0
+    payload.city.trim().length > 0 &&
+    payload.role.trim().length > 0
   );
 }
 
@@ -62,7 +65,7 @@ export async function POST(request: Request): Promise<Response> {
 
   if (!isWaitlistPayload(body)) {
     return Response.json(
-      { message: "Please provide your name, email, phone, and city." },
+      { message: "Please provide your name, email, phone, city, and role." },
       { status: 400 },
     );
   }
@@ -73,6 +76,7 @@ export async function POST(request: Request): Promise<Response> {
     email: body.email.trim(),
     phone: body.phone.trim(),
     city: body.city.trim(),
+    role: body.role.trim(),
   };
 
   try {
