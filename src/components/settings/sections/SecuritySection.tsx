@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import ConfirmActionModal from "@/components/settings/ConfirmActionModal";
 import SettingsDangerZone from "@/components/settings/SettingsDangerZone";
@@ -43,19 +44,12 @@ export default function SecuritySection() {
               Update your password regularly to keep your account protected.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() =>
-              notify({
-                title: "Password flow opened",
-                description: "Password changes are simulated on this page.",
-                variant: "success",
-              })
-            }
-            className="min-h-12 rounded-full bg-accent px-6 py-3 font-body text-sm font-medium text-white transition-all duration-200 ease-in-out hover:scale-[1.02] hover:bg-accent-alt hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          <Link
+            href="/forgot-password"
+            className="inline-flex min-h-12 items-center justify-center rounded-full bg-accent px-6 py-3 font-body text-sm font-medium text-white transition-all duration-200 ease-in-out hover:scale-[1.02] hover:bg-accent-alt hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             Change password
-          </button>
+          </Link>
         </div>
 
         <div className="grid gap-5 border-b border-primary/20 py-7 transition-all duration-200 ease-in-out hover:bg-surface-soft hover:shadow-sm sm:grid-cols-[1fr_auto] sm:items-center">

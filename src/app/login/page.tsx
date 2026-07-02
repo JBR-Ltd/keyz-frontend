@@ -21,6 +21,7 @@ interface LoginFormValues {
 interface LoginResponseData {
   accessToken: string;
   role: unknown;
+  userId?: number;
 }
 
 interface ApiEnvelope<TData> {
@@ -44,7 +45,8 @@ function isLoginData(value: unknown): value is LoginResponseData {
     typeof value === "object" &&
     "accessToken" in value &&
     typeof value.accessToken === "string" &&
-    "role" in value
+    "role" in value &&
+    (!("userId" in value) || typeof value.userId === "number")
   );
 }
 
@@ -147,6 +149,10 @@ export default function LoginPage() {
 
         localStorage.setItem("rello_token", data.data.accessToken);
         localStorage.setItem("rello_role", role);
+
+        if (typeof data.data.userId === "number") {
+          localStorage.setItem("rello_user_id", String(data.data.userId));
+        }
         notify({
           title: "Logged in",
           description: getApiMessage(data, "Login successful"),
@@ -254,7 +260,9 @@ export default function LoginPage() {
                   <motion.div
                     className="flex items-start justify-between gap-4 rounded-lg border-l-4 border-accent bg-accent/10 p-4 font-body text-sm font-medium text-primary"
                     initial={reduceMotion ? false : { height: 0, opacity: 0 }}
-                    animate={reduceMotion ? undefined : { height: "auto", opacity: 1 }}
+                    animate={
+                      reduceMotion ? undefined : { height: "auto", opacity: 1 }
+                    }
                     exit={reduceMotion ? undefined : { height: 0, opacity: 0 }}
                     transition={{ duration: 0.2, ease: "easeOut" }}
                     role="status"
@@ -277,7 +285,9 @@ export default function LoginPage() {
                   <motion.div
                     className="flex items-start justify-between gap-4 rounded-lg border-l-4 border-red-500 bg-red-500/10 p-4 font-body text-sm font-medium text-red-500"
                     initial={reduceMotion ? false : { height: 0, opacity: 0 }}
-                    animate={reduceMotion ? undefined : { height: "auto", opacity: 1 }}
+                    animate={
+                      reduceMotion ? undefined : { height: "auto", opacity: 1 }
+                    }
                     exit={reduceMotion ? undefined : { height: 0, opacity: 0 }}
                     transition={{ duration: 0.2, ease: "easeOut" }}
                     role="alert"
@@ -311,7 +321,9 @@ export default function LoginPage() {
                   placeholder="you@example.com"
                   autoComplete="email"
                   aria-invalid={errors.email ? "true" : "false"}
-                  aria-describedby={errors.email ? "auth-email-error" : undefined}
+                  aria-describedby={
+                    errors.email ? "auth-email-error" : undefined
+                  }
                   className="mt-1 min-h-14 w-full rounded-xl border border-border bg-bg px-4 py-3 font-body text-base text-[var(--color-text)] outline-none transition-all duration-200 ease-in-out placeholder:text-muted focus:border-accent focus:ring-2 focus:ring-accent/50"
                   {...register("email", {
                     required: "Email is required",
@@ -354,17 +366,27 @@ export default function LoginPage() {
                     placeholder="SecurePassword123!"
                     autoComplete="current-password"
                     aria-invalid={errors.password ? "true" : "false"}
-                    aria-describedby={errors.password ? "auth-password-error" : undefined}
+                    aria-describedby={
+                      errors.password ? "auth-password-error" : undefined
+                    }
                     className="min-h-14 w-full rounded-xl border border-border bg-bg px-4 py-3 pr-14 font-body text-base text-[var(--color-text)] outline-none transition-all duration-200 ease-in-out placeholder:text-muted focus:border-accent focus:ring-2 focus:ring-accent/50"
-                    {...register("password", { required: "Password is required" })}
+                    {...register("password", {
+                      required: "Password is required",
+                    })}
                   />
                   <button
                     type="button"
-                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    aria-label={
+                      showPassword ? "Hide password" : "Show password"
+                    }
                     onClick={() => setShowPassword((current) => !current)}
                     className="absolute right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center text-muted transition-all duration-200 ease-in-out hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                   >
-                    {showPassword ? <EyeOffIcon size={20} /> : <EyeIcon size={20} />}
+                    {showPassword ? (
+                      <EyeOffIcon size={20} />
+                    ) : (
+                      <EyeIcon size={20} />
+                    )}
                   </button>
                 </span>
                 <AnimatePresence>

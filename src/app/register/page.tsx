@@ -15,10 +15,27 @@ const VERIFY_EMAIL_STORAGE_KEY = "rello_verify_email";
 const registerPhotoUrl =
   "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200&h=1400&fit=crop&auto=format&q=80";
 
-const roleOptions: Array<{ label: string; value: UserRole }> = [
-  { label: "Tenant", value: "TENANT" },
-  { label: "Landlord", value: "LANDLORD" },
-  { label: "Agent", value: "AGENT" },
+const roleOptions: Array<{
+  label: string;
+  value: UserRole;
+  description: string;
+}> = [
+  {
+    label: "Tenant",
+    value: "TENANT",
+    description: "Find verified homes to rent or buy without agent stress.",
+  },
+  {
+    label: "Landlord",
+    value: "LANDLORD",
+    description: "List and manage rental properties for verified tenants.",
+  },
+  {
+    label: "Agent",
+    value: "AGENT",
+    description:
+      "List and sell properties. Verified agents connect buyers with quality FOR_SALE listings.",
+  },
 ];
 
 interface RegisterFormValues {
@@ -97,6 +114,8 @@ export default function RegisterPage() {
   });
   const fieldInitial = reduceMotion ? false : { opacity: 0, y: 16 };
   const fieldAnimate = reduceMotion ? undefined : { opacity: 1, y: 0 };
+  const selectedRoleDescription =
+    roleOptions.find((role) => role.value === selectedRole)?.description ?? "";
 
   const onSubmit: SubmitHandler<RegisterFormValues> = async (values) => {
     setBannerMessage("");
@@ -215,7 +234,9 @@ export default function RegisterPage() {
                   <motion.div
                     className="flex items-start justify-between gap-4 rounded-lg border-l-4 border-red-500 bg-red-500/10 p-4 font-body text-sm font-medium text-red-500"
                     initial={reduceMotion ? false : { height: 0, opacity: 0 }}
-                    animate={reduceMotion ? undefined : { height: "auto", opacity: 1 }}
+                    animate={
+                      reduceMotion ? undefined : { height: "auto", opacity: 1 }
+                    }
                     exit={reduceMotion ? undefined : { height: 0, opacity: 0 }}
                     transition={{ duration: 0.2, ease: "easeOut" }}
                     role="alert"
@@ -249,9 +270,13 @@ export default function RegisterPage() {
                   placeholder="Tunde"
                   autoComplete="given-name"
                   aria-invalid={errors.firstName ? "true" : "false"}
-                  aria-describedby={errors.firstName ? "auth-firstName-error" : undefined}
+                  aria-describedby={
+                    errors.firstName ? "auth-firstName-error" : undefined
+                  }
                   className="mt-1 min-h-14 w-full rounded-xl border border-border bg-bg px-4 py-3 font-body text-base text-[var(--color-text)] outline-none transition-all duration-200 ease-in-out placeholder:text-muted focus:border-accent focus:ring-2 focus:ring-accent/50"
-                  {...register("firstName", { required: "First name is required" })}
+                  {...register("firstName", {
+                    required: "First name is required",
+                  })}
                 />
                 <AnimatePresence>
                   {errors.firstName?.message ? (
@@ -285,9 +310,13 @@ export default function RegisterPage() {
                   placeholder="Musa"
                   autoComplete="family-name"
                   aria-invalid={errors.lastName ? "true" : "false"}
-                  aria-describedby={errors.lastName ? "auth-lastName-error" : undefined}
+                  aria-describedby={
+                    errors.lastName ? "auth-lastName-error" : undefined
+                  }
                   className="mt-1 min-h-14 w-full rounded-xl border border-border bg-bg px-4 py-3 font-body text-base text-[var(--color-text)] outline-none transition-all duration-200 ease-in-out placeholder:text-muted focus:border-accent focus:ring-2 focus:ring-accent/50"
-                  {...register("lastName", { required: "Last name is required" })}
+                  {...register("lastName", {
+                    required: "Last name is required",
+                  })}
                 />
                 <AnimatePresence>
                   {errors.lastName?.message ? (
@@ -321,7 +350,9 @@ export default function RegisterPage() {
                   placeholder="you@example.com"
                   autoComplete="email"
                   aria-invalid={errors.email ? "true" : "false"}
-                  aria-describedby={errors.email ? "auth-email-error" : undefined}
+                  aria-describedby={
+                    errors.email ? "auth-email-error" : undefined
+                  }
                   className="mt-1 min-h-14 w-full rounded-xl border border-border bg-bg px-4 py-3 font-body text-base text-[var(--color-text)] outline-none transition-all duration-200 ease-in-out placeholder:text-muted focus:border-accent focus:ring-2 focus:ring-accent/50"
                   {...register("email", {
                     required: "Email is required",
@@ -364,17 +395,27 @@ export default function RegisterPage() {
                     placeholder="SecurePassword123!"
                     autoComplete="new-password"
                     aria-invalid={errors.password ? "true" : "false"}
-                    aria-describedby={errors.password ? "auth-password-error" : undefined}
+                    aria-describedby={
+                      errors.password ? "auth-password-error" : undefined
+                    }
                     className="min-h-14 w-full rounded-xl border border-border bg-bg px-4 py-3 pr-14 font-body text-base text-[var(--color-text)] outline-none transition-all duration-200 ease-in-out placeholder:text-muted focus:border-accent focus:ring-2 focus:ring-accent/50"
-                    {...register("password", { required: "Password is required" })}
+                    {...register("password", {
+                      required: "Password is required",
+                    })}
                   />
                   <button
                     type="button"
-                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    aria-label={
+                      showPassword ? "Hide password" : "Show password"
+                    }
                     onClick={() => setShowPassword((current) => !current)}
                     className="absolute right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center text-muted transition-all duration-200 ease-in-out hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                   >
-                    {showPassword ? <EyeOffIcon size={20} /> : <EyeIcon size={20} />}
+                    {showPassword ? (
+                      <EyeOffIcon size={20} />
+                    ) : (
+                      <EyeIcon size={20} />
+                    )}
                   </button>
                 </span>
                 <AnimatePresence>
@@ -398,8 +439,13 @@ export default function RegisterPage() {
                 animate={fieldAnimate}
                 transition={{ duration: 0.4, delay: 0.64, ease: "easeOut" }}
               >
-                <input type="hidden" {...register("role", { required: "Role is required" })} />
-                <p className="font-body text-sm font-medium text-primary">Role</p>
+                <input
+                  type="hidden"
+                  {...register("role", { required: "Role is required" })}
+                />
+                <p className="font-body text-sm font-medium text-primary">
+                  Role
+                </p>
                 <div className="mt-2 grid grid-cols-3 gap-2">
                   {roleOptions.map((role) => {
                     const selected = selectedRole === role.value;
@@ -411,7 +457,9 @@ export default function RegisterPage() {
                         aria-pressed={selected}
                         onClick={() => {
                           setSelectedRole(role.value);
-                          setValue("role", role.value, { shouldValidate: true });
+                          setValue("role", role.value, {
+                            shouldValidate: true,
+                          });
                         }}
                         className={`min-h-11 rounded-full px-3 py-2 font-body text-sm font-medium transition-all duration-150 ease-in-out hover:scale-[1.02] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                           selected
@@ -424,6 +472,9 @@ export default function RegisterPage() {
                     );
                   })}
                 </div>
+                <p className="mt-3 font-body text-sm leading-6 text-muted">
+                  {selectedRoleDescription}
+                </p>
                 <AnimatePresence>
                   {errors.role?.message ? (
                     <motion.p

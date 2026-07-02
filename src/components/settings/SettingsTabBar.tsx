@@ -1,10 +1,14 @@
+"use client";
+
 import {
+  BadgeCheck,
   Bell,
   CreditCard,
   LockKeyhole,
   ShieldCheck,
   UserRound,
 } from "lucide-react";
+import { usePathname } from "next/navigation";
 import { SettingsSectionId } from "@/components/settings/types";
 
 interface SettingsTabBarProps {
@@ -15,6 +19,7 @@ interface SettingsTabBarProps {
 const SETTINGS_TABS = [
   { id: "profile", label: "Profile", icon: UserRound },
   { id: "security", label: "Security", icon: LockKeyhole },
+  { id: "verification", label: "Verification", icon: BadgeCheck },
   { id: "notifications", label: "Notifications", icon: Bell },
   { id: "payments", label: "Payments", icon: CreditCard },
   { id: "privacy", label: "Privacy", icon: ShieldCheck },
@@ -28,13 +33,19 @@ export default function SettingsTabBar({
   activeSection,
   onSectionChange,
 }: SettingsTabBarProps) {
+  const pathname = usePathname();
+  const isTenant = pathname.startsWith("/tenant");
+  const tabs = isTenant
+    ? SETTINGS_TABS
+    : SETTINGS_TABS.filter(({ id }) => id !== "verification");
+
   return (
     <div className="overflow-x-auto rounded-t-2xl bg-bg">
       <nav
         className="flex min-w-max border-b border-border"
         aria-label="Settings sections"
       >
-        {SETTINGS_TABS.map(({ id, label, icon: Icon }) => {
+        {tabs.map(({ id, label, icon: Icon }) => {
           const isActive = id === activeSection;
 
           return (

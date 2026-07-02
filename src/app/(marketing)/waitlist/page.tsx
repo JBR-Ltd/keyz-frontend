@@ -24,7 +24,10 @@ function getResponseMessage(value: unknown): string | null {
   return typeof message === "string" ? message : null;
 }
 
-function splitFullName(fullName: string): { firstName: string; lastName: string } {
+function splitFullName(fullName: string): {
+  firstName: string;
+  lastName: string;
+} {
   const parts = fullName.trim().split(/\s+/).filter(Boolean);
   const firstName = parts[0] ?? "";
   const lastName = parts.slice(1).join(" ") || "Not provided";
@@ -38,14 +41,18 @@ export default function WaitlistPage(): ReactElement {
   const reduceMotion = useReducedMotion();
   const { notify } = useToast();
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
+  async function handleSubmit(
+    event: FormEvent<HTMLFormElement>,
+  ): Promise<void> {
     event.preventDefault();
     const form = event.currentTarget;
     setStatus("submitting");
     setMessage("");
 
     const formData = new FormData(form);
-    const { firstName, lastName } = splitFullName(String(formData.get("fullName") ?? ""));
+    const { firstName, lastName } = splitFullName(
+      String(formData.get("fullName") ?? ""),
+    );
     const payload = {
       firstName,
       lastName,
@@ -67,7 +74,8 @@ export default function WaitlistPage(): ReactElement {
 
       if (!response.ok) {
         throw new Error(
-          getResponseMessage(data) ?? "We could not join the waitlist right now.",
+          getResponseMessage(data) ??
+            "We could not join the waitlist right now.",
         );
       }
 
@@ -112,11 +120,15 @@ export default function WaitlistPage(): ReactElement {
               Be first through the door.
             </h1>
             <p className="mt-4 max-w-sm font-body text-base leading-7 text-white/70">
-              Join thousands of Nigerians finding verified homes without the stress. Get early access before we launch.
+              Join thousands of Nigerians finding verified homes without the
+              stress. Get early access before we launch.
             </p>
             <div className="mt-8 grid gap-4">
               {trustPoints.map(({ label, Icon }) => (
-                <div key={label} className="flex items-center gap-3 font-body text-sm text-white/80">
+                <div
+                  key={label}
+                  className="flex items-center gap-3 font-body text-sm text-white/80"
+                >
                   <Icon size={18} className="text-accent" aria-hidden="true" />
                   {label}
                 </div>
@@ -140,7 +152,10 @@ export default function WaitlistPage(): ReactElement {
                 transition={{ duration: 0.4, ease: "easeOut" }}
                 role="status"
               >
-                <CheckCircle2 className="h-16 w-16 text-accent" aria-hidden="true" />
+                <CheckCircle2
+                  className="h-16 w-16 text-accent"
+                  aria-hidden="true"
+                />
                 <h2 className="mt-4 font-display text-2xl font-bold text-primary">
                   You&apos;re on the list!
                 </h2>
@@ -150,14 +165,18 @@ export default function WaitlistPage(): ReactElement {
               </motion.div>
             ) : (
               <>
-                <h2 className="font-display text-3xl font-bold text-primary">Join the waitlist</h2>
+                <h2 className="font-display text-3xl font-bold text-primary">
+                  Join the waitlist
+                </h2>
                 <p className="mb-8 mt-2 font-body text-sm text-muted">
                   We&apos;ll notify you the moment we launch in your city.
                 </p>
 
                 <form className="grid gap-6" onSubmit={handleSubmit}>
                   <label className="block">
-                    <span className="mb-1 block font-body text-sm font-medium text-primary">Full Name</span>
+                    <span className="mb-1 block font-body text-sm font-medium text-primary">
+                      Full Name
+                    </span>
                     <input
                       type="text"
                       name="fullName"
@@ -169,7 +188,9 @@ export default function WaitlistPage(): ReactElement {
                   </label>
 
                   <label className="block">
-                    <span className="mb-1 block font-body text-sm font-medium text-primary">Email Address</span>
+                    <span className="mb-1 block font-body text-sm font-medium text-primary">
+                      Email Address
+                    </span>
                     <input
                       type="email"
                       name="email"
@@ -181,7 +202,9 @@ export default function WaitlistPage(): ReactElement {
                   </label>
 
                   <label className="block">
-                    <span className="mb-1 block font-body text-sm font-medium text-primary">City</span>
+                    <span className="mb-1 block font-body text-sm font-medium text-primary">
+                      City
+                    </span>
                     <select
                       name="city"
                       defaultValue=""
@@ -216,7 +239,9 @@ export default function WaitlistPage(): ReactElement {
                     className="mt-2 w-full rounded-full bg-accent py-4 font-body text-base font-medium text-white transition-all duration-200 ease-in-out hover:scale-[1.01] hover:bg-accent-alt focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-70"
                     whileTap={reduceMotion ? undefined : { scale: 0.99 }}
                   >
-                    {status === "submitting" ? "Joining..." : "Join the Waitlist"}
+                    {status === "submitting"
+                      ? "Joining..."
+                      : "Join the Waitlist"}
                   </motion.button>
                 </form>
               </>
@@ -224,7 +249,6 @@ export default function WaitlistPage(): ReactElement {
           </motion.div>
         </div>
       </section>
-
     </main>
   );
 }

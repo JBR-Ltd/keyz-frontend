@@ -7,15 +7,17 @@ import {
   ChevronRight,
   Landmark,
   LayoutDashboard,
+  LogOut,
   Menu,
   Scale,
+  Settings,
   Star,
   X,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { SyntheticEvent, useEffect, useRef, useState } from "react";
 import relloLogoMark from "../../../public/rello-logo-cropped.svg";
 
 const TENANT_NAV_ITEMS = [
@@ -26,6 +28,30 @@ const TENANT_NAV_ITEMS = [
   { label: "Ratings", href: "/tenant/ratings", icon: Star },
   { label: "Saved Listings", href: "/tenant/saved-listings", icon: Bookmark },
 ];
+
+const PROFILE_MENU_WIDTH = 224;
+const PROFILE_MENU_HEIGHT = 120;
+const PROFILE_MENU_GAP = 10;
+const PROFILE_MENU_MARGIN = 12;
+
+function getProfileMenuPosition(
+  rect: DOMRect,
+  isCollapsed: boolean,
+): { left: number; top: number } {
+  const maxLeft = window.innerWidth - PROFILE_MENU_WIDTH - PROFILE_MENU_MARGIN;
+  const left = isCollapsed
+    ? Math.min(rect.right + PROFILE_MENU_GAP, maxLeft)
+    : Math.min(Math.max(rect.left, PROFILE_MENU_MARGIN), maxLeft);
+  const topBesideIcon = rect.top + rect.height / 2 - PROFILE_MENU_HEIGHT / 2;
+  const topAboveCard = rect.top - PROFILE_MENU_HEIGHT - PROFILE_MENU_GAP;
+  const preferredTop = isCollapsed ? topBesideIcon : topAboveCard;
+  const maxTop = window.innerHeight - PROFILE_MENU_HEIGHT - PROFILE_MENU_MARGIN;
+
+  return {
+    left: Math.max(PROFILE_MENU_MARGIN, left),
+    top: Math.min(Math.max(preferredTop, PROFILE_MENU_MARGIN), maxTop),
+  };
+}
 
 interface TenantSidebarProps {
   isCollapsed: boolean;
@@ -116,13 +142,31 @@ function TenantLogoLink() {
 interface TenantNavigationProps {
   isCollapsed?: boolean;
   onNavigate?: () => void;
+  onTooltipChange?: (tooltip: SidebarTooltip | null) => void;
 }
 
 function TenantNavigation({
   isCollapsed = false,
   onNavigate,
+  onTooltipChange,
 }: TenantNavigationProps) {
   const pathname = usePathname();
+
+  const handleTooltipEnter = (
+    event: SyntheticEvent<HTMLAnchorElement>,
+    label: string,
+  ) => {
+    if (!isCollapsed) {
+      return;
+    }
+
+    const rect = event.currentTarget.getBoundingClientRect();
+
+    onTooltipChange?.({
+      label,
+      top: rect.top + rect.height / 2,
+    });
+  };
 
   return (
     <nav
@@ -138,6 +182,10 @@ function TenantNavigation({
               <Link
                 href={href}
                 onClick={onNavigate}
+                onMouseEnter={(event) => handleTooltipEnter(event, label)}
+                onMouseLeave={() => onTooltipChange?.(null)}
+                onFocus={(event) => handleTooltipEnter(event, label)}
+                onBlur={() => onTooltipChange?.(null)}
                 aria-current={isActive ? "page" : undefined}
                 aria-label={isCollapsed ? label : undefined}
                 className={`group relative flex min-h-12 items-center rounded-xl font-body text-sm font-medium transition-all duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
@@ -164,11 +212,6 @@ function TenantNavigation({
                 >
                   {label}
                 </span>
-                {isCollapsed ? (
-                  <span className="pointer-events-none absolute left-full top-1/2 z-50 ml-3 -translate-y-1/2 rounded-lg bg-white px-3 py-2 font-body text-xs font-bold text-primary opacity-0 shadow-lg transition-all duration-200 ease-in-out group-hover:translate-x-1 group-hover:opacity-100">
-                    {label}
-                  </span>
-                ) : null}
               </Link>
             </li>
           );
@@ -181,24 +224,109 @@ function TenantNavigation({
 interface TenantProfileCardProps {
   isCollapsed?: boolean;
   onNavigate?: () => void;
+  onTooltipChange?: (tooltip: SidebarTooltip | null) => void;
 }
 
 function TenantProfileCard({
   isCollapsed = false,
   onNavigate,
+  onTooltipChange,
 }: TenantProfileCardProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [menuPosition, setMenuPosition] = useState({ left: 96, top: 0 });
   const isSettingsActive = pathname.startsWith("/tenant/settings");
+
+  useEffect(() => {
+    if (!isMenuOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target;
+
+      if (!(target instanceof Node)) {
+        return;
+      }
+
+      if (
+        buttonRef.current?.contains(target) ||
+        menuRef.current?.contains(target)
+      ) {
+        return;
+      }
+
+      setIsMenuOpen(false);
+    };
+
+    window.addEventListener("pointerdown", handlePointerDown);
+
+    return () => {
+      window.removeEventListener("pointerdown", handlePointerDown);
+    };
+  }, [isMenuOpen]);
+
+  const updateMenuPosition = () => {
+    const rect = buttonRef.current?.getBoundingClientRect();
+
+    if (!rect) {
+      return;
+    }
+
+    setMenuPosition(getProfileMenuPosition(rect, isCollapsed));
+  };
+
+  const handleMenuToggle = () => {
+    updateMenuPosition();
+    onTooltipChange?.(null);
+    setIsMenuOpen((current) => !current);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("rello_token");
+    localStorage.removeItem("rello_role");
+    localStorage.removeItem("rello_user_id");
+    setIsMenuOpen(false);
+    onNavigate?.();
+    router.replace("/login");
+  };
+
+  const handleTooltipEnter = () => {
+    if (!isCollapsed || isMenuOpen) {
+      return;
+    }
+
+    const rect = buttonRef.current?.getBoundingClientRect();
+
+    if (!rect) {
+      return;
+    }
+
+    onTooltipChange?.({
+      label: "Profile menu",
+      top: rect.top + rect.height / 2,
+    });
+  };
 
   return (
     <div
       className={`border-t border-white/10 p-4 ${isCollapsed ? "px-2" : ""}`}
     >
-      <Link
-        href="/tenant/settings"
-        onClick={onNavigate}
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={handleMenuToggle}
+        onMouseEnter={handleTooltipEnter}
+        onMouseLeave={() => onTooltipChange?.(null)}
+        onFocus={handleTooltipEnter}
+        onBlur={() => onTooltipChange?.(null)}
         aria-current={isSettingsActive ? "page" : undefined}
-        aria-label={isCollapsed ? "Tenant settings" : undefined}
+        aria-haspopup="menu"
+        aria-expanded={isMenuOpen}
+        aria-label={isCollapsed ? "Open profile menu" : undefined}
         className={`group relative grid items-center rounded-2xl transition-all duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
           isCollapsed
             ? "mx-auto h-12 w-12 grid-cols-1 justify-items-center p-0"
@@ -232,14 +360,55 @@ function TenantProfileCard({
         </span>
         {!isCollapsed ? (
           <ChevronRight size={18} className="text-white/65" />
-        ) : (
-          <span className="pointer-events-none absolute left-full top-1/2 z-50 ml-3 -translate-y-1/2 rounded-lg bg-white px-3 py-2 font-body text-xs font-bold text-primary opacity-0 shadow-lg transition-all duration-200 ease-in-out group-hover:translate-x-1 group-hover:opacity-100">
-            Settings
-          </span>
-        )}
-      </Link>
+        ) : null}
+      </button>
+
+      <AnimatePresence>
+        {isMenuOpen ? (
+          <motion.div
+            ref={menuRef}
+            role="menu"
+            className="fixed z-[90] w-56 overflow-hidden rounded-2xl border border-white/10 bg-primary p-2 shadow-2xl ring-1 ring-white/10"
+            style={{
+              left: menuPosition.left,
+              top: menuPosition.top,
+            }}
+            initial={{ opacity: 0, y: 8, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 8, scale: 0.98 }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
+          >
+            <Link
+              href="/tenant/settings"
+              role="menuitem"
+              onClick={() => {
+                setIsMenuOpen(false);
+                onNavigate?.();
+              }}
+              className="flex items-center gap-3 rounded-xl px-4 py-3 font-body text-sm font-medium text-white transition-all duration-200 ease-in-out hover:bg-white/10"
+            >
+              <Settings size={17} strokeWidth={1.9} />
+              Settings
+            </Link>
+            <button
+              type="button"
+              role="menuitem"
+              onClick={handleLogout}
+              className="mt-1 flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left font-body text-sm font-medium text-white transition-all duration-200 ease-in-out hover:bg-white/10"
+            >
+              <LogOut size={17} strokeWidth={1.9} />
+              Logout
+            </button>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
     </div>
   );
+}
+
+interface SidebarTooltip {
+  label: string;
+  top: number;
 }
 
 export default function TenantSidebar({
@@ -247,6 +416,7 @@ export default function TenantSidebar({
   onCollapseToggle,
 }: TenantSidebarProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [tooltip, setTooltip] = useState<SidebarTooltip | null>(null);
   const reduceMotion = useReducedMotion();
 
   return (
@@ -264,9 +434,30 @@ export default function TenantSidebar({
             onCollapseToggle={onCollapseToggle}
           />
         </div>
-        <TenantNavigation isCollapsed={isCollapsed} />
-        <TenantProfileCard isCollapsed={isCollapsed} />
+        <TenantNavigation
+          isCollapsed={isCollapsed}
+          onTooltipChange={setTooltip}
+        />
+        <TenantProfileCard
+          isCollapsed={isCollapsed}
+          onTooltipChange={setTooltip}
+        />
       </aside>
+
+      <AnimatePresence>
+        {isCollapsed && tooltip ? (
+          <motion.div
+            className="pointer-events-none fixed left-24 z-[80] rounded-lg bg-white px-3 py-2 font-body text-xs font-bold text-primary shadow-lg"
+            style={{ top: tooltip.top }}
+            initial={{ opacity: 0, x: -4, y: "-50%" }}
+            animate={{ opacity: 1, x: 0, y: "-50%" }}
+            exit={{ opacity: 0, x: -4, y: "-50%" }}
+            transition={{ duration: 0.16, ease: "easeOut" }}
+          >
+            {tooltip.label}
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
 
       <header className="sticky top-0 z-40 flex h-20 items-center justify-between border-b border-white/10 bg-primary px-4 lg:hidden">
         <TenantLogoLink />

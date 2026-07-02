@@ -12,11 +12,13 @@ import PaymentsSection from "@/components/settings/sections/PaymentsSection";
 import PrivacySection from "@/components/settings/sections/PrivacySection";
 import ProfileSection from "@/components/settings/sections/ProfileSection";
 import SecuritySection from "@/components/settings/sections/SecuritySection";
+import VerificationSection from "@/components/settings/sections/VerificationSection";
 import { SettingsSectionId } from "@/components/settings/types";
 
 const SECTION_COMPONENTS = {
   profile: ProfileSection,
   security: SecuritySection,
+  verification: VerificationSection,
   notifications: NotificationsSection,
   payments: PaymentsSection,
   privacy: PrivacySection,

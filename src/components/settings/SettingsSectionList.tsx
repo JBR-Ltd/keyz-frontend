@@ -1,4 +1,7 @@
+"use client";
+
 import {
+  BadgeCheck,
   Bell,
   ChevronRight,
   CreditCard,
@@ -6,6 +9,7 @@ import {
   ShieldCheck,
   UserRound,
 } from "lucide-react";
+import { usePathname } from "next/navigation";
 import { SettingsSectionId } from "@/components/settings/types";
 
 interface SettingsSectionListProps {
@@ -22,8 +26,14 @@ const SETTINGS_SECTIONS = [
   {
     id: "security",
     title: "Security",
-    description: "Manage your password, verification, and active sessions.",
+    description: "Manage your password and active sessions.",
     icon: LockKeyhole,
+  },
+  {
+    id: "verification",
+    title: "Tenant Verification",
+    description: "Verify your NIN, BVN, and selfie liveness with Smile ID.",
+    icon: BadgeCheck,
   },
   {
     id: "notifications",
@@ -53,9 +63,15 @@ const SETTINGS_SECTIONS = [
 export default function SettingsSectionList({
   onSectionChange,
 }: SettingsSectionListProps) {
+  const pathname = usePathname();
+  const isTenant = pathname.startsWith("/tenant");
+  const sections = isTenant
+    ? SETTINGS_SECTIONS
+    : SETTINGS_SECTIONS.filter(({ id }) => id !== "verification");
+
   return (
     <section className="grid gap-4">
-      {SETTINGS_SECTIONS.map(({ id, title, description, icon: Icon }) => (
+      {sections.map(({ id, title, description, icon: Icon }) => (
         <button
           key={id}
           type="button"

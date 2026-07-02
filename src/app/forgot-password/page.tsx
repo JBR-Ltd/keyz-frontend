@@ -70,12 +70,12 @@ export default function ForgotPasswordPage() {
 
       const message = getApiMessage(
         data,
-        "If the email exists, a reset link has been sent.",
+        "If the email exists, a reset code has been sent.",
       );
 
       setSuccessMessage(message);
       notify({
-        title: "Reset link sent",
+        title: "Reset code sent",
         description: message,
         variant: "success",
       });
@@ -106,7 +106,7 @@ export default function ForgotPasswordPage() {
               Get back into Rello.
             </h1>
             <p className="mt-6 font-body text-lg leading-8 text-white/70">
-              Request a secure reset link and continue your search for a
+              Request a secure 6-digit reset code and continue your search for a
               verified home.
             </p>
           </div>
@@ -120,7 +120,10 @@ export default function ForgotPasswordPage() {
               Reset your password
             </h1>
 
-            <form className="mt-10 grid gap-5" onSubmit={handleSubmit(onSubmit)}>
+            <form
+              className="mt-10 grid gap-5"
+              onSubmit={handleSubmit(onSubmit)}
+            >
               {successMessage ? (
                 <AuthBanner
                   key={successMessage}
@@ -154,6 +157,15 @@ export default function ForgotPasswordPage() {
                 }}
               />
 
+              {successMessage ? (
+                <Link
+                  href="/reset-password"
+                  className="inline-flex min-h-12 items-center justify-center rounded-full border border-primary px-5 py-3 font-body text-sm font-medium text-primary transition-all duration-200 ease-in-out hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                >
+                  Enter reset code
+                </Link>
+              ) : null}
+
               <motion.button
                 type="submit"
                 disabled={isSubmitting}
@@ -170,7 +182,7 @@ export default function ForgotPasswordPage() {
                     : { duration: 0.2 }
                 }
               >
-                {isSubmitting ? "Please wait..." : "Send Reset Link"}
+                {isSubmitting ? "Please wait..." : "Send Reset Code"}
               </motion.button>
             </form>
 

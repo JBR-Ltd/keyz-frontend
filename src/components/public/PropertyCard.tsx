@@ -3,10 +3,13 @@ import Image from "next/image";
 import { Bath, BedDouble, MapPin } from "lucide-react";
 import VerifiedBadge from "@/components/ui/VerifiedBadge";
 
+type ListingType = "FOR_RENT" | "FOR_SALE";
+
 interface PropertyCardProps {
   name: string;
   location: string;
   price: number;
+  listingType: ListingType;
   bedrooms: number;
   bathrooms: number;
   imageUrl: string;
@@ -22,10 +25,21 @@ function formatNaira(value: number): string {
   }).format(value);
 }
 
+function formatPrice(value: number, listingType: ListingType): string {
+  const formatted = formatNaira(value);
+
+  return listingType === "FOR_RENT" ? `${formatted}/mo` : formatted;
+}
+
+function formatListingType(listingType: ListingType): string {
+  return listingType === "FOR_RENT" ? "For Rent" : "For Sale";
+}
+
 export default function PropertyCard({
   name,
   location,
   price,
+  listingType,
   bedrooms,
   bathrooms,
   imageUrl,
@@ -38,19 +52,27 @@ export default function PropertyCard({
         featured ? "lg:row-span-2" : ""
       }`}
     >
-      <div className={`relative overflow-hidden ${featured ? "aspect-[4/3]" : "aspect-video"}`}>
+      <div
+        className={`relative overflow-hidden ${featured ? "aspect-[4/3]" : "aspect-video"}`}
+      >
         <Image
           src={imageUrl}
           alt={name}
           fill
+          sizes={
+            featured
+              ? "(min-width: 1024px) 50vw, 100vw"
+              : "(min-width: 1024px) 33vw, 100vw"
+          }
           className="transition-all duration-300 ease-in-out group-hover:scale-[1.03]"
           style={{ objectFit: "cover" }}
         />
-        {verified ? (
-          <div className="absolute left-4 top-4">
-            <VerifiedBadge />
-          </div>
-        ) : null}
+        <div className="absolute left-4 top-4 flex flex-wrap gap-2">
+          {verified ? <VerifiedBadge /> : null}
+          <span className="inline-flex rounded-full bg-white/90 px-3 py-1.5 font-body text-xs font-medium text-primary shadow-sm">
+            {formatListingType(listingType)}
+          </span>
+        </div>
       </div>
 
       <div className="p-5 sm:p-6">
@@ -62,7 +84,7 @@ export default function PropertyCard({
           {location}
         </p>
         <p className="mt-4 font-body text-xl font-bold text-primary">
-          {formatNaira(price)}/month
+          {formatPrice(price, listingType)}
         </p>
         <div className="mt-4 flex flex-wrap items-center gap-4 font-body text-sm text-muted">
           <span className="inline-flex items-center gap-1.5">

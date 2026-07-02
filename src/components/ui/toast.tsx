@@ -69,31 +69,29 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           return (
             <div
               key={toast.id}
-              className="flex items-start gap-3 border border-primary bg-[var(--color-bg)] p-4 shadow-[4px_4px_0_var(--color-primary)]"
+              className="flex items-start gap-3 rounded-2xl border border-border/80 bg-bg p-4 shadow-xl shadow-primary/10 ring-1 ring-white/70"
               role="status"
             >
               <span
-                className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center border ${
-                  isSuccess
-                    ? "border-accent text-accent"
-                    : "border-red-500 text-red-500"
+                className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
+                  isSuccess ? "bg-accent text-white" : "bg-red-700 text-white"
                 }`}
               >
                 <Icon size={18} />
               </span>
-              <div className="min-w-0 flex-1">
-                <p className="font-accent text-xs font-bold uppercase tracking-[0.22em] text-primary">
+              <div className="min-w-0 flex-1 pt-0.5">
+                <p className="font-body text-sm font-bold leading-5 text-primary">
                   {toast.title}
                 </p>
                 {toast.description ? (
-                  <p className="mt-2 font-body text-sm leading-5 text-muted">
+                  <p className="mt-1.5 font-body text-sm leading-5 text-muted">
                     {toast.description}
                   </p>
                 ) : null}
               </div>
               <button
                 type="button"
-                className="flex h-8 w-8 shrink-0 items-center justify-center border border-surface text-primary transition-all duration-200 ease-in-out hover:border-accent hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted transition-all duration-200 ease-in-out hover:scale-[1.02] hover:bg-primary/10 hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 onClick={() => dismiss(toast.id)}
                 aria-label="Dismiss notification"
               >

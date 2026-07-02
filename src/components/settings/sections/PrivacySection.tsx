@@ -8,7 +8,8 @@ const INITIAL_CONTROLS = [
   {
     id: "discoverable",
     label: "Profile discovery",
-    description: "Allow verified agents to find your profile for matching homes.",
+    description:
+      "Allow verified agents and property owners to contact you about relevant listings.",
     enabled: true,
   },
   {
@@ -32,9 +33,7 @@ export default function PrivacySection() {
   const toggleControl = (id: string) => {
     setControls((current) =>
       current.map((control) =>
-        control.id === id
-          ? { ...control, enabled: !control.enabled }
-          : control,
+        control.id === id ? { ...control, enabled: !control.enabled } : control,
       ),
     );
   };

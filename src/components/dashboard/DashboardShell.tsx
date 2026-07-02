@@ -52,7 +52,7 @@ export default function DashboardShell({
         ? "lg:ml-20"
         : "lg:ml-72"
       : isCollapsed
-        ? "lg:ml-24"
+        ? "lg:ml-20"
         : "lg:ml-72";
 
   return (
