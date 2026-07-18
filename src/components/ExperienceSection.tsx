@@ -272,7 +272,7 @@ export default function ExperienceSection() {
           {AMENITIES.slice(0, 4).map(({ label, icon }) => (
             <div
               key={label}
-              className="premium-hover bg-white/[0.85] border border-white/70 rounded-2xl p-5 flex flex-col items-center gap-3 text-center shadow-md backdrop-blur"
+              className="premium-hover bg-white border border-white/70 rounded-2xl p-5 flex flex-col items-center gap-3 text-center shadow-md"
             >
               <div className="flex justify-center items-center h-14 w-14">
                 {icon}
@@ -297,7 +297,7 @@ export default function ExperienceSection() {
                 key={`${label}-${idx}`}
                 className="flex-shrink-0 w-1/3 h-full px-1.5 flex items-center justify-center"
               >
-                <div className="premium-hover bg-white/[0.85] border border-white/70 rounded-2xl p-8 flex flex-col items-center gap-4 text-center w-full h-full shadow-lg backdrop-blur">
+                <div className="premium-hover bg-white border border-white/70 rounded-2xl p-8 flex flex-col items-center gap-4 text-center w-full h-full shadow-md">
                   <div className="flex justify-center items-center h-20 w-20">
                     {icon}
                   </div>

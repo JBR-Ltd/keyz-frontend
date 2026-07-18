@@ -2,11 +2,14 @@
 
 import type { ReactElement } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { Bath, Bed, Home, Lock, MapPin, ShieldCheck } from "lucide-react";
+import { Home, Lock, ShieldCheck } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import Footer from "@/components/Footer";
+import PropertyPrice from "@/components/property/PropertyPrice";
+import PropertyCard from "@/components/public/PropertyCard";
 import Navbar from "@/components/Navbar";
+import { BROWSE_PROPERTIES } from "@/lib/tenantActivity";
 
 const heroImage = {
   src: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200&h=900&fit=crop&auto=format&q=80",
@@ -37,55 +40,6 @@ const cityCards = [
   },
 ];
 
-type ListingType = "FOR_RENT" | "FOR_SALE";
-
-const properties = [
-  {
-    name: "Ikoyi Garden Residence",
-    location: "Ikoyi, Lagos",
-    price: 150000,
-    listingType: "FOR_RENT" as const,
-    beds: 3,
-    baths: 3,
-    imageUrl:
-      "https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800&h=600&fit=crop&auto=format&q=80",
-    alt: "Luxury apartment interior",
-  },
-  {
-    name: "Maitama City Apartment",
-    location: "Maitama, Abuja",
-    price: 85000000,
-    listingType: "FOR_SALE" as const,
-    beds: 4,
-    baths: 4,
-    imageUrl:
-      "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&h=600&fit=crop&auto=format&q=80",
-    alt: "Modern apartment living room",
-  },
-  {
-    name: "Lekki Contemporary Home",
-    location: "Lekki Phase 1, Lagos",
-    price: 95000,
-    listingType: "FOR_RENT" as const,
-    beds: 2,
-    baths: 2,
-    imageUrl:
-      "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&h=600&fit=crop&auto=format&q=80",
-    alt: "Contemporary home interior",
-  },
-  {
-    name: "GRA Family Duplex",
-    location: "GRA, Port Harcourt",
-    price: 64000000,
-    listingType: "FOR_SALE" as const,
-    beds: 4,
-    baths: 3,
-    imageUrl:
-      "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800&h=600&fit=crop&auto=format&q=80",
-    alt: "Luxury property exterior",
-  },
-];
-
 const stats = [
   { value: "2,400+", label: "Listings" },
   { value: "3", label: "Cities" },
@@ -109,10 +63,10 @@ const bentoCells = [
   {
     title: "Zero Agent Fees",
     description: "Pay the owner, not the middleman.",
-    className: "bg-accent text-white",
+    className: "bg-accent text-primary",
     value: "₦0",
-    titleClassName: "text-white",
-    descriptionClassName: "text-white/80",
+    titleClassName: "text-primary",
+    descriptionClassName: "text-primary",
   },
   {
     title: "Secure Escrow",
@@ -140,7 +94,7 @@ const bentoCells = [
     className:
       "border border-[color-mix(in_srgb,var(--color-accent)_20%,transparent)] bg-[color-mix(in_srgb,var(--color-accent)_10%,var(--color-bg))] text-primary lg:col-span-2",
     value: "< 2hrs",
-    titleClassName: "text-accent",
+    titleClassName: "text-accent-alt",
     descriptionClassName: "text-muted",
   },
   {
@@ -149,21 +103,11 @@ const bentoCells = [
       "Send viewing requests without chasing multiple agents or losing track of conversations.",
     className: "border border-surface bg-[var(--color-bg)] text-primary",
     Icon: Home,
-    iconClassName: "text-accent",
+    iconClassName: "text-accent-alt",
     titleClassName: "text-primary",
     descriptionClassName: "text-muted",
   },
 ];
-
-function formatPrice(value: number, listingType: ListingType): string {
-  const formatted = `₦${value.toLocaleString("en-NG")}`;
-
-  return listingType === "FOR_RENT" ? `${formatted}/mo` : formatted;
-}
-
-function formatListingType(listingType: ListingType): string {
-  return listingType === "FOR_RENT" ? "For Rent" : "For Sale";
-}
 
 function reveal(index = 0) {
   return {
@@ -218,7 +162,7 @@ export default function MarketingLandingPage(): ReactElement {
             >
               <Link
                 href="#featured-properties"
-                className="inline-flex items-center justify-center rounded-full bg-accent px-8 py-4 font-body text-base font-medium text-white transition-all duration-200 ease-in-out hover:scale-[1.03] hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+                className="inline-flex items-center justify-center rounded-full bg-accent px-8 py-4 font-body text-base font-medium text-primary transition-all duration-200 ease-in-out hover:scale-[1.03] hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
               >
                 Browse Listings
               </Link>
@@ -284,10 +228,14 @@ export default function MarketingLandingPage(): ReactElement {
               className={`text-center ${index > 0 ? "lg:border-l lg:border-white/30" : ""}`}
               {...(reduceMotion ? {} : reveal(index))}
             >
-              <p className="font-display text-4xl font-bold text-white">
-                {stat.value}
+              <p className="font-display text-4xl font-bold text-primary">
+                {stat.value.startsWith("₦") ? (
+                  <PropertyPrice value={stat.value} />
+                ) : (
+                  stat.value
+                )}
               </p>
-              <p className="mt-2 font-body text-sm uppercase tracking-wide text-white/80">
+              <p className="mt-2 font-body text-sm uppercase tracking-wide text-primary">
                 {stat.label}
               </p>
             </motion.div>
@@ -301,7 +249,7 @@ export default function MarketingLandingPage(): ReactElement {
       >
         <div className="mx-auto max-w-7xl">
           <motion.div {...(reduceMotion ? {} : reveal())}>
-            <p className="font-accent text-xs font-bold uppercase tracking-widest text-accent">
+            <p className="font-accent text-xs font-bold uppercase tracking-widest text-primary">
               Explore by city
             </p>
             <h2 className="mb-12 mt-2 font-display text-4xl font-bold text-primary">
@@ -312,7 +260,7 @@ export default function MarketingLandingPage(): ReactElement {
             {cityCards.map((city, index) => (
               <motion.article
                 key={city.city}
-                className="group relative h-80 cursor-pointer overflow-hidden rounded-2xl transition-all duration-300 ease-in-out hover:scale-[1.03] hover:shadow-2xl"
+                className="group relative h-80 cursor-pointer overflow-hidden rounded-2xl transition-all duration-300 ease-in-out hover:scale-[1.03] hover:shadow-xl"
                 {...(reduceMotion ? {} : reveal(index))}
               >
                 <Image
@@ -353,60 +301,23 @@ export default function MarketingLandingPage(): ReactElement {
             </h2>
           </motion.div>
           <div className="grid gap-6 lg:grid-cols-2">
-            {properties.map((property, index) => (
-              <motion.article
-                key={property.name}
-                className="group cursor-pointer overflow-hidden rounded-2xl bg-white shadow-lg transition-all duration-200 ease-in-out hover:-translate-y-1.5 hover:shadow-2xl"
+            {BROWSE_PROPERTIES.slice(0, 4).map((property, index) => (
+              <motion.div
+                key={property.id}
                 {...(reduceMotion ? {} : reveal(index))}
               >
-                <div className="relative aspect-video overflow-hidden">
-                  <Image
-                    src={property.imageUrl}
-                    alt={property.alt}
-                    fill
-                    sizes="(min-width: 1024px) 50vw, 100vw"
-                    className="transition-all duration-500 group-hover:scale-[1.05]"
-                    style={{ objectFit: "cover" }}
-                  />
-                  <div className="absolute left-3 top-3 flex flex-wrap gap-2">
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 font-body text-xs font-medium text-white">
-                      <ShieldCheck size={14} aria-hidden="true" />
-                      Verified
-                    </span>
-                    <span className="inline-flex rounded-full bg-white/90 px-3 py-1 font-body text-xs font-medium text-primary shadow-sm">
-                      {formatListingType(property.listingType)}
-                    </span>
-                  </div>
-                </div>
-                <div className="p-5">
-                  <h3 className="font-display text-lg font-semibold text-primary">
-                    {property.name}
-                  </h3>
-                  <p className="mt-1 inline-flex items-center gap-1.5 font-body text-sm text-muted">
-                    <MapPin
-                      size={15}
-                      className="text-accent"
-                      aria-hidden="true"
-                    />
-                    {property.location}
-                  </p>
-                  <div className="mt-4 flex items-center justify-between gap-4">
-                    <p className="font-body font-bold text-primary">
-                      {formatPrice(property.price, property.listingType)}
-                    </p>
-                    <p className="flex items-center gap-3 font-body text-sm text-muted">
-                      <span className="inline-flex items-center gap-1">
-                        <Bed size={15} aria-hidden="true" />
-                        {property.beds}
-                      </span>
-                      <span className="inline-flex items-center gap-1">
-                        <Bath size={15} aria-hidden="true" />
-                        {property.baths}
-                      </span>
-                    </p>
-                  </div>
-                </div>
-              </motion.article>
+                <PropertyCard
+                  id={property.id}
+                  name={property.name}
+                  location={property.location}
+                  price={property.price}
+                  listingType={property.listingType}
+                  bedrooms={property.bedrooms}
+                  bathrooms={property.bathrooms}
+                  imageUrl={property.imageUrl}
+                  featured={false}
+                />
+              </motion.div>
             ))}
           </div>
         </div>
@@ -418,7 +329,7 @@ export default function MarketingLandingPage(): ReactElement {
       >
         <div className="mx-auto max-w-7xl">
           <motion.div {...(reduceMotion ? {} : reveal())}>
-            <p className="font-accent text-xs font-bold uppercase tracking-widest text-accent">
+            <p className="font-accent text-xs font-bold uppercase tracking-widest text-primary">
               Why Rello
             </p>
             <h2 className="mb-12 mt-2 font-display text-4xl font-bold text-primary">
@@ -439,7 +350,11 @@ export default function MarketingLandingPage(): ReactElement {
                     <p
                       className={`font-display text-5xl font-bold leading-tight ${cell.titleClassName}`}
                     >
-                      {cell.value}
+                      {cell.value.startsWith("₦") ? (
+                        <PropertyPrice value={cell.value} />
+                      ) : (
+                        cell.value
+                      )}
                     </p>
                   ) : null}
                   {Icon ? (

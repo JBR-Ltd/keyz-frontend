@@ -79,7 +79,10 @@ export default function VerifyEmailPage() {
     otpInputRefs.current[index]?.focus();
   }
 
-  function setOtpInputRef(element: HTMLInputElement | null, index: number): void {
+  function setOtpInputRef(
+    element: HTMLInputElement | null,
+    index: number,
+  ): void {
     if (element) {
       otpInputRefs.current[index] = element;
     }
@@ -206,14 +209,17 @@ export default function VerifyEmailPage() {
         }
         rightContent={
           <>
-            <p className="font-accent text-xs font-bold uppercase tracking-[0.3em] text-accent">
+            <p className="font-accent text-xs font-bold uppercase tracking-[0.3em] text-primary">
               Verify Email
             </p>
             <h1 className="mt-5 font-display text-5xl font-bold leading-[0.95] text-primary sm:text-6xl">
               Activate your account
             </h1>
 
-            <form className="mt-10 grid gap-5" onSubmit={handleSubmit(onSubmit)}>
+            <form
+              className="mt-10 grid gap-5"
+              onSubmit={handleSubmit(onSubmit)}
+            >
               {errorMessage ? (
                 <AuthBanner
                   key={errorMessage}
@@ -257,7 +263,9 @@ export default function VerifyEmailPage() {
                       autoComplete={index === 0 ? "one-time-code" : "off"}
                       aria-label={`Verification code digit ${index + 1}`}
                       aria-invalid={otpError ? "true" : "false"}
-                      aria-describedby={otpError ? "auth-token-error" : undefined}
+                      aria-describedby={
+                        otpError ? "auth-token-error" : undefined
+                      }
                       maxLength={1}
                       value={digit}
                       onChange={(event) => handleOtpChange(index, event)}

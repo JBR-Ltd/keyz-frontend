@@ -1,5 +1,6 @@
-import ComingSoon from "@/components/dashboard/ComingSoon";
+import type { ReactElement } from "react";
+import HostListingsView from "@/components/listings/HostListingsView";
 
-export default function AgentSavedListingsPage() {
-  return <ComingSoon eyebrow="Agent portal" title="My Listings" />;
+export default function AgentSavedListingsPage(): ReactElement {
+  return <HostListingsView role="agent" />;
 }

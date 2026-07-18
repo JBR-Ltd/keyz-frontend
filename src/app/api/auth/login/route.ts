@@ -1,5 +1,5 @@
 const API_BASE_URL = process.env.API_BASE_URL;
-const AUTH_REQUEST_TIMEOUT_MS = 45000;
+const AUTH_REQUEST_TIMEOUT_MS = 90000;
 
 interface TimeoutSignal {
   signal: AbortSignal;

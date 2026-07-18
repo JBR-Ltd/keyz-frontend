@@ -21,7 +21,6 @@ interface LoginFormValues {
 interface LoginResponseData {
   accessToken: string;
   role: unknown;
-  userId?: number;
 }
 
 interface ApiEnvelope<TData> {
@@ -45,8 +44,7 @@ function isLoginData(value: unknown): value is LoginResponseData {
     typeof value === "object" &&
     "accessToken" in value &&
     typeof value.accessToken === "string" &&
-    "role" in value &&
-    (!("userId" in value) || typeof value.userId === "number")
+    "role" in value
   );
 }
 
@@ -146,19 +144,17 @@ export default function LoginPage() {
 
         const role = data.data.role.toUpperCase();
         const rolePath = role.toLowerCase();
+        const redirectPath =
+          role === "TENANT" ? "/tenant/browse" : "/" + rolePath + "/dashboard";
 
         localStorage.setItem("rello_token", data.data.accessToken);
         localStorage.setItem("rello_role", role);
-
-        if (typeof data.data.userId === "number") {
-          localStorage.setItem("rello_user_id", String(data.data.userId));
-        }
         notify({
           title: "Logged in",
           description: getApiMessage(data, "Login successful"),
           variant: "success",
         });
-        router.replace(`/${rolePath}/dashboard`);
+        router.replace(redirectPath);
         return;
       }
 
@@ -230,7 +226,7 @@ export default function LoginPage() {
             </motion.div>
 
             <motion.p
-              className="font-accent text-xs font-bold uppercase tracking-[0.3em] text-accent"
+              className="font-accent text-xs font-bold uppercase tracking-[0.3em] text-primary"
               initial={fieldInitial}
               animate={fieldAnimate}
               transition={{ duration: 0.4, delay: 0.08, ease: "easeOut" }}
@@ -413,7 +409,7 @@ export default function LoginPage() {
               >
                 <Link
                   href="/forgot-password"
-                  className="font-body text-sm font-medium text-accent transition-all duration-200 ease-in-out hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  className="font-body text-sm font-medium text-primary transition-all duration-200 ease-in-out hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 >
                   Forgot password?
                 </Link>
@@ -422,7 +418,7 @@ export default function LoginPage() {
               <motion.button
                 type="submit"
                 disabled={isSubmitting}
-                className="mt-3 inline-flex min-h-14 w-full items-center justify-center rounded-full bg-accent px-5 py-4 font-body text-base font-medium text-white transition-all duration-200 ease-in-out hover:scale-[1.01] hover:bg-accent-alt focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-70"
+                className="mt-3 inline-flex min-h-14 w-full items-center justify-center rounded-full bg-accent px-5 py-4 font-body text-base font-medium text-primary transition-all duration-200 ease-in-out hover:scale-[1.01] hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-70"
                 initial={fieldInitial}
                 animate={
                   isSubmitting && !reduceMotion
@@ -448,7 +444,7 @@ export default function LoginPage() {
               Don&apos;t have an account?{" "}
               <Link
                 href="/register"
-                className="font-body font-medium text-accent transition-all duration-200 ease-in-out hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                className="font-body font-medium text-primary transition-all duration-200 ease-in-out hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               >
                 Register
               </Link>

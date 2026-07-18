@@ -8,6 +8,9 @@ import {
   Percent,
   Trophy,
 } from "lucide-react";
+import PropertyPrice from "@/components/property/PropertyPrice";
+import { IconTile } from "@/components/ui/icon-tile";
+import { utilityCardVariants } from "@/components/ui/utility-card";
 
 interface SettingsStatStripProps {
   role: "tenant" | "landlord" | "agent" | "admin";
@@ -50,13 +53,17 @@ export default function SettingsStatStrip({ role }: SettingsStatStripProps) {
       {ROLE_STATS[role].map(({ value, label, icon: Icon }) => (
         <article
           key={label}
-          className="min-w-0 rounded-lg border border-primary/15 bg-[var(--color-bg)] p-5 shadow-sm transition-all duration-200 ease-in-out hover:-translate-y-0.5 hover:bg-surface-soft hover:shadow-md"
+          className={utilityCardVariants({ interactive: true })}
         >
-          <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-surface-soft text-accent-alt">
+          <IconTile tone="accent">
             <Icon size={24} strokeWidth={1.7} />
-          </span>
+          </IconTile>
           <p className="mt-4 font-display text-3xl font-bold leading-none text-primary">
-            {value}
+            {typeof value === "string" && value.startsWith("₦") ? (
+              <PropertyPrice value={value} />
+            ) : (
+              value
+            )}
           </p>
           <p className="mt-2 font-body text-xs font-medium uppercase tracking-[0.14em] text-muted">
             {label}

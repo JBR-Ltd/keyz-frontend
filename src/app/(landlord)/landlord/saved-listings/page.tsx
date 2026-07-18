@@ -1,5 +1,6 @@
-import ComingSoon from "@/components/dashboard/ComingSoon";
+import type { ReactElement } from "react";
+import HostListingsView from "@/components/listings/HostListingsView";
 
-export default function LandlordSavedListingsPage() {
-  return <ComingSoon eyebrow="Landlord portal" title="Saved Listings" />;
+export default function LandlordSavedListingsPage(): ReactElement {
+  return <HostListingsView role="landlord" />;
 }

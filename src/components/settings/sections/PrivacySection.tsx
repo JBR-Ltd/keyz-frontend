@@ -1,6 +1,7 @@
 "use client";
 
 import { Download } from "lucide-react";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { useToast } from "@/components/ui/toast";
 
@@ -26,8 +27,35 @@ const INITIAL_CONTROLS = [
   },
 ];
 
+const LANDLORD_CONTROLS = [
+  {
+    id: "discoverable",
+    label: "Profile discovery",
+    description:
+      "Allow verified tenants and agents to contact you about your active listings.",
+    enabled: true,
+  },
+  {
+    id: "activity",
+    label: "Portfolio personalisation",
+    description:
+      "Use listing and booking activity to improve landlord recommendations.",
+    enabled: true,
+  },
+  {
+    id: "analytics",
+    label: "Product analytics",
+    description: "Share anonymous usage data that helps improve Rello.",
+    enabled: false,
+  },
+];
+
 export default function PrivacySection() {
-  const [controls, setControls] = useState(INITIAL_CONTROLS);
+  const pathname = usePathname();
+  const isLandlord = pathname.startsWith("/landlord");
+  const [controls, setControls] = useState(
+    isLandlord ? LANDLORD_CONTROLS : INITIAL_CONTROLS,
+  );
   const { notify } = useToast();
 
   const toggleControl = (id: string) => {
@@ -39,17 +67,18 @@ export default function PrivacySection() {
   };
 
   return (
-    <section className="overflow-hidden rounded-xl border border-border bg-bg shadow-sm">
+    <section className="overflow-hidden rounded-lg border border-border bg-bg shadow-sm">
       <div className="border-b border-border bg-surface-soft p-6 sm:p-8">
-        <p className="font-accent text-xs font-bold uppercase tracking-[0.3em] text-accent-alt">
+        <p className="font-accent text-xs font-bold uppercase tracking-[0.3em] text-primary">
           Data controls
         </p>
         <h2 className="mt-3 font-display text-3xl font-bold leading-none text-primary sm:text-4xl">
           Privacy
         </h2>
         <p className="mt-4 max-w-2xl font-body text-sm leading-6 text-muted">
-          Decide how your activity supports recommendations and how verified
-          professionals can connect with you.
+          {isLandlord
+            ? "Decide how your portfolio activity supports recommendations and how verified renters can connect with you."
+            : "Decide how your activity supports recommendations and how verified professionals can connect with you."}
         </p>
       </div>
 
@@ -89,7 +118,7 @@ export default function PrivacySection() {
 
       <div className="grid border-t border-border lg:grid-cols-[1fr_auto]">
         <div className="p-6 sm:p-8">
-          <p className="font-accent text-xs font-bold uppercase tracking-[0.3em] text-accent-alt">
+          <p className="font-accent text-xs font-bold uppercase tracking-[0.3em] text-primary">
             Your archive
           </p>
           <h2 className="mt-4 font-display text-3xl font-bold leading-none text-primary sm:text-4xl">
@@ -106,7 +135,7 @@ export default function PrivacySection() {
                 variant: "success",
               })
             }
-            className="flex min-h-16 h-full w-full items-center justify-center gap-3 rounded-full bg-accent px-6 py-4 font-body text-sm font-medium text-white transition-all duration-200 ease-in-out hover:scale-[1.02] hover:bg-accent-alt hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="flex min-h-16 h-full w-full items-center justify-center gap-3 rounded-full bg-accent px-6 py-4 font-body text-sm font-medium text-primary transition-all duration-200 ease-in-out hover:scale-[1.02] hover:bg-primary hover:text-white hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             <Download size={18} />
             Download data

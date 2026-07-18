@@ -204,7 +204,7 @@ export default function RegisterPage() {
             </motion.div>
 
             <motion.p
-              className="font-accent text-xs font-bold uppercase tracking-[0.3em] text-accent"
+              className="font-accent text-xs font-bold uppercase tracking-[0.3em] text-primary"
               initial={fieldInitial}
               animate={fieldAnimate}
               transition={{ duration: 0.4, delay: 0.08, ease: "easeOut" }}
@@ -494,7 +494,7 @@ export default function RegisterPage() {
               <motion.button
                 type="submit"
                 disabled={isSubmitting}
-                className="mt-3 inline-flex min-h-14 w-full items-center justify-center rounded-full bg-accent px-5 py-4 font-body text-base font-medium text-white transition-all duration-200 ease-in-out hover:scale-[1.01] hover:bg-accent-alt focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-70"
+                className="mt-3 inline-flex min-h-14 w-full items-center justify-center rounded-full bg-accent px-5 py-4 font-body text-base font-medium text-primary transition-all duration-200 ease-in-out hover:scale-[1.01] hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-70"
                 initial={fieldInitial}
                 animate={
                   isSubmitting && !reduceMotion
@@ -520,7 +520,7 @@ export default function RegisterPage() {
               Already have an account?{" "}
               <Link
                 href="/login"
-                className="font-body font-medium text-accent transition-all duration-200 ease-in-out hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                className="font-body font-medium text-primary transition-all duration-200 ease-in-out hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               >
                 Log in
               </Link>

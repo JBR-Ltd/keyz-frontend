@@ -9,6 +9,7 @@ This is the comprehensive API specification for the **Keyz Real Estate Platform*
 2. [Interactive Documentation via Swagger UI](#-interactive-documentation-via-swagger-ui)
 3. [Endpoint Catalog](#-endpoint-catalog)
    - [1. Authentication (`/api/auth`)](#1-authentication-apiauth)
+   - [1.5. User Profiles (`/api/users`)](#15-user-profiles-apiusers)
    - [2. Properties (`/api/properties`)](#2-properties-apiproperties)
    - [3. Bookings (`/api/bookings`)](#3-bookings-apibookings)
    - [4. Offers (`/api/offers`)](#4-offers-apioffers)
@@ -214,6 +215,64 @@ Applies the password changes using the 6-digit OTP code received in the email.
     {
       "success": true,
       "message": "Password reset successfully",
+      "data": null
+    }
+    ```
+
+---
+
+### 1.5. User Profiles (`/api/users`)
+
+#### A. Fetch Authenticated User's Profile
+`GET /api/users/me`
+
+Fetches the complete profile details of the currently logged-in user. This endpoint automatically extracts the user's identity from the Authorization JWT token.
+
+*   **Authorization:** Bearer JWT required
+*   **Response (`200 OK`):**
+    ```json
+    {
+      "success": true,
+      "message": "Authenticated user details retrieved successfully",
+      "data": {
+        "id": 3,
+        "firstName": "Tenant Bob",
+        "lastName": "Smith",
+        "email": "bob@example.com",
+        "role": "TENANT",
+        "identityVerified": true,
+        "createdAt": "2026-05-28T01:30:00"
+      }
+    }
+    ```
+
+#### B. Fetch User Details by ID
+`GET /api/users/{id}`
+
+Fetches the profile details of the user matching the specified ID. Security rules dictate that you are only allowed to retrieve your own user details; requesting another user's ID will return a `403 Forbidden` response.
+
+*   **Authorization:** Bearer JWT required
+*   **Response (`200 OK`):**
+    ```json
+    {
+      "success": true,
+      "message": "User details retrieved successfully",
+      "data": {
+        "id": 3,
+        "firstName": "Tenant Bob",
+        "lastName": "Smith",
+        "email": "bob@example.com",
+        "role": "TENANT",
+        "identityVerified": true,
+        "createdAt": "2026-05-28T01:30:00"
+      }
+    }
+    ```
+*   **Response (`403 Forbidden`):**
+    ```json
+    {
+      "success": false,
+      "message": "Access denied: You can only retrieve your own user details.",
       "data": null
     }
     ```
@@ -595,25 +654,24 @@ Landlords call this endpoint to upload legal identity/business documents. They m
     }
     ```
 
-#### B. Standalone Smile ID NIN Verification
-`POST /api/verification/smileid/nin`
+#### B. Standalone Dojah NIN Verification
+`POST /api/verification/dojah/nin`
 
-Verifies a National Identification Number (NIN) against the official database using Smile Identity.
+Verifies a National Identification Number (NIN) against the official database using Dojah.
 
 *   **Authorization:** Bearer JWT required
 *   **Query Parameters:**
     *   `nin` (String): The 11-digit National Identification Number.
-    *   `userId` (Long): The authenticated user ID.
 *   **Response (`200 OK`):**
     ```json
     {
       "success": true,
-      "message": "NIN successfully verified via Smile Identity",
+      "message": "NIN successfully verified via Dojah",
       "data": {
         "success": true,
         "status": "VERIFIED",
-        "message": "NIN successfully verified via Nimc government portal lookup",
-        "smileTxId": "sm_tx_9b1deb4d3a1b",
+        "message": "NIN successfully verified via Dojah portal lookup",
+        "smileTxId": "dj_tx_9b1deb4d3a1b",
         "fullName": "JOHN DOE",
         "dob": "1995-08-12",
         "databaseMatched": "NIN"
@@ -621,25 +679,24 @@ Verifies a National Identification Number (NIN) against the official database us
     }
     ```
 
-#### C. Standalone Smile ID BVN Verification
-`POST /api/verification/smileid/bvn`
+#### C. Standalone Dojah BVN Verification
+`POST /api/verification/dojah/bvn`
 
-Verifies a Bank Verification Number (BVN) against core banking records using Smile Identity.
+Verifies a Bank Verification Number (BVN) against core banking records using Dojah.
 
 *   **Authorization:** Bearer JWT required
 *   **Query Parameters:**
     *   `bvn` (String): The 11-digit Bank Verification Number.
-    *   `userId` (Long): The authenticated user ID.
 *   **Response (`200 OK`):**
     ```json
     {
       "success": true,
-      "message": "BVN successfully verified via Smile Identity",
+      "message": "BVN successfully verified via Dojah",
       "data": {
         "success": true,
         "status": "VERIFIED",
-        "message": "BVN successfully verified via Nibss core banking records matching",
-        "smileTxId": "sm_tx_7a3cef2c8b",
+        "message": "BVN successfully verified via Dojah portal lookup",
+        "smileTxId": "dj_tx_7a3cef2c8b",
         "fullName": "JOHN DOE",
         "dob": "1995-08-12",
         "databaseMatched": "BVN"
@@ -647,26 +704,25 @@ Verifies a Bank Verification Number (BVN) against core banking records using Smi
     }
     ```
 
-#### D. Standalone Smile ID Selfie Liveness Check
-`POST /api/verification/smileid/selfie`
+#### D. Standalone Dojah Selfie Liveness Check
+`POST /api/verification/dojah/selfie`
 
-Analyzes a captured live selfie for physical liveness (anti-spoofing) via Smile Identity.
+Analyzes a captured live selfie for physical liveness (anti-spoofing) via Dojah.
 
 *   **Authorization:** Bearer JWT required
 *   **Content-Type:** `multipart/form-data`
 *   **Request Body (Form Data):**
     *   `selfie` (File Binary): The captured selfie image.
-    *   `userId` (Long): The authenticated user ID.
 *   **Response (`200 OK`):**
     ```json
     {
       "success": true,
-      "message": "Selfie liveness check succeeded via Smile Identity",
+      "message": "Selfie liveness check succeeded via Dojah",
       "data": {
         "success": true,
         "status": "VERIFIED",
-        "message": "Liveness check succeeded (Confidence score: 98.4%). User verified as real physical person.",
-        "smileTxId": "sm_tx_2b9ff9b8c2d1",
+        "message": "Selfie liveness check passed.",
+        "smileTxId": "dj_tx_2b9ff9b8c2d1",
         "livenessScore": 0.984,
         "fullName": "JOHN DOE",
         "databaseMatched": "SELFIE"
@@ -685,14 +741,13 @@ A unified compound endpoint for users registered with the `AGENT` role. It runs 
     *   `selfie` (File Binary): The agent's live selfie image.
     *   `nin` (String): The agent's 11-digit NIN.
     *   `bvn` (String): The agent's 11-digit BVN.
-    *   `userId` (Long): The authenticated user ID.
     *   `latitude` (Double, optional): The agent's physical latitude location.
     *   `longitude` (Double, optional): The agent's physical longitude location.
 *   **Response (`200 OK`):**
     ```json
     {
       "success": true,
-      "message": "Agent identity checks passed. Verification successfully auto-approved via Smile ID biometric trust.",
+      "message": "Agent identity checks passed. Verification successfully auto-approved via Dojah biometric trust.",
       "data": {
         "id": 1,
         "user": {
@@ -707,7 +762,7 @@ A unified compound endpoint for users registered with the `AGENT` role. It runs 
         "nin": "12345678901",
         "bvn": "98765432109",
         "selfieUrl": "https://bucket.s3.region.amazonaws.com/selfies/agent_6",
-        "smileTxId": "sm_tx_4c8efa7a",
+        "smileTxId": "dj_tx_4c8efa7a",
         "status": "APPROVED",
         "latitude": null,
         "longitude": null
@@ -798,7 +853,6 @@ Registers a banking payout account, auditing that the beneficiary name matches t
 
 *   **Authorization:** Bearer JWT required
 *   **Query/Form Parameters:**
-    *   `userId` (Long): The authenticated user ID.
     *   `bankCode` (String): The bank's unique routing code (e.g. `011`).
     *   `accountNumber` (String): The 10-digit bank account number.
     *   `accountName` (String): The name registered on the bank account.
@@ -987,6 +1041,154 @@ Returns the count of pending offline messages waiting in the user's transit mail
       "success": true,
       "message": "Pending offline messages count retrieved successfully",
       "data": 1
+    }
+    ```
+
+---
+
+### 8.5. Call Signaling Subsystem (`/api/calls`)
+
+To allow a real-time call flow similar to WhatsApp, these endpoints act as a signaling server. By combining these endpoints with background polling or push signaling, the client app can display call screens, ring the receiver's phone, and automatically join the private Jitsi video room.
+
+#### A. Initiate Call
+`POST /api/calls/initiate`
+
+Starts a call session, generates a private Jitsi room, and puts the call in the `INITIATED` (ringing) state for the receiver.
+
+*   **Authorization:** Bearer JWT required
+*   **Query Parameters:**
+    *   `receiverId` (Long): The user ID of the person to call (e.g. the agent/landlord).
+    *   `propertyId` (Long): The property ID of the virtual tour.
+*   **Response (`200 OK`):**
+    ```json
+    {
+      "success": true,
+      "message": "Call initiated successfully. Ringing receiver...",
+      "data": {
+        "id": 12,
+        "caller": {
+          "id": 3,
+          "firstName": "Tenant Bob",
+          "lastName": "Smith",
+          "email": "bob@example.com",
+          "role": "TENANT"
+        },
+        "receiver": {
+          "id": 7,
+          "firstName": "Agent Alice",
+          "lastName": "Jones",
+          "email": "alice@example.com",
+          "role": "AGENT"
+        },
+        "propertyId": 1,
+        "status": "INITIATED",
+        "roomName": "keyz-property-1",
+        "jitsiToken": "eyJhbGciOi...",
+        "joinUrl": "https://8x8.vc/appId/keyz-property-1?jwt=...",
+        "createdAt": "2026-07-10T00:50:00",
+        "updatedAt": "2026-07-10T00:50:00"
+      }
+    }
+    ```
+
+#### B. Detect Incoming Call
+`GET /api/calls/incoming`
+
+Checks if there is a pending incoming call (`INITIATED`) waiting for the authenticated user. The client app should poll this endpoint (e.g., every few seconds) or call it on notification receipt. If a call is present, the app can display the "Incoming Call" ringing screen.
+
+*   **Authorization:** Bearer JWT required
+*   **Response (`200 OK`):**
+    ```json
+    {
+      "success": true,
+      "message": "Incoming call detected",
+      "data": {
+        "id": 12,
+        "caller": {
+          "id": 3,
+          "firstName": "Tenant Bob",
+          "lastName": "Smith"
+        },
+        "propertyId": 1,
+        "status": "INITIATED",
+        "roomName": "keyz-property-1",
+        "createdAt": "2026-07-10T00:50:00"
+      }
+    }
+    ```
+
+#### C. Accept Call
+`POST /api/calls/{callId}/accept`
+
+Receiver accepts the call. Updates state to `ACCEPTED` and returns the receiver-specific Jitsi meeting token/url to join.
+
+*   **Authorization:** Bearer JWT required
+*   **Response (`200 OK`):**
+    ```json
+    {
+      "success": true,
+      "message": "Call accepted. Connecting room session...",
+      "data": {
+        "id": 12,
+        "status": "ACCEPTED",
+        "roomName": "keyz-property-1",
+        "jitsiToken": "receiver_jwt...",
+        "joinUrl": "https://8x8.vc/appId/keyz-property-1?jwt=..."
+      }
+    }
+    ```
+
+#### D. Reject Call
+`POST /api/calls/{callId}/reject`
+
+Receiver actively declines the incoming call. Updates state to `REJECTED`.
+
+*   **Authorization:** Bearer JWT required
+*   **Response (`200 OK`):**
+    ```json
+    {
+      "success": true,
+      "message": "Call rejected successfully",
+      "data": {
+        "id": 12,
+        "status": "REJECTED"
+      }
+    }
+    ```
+
+#### E. End Call
+`POST /api/calls/{callId}/end`
+
+Either the caller or receiver ends the call session. Updates state to `ENDED`.
+
+*   **Authorization:** Bearer JWT required
+*   **Response (`200 OK`):**
+    ```json
+    {
+      "success": true,
+      "message": "Call session ended successfully",
+      "data": {
+        "id": 12,
+        "status": "ENDED"
+      }
+    }
+    ```
+
+#### F. Get Call Status
+`GET /api/calls/{callId}/status`
+
+Retrieves the current state of a call session. The caller client app should poll this during call setup (while "Ringing") to know immediately if the receiver accepted, rejected, or timed out.
+
+*   **Authorization:** Bearer JWT required
+*   **Response (`200 OK`):**
+    ```json
+    {
+      "success": true,
+      "message": "Call session status retrieved",
+      "data": {
+        "id": 12,
+        "status": "ACCEPTED"
+      }
     }
     ```
 

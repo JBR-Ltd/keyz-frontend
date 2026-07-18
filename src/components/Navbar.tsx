@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactElement } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -16,6 +16,7 @@ const NAV_LINKS = [
 ];
 
 export default function Navbar(): ReactElement {
+  const reduceMotion = useReducedMotion();
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -30,19 +31,29 @@ export default function Navbar(): ReactElement {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const navSurface = scrolled || menuOpen
-    ? "bg-[color-mix(in_srgb,var(--color-primary)_90%,transparent)] backdrop-blur-md"
-    : "bg-transparent";
+  const navSurface =
+    scrolled || menuOpen
+      ? "bg-[color-mix(in_srgb,var(--color-primary)_90%,transparent)] backdrop-blur-md"
+      : "bg-transparent";
 
   return (
-    <nav className={`fixed left-0 top-0 z-50 w-full transition-all duration-300 ease-in-out ${navSurface}`}>
+    <nav
+      className={`fixed left-0 top-0 z-50 w-full transition-all duration-300 ease-in-out ${navSurface}`}
+    >
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
         <Link
           href="/"
           className="flex items-center transition-all duration-200 ease-in-out hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
           onClick={() => setMenuOpen(false)}
         >
-          <Image src={relloLogo} alt="Rello" width={128} height={48} priority className="h-12 w-32 object-contain brightness-0 invert" />
+          <Image
+            src={relloLogo}
+            alt="Rello"
+            width={128}
+            height={48}
+            priority
+            className="h-12 w-32 object-contain brightness-0 invert"
+          />
         </Link>
 
         <ul className="hidden items-center gap-8 lg:flex">
@@ -67,7 +78,7 @@ export default function Navbar(): ReactElement {
           </Link>
           <Link
             href="/waitlist"
-            className="inline-flex items-center justify-center rounded-full bg-accent px-5 py-2 font-body text-sm font-medium text-white transition-all duration-200 ease-in-out hover:scale-[1.03] hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+            className="inline-flex items-center justify-center rounded-full bg-accent px-5 py-2 font-body text-sm font-medium text-primary transition-all duration-200 ease-in-out hover:scale-[1.03] hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
           >
             List your property
           </Link>
@@ -87,10 +98,10 @@ export default function Navbar(): ReactElement {
       <AnimatePresence>
         {menuOpen ? (
           <motion.div
-            className="absolute left-0 top-full w-full bg-[color-mix(in_srgb,var(--color-primary)_90%,transparent)] px-4 pb-6 backdrop-blur-md lg:hidden"
-            initial={{ opacity: 0, y: -12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -12 }}
+            className="absolute left-0 top-full w-full bg-primary px-4 pb-6 lg:hidden"
+            initial={reduceMotion ? false : { opacity: 0, y: -12 }}
+            animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+            exit={reduceMotion ? undefined : { opacity: 0, y: -12 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
           >
             <ul className="flex flex-col gap-1 py-3">
@@ -118,7 +129,7 @@ export default function Navbar(): ReactElement {
               <Link
                 href="/waitlist"
                 onClick={() => setMenuOpen(false)}
-                className="inline-flex min-h-12 items-center justify-center rounded-full bg-accent px-5 py-3 font-body text-base font-medium text-white transition-all duration-200 ease-in-out hover:scale-[1.01] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+                className="inline-flex min-h-12 items-center justify-center rounded-full bg-accent px-5 py-3 font-body text-base font-medium text-primary transition-all duration-200 ease-in-out hover:scale-[1.01] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
               >
                 List your property
               </Link>

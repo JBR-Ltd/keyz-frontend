@@ -117,7 +117,7 @@ export default function ResetPasswordPage() {
         }
         rightContent={
           <>
-            <p className="font-accent text-xs font-bold uppercase tracking-[0.3em] text-accent">
+            <p className="font-accent text-xs font-bold uppercase tracking-[0.3em] text-primary">
               New Password
             </p>
             <h1 className="mt-5 font-display text-5xl font-bold leading-[0.95] text-primary sm:text-6xl">

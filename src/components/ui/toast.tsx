@@ -69,12 +69,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           return (
             <div
               key={toast.id}
-              className="flex items-start gap-3 rounded-2xl border border-border/80 bg-bg p-4 shadow-xl shadow-primary/10 ring-1 ring-white/70"
+              className="flex items-start gap-3 rounded-xl border border-border/80 bg-bg p-4 shadow-xl ring-1 ring-white/70"
               role="status"
             >
               <span
                 className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
-                  isSuccess ? "bg-accent text-white" : "bg-red-700 text-white"
+                  isSuccess ? "bg-accent text-primary" : "bg-red-700 text-white"
                 }`}
               >
                 <Icon size={18} />

@@ -5,15 +5,23 @@ import {
   ArrowUpRight,
   Building2,
   CalendarCheck,
+  Clock,
   Clock3,
   FileCheck2,
   Landmark,
   MapPin,
   MessageSquareText,
   Percent,
+  X,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { ReactElement, useEffect, useState } from "react";
+import PropertyPrice from "@/components/property/PropertyPrice";
+import {
+  getHostVerificationSnapshot,
+  saveHostPayoutVerification,
+} from "@/lib/hostVerification";
 
 type LandlordRequest =
   | {
@@ -141,17 +149,13 @@ const ACTIVITY_ITEMS = [
   },
 ];
 
-function formatNaira(value: number): string {
-  return `₦${value.toLocaleString("en-NG")}`;
-}
-
 const STATS = [
   {
     label: "Active Listings",
     value: landlordPortfolio.activeListingsCount.toString().padStart(2, "0"),
     trend: `${landlordPortfolio.totalPropertiesCount} total properties`,
     icon: Building2,
-    tone: "bg-primary/5",
+    tone: "bg-surface-soft",
     tile: "bg-primary text-white",
   },
   {
@@ -159,12 +163,12 @@ const STATS = [
     value: landlordPortfolio.pendingOffersCount.toString().padStart(2, "0"),
     trend: "Awaiting response",
     icon: FileCheck2,
-    tone: "bg-primary/5",
+    tone: "bg-surface-soft",
     tile: "bg-primary/10 text-primary",
   },
   {
     label: "Monthly Rental Income",
-    value: formatNaira(landlordPortfolio.expectedMonthlyRentalIncome),
+    value: landlordPortfolio.expectedMonthlyRentalIncome,
     trend: "Expected recurring income",
     icon: Landmark,
     tone: "bg-surface-soft",
@@ -182,18 +186,103 @@ const STATS = [
 
 const STATUS_STYLES: Record<LandlordRequest["status"], string> = {
   Pending: "border border-primary/20 bg-surface-soft text-primary",
-  Accepted: "bg-accent text-white",
+  Accepted: "bg-accent text-primary",
   Declined: "border border-red-700/30 bg-red-700/10 text-red-700",
 };
 
 const REQUEST_TYPE_STYLES: Record<LandlordRequest["requestType"], string> = {
   Rental: "bg-primary/10 text-primary",
-  Sale: "bg-accent text-white",
+  Sale: "bg-accent text-primary",
 };
 
 export default function LandlordDashboardPage() {
   const reduceMotion = useReducedMotion();
+  const [verification, setVerification] = useState(() =>
+    getHostVerificationSnapshot("landlord"),
+  );
+  const [bannerDismissed, setBannerDismissed] = useState(false);
   const maxChartValue = Math.max(...BOOKING_OVERVIEW.map(({ value }) => value));
+  const identityPending = verification.identity.status === "pending";
+  const identityApproved = verification.identity.status === "approved";
+  const payoutPending = verification.payout.status === "pending";
+  const depositsReady = Boolean(verification.payout.depositsReady);
+  const showVerificationBanner =
+    !bannerDismissed && (identityPending || payoutPending);
+
+  useEffect(() => {
+    if (!payoutPending || depositsReady) {
+      return;
+    }
+
+    const setupTime = verification.payout.setupAt
+      ? new Date(verification.payout.setupAt).getTime()
+      : Date.now();
+    const remainingDelay = Math.max(0, 2000 - (Date.now() - setupTime));
+    const timeoutId = window.setTimeout(() => {
+      const nextSnapshot = saveHostPayoutVerification("landlord", {
+        ...verification.payout,
+        depositsReady: true,
+      });
+
+      setVerification(nextSnapshot);
+    }, remainingDelay);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [depositsReady, payoutPending, verification.payout]);
+
+  const renderVerificationBanner = (): ReactElement | null => {
+    if (!showVerificationBanner) {
+      return null;
+    }
+
+    let message = "Your host verification is in progress.";
+    let showConfirmationLink = false;
+
+    if (identityPending && payoutPending && !depositsReady) {
+      message =
+        "Your host verification is in progress. Business review and payout setup are both underway.";
+    } else if (identityPending && payoutPending && depositsReady) {
+      message =
+        "Check your bank account. Enter your deposit amounts to activate payouts.";
+      showConfirmationLink = true;
+    } else if (identityApproved && payoutPending) {
+      message = "Your business is verified! Payout setup is still in progress.";
+    } else if (identityPending) {
+      message =
+        "Your host verification is in progress. Business review is underway.";
+    }
+
+    return (
+      <section
+        className="mb-6 flex items-start gap-3 rounded-lg border-l-2 border-accent bg-accent/10 px-4 py-3"
+        aria-label="Host verification status"
+      >
+        <Clock
+          className="mt-0.5 h-5 w-5 shrink-0 text-accent-alt"
+          aria-hidden="true"
+        />
+        <p className="min-w-0 flex-1 font-body text-sm leading-6 text-primary">
+          {message}{" "}
+          {showConfirmationLink ? (
+            <Link
+              href="/landlord/verify?mode=confirm"
+              className="whitespace-nowrap font-bold text-primary underline decoration-accent underline-offset-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            >
+              Enter Amounts
+            </Link>
+          ) : null}
+        </p>
+        <button
+          type="button"
+          onClick={() => setBannerDismissed(true)}
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          aria-label="Dismiss verification status"
+        >
+          <X size={16} aria-hidden="true" />
+        </button>
+      </section>
+    );
+  };
 
   return (
     <motion.main
@@ -203,7 +292,7 @@ export default function LandlordDashboardPage() {
       transition={{ duration: 0.4, ease: "easeOut" }}
     >
       <header className="pb-10">
-        <p className="font-accent text-xs font-bold uppercase tracking-[0.3em] text-accent-alt">
+        <p className="font-accent text-xs font-bold uppercase tracking-[0.3em] text-primary">
           Host portfolio
         </p>
         <h1 className="mt-4 font-display text-4xl font-bold leading-[0.92] text-primary sm:text-5xl">
@@ -214,6 +303,8 @@ export default function LandlordDashboardPage() {
           and expected rental income.
         </p>
       </header>
+
+      {renderVerificationBanner()}
 
       <section className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
         {STATS.map(({ label, value, trend, icon: Icon, tone, tile }) => (
@@ -230,9 +321,13 @@ export default function LandlordDashboardPage() {
               {label}
             </p>
             <p className="mt-4 break-words font-display text-3xl font-bold leading-none text-primary">
-              {value}
+              {typeof value === "number" ? (
+                <PropertyPrice value={value} />
+              ) : (
+                value
+              )}
             </p>
-            <p className="mt-4 flex items-center gap-2 font-body text-xs font-bold text-accent-alt">
+            <p className="mt-4 flex items-center gap-2 font-body text-xs font-bold text-primary">
               <ArrowUpRight size={15} />
               {trend}
             </p>
@@ -244,7 +339,7 @@ export default function LandlordDashboardPage() {
         <section className="min-w-0 overflow-hidden rounded-lg border border-primary/15 bg-[var(--color-bg)] shadow-sm">
           <div className="flex items-end justify-between gap-5 border-b border-primary/20 bg-surface-soft px-5 py-5 sm:px-6">
             <div>
-              <p className="font-accent text-xs font-bold uppercase tracking-[0.25em] text-accent-alt">
+              <p className="font-accent text-xs font-bold uppercase tracking-[0.25em] text-primary">
                 Bookings overview
               </p>
               <h2 className="mt-2 font-display text-3xl font-bold text-primary">
@@ -335,7 +430,7 @@ export default function LandlordDashboardPage() {
                     <p className="mt-2 font-body text-sm leading-6 text-muted">
                       {description}
                     </p>
-                    <p className="mt-3 font-body text-xs font-medium uppercase tracking-[0.12em] text-accent-alt">
+                    <p className="mt-3 font-body text-xs font-medium uppercase tracking-[0.12em] text-primary">
                       {time}
                     </p>
                   </div>
@@ -349,7 +444,7 @@ export default function LandlordDashboardPage() {
       <section className="mt-10 min-w-0 overflow-hidden rounded-lg border border-primary/15 bg-[var(--color-bg)] shadow-sm">
         <div className="flex items-end justify-between gap-5 border-b border-primary/20 bg-surface-soft px-5 py-5 sm:px-6">
           <div>
-            <p className="font-accent text-xs font-bold uppercase tracking-[0.25em] text-accent-alt">
+            <p className="font-accent text-xs font-bold uppercase tracking-[0.25em] text-primary">
               Pending offers
             </p>
             <h2 className="mt-2 font-display text-3xl font-bold text-primary">
@@ -417,9 +512,13 @@ export default function LandlordDashboardPage() {
                       {request.requester}
                     </p>
                     <p className="mt-1 font-display text-2xl font-bold text-primary">
-                      {request.requestType === "Rental"
-                        ? request.amount
-                        : request.offerAmount}
+                      <PropertyPrice
+                        value={
+                          request.requestType === "Rental"
+                            ? request.amount
+                            : request.offerAmount
+                        }
+                      />
                     </p>
                   </div>
                 </div>

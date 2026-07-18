@@ -3,7 +3,7 @@ import { MapPin, Search } from "lucide-react";
 
 export default function HeroSearchBar(): ReactElement {
   return (
-    <div className="w-full overflow-hidden rounded-2xl bg-[var(--color-bg)] p-2 shadow-[0_28px_70px_color-mix(in_srgb,var(--color-primary)_10%,transparent)] ring-1 ring-[var(--color-border)] lg:max-w-3xl">
+    <div className="w-full overflow-hidden rounded-2xl bg-[var(--color-bg)] p-2 shadow-sm ring-1 ring-[var(--color-border)] lg:max-w-3xl">
       <div className="grid gap-2 sm:grid-cols-2 sm:items-center xl:grid-cols-[auto_1.15fr_0.85fr_auto]">
         <div className="grid grid-cols-2 rounded-lg bg-[var(--color-surface-soft)] p-1 font-body text-sm font-medium text-primary">
           <button
@@ -52,7 +52,7 @@ export default function HeroSearchBar(): ReactElement {
 
         <button
           type="button"
-          className="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-accent px-7 font-body text-base font-bold text-[var(--color-bg)] transition-all duration-200 ease-in-out hover:-translate-y-0.5 hover:shadow-[0_14px_34px_color-mix(in_srgb,var(--color-accent)_20%,transparent)] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          className="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-accent px-7 font-body text-base font-bold text-[var(--color-bg)] transition-all duration-200 ease-in-out hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         >
           <Search size={18} aria-hidden="true" />
           Search

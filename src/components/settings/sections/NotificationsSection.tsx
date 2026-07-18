@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 
 const INITIAL_PREFERENCES = [
@@ -29,8 +30,41 @@ const INITIAL_PREFERENCES = [
   },
 ];
 
+const LANDLORD_PREFERENCES = [
+  {
+    id: "bookings",
+    label: "Booking requests",
+    description: "New requests and changes across your active properties.",
+    enabled: true,
+  },
+  {
+    id: "listings",
+    label: "Listing performance",
+    description: "Views, saves, and activity summaries for your listings.",
+    enabled: true,
+  },
+  {
+    id: "payouts",
+    label: "Payout updates",
+    description: "Escrow releases and settlement updates for funded bookings.",
+    enabled: true,
+  },
+  {
+    id: "editorial",
+    label: "Rello host notes",
+    description:
+      "Occasional market reports, hosting guidance, and product news.",
+    enabled: false,
+  },
+];
+
 export default function NotificationsSection() {
-  const [preferences, setPreferences] = useState(INITIAL_PREFERENCES);
+  const pathname = usePathname();
+  const [preferences, setPreferences] = useState(
+    pathname.startsWith("/landlord")
+      ? LANDLORD_PREFERENCES
+      : INITIAL_PREFERENCES,
+  );
 
   const togglePreference = (id: string) => {
     setPreferences((current) =>
@@ -43,9 +77,9 @@ export default function NotificationsSection() {
   };
 
   return (
-    <section className="overflow-hidden rounded-xl border border-border bg-bg shadow-sm">
+    <section className="overflow-hidden rounded-lg border border-border bg-bg shadow-sm">
       <div className="border-b border-border bg-surface-soft p-6 sm:p-8">
-        <p className="font-accent text-xs font-bold uppercase tracking-[0.3em] text-accent-alt">
+        <p className="font-accent text-xs font-bold uppercase tracking-[0.3em] text-primary">
           Your attention
         </p>
         <h2 className="mt-3 font-display text-3xl font-bold leading-none text-primary sm:text-4xl">

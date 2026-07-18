@@ -5,7 +5,9 @@ interface VerifiedBadgeProps {
   size?: "sm" | "md";
 }
 
-export default function VerifiedBadge({ size = "md" }: VerifiedBadgeProps): ReactElement {
+export default function VerifiedBadge({
+  size = "md",
+}: VerifiedBadgeProps): ReactElement {
   const classes =
     size === "sm"
       ? "gap-1.5 rounded-sm px-2 py-1 text-[0.68rem]"
@@ -14,7 +16,7 @@ export default function VerifiedBadge({ size = "md" }: VerifiedBadgeProps): Reac
 
   return (
     <span
-      className={`inline-flex items-center bg-accent font-body font-bold text-[var(--color-bg)] shadow-sm ${classes}`}
+      className={`inline-flex items-center bg-accent font-body font-bold text-primary shadow-sm ${classes}`}
     >
       <ShieldCheck size={iconSize} strokeWidth={2.4} aria-hidden="true" />
       Verified

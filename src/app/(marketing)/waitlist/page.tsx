@@ -236,7 +236,7 @@ export default function WaitlistPage(): ReactElement {
                   <motion.button
                     type="submit"
                     disabled={status === "submitting"}
-                    className="mt-2 w-full rounded-full bg-accent py-4 font-body text-base font-medium text-white transition-all duration-200 ease-in-out hover:scale-[1.01] hover:bg-accent-alt focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-70"
+                    className="mt-2 w-full rounded-full bg-accent py-4 font-body text-base font-medium text-primary transition-all duration-200 ease-in-out hover:scale-[1.01] hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-70"
                     whileTap={reduceMotion ? undefined : { scale: 0.99 }}
                   >
                     {status === "submitting"

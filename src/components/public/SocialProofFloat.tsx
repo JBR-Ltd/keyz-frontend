@@ -16,7 +16,7 @@ export default function SocialProofFloat({
 
   return (
     <motion.div
-      className="inline-flex items-center gap-3 rounded-lg bg-[var(--color-bg)] px-4 py-3 shadow-[0_28px_70px_color-mix(in_srgb,var(--color-primary)_15%,transparent)] ring-1 ring-[var(--color-border)]"
+      className="inline-flex items-center gap-3 rounded-lg bg-[var(--color-bg)] px-4 py-3 shadow-sm ring-1 ring-[var(--color-border)]"
       initial={reduceMotion ? false : { opacity: 0, y: 14 }}
       animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
       transition={{ duration: 0.45, ease: "easeOut", delay: 0.35 }}

@@ -10,12 +10,7 @@ interface RoleGuardProps {
   expectedRole: AccountRole;
 }
 
-const ACCOUNT_ROLES: AccountRole[] = [
-  "TENANT",
-  "LANDLORD",
-  "AGENT",
-  "ADMIN",
-];
+const ACCOUNT_ROLES: AccountRole[] = ["TENANT", "LANDLORD", "AGENT", "ADMIN"];
 
 export function isAccountRole(value: unknown): value is AccountRole {
   return (
@@ -28,6 +23,12 @@ function subscribeToAuth(): () => void {
   return () => undefined;
 }
 
+function getRoleHomePath(role: AccountRole): string {
+  return role === "TENANT"
+    ? "/tenant/browse"
+    : "/" + role.toLowerCase() + "/dashboard";
+}
+
 function getAuthSnapshot(): string {
   const token = localStorage.getItem("rello_token") ?? "";
   const role = localStorage.getItem("rello_role") ?? "";
@@ -35,10 +36,7 @@ function getAuthSnapshot(): string {
   return `${token}|${role}`;
 }
 
-export default function RoleGuard({
-  children,
-  expectedRole,
-}: RoleGuardProps) {
+export default function RoleGuard({ children, expectedRole }: RoleGuardProps) {
   const router = useRouter();
   const authSnapshot = useSyncExternalStore(
     subscribeToAuth,
@@ -63,7 +61,7 @@ export default function RoleGuard({
 
     if (normalizedRole !== expectedRole) {
       // This client guard improves navigation UX. Authorization must also be enforced server-side.
-      router.replace(`/${normalizedRole.toLowerCase()}/dashboard`);
+      router.replace(getRoleHomePath(normalizedRole));
     }
   }, [authSnapshot, expectedRole, normalizedRole, router, token]);
 

@@ -18,6 +18,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { SyntheticEvent, useEffect, useRef, useState } from "react";
+import OverlayPortal from "@/components/ui/OverlayPortal";
+import { useDialogFocus } from "@/lib/useDialogFocus";
 import relloLogoMark from "../../../public/rello-logo-cropped.svg";
 
 const DEFAULT_ROLE_NAV_ITEMS = [
@@ -118,7 +120,7 @@ function RoleLogoButton({
     <button
       type="button"
       onClick={onCollapseToggle}
-      className={`flex rounded-xl transition-all duration-200 ease-in-out hover:bg-white/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+      className={`flex rounded-lg transition-all duration-200 ease-in-out hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
         isCollapsed
           ? "mx-auto h-12 w-12 items-center justify-center p-0"
           : "w-full items-center gap-3 p-2 text-left"
@@ -130,7 +132,7 @@ function RoleLogoButton({
       }
     >
       <span
-        className={`flex shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white/10 ${
+        className={`flex shrink-0 items-center justify-center overflow-hidden rounded-lg bg-primary ${
           isCollapsed ? "h-10 w-10" : "h-11 w-11"
         }`}
       >
@@ -149,10 +151,10 @@ function RoleLogoButton({
           isCollapsed ? "pointer-events-none w-0 opacity-0" : "w-40 opacity-100"
         }`}
       >
-        <span className="block whitespace-nowrap font-display text-2xl font-bold leading-none text-white">
+        <span className="block whitespace-nowrap font-display text-2xl font-bold leading-none text-primary">
           Rello
         </span>
-        <span className="mt-1 block whitespace-nowrap font-body text-xs font-medium uppercase tracking-[0.14em] text-white/55">
+        <span className="mt-1 block whitespace-nowrap font-body text-xs font-medium uppercase tracking-[0.14em] text-muted">
           {roleLabel} portal
         </span>
       </span>
@@ -164,10 +166,10 @@ function RoleLogoLink({ dashboardHref, roleLabel }: RoleLogoLinkProps) {
   return (
     <Link
       href={dashboardHref}
-      className="flex items-center gap-3 rounded-xl p-2 transition-all duration-200 ease-in-out hover:bg-white/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+      className="flex items-center gap-3 rounded-lg p-2 transition-all duration-200 ease-in-out hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
       aria-label={`Rello ${roleLabel} dashboard`}
     >
-      <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white/10">
+      <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-primary">
         <Image
           src={relloLogoMark}
           alt=""
@@ -177,10 +179,10 @@ function RoleLogoLink({ dashboardHref, roleLabel }: RoleLogoLinkProps) {
         />
       </span>
       <span className="min-w-0">
-        <span className="block font-display text-2xl font-bold leading-none text-white">
+        <span className="block font-display text-2xl font-bold leading-none text-primary">
           Rello
         </span>
-        <span className="mt-1 block font-body text-xs font-medium uppercase tracking-[0.14em] text-white/55">
+        <span className="mt-1 block font-body text-xs font-medium uppercase tracking-[0.14em] text-muted">
           {roleLabel} portal
         </span>
       </span>
@@ -235,12 +237,12 @@ function RoleNavigation({
                 onBlur={() => onTooltipChange?.(null)}
                 aria-current={isActive ? "page" : undefined}
                 aria-label={isCollapsed ? label : undefined}
-                className={`group relative flex min-h-12 items-center rounded-xl font-body text-sm font-medium transition-all duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                className={`group relative flex min-h-12 items-center rounded-lg font-body text-sm font-medium transition-all duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                   isCollapsed ? "justify-center px-3 py-3" : "gap-3 px-4 py-3"
                 } ${
                   isActive
-                    ? "bg-accent text-white shadow-md"
-                    : "text-white/80 hover:bg-white/5 hover:text-white"
+                    ? "border-l-2 border-accent bg-primary/5 text-primary"
+                    : "border-l-2 border-transparent text-muted hover:bg-primary/5 hover:text-primary"
                 }`}
               >
                 <Icon
@@ -248,8 +250,8 @@ function RoleNavigation({
                   strokeWidth={1.8}
                   className={
                     isActive
-                      ? "shrink-0 text-white"
-                      : "shrink-0 text-white/60 transition-colors duration-200 group-hover:text-white"
+                      ? "shrink-0 text-accent-alt"
+                      : "shrink-0 text-primary transition-colors duration-200 group-hover:text-accent-alt"
                   }
                 />
                 <span
@@ -332,7 +334,6 @@ function RoleProfileCard({
   const handleLogout = () => {
     localStorage.removeItem("rello_token");
     localStorage.removeItem("rello_role");
-    localStorage.removeItem("rello_user_id");
     setIsMenuOpen(false);
     onNavigate?.();
     router.replace("/login");
@@ -356,9 +357,7 @@ function RoleProfileCard({
   };
 
   return (
-    <div
-      className={`border-t border-white/10 p-4 ${isCollapsed ? "px-2" : ""}`}
-    >
+    <div className={`border-t border-border p-4 ${isCollapsed ? "px-2" : ""}`}>
       <button
         ref={buttonRef}
         type="button"
@@ -371,18 +370,18 @@ function RoleProfileCard({
         aria-haspopup="menu"
         aria-expanded={isMenuOpen}
         aria-label={isCollapsed ? "Open profile menu" : undefined}
-        className={`group relative grid items-center rounded-2xl transition-all duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+        className={`group relative grid items-center rounded-xl transition-all duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
           isCollapsed
             ? "mx-auto h-12 w-12 grid-cols-1 justify-items-center p-0"
             : "grid-cols-[3rem_1fr_auto] gap-3 p-3"
         } ${
           isSettingsActive
-            ? "bg-accent text-white shadow-md"
-            : "bg-white/5 text-white hover:bg-white/10 hover:shadow-sm"
+            ? "border-l-2 border-accent bg-primary/5 text-primary"
+            : "border-l-2 border-transparent bg-bg text-primary hover:bg-primary/5 hover:shadow-sm"
         }`}
       >
         <span
-          className={`flex items-center justify-center rounded-xl bg-white/15 font-body text-sm font-bold text-white ${
+          className={`flex items-center justify-center rounded-lg bg-primary font-body text-sm font-bold text-white ${
             isCollapsed ? "h-10 w-10" : "h-12 w-12"
           }`}
         >
@@ -398,12 +397,12 @@ function RoleProfileCard({
           <span className="block truncate font-body text-sm font-bold">
             {profile.name}
           </span>
-          <span className="mt-1 block font-body text-xs text-white/65">
+          <span className="mt-1 block font-body text-xs text-muted">
             {roleLabel}
           </span>
         </span>
         {!isCollapsed ? (
-          <ChevronRight size={18} className="text-white/65" />
+          <ChevronRight size={18} className="text-muted" />
         ) : null}
       </button>
 
@@ -412,7 +411,7 @@ function RoleProfileCard({
           <motion.div
             ref={menuRef}
             role="menu"
-            className="fixed z-[90] w-56 overflow-hidden rounded-2xl border border-white/10 bg-primary p-2 shadow-2xl ring-1 ring-white/10"
+            className="fixed z-[90] w-56 overflow-hidden rounded-xl bg-bg p-2 shadow-xl"
             style={{
               left: menuPosition.left,
               top: menuPosition.top,
@@ -429,7 +428,7 @@ function RoleProfileCard({
                 setIsMenuOpen(false);
                 onNavigate?.();
               }}
-              className="flex items-center gap-3 rounded-xl px-4 py-3 font-body text-sm font-medium text-white transition-all duration-200 ease-in-out hover:bg-white/10"
+              className="flex items-center gap-3 rounded-lg px-4 py-3 font-body text-sm font-medium text-primary transition-all duration-200 ease-in-out hover:bg-primary/5"
             >
               <Settings size={17} strokeWidth={1.9} />
               Settings
@@ -438,7 +437,7 @@ function RoleProfileCard({
               type="button"
               role="menuitem"
               onClick={handleLogout}
-              className="mt-1 flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left font-body text-sm font-medium text-white transition-all duration-200 ease-in-out hover:bg-white/10"
+              className="mt-1 flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left font-body text-sm font-medium text-primary transition-all duration-200 ease-in-out hover:bg-primary/5"
             >
               <LogOut size={17} strokeWidth={1.9} />
               Logout
@@ -459,21 +458,37 @@ export default function RoleSidebar({
   const [isOpen, setIsOpen] = useState(false);
   const [tooltip, setTooltip] = useState<SidebarTooltip | null>(null);
   const reduceMotion = useReducedMotion();
+  const drawerRef = useDialogFocus<HTMLElement>(isOpen);
   const dashboardHref = `/${rolePath}/dashboard`;
   const settingsHref = `/${rolePath}/settings`;
   const navItems =
     rolePath === "admin" ? ADMIN_NAV_ITEMS : DEFAULT_ROLE_NAV_ITEMS;
   const profile = ROLE_PROFILES[rolePath];
 
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen]);
+
   return (
     <>
       <aside
-        className={`fixed inset-y-0 left-0 z-30 hidden overflow-visible flex-col border-r border-white/10 bg-primary shadow-sm transition-all duration-300 ease-in-out lg:flex ${
+        className={`fixed inset-y-0 left-0 z-30 hidden overflow-visible flex-col border-r border-border bg-bg shadow-sm transition-all duration-300 ease-in-out lg:flex ${
           isCollapsed ? "w-20" : "w-72"
         }`}
       >
         <div
-          className={`border-b border-white/10 py-6 ${isCollapsed ? "px-2" : "px-3"}`}
+          className={`border-b border-border py-6 ${isCollapsed ? "px-2" : "px-3"}`}
         >
           <RoleLogoButton
             isCollapsed={isCollapsed}
@@ -500,7 +515,7 @@ export default function RoleSidebar({
       <AnimatePresence>
         {isCollapsed && tooltip ? (
           <motion.div
-            className="pointer-events-none fixed left-24 z-[80] rounded-lg bg-white px-3 py-2 font-body text-xs font-bold text-primary shadow-lg"
+            className="pointer-events-none fixed left-24 z-[80] rounded-lg bg-white px-3 py-2 font-body text-xs font-bold text-primary shadow-md"
             style={{ top: tooltip.top }}
             initial={{ opacity: 0, x: -4, y: "-50%" }}
             animate={{ opacity: 1, x: 0, y: "-50%" }}
@@ -512,68 +527,74 @@ export default function RoleSidebar({
         ) : null}
       </AnimatePresence>
 
-      <header className="sticky top-0 z-40 flex h-20 items-center justify-between border-b border-white/10 bg-primary px-4 lg:hidden">
+      <header className="sticky top-0 z-40 flex h-20 items-center justify-between border-b border-border bg-bg px-4 lg:hidden">
         <RoleLogoLink dashboardHref={dashboardHref} roleLabel={roleLabel} />
         <button
           type="button"
           aria-label={isOpen ? "Close navigation" : "Open navigation"}
           aria-expanded={isOpen}
           onClick={() => setIsOpen((current) => !current)}
-          className="flex h-11 w-11 items-center justify-center rounded-full border border-white/20 text-white transition-all duration-200 ease-in-out hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          className="flex h-11 w-11 items-center justify-center rounded-full text-primary shadow-sm transition-all duration-200 ease-in-out hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         >
           {isOpen ? <X size={21} /> : <Menu size={21} />}
         </button>
       </header>
 
-      <AnimatePresence>
-        {isOpen ? (
-          <>
-            <motion.button
-              type="button"
-              aria-label="Close navigation"
-              className="fixed inset-0 z-40 bg-primary/40 backdrop-blur-sm lg:hidden"
-              onClick={() => setIsOpen(false)}
-              initial={reduceMotion ? false : { opacity: 0 }}
-              animate={reduceMotion ? undefined : { opacity: 1 }}
-              exit={reduceMotion ? undefined : { opacity: 0 }}
-            />
-            <motion.aside
-              className="fixed inset-y-0 left-0 z-50 flex w-[min(86vw,22rem)] flex-col rounded-r-2xl border-r border-white/10 bg-primary shadow-2xl lg:hidden"
-              initial={reduceMotion ? false : { x: "-100%" }}
-              animate={reduceMotion ? undefined : { x: 0 }}
-              exit={reduceMotion ? undefined : { x: "-100%" }}
-              transition={{ duration: 0.25, ease: "easeOut" }}
-            >
-              <div className="flex h-20 items-center justify-between border-b border-white/10 px-5">
-                <RoleLogoLink
-                  dashboardHref={dashboardHref}
+      <OverlayPortal>
+        <AnimatePresence>
+          {isOpen ? (
+            <>
+              <motion.button
+                type="button"
+                aria-label="Close navigation"
+                className="fixed inset-0 z-[100] bg-black/40 lg:hidden"
+                onClick={() => setIsOpen(false)}
+                initial={reduceMotion ? false : { opacity: 0 }}
+                animate={reduceMotion ? undefined : { opacity: 1 }}
+                exit={reduceMotion ? undefined : { opacity: 0 }}
+              />
+              <motion.aside
+                ref={drawerRef}
+                role="dialog"
+                aria-modal="true"
+                aria-label="Navigation"
+                className="fixed inset-y-0 left-0 z-[110] flex w-[min(86vw,22rem)] flex-col rounded-r-xl border-r border-border bg-bg shadow-xl lg:hidden"
+                initial={reduceMotion ? false : { x: "-100%" }}
+                animate={reduceMotion ? undefined : { x: 0 }}
+                exit={reduceMotion ? undefined : { x: "-100%" }}
+                transition={{ duration: 0.25, ease: "easeOut" }}
+              >
+                <div className="flex h-20 items-center justify-between border-b border-border px-5">
+                  <RoleLogoLink
+                    dashboardHref={dashboardHref}
+                    roleLabel={roleLabel}
+                  />
+                  <button
+                    type="button"
+                    aria-label="Close navigation"
+                    onClick={() => setIsOpen(false)}
+                    className="flex h-10 w-10 items-center justify-center rounded-full text-primary shadow-sm transition-all duration-200 ease-in-out hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+                <RoleNavigation
+                  navItems={navItems}
+                  onNavigate={() => setIsOpen(false)}
                   roleLabel={roleLabel}
+                  rolePath={rolePath}
                 />
-                <button
-                  type="button"
-                  aria-label="Close navigation"
-                  onClick={() => setIsOpen(false)}
-                  className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 text-white transition-all duration-200 ease-in-out hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-              <RoleNavigation
-                navItems={navItems}
-                onNavigate={() => setIsOpen(false)}
-                roleLabel={roleLabel}
-                rolePath={rolePath}
-              />
-              <RoleProfileCard
-                onNavigate={() => setIsOpen(false)}
-                profile={profile}
-                roleLabel={roleLabel}
-                settingsHref={settingsHref}
-              />
-            </motion.aside>
-          </>
-        ) : null}
-      </AnimatePresence>
+                <RoleProfileCard
+                  onNavigate={() => setIsOpen(false)}
+                  profile={profile}
+                  roleLabel={roleLabel}
+                  settingsHref={settingsHref}
+                />
+              </motion.aside>
+            </>
+          ) : null}
+        </AnimatePresence>
+      </OverlayPortal>
     </>
   );
 }

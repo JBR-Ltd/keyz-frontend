@@ -12,13 +12,11 @@ import PaymentsSection from "@/components/settings/sections/PaymentsSection";
 import PrivacySection from "@/components/settings/sections/PrivacySection";
 import ProfileSection from "@/components/settings/sections/ProfileSection";
 import SecuritySection from "@/components/settings/sections/SecuritySection";
-import VerificationSection from "@/components/settings/sections/VerificationSection";
 import { SettingsSectionId } from "@/components/settings/types";
 
 const SECTION_COMPONENTS = {
   profile: ProfileSection,
   security: SecuritySection,
-  verification: VerificationSection,
   notifications: NotificationsSection,
   payments: PaymentsSection,
   privacy: PrivacySection,
@@ -44,14 +42,14 @@ export default function SettingsView() {
 
   return (
     <motion.main
-      className="min-h-screen overflow-x-hidden bg-surface-soft px-5 py-12 sm:px-8 lg:px-10 lg:py-14"
+      className="min-h-screen overflow-x-hidden bg-surface-soft px-5 py-12 sm:px-8 lg:px-10 lg:py-16"
       initial={reduceMotion ? false : { opacity: 0, y: 16 }}
       animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: "easeOut" }}
     >
       <div className="mx-auto max-w-6xl">
         <header>
-          <h1 className="font-display text-4xl font-bold leading-[0.92] text-primary">
+          <h1 className="font-display text-4xl font-bold leading-[0.92] text-primary sm:text-5xl">
             Account Settings
           </h1>
           <p className="mt-3 font-body text-base text-muted">
@@ -59,7 +57,7 @@ export default function SettingsView() {
           </p>
         </header>
 
-        <div className="mt-8 overflow-hidden rounded-2xl border border-border bg-bg shadow-sm">
+        <div className="mt-8 overflow-hidden rounded-xl border border-border bg-bg shadow-sm">
           <SettingsTabBar
             activeSection={activeSection}
             onSectionChange={showSection}

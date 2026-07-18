@@ -13,7 +13,7 @@ export default function CityCard({
   imageUrl,
 }: CityCardProps): ReactElement {
   return (
-    <article className="group relative h-80 min-w-[18rem] overflow-hidden rounded-2xl shadow-[0_18px_45px_color-mix(in_srgb,var(--color-primary)_10%,transparent)] transition-all duration-300 ease-in-out hover:scale-[1.02] hover:shadow-[0_28px_70px_color-mix(in_srgb,var(--color-primary)_20%,transparent)] sm:min-w-[22rem] lg:min-w-0">
+    <article className="group relative h-80 min-w-[18rem] overflow-hidden rounded-2xl shadow-sm transition-all duration-300 ease-in-out hover:scale-[1.02] hover:shadow-md sm:min-w-[22rem] lg:min-w-0">
       <Image
         src={imageUrl}
         alt={`${city} cityscape`}

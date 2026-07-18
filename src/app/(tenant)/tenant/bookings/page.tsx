@@ -1,163 +1,282 @@
-import type { ReactElement } from "react";
-import type { StaticImageData } from "next/image";
+"use client";
+
+import { useEffect, useState, type ReactElement } from "react";
 import {
+  ArrowDownRight,
   ArrowUpRight,
-  CalendarDays,
-  CheckCircle2,
-  DoorOpen,
+  Clock3,
   MapPin,
-  MessageSquareText,
+  MessageCircle,
 } from "lucide-react";
 import Image from "next/image";
-import propertyOne from "../../../../../public/images/about-interior.jpg";
-import propertyTwo from "../../../../../public/images/cta-house.jpg";
-import propertyThree from "../../../../../public/images/newsletter-house.jpg";
+import ChatThread from "@/components/chat/ChatThread";
+import PropertyPrice from "@/components/property/PropertyPrice";
+import { IconTile } from "@/components/ui/icon-tile";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { utilityCardVariants } from "@/components/ui/utility-card";
+import {
+  TENANT_ACTIVITIES,
+  TENANT_ACTIVITY_TYPE_TONES,
+  TENANT_STATS,
+  TENANT_STATUS_TONES,
+  TENANT_TIMELINE_ACTIVITIES,
+} from "@/lib/tenantActivity";
+import {
+  ChatPartyRole,
+  ConversationSummary,
+  getAllConversations,
+  getConversationId,
+  getCurrentChatUser,
+  subscribeToChatStorage,
+} from "@/lib/chat/chatStorage";
 
-interface StayCard {
-  title: string;
-  location: string;
-  date: string;
-  status: string;
-  image: StaticImageData;
+interface ActiveChatThread {
+  conversationId: string;
+  otherPartyName: string;
+  otherPartyRole: ChatPartyRole;
+  propertyName: string;
 }
 
-const STAYS: StayCard[] = [
-  {
-    title: "Maitama Courtyard",
-    location: "Maitama, Abuja",
-    date: "Jul 22",
-    status: "Viewing",
-    image: propertyTwo,
-  },
-  {
-    title: "Harbour View Residence",
-    location: "Victoria Island, Lagos",
-    date: "Aug 14",
-    status: "Confirmed",
-    image: propertyThree,
-  },
-];
-
-const MOMENTS = [
-  { time: "09:00", title: "Keys pickup", detail: "Meet host at reception" },
-  { time: "10:30", title: "Room inspection", detail: "Upload photos before escrow release" },
-  { time: "12:00", title: "Move-in note", detail: "Confirm utilities and access cards" },
-];
-
 export default function TenantBookingsPage(): ReactElement {
-  return (
-    <main className="min-h-screen overflow-x-hidden px-5 py-10 sm:px-8 lg:px-10 lg:py-14 xl:px-14">
-      <section className="grid min-h-[28rem] overflow-hidden rounded-lg border border-primary/15 bg-primary text-white shadow-sm xl:grid-cols-[1.05fr_0.95fr]">
-        <div className="p-6 sm:p-8 lg:p-10">
-          <p className="font-accent text-xs font-bold uppercase tracking-[0.3em] text-accent">
-            Booking itinerary
-          </p>
-          <h1 className="mt-5 max-w-xl font-display text-5xl font-bold leading-[0.9] sm:text-6xl">
-            Your next stay is almost ready.
-          </h1>
-          <p className="mt-5 max-w-lg font-body text-base leading-7 text-white/70">
-            The Glass House is in the final handoff stage. Finish inspection,
-            confirm keys, and escrow can move to release review.
-          </p>
+  const [conversations, setConversations] = useState<ConversationSummary[]>([]);
+  const [activeThread, setActiveThread] = useState<ActiveChatThread | null>(
+    null,
+  );
+  const [storageUnavailable, setStorageUnavailable] = useState(false);
+  const currentUser = getCurrentChatUser();
 
-          <div className="mt-8 grid gap-4 sm:grid-cols-3">
-            {[
-              ["Check-in", "Jul 04"],
-              ["Duration", "14 nights"],
-              ["Escrow", "Funded"],
-            ].map(([label, value]) => (
-              <div key={label} className="rounded-lg border border-white/15 bg-white/[0.08] p-4">
-                <p className="font-accent text-[0.65rem] font-bold uppercase tracking-[0.2em] text-white/50">
+  useEffect(() => {
+    let active = true;
+
+    function loadConversations(): void {
+      void getAllConversations().then((result) => {
+        if (!active) {
+          return;
+        }
+
+        setConversations(result.data);
+        setStorageUnavailable(result.unavailable);
+      });
+    }
+
+    loadConversations();
+
+    const unsubscribe = subscribeToChatStorage(loadConversations);
+
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, []);
+
+  return (
+    <main className="min-h-screen overflow-x-hidden px-5 py-12 sm:px-8 lg:px-10 lg:py-16 xl:px-14">
+      <header className="pb-10">
+        <p className="font-accent text-xs font-bold uppercase tracking-[0.3em] text-primary">
+          Your rental desk
+        </p>
+        <h1 className="mt-4 font-display text-4xl font-bold leading-[0.92] text-primary sm:text-5xl">
+          Bookings
+        </h1>
+        <p className="mt-4 max-w-2xl font-body text-base leading-7 text-muted">
+          Track your rentals, purchase offers, escrow status, and saved homes
+          from one scannable workspace.
+        </p>
+      </header>
+
+      <section className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+        {TENANT_STATS.map(
+          ({ label, value, trend, direction, icon: Icon, tone, tile }) => {
+            const TrendIcon =
+              direction === "up" ? ArrowUpRight : ArrowDownRight;
+
+            return (
+              <article
+                key={label}
+                className={utilityCardVariants({ tone, interactive: true })}
+              >
+                <IconTile tone={tile}>
+                  <Icon size={22} />
+                </IconTile>
+                <p className="mt-2 font-body text-xs font-medium uppercase tracking-[0.14em] text-muted">
                   {label}
                 </p>
-                <p className="mt-2 font-display text-2xl font-bold text-accent">
-                  {value}
+                <p className="mt-4 break-words font-display text-3xl font-bold leading-none text-primary">
+                  {typeof value === "number" ? (
+                    <PropertyPrice value={value} />
+                  ) : (
+                    value
+                  )}
                 </p>
-              </div>
-            ))}
-          </div>
+                <p
+                  className={`mt-4 flex items-center gap-2 font-body text-xs font-bold ${direction === "up" ? "text-primary" : "text-muted"}`}
+                >
+                  <TrendIcon size={15} />
+                  {trend}
+                </p>
+              </article>
+            );
+          },
+        )}
+      </section>
+
+      <section className="mt-10 min-w-0 overflow-hidden rounded-lg bg-[var(--color-bg)] shadow-sm">
+        <div className="border-b border-primary/20 bg-surface-soft px-5 py-5 sm:px-6">
+          <p className="font-accent text-xs font-bold uppercase tracking-[0.25em] text-primary">
+            Tenant activity
+          </p>
+          <h2 className="mt-2 font-display text-3xl font-bold text-primary">
+            Active Rentals & Offers
+          </h2>
         </div>
 
-        <div className="relative min-h-80">
-          <Image
-            src={propertyOne}
-            alt="The Glass House living room"
-            fill
-            priority
-            sizes="(max-width: 1280px) 100vw, 45vw"
-            className="object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-primary via-primary/20 to-transparent" />
-          <div className="absolute bottom-5 left-5 right-5 rounded-lg border border-white/20 bg-primary/85 p-5 backdrop-blur">
-            <p className="font-body text-sm font-bold text-accent">The Glass House, Lekki</p>
-            <p className="mt-2 flex items-center gap-2 font-body text-sm text-white/70">
-              <MapPin size={15} />
-              Lekki Phase 1, Lagos
-            </p>
-          </div>
+        {storageUnavailable ? (
+          <p className="border-b border-border px-5 py-3 font-body text-xs text-primary sm:px-6">
+            Local message storage is unavailable in this browser session.
+          </p>
+        ) : null}
+
+        <div>
+          {TENANT_ACTIVITIES.map((activity) => {
+            const conversationId = getConversationId(activity.propertyId, [
+              currentUser.id,
+              activity.host.id,
+            ]);
+            const conversation = conversations.find(
+              (summary) => summary.conversationId === conversationId,
+            );
+            const hasUnread = Boolean(conversation?.unreadCount);
+
+            return (
+              <article
+                key={`${activity.activityType}-${activity.title}`}
+                className="grid gap-4 border-b border-border p-5 transition-all duration-200 ease-in-out last:border-b-0 hover:bg-surface-soft hover:shadow-md sm:grid-cols-[8rem_1fr] sm:items-center sm:p-6"
+              >
+                <div className="relative h-28 overflow-hidden rounded-lg bg-surface-soft sm:w-full">
+                  <Image
+                    src={activity.image}
+                    alt={activity.title}
+                    fill
+                    sizes="(max-width: 640px) 100vw, 128px"
+                    className="object-cover transition-all duration-200 ease-in-out"
+                  />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <StatusBadge
+                          tone={
+                            TENANT_ACTIVITY_TYPE_TONES[activity.activityType]
+                          }
+                        >
+                          {activity.activityType}
+                        </StatusBadge>
+                        <h3 className="font-body text-lg font-bold text-primary">
+                          {activity.title}
+                        </h3>
+                      </div>
+                      <p className="mt-2 flex items-center gap-2 font-body text-sm text-muted">
+                        <MapPin
+                          size={15}
+                          className="shrink-0 text-primary/60"
+                        />
+                        {activity.location}
+                      </p>
+                    </div>
+                    <StatusBadge tone={TENANT_STATUS_TONES[activity.status]}>
+                      {activity.status}
+                    </StatusBadge>
+                  </div>
+                  <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
+                    <div className="flex items-center gap-2 font-body text-sm text-muted">
+                      <Clock3 size={15} className="shrink-0 text-primary/60" />
+                      <span>
+                        {activity.activityType === "Rental"
+                          ? activity.dates
+                          : "Offer submitted"}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setActiveThread({
+                            conversationId,
+                            otherPartyName: activity.host.name,
+                            otherPartyRole: activity.host.role,
+                            propertyName: activity.title,
+                          })
+                        }
+                        className="relative flex h-10 w-10 items-center justify-center rounded-full text-primary transition-all duration-200 ease-in-out hover:bg-primary/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                        aria-label={`Message ${activity.host.name}`}
+                      >
+                        <MessageCircle size={18} aria-hidden="true" />
+                        {hasUnread ? (
+                          <span className="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full bg-accent" />
+                        ) : null}
+                      </button>
+                      <p className="font-display text-2xl font-bold text-primary">
+                        <PropertyPrice
+                          value={
+                            activity.activityType === "Rental"
+                              ? (activity.price ?? "")
+                              : (activity.offerAmount ?? "")
+                          }
+                        />
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </article>
+            );
+          })}
         </div>
       </section>
 
-      <div className="mt-8 grid gap-6 xl:grid-cols-[22rem_1fr]">
-        <aside className="rounded-lg border border-primary/15 bg-[var(--color-bg)] p-6 shadow-sm">
-          <p className="font-accent text-xs font-bold uppercase tracking-[0.25em] text-accent-alt">
-            Handoff day
+      <section className="mt-10 overflow-hidden rounded-lg bg-[var(--color-bg)] shadow-sm">
+        <div className="border-b border-primary/20 bg-surface-soft px-5 py-5 sm:px-6">
+          <p className="font-accent text-xs font-bold uppercase tracking-[0.25em] text-primary">
+            Timeline
           </p>
-          <div className="mt-6 space-y-6">
-            {MOMENTS.map((moment, index) => (
-              <div key={moment.title} className="grid grid-cols-[4rem_1fr] gap-4">
-                <p className="font-display text-xl font-bold text-primary">{moment.time}</p>
-                <div className="border-l border-primary/20 pl-4">
-                  <p className="flex items-center gap-2 font-body text-sm font-bold text-primary">
-                    {index === 0 ? <DoorOpen size={16} className="text-accent-alt" /> : null}
-                    {index === 1 ? <CheckCircle2 size={16} className="text-accent-alt" /> : null}
-                    {index === 2 ? <MessageSquareText size={16} className="text-accent-alt" /> : null}
-                    {moment.title}
+          <h2 className="mt-2 font-display text-3xl font-bold text-primary">
+            Recent Activity
+          </h2>
+        </div>
+        <div className="grid md:grid-cols-3">
+          {TENANT_TIMELINE_ACTIVITIES.map(
+            ({ title, description, time, icon: Icon, tone }) => (
+              <article
+                key={title}
+                className="grid grid-cols-[3rem_1fr] gap-4 border-b border-border p-5 transition-all duration-200 ease-in-out last:border-b-0 hover:bg-surface-soft hover:shadow-md md:border-b-0 md:border-r md:last:border-r-0 sm:p-6"
+              >
+                <IconTile tone={tone} size="lg" shape="circle">
+                  <Icon size={20} />
+                </IconTile>
+                <div className="min-w-0">
+                  <h3 className="font-body text-sm font-bold text-primary">
+                    {title}
+                  </h3>
+                  <p className="mt-2 font-body text-sm leading-6 text-muted">
+                    {description}
                   </p>
-                  <p className="mt-2 font-body text-sm leading-6 text-muted">{moment.detail}</p>
+                  <p className="mt-3 font-body text-xs font-medium uppercase tracking-[0.12em] text-primary">
+                    {time}
+                  </p>
                 </div>
-              </div>
-            ))}
-          </div>
-        </aside>
+              </article>
+            ),
+          )}
+        </div>
+      </section>
 
-        <section className="grid gap-5 md:grid-cols-2">
-          {STAYS.map((stay) => (
-            <article key={stay.title} className="group overflow-hidden rounded-lg border border-primary/15 bg-[var(--color-bg)] shadow-sm">
-              <div className="relative h-52 overflow-hidden">
-                <Image
-                  src={stay.image}
-                  alt={stay.title}
-                  fill
-                  sizes="(max-width: 768px) 100vw, 34vw"
-                  className="object-cover transition-transform duration-300 ease-in-out group-hover:scale-105"
-                />
-              </div>
-              <div className="p-5">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="font-body text-lg font-bold text-primary">{stay.title}</p>
-                    <p className="mt-2 flex items-center gap-2 font-body text-sm text-muted">
-                      <MapPin size={15} className="text-accent-alt" />
-                      {stay.location}
-                    </p>
-                  </div>
-                  <span className="rounded-full bg-accent px-3 py-2 font-accent text-xs font-bold uppercase tracking-[0.14em] text-primary">
-                    {stay.status}
-                  </span>
-                </div>
-                <div className="mt-5 flex items-center justify-between border-t border-primary/10 pt-5">
-                  <span className="flex items-center gap-2 font-body text-sm text-muted">
-                    <CalendarDays size={15} className="text-accent-alt" />
-                    {stay.date}
-                  </span>
-                  <ArrowUpRight size={18} className="text-primary" />
-                </div>
-              </div>
-            </article>
-          ))}
-        </section>
-      </div>
+      <ChatThread
+        conversationId={activeThread?.conversationId ?? null}
+        otherPartyName={activeThread?.otherPartyName ?? ""}
+        otherPartyRole={activeThread?.otherPartyRole ?? "Agent"}
+        propertyName={activeThread?.propertyName ?? ""}
+        onClose={() => setActiveThread(null)}
+      />
     </main>
   );
 }
