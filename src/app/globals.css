@@ -36,6 +36,11 @@
     background: var(--color-bg);
   }
 
+  :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
   h1,
   h2,
   h3 {
@@ -62,6 +67,14 @@
     font-family: var(--font-accent), sans-serif;
     font-optical-sizing: auto;
     font-style: normal;
+  }
+
+  .bg-bg {
+    background-color: var(--color-bg);
+  }
+
+  .bg-border {
+    background-color: var(--color-border);
   }
 
   .bg-primary {
@@ -114,6 +127,10 @@
 
   .text-muted {
     color: var(--color-text-muted);
+  }
+
+  .border-border {
+    border-color: var(--color-border);
   }
 
   .border-accent {
@@ -205,6 +222,14 @@
     );
   }
 
+  .settings-hero-surface {
+    background: linear-gradient(
+      135deg,
+      var(--color-primary),
+      var(--color-primary-dark)
+    );
+  }
+
   .premium-hover {
     transition-property: all;
     transition-duration: 200ms;
@@ -214,7 +239,7 @@
   .premium-hover:hover,
   .premium-hover:focus-visible {
     transform: translateY(-2px);
-    box-shadow: 4px 4px 0 var(--color-primary);
+    box-shadow: var(--shadow-md);
   }
 
   .hero-mesh {
@@ -292,6 +317,18 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
   .hero-mesh,
   .rello-marquee {
     animation: none;

@@ -9,15 +9,15 @@ This is the comprehensive API specification for the **Keyz Real Estate Platform*
 2. [Interactive Documentation via Swagger UI](#-interactive-documentation-via-swagger-ui)
 3. [Endpoint Catalog](#-endpoint-catalog)
    - [1. Authentication (`/api/auth`)](#1-authentication-apiauth)
+   - [1.5. User Profiles (`/api/users`)](#15-user-profiles-apiusers)
    - [2. Properties (`/api/properties`)](#2-properties-apiproperties)
    - [3. Bookings (`/api/bookings`)](#3-bookings-apibookings)
    - [4. Offers (`/api/offers`)](#4-offers-apioffers)
    - [5. Reviews (`/api/reviews`)](#5-reviews-apireviews)
    - [6. KYC & Verifications (`/api/verification`)](#6-kyc--verifications-apiverification)
    - [7. Virtual 3D & Video Tours (`/api/tours`)](#7-virtual-3d--video-tours-apitours)
-   - [8. Admin Verification Workflows (`/api/admin/verification`)](#8-admin-verification-workflows-apiadminverification)
-   - [9. Zero-Knowledge Marketplace Chat Relay (`/api/chat`)](#9-zero-knowledge-marketplace-chat-relay-apichat)
-   - [10. System Health (`/api/health`)](#10-system-health-apihealth)
+   - [8. Zero-Knowledge Marketplace Chat Relay (`/api/chat`)](#8-zero-knowledge-marketplace-chat-relay-apichat)
+   - [9. System Health (`/api/health`)](#9-system-health-apihealth)
 4. [Standardized Error Codes](#-standardized-error-codes)
 
 ---
@@ -111,10 +111,10 @@ Creates a new user profile on the system.
       "lastName": "Doe",
       "email": "john@example.com",
       "password": "SecurePassword123!",
-      "role": "BUYER"
+      "role": "TENANT"
     }
     ```
-    *(Note: `role` must be one of `"LANDLORD"`, `"AGENT"`, or `"TENANT"`)*
+    *(Note: role must be one of `"LANDLORD"`, `"AGENT"`, or `"TENANT"`)*
 *   **Response (`200 OK` - New Registration):**
     ```json
     {
@@ -149,11 +149,14 @@ Authenticates credentials and registers the client's device fingerprint.
 *   **Response (`200 OK`):**
     ```json
     {
-      "success": true,
       "message": "Login successful",
       "data": {
-        "token": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJqb2hu...",
-        "role": "BUYER"
+        "accessToken": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJqb2hu...",
+        "role": "TENANT",
+        "userId": 1,
+        "email": "john@example.com",
+        "firstName": "John",
+        "lastName": "Doe"
       }
     }
     ```
@@ -175,10 +178,10 @@ Consumes the 6-digit numeric verification OTP sent to the user's email upon regi
     }
     ```
 
-#### C. Forgot Password Link Request
+#### D. Forgot Password OTP Request
 `POST /api/auth/forgot-password`
 
-Triggers password recovery. Sends a recovery link containing a token via Resend.
+Triggers password recovery. Sends a 6-digit verification OTP code via Resend.
 
 *   **Request Body:**
     ```json
@@ -195,15 +198,15 @@ Triggers password recovery. Sends a recovery link containing a token via Resend.
     }
     ```
 
-#### D. Password Reset
+#### E. Password Reset
 `POST /api/auth/reset-password`
 
-Applies the password changes using the token received in the email.
+Applies the password changes using the 6-digit OTP code received in the email.
 
 *   **Request Body:**
     ```json
     {
-      "token": "a1b2c3d4-email-token",
+      "token": "482915",
       "newPassword": "NewSecurePassword456!"
     }
     ```
@@ -212,6 +215,64 @@ Applies the password changes using the token received in the email.
     {
       "success": true,
       "message": "Password reset successfully",
+      "data": null
+    }
+    ```
+
+---
+
+### 1.5. User Profiles (`/api/users`)
+
+#### A. Fetch Authenticated User's Profile
+`GET /api/users/me`
+
+Fetches the complete profile details of the currently logged-in user. This endpoint automatically extracts the user's identity from the Authorization JWT token.
+
+*   **Authorization:** Bearer JWT required
+*   **Response (`200 OK`):**
+    ```json
+    {
+      "success": true,
+      "message": "Authenticated user details retrieved successfully",
+      "data": {
+        "id": 3,
+        "firstName": "Tenant Bob",
+        "lastName": "Smith",
+        "email": "bob@example.com",
+        "role": "TENANT",
+        "identityVerified": true,
+        "createdAt": "2026-05-28T01:30:00"
+      }
+    }
+    ```
+
+#### B. Fetch User Details by ID
+`GET /api/users/{id}`
+
+Fetches the profile details of the user matching the specified ID. Security rules dictate that you are only allowed to retrieve your own user details; requesting another user's ID will return a `403 Forbidden` response.
+
+*   **Authorization:** Bearer JWT required
+*   **Response (`200 OK`):**
+    ```json
+    {
+      "success": true,
+      "message": "User details retrieved successfully",
+      "data": {
+        "id": 3,
+        "firstName": "Tenant Bob",
+        "lastName": "Smith",
+        "email": "bob@example.com",
+        "role": "TENANT",
+        "identityVerified": true,
+        "createdAt": "2026-05-28T01:30:00"
+      }
+    }
+    ```
+*   **Response (`403 Forbidden`):**
+    ```json
+    {
+      "success": false,
+      "message": "Access denied: You can only retrieve your own user details.",
       "data": null
     }
     ```
@@ -301,7 +362,32 @@ Creates a new property listing. The property starts as **unverified** (`isVerifi
       "data": {
         "id": 2,
         "title": "Stunning Ikoyi Duplex",
-        "isVerified": false,
+        "description": "Exquisite luxury duplex",
+        "address": "4 Waterfront Road, Ikoyi",
+        "price": 600000.00,
+        "bedrooms": 5,
+        "bathrooms": 6,
+        "squareFootage": 4500.0,
+        "status": "FOR_SALE",
+        "virtualTourUrl": null,
+        "videoWalkthroughUrl": null,
+        "seller": {
+          "id": 5,
+          "firstName": "John",
+          "lastName": "Doe",
+          "email": "john@example.com",
+          "role": "AGENT",
+          "sellerRating": 0.0,
+          "isEmailVerified": true
+        },
+        "latitude": null,
+        "longitude": null,
+        "proofLatitude": null,
+        "proofLongitude": null,
+        "imageUrl": null,
+        "imageHash": null,
+        "verified": false,
+        "flaggedAsDuplicate": false
       }
     }
     ```
@@ -316,20 +402,49 @@ Uploads a property listing photo, processes its EXIF metadata for geofence valid
     *   `id` (Long): The target property listing ID.
 *   **Content-Type:** `multipart/form-data`
 *   **Request Body (Form Data):**
-    *   `file` (File Binary): The property image file (e.g. `house_front.jpg`).
+    *   `image` (File Binary): The property image file (e.g. `house_front.jpg`).
 *   **Response (`200 OK` - Success, Clean Visual Fingerprint):**
     ```json
     {
       "success": true,
       "message": "Property listing photograph uploaded and verified successfully! No duplicate footprints found.",
-      "data": "https://keyz-walkthroughs.s3.amazonaws.com/properties/photos_2_..."
+      "data": {
+        "id": 2,
+        "title": "Stunning Ikoyi Duplex",
+        "description": "Exquisite luxury duplex",
+        "address": "4 Waterfront Road, Ikoyi",
+        "price": 600000.00,
+        "bedrooms": 5,
+        "bathrooms": 6,
+        "squareFootage": 4500.0,
+        "status": "FOR_SALE",
+        "virtualTourUrl": null,
+        "videoWalkthroughUrl": null,
+        "seller": {
+          "id": 5,
+          "firstName": "John",
+          "lastName": "Doe",
+          "email": "john@example.com",
+          "role": "AGENT",
+          "sellerRating": 0.0,
+          "isEmailVerified": true
+        },
+        "latitude": null,
+        "longitude": null,
+        "proofLatitude": null,
+        "proofLongitude": null,
+        "imageUrl": "https://keyz-walkthroughs.s3.amazonaws.com/properties/photos_2",
+        "imageHash": "a1b2c3d4e5f6g7h8",
+        "verified": false,
+        "flaggedAsDuplicate": false
+      }
     }
     ```
-*   **Response (`200 OK` - Warning, Stolen/Duplicate Photo Flagged):**
+*   **Response (`400 Bad Request` - Warning, Stolen/Duplicate Photo Flagged):**
     ```json
     {
-      "success": true,
-      "message": "Security Warning: Stolen visual footprint detected. This image has already been listed by another seller. This property listing has been flagged and deactivated.",
+      "success": false,
+      "message": "Security Alert: This listing photograph matches an existing verified property listing (Property ID: 1) by a different host. Listing flagged and deactivated.",
       "data": null
     }
     ```
@@ -539,25 +654,24 @@ Landlords call this endpoint to upload legal identity/business documents. They m
     }
     ```
 
-#### B. Standalone Smile ID NIN Verification
-`POST /api/verification/smileid/nin`
+#### B. Standalone Dojah NIN Verification
+`POST /api/verification/dojah/nin`
 
-Verifies a National Identification Number (NIN) against the official database using Smile Identity.
+Verifies a National Identification Number (NIN) against the official database using Dojah.
 
 *   **Authorization:** Bearer JWT required
 *   **Query Parameters:**
     *   `nin` (String): The 11-digit National Identification Number.
-    *   `userId` (Long): The authenticated user ID.
 *   **Response (`200 OK`):**
     ```json
     {
       "success": true,
-      "message": "NIN successfully verified via Smile Identity",
+      "message": "NIN successfully verified via Dojah",
       "data": {
         "success": true,
         "status": "VERIFIED",
-        "message": "NIN successfully verified via Nimc government portal lookup",
-        "smileTxId": "sm_tx_9b1deb4d3a1b",
+        "message": "NIN successfully verified via Dojah portal lookup",
+        "smileTxId": "dj_tx_9b1deb4d3a1b",
         "fullName": "JOHN DOE",
         "dob": "1995-08-12",
         "databaseMatched": "NIN"
@@ -565,25 +679,24 @@ Verifies a National Identification Number (NIN) against the official database us
     }
     ```
 
-#### C. Standalone Smile ID BVN Verification
-`POST /api/verification/smileid/bvn`
+#### C. Standalone Dojah BVN Verification
+`POST /api/verification/dojah/bvn`
 
-Verifies a Bank Verification Number (BVN) against core banking records using Smile Identity.
+Verifies a Bank Verification Number (BVN) against core banking records using Dojah.
 
 *   **Authorization:** Bearer JWT required
 *   **Query Parameters:**
     *   `bvn` (String): The 11-digit Bank Verification Number.
-    *   `userId` (Long): The authenticated user ID.
 *   **Response (`200 OK`):**
     ```json
     {
       "success": true,
-      "message": "BVN successfully verified via Smile Identity",
+      "message": "BVN successfully verified via Dojah",
       "data": {
         "success": true,
         "status": "VERIFIED",
-        "message": "BVN successfully verified via Nibss core banking records matching",
-        "smileTxId": "sm_tx_7a3cef2c8b",
+        "message": "BVN successfully verified via Dojah portal lookup",
+        "smileTxId": "dj_tx_7a3cef2c8b",
         "fullName": "JOHN DOE",
         "dob": "1995-08-12",
         "databaseMatched": "BVN"
@@ -591,26 +704,25 @@ Verifies a Bank Verification Number (BVN) against core banking records using Smi
     }
     ```
 
-#### D. Standalone Smile ID Selfie Liveness Check
-`POST /api/verification/smileid/selfie`
+#### D. Standalone Dojah Selfie Liveness Check
+`POST /api/verification/dojah/selfie`
 
-Analyzes a captured live selfie for physical liveness (anti-spoofing) via Smile Identity.
+Analyzes a captured live selfie for physical liveness (anti-spoofing) via Dojah.
 
 *   **Authorization:** Bearer JWT required
 *   **Content-Type:** `multipart/form-data`
 *   **Request Body (Form Data):**
     *   `selfie` (File Binary): The captured selfie image.
-    *   `userId` (Long): The authenticated user ID.
 *   **Response (`200 OK`):**
     ```json
     {
       "success": true,
-      "message": "Selfie liveness check succeeded via Smile Identity",
+      "message": "Selfie liveness check succeeded via Dojah",
       "data": {
         "success": true,
         "status": "VERIFIED",
-        "message": "Liveness check succeeded (Confidence score: 98.4%). User verified as real physical person.",
-        "smileTxId": "sm_tx_2b9ff9b8c2d1",
+        "message": "Selfie liveness check passed.",
+        "smileTxId": "dj_tx_2b9ff9b8c2d1",
         "livenessScore": 0.984,
         "fullName": "JOHN DOE",
         "databaseMatched": "SELFIE"
@@ -621,7 +733,7 @@ Analyzes a captured live selfie for physical liveness (anti-spoofing) via Smile 
 #### E. Submit Agent Verification (Compound Biometric Check)
 `POST /api/verification/agent`
 
-A unified compound endpoint for users registered with the `AGENT` role. It runs Standalone NIN verification, BVN verification, and a Selfie Liveness check. If all succeed, it uploads the selfie to S3 and registers a pending `AgentVerification` entry.
+A unified compound endpoint for users registered with the `AGENT` role. It runs Standalone NIN verification, BVN verification, and a Selfie Liveness check. If all succeed, it uploads the selfie to S3 and registers an approved `AgentVerification` entry.
 
 *   **Authorization:** Bearer JWT required (Must have `AGENT` role)
 *   **Content-Type:** `multipart/form-data`
@@ -629,20 +741,31 @@ A unified compound endpoint for users registered with the `AGENT` role. It runs 
     *   `selfie` (File Binary): The agent's live selfie image.
     *   `nin` (String): The agent's 11-digit NIN.
     *   `bvn` (String): The agent's 11-digit BVN.
-    *   `userId` (Long): The authenticated user ID.
+    *   `latitude` (Double, optional): The agent's physical latitude location.
+    *   `longitude` (Double, optional): The agent's physical longitude location.
 *   **Response (`200 OK`):**
     ```json
     {
       "success": true,
-      "message": "Agent identity checks passed. Verification submitted and pending admin approval.",
+      "message": "Agent identity checks passed. Verification successfully auto-approved via Dojah biometric trust.",
       "data": {
         "id": 1,
-        "user": { "id": 6 },
+        "user": {
+          "id": 6,
+          "firstName": "Alice",
+          "lastName": "Agent",
+          "email": "alice@agent.com",
+          "role": "AGENT",
+          "sellerRating": 0.0,
+          "isEmailVerified": true
+        },
         "nin": "12345678901",
         "bvn": "98765432109",
-        "selfieUrl": "https://bucket.s3.region.amazonaws.com/selfies/agent_6/...",
-        "smileTxId": "sm_tx_4c8efa7a",
-        "status": "PENDING"
+        "selfieUrl": "https://bucket.s3.region.amazonaws.com/selfies/agent_6",
+        "smileTxId": "dj_tx_4c8efa7a",
+        "status": "APPROVED",
+        "latitude": null,
+        "longitude": null
       }
     }
     ```
@@ -730,7 +853,6 @@ Registers a banking payout account, auditing that the beneficiary name matches t
 
 *   **Authorization:** Bearer JWT required
 *   **Query/Form Parameters:**
-    *   `userId` (Long): The authenticated user ID.
     *   `bankCode` (String): The bank's unique routing code (e.g. `011`).
     *   `accountNumber` (String): The 10-digit bank account number.
     *   `accountName` (String): The name registered on the bank account.
@@ -842,120 +964,7 @@ Binds an interactive Matterport 3D virtual tour link to the property.
 
 ---
 
-### 8. Admin Verification Workflows (`/api/admin/verification`)
-
-These administrative endpoints permit system operators to review and act on pending trust submissions.
-
-#### A. Approve Landlord KYB
-`POST /api/admin/verification/kyb/{id}/approve`
-
-*   **Authorization:** Bearer JWT required (Must have the `ADMIN` role)
-*   **Response (`200 OK`):**
-    ```json
-    {
-      "success": true,
-      "message": "KYB verification successfully approved.",
-      "data": {
-        "id": 1,
-        "status": "APPROVED",
-        "documentUrl": "https://..."
-      }
-    }
-    ```
-
-#### B. Reject Landlord KYB
-`POST /api/admin/verification/kyb/{id}/reject`
-
-*   **Authorization:** Bearer JWT required (Must have the `ADMIN` role)
-*   **Query Parameters:**
-    *   `reason` (String): Reason for rejection (e.g., "Illegible document ID").
-*   **Response (`200 OK`):**
-    ```json
-    {
-      "success": true,
-      "message": "KYB verification rejected. Reason: Illegible document ID",
-      "data": {
-        "id": 1,
-        "status": "REJECTED",
-        "documentUrl": "https://..."
-      }
-    }
-    ```
-
-#### C. Approve Agent Verification
-`POST /api/admin/verification/agent/{id}/approve`
-
-*   **Authorization:** Bearer JWT required (Must have the `ADMIN` role)
-*   **Response (`200 OK`):**
-    ```json
-    {
-      "success": true,
-      "message": "Agent verification successfully approved.",
-      "data": {
-        "id": 2,
-        "status": "APPROVED",
-        "nin": "12345678901",
-        "bvn": "98765432109"
-      }
-    }
-    ```
-
-#### D. Reject Agent Verification
-`POST /api/admin/verification/agent/{id}/reject`
-
-*   **Authorization:** Bearer JWT required (Must have the `ADMIN` role)
-*   **Query Parameters:**
-    *   `reason` (String): Reason for rejection.
-*   **Response (`200 OK`):**
-    ```json
-    {
-      "success": true,
-      "message": "Agent verification rejected. Reason: Signature mismatch",
-      "data": {
-        "id": 2,
-        "status": "REJECTED",
-        "rejectionReason": "Signature mismatch"
-      }
-    }
-    ```
-
-#### E. Approve Property Verification (Makes Property Public)
-`POST /api/admin/verification/property/{id}/approve`
-
-*   **Authorization:** Bearer JWT required (Must have the `ADMIN` role)
-*   **Response (`200 OK`):**
-    ```json
-    {
-      "success": true,
-      "message": "Property verification approved. Listing is now live and public.",
-      "data": {
-        "id": 4,
-        "status": "APPROVED"
-      }
-    }
-    ```
-
-#### F. Reject Property Verification
-`POST /api/admin/verification/property/{id}/reject`
-
-*   **Authorization:** Bearer JWT required (Must have the `ADMIN` role)
-*   **Query Parameters:**
-    *   `reason` (String): Reason for rejection.
-*   **Response (`200 OK`):**
-    ```json
-    {
-      "success": true,
-      "message": "Property verification rejected. Listing remains offline. Reason: Deed invalid",
-      "data": {
-        "id": 4,
-        "status": "REJECTED"
-      }
-    }
-    ```
-
----
-
-### 9. Zero-Knowledge Marketplace Chat Relay (`/api/chat`)
+### 8. Zero-Knowledge Marketplace Chat Relay (`/api/chat`)
 
 Keyz utilizes a **Zero-Knowledge privacy-first messaging architecture** (similar to WhatsApp and Signal). 
 
@@ -1037,7 +1046,155 @@ Returns the count of pending offline messages waiting in the user's transit mail
 
 ---
 
-### 10. System Health (`/api/health`)
+### 8.5. Call Signaling Subsystem (`/api/calls`)
+
+To allow a real-time call flow similar to WhatsApp, these endpoints act as a signaling server. By combining these endpoints with background polling or push signaling, the client app can display call screens, ring the receiver's phone, and automatically join the private Jitsi video room.
+
+#### A. Initiate Call
+`POST /api/calls/initiate`
+
+Starts a call session, generates a private Jitsi room, and puts the call in the `INITIATED` (ringing) state for the receiver.
+
+*   **Authorization:** Bearer JWT required
+*   **Query Parameters:**
+    *   `receiverId` (Long): The user ID of the person to call (e.g. the agent/landlord).
+    *   `propertyId` (Long): The property ID of the virtual tour.
+*   **Response (`200 OK`):**
+    ```json
+    {
+      "success": true,
+      "message": "Call initiated successfully. Ringing receiver...",
+      "data": {
+        "id": 12,
+        "caller": {
+          "id": 3,
+          "firstName": "Tenant Bob",
+          "lastName": "Smith",
+          "email": "bob@example.com",
+          "role": "TENANT"
+        },
+        "receiver": {
+          "id": 7,
+          "firstName": "Agent Alice",
+          "lastName": "Jones",
+          "email": "alice@example.com",
+          "role": "AGENT"
+        },
+        "propertyId": 1,
+        "status": "INITIATED",
+        "roomName": "keyz-property-1",
+        "jitsiToken": "eyJhbGciOi...",
+        "joinUrl": "https://8x8.vc/appId/keyz-property-1?jwt=...",
+        "createdAt": "2026-07-10T00:50:00",
+        "updatedAt": "2026-07-10T00:50:00"
+      }
+    }
+    ```
+
+#### B. Detect Incoming Call
+`GET /api/calls/incoming`
+
+Checks if there is a pending incoming call (`INITIATED`) waiting for the authenticated user. The client app should poll this endpoint (e.g., every few seconds) or call it on notification receipt. If a call is present, the app can display the "Incoming Call" ringing screen.
+
+*   **Authorization:** Bearer JWT required
+*   **Response (`200 OK`):**
+    ```json
+    {
+      "success": true,
+      "message": "Incoming call detected",
+      "data": {
+        "id": 12,
+        "caller": {
+          "id": 3,
+          "firstName": "Tenant Bob",
+          "lastName": "Smith"
+        },
+        "propertyId": 1,
+        "status": "INITIATED",
+        "roomName": "keyz-property-1",
+        "createdAt": "2026-07-10T00:50:00"
+      }
+    }
+    ```
+
+#### C. Accept Call
+`POST /api/calls/{callId}/accept`
+
+Receiver accepts the call. Updates state to `ACCEPTED` and returns the receiver-specific Jitsi meeting token/url to join.
+
+*   **Authorization:** Bearer JWT required
+*   **Response (`200 OK`):**
+    ```json
+    {
+      "success": true,
+      "message": "Call accepted. Connecting room session...",
+      "data": {
+        "id": 12,
+        "status": "ACCEPTED",
+        "roomName": "keyz-property-1",
+        "jitsiToken": "receiver_jwt...",
+        "joinUrl": "https://8x8.vc/appId/keyz-property-1?jwt=..."
+      }
+    }
+    ```
+
+#### D. Reject Call
+`POST /api/calls/{callId}/reject`
+
+Receiver actively declines the incoming call. Updates state to `REJECTED`.
+
+*   **Authorization:** Bearer JWT required
+*   **Response (`200 OK`):**
+    ```json
+    {
+      "success": true,
+      "message": "Call rejected successfully",
+      "data": {
+        "id": 12,
+        "status": "REJECTED"
+      }
+    }
+    ```
+
+#### E. End Call
+`POST /api/calls/{callId}/end`
+
+Either the caller or receiver ends the call session. Updates state to `ENDED`.
+
+*   **Authorization:** Bearer JWT required
+*   **Response (`200 OK`):**
+    ```json
+    {
+      "success": true,
+      "message": "Call session ended successfully",
+      "data": {
+        "id": 12,
+        "status": "ENDED"
+      }
+    }
+    ```
+
+#### F. Get Call Status
+`GET /api/calls/{callId}/status`
+
+Retrieves the current state of a call session. The caller client app should poll this during call setup (while "Ringing") to know immediately if the receiver accepted, rejected, or timed out.
+
+*   **Authorization:** Bearer JWT required
+*   **Response (`200 OK`):**
+    ```json
+    {
+      "success": true,
+      "message": "Call session status retrieved",
+      "data": {
+        "id": 12,
+        "status": "ACCEPTED"
+      }
+    }
+    ```
+
+---
+
+### 9. System Health (`/api/health`)
 
 Endpoints in this group do not require any Authorization token and are designed for uptime monitors and keep-alive cronjobs.
 

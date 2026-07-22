@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 type Phase = "draw" | "fillin" | "exit";
@@ -62,6 +62,7 @@ function DrawPath({
 }
 
 export default function LoadingScreen({ onDone }: LoadingScreenProps) {
+  const reduceMotion = useReducedMotion();
   const [phase, setPhase] = useState<Phase>("draw");
   const exitTimeoutRef = useRef<number | null>(null);
 
@@ -69,6 +70,13 @@ export default function LoadingScreen({ onDone }: LoadingScreenProps) {
     document.documentElement.style.visibility = "";
     document.documentElement.style.overflow = "";
   }, []);
+
+  useEffect(() => {
+    if (reduceMotion) {
+      sessionStorage.setItem("rello_loaded", "true");
+      onDone();
+    }
+  }, [onDone, reduceMotion]);
 
   useEffect(() => {
     return () => {

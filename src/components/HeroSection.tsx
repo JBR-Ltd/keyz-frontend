@@ -90,7 +90,7 @@ export default function HeroSection() {
             </Link>
             <Link
               href="#how-it-works"
-              className="premium-hover inline-flex min-h-14 justify-center rounded-full border border-white/25 bg-white/10 px-8 py-4 text-base font-semibold text-white backdrop-blur-md"
+              className="premium-hover inline-flex min-h-14 justify-center rounded-full border border-white bg-white text-primary px-8 py-4 text-base font-semibold text-white"
             >
               See how it works
             </Link>

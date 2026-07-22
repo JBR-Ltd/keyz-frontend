@@ -110,21 +110,24 @@ export default function ResetPasswordPage() {
               Set a new Rello password.
             </h1>
             <p className="mt-6 font-body text-lg leading-8 text-white/70">
-              Use the token from your reset email and choose a new password for
-              your account.
+              Use the 6-digit code from your reset email and choose a new
+              password for your account.
             </p>
           </div>
         }
         rightContent={
           <>
-            <p className="font-accent text-xs font-bold uppercase tracking-[0.3em] text-accent">
+            <p className="font-accent text-xs font-bold uppercase tracking-[0.3em] text-primary">
               New Password
             </p>
             <h1 className="mt-5 font-display text-5xl font-bold leading-[0.95] text-primary sm:text-6xl">
               Reset your password
             </h1>
 
-            <form className="mt-10 grid gap-5" onSubmit={handleSubmit(onSubmit)}>
+            <form
+              className="mt-10 grid gap-5"
+              onSubmit={handleSubmit(onSubmit)}
+            >
               {errorMessage ? (
                 <AuthBanner
                   key={errorMessage}
@@ -134,14 +137,14 @@ export default function ResetPasswordPage() {
               ) : null}
 
               <AuthInput
-                label="Reset Token"
+                label="Reset Code"
                 name="token"
                 type="text"
-                placeholder="a1b2c3d4-email-token"
+                placeholder="482915"
                 autoComplete="one-time-code"
                 error={errors.token?.message}
                 register={register}
-                rules={{ required: "Reset token is required" }}
+                rules={{ required: "Reset code is required" }}
               />
 
               <AuthInput
