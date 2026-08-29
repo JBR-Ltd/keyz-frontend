@@ -119,14 +119,88 @@ async function persistListing(
   }
 }
 
-async function simulateCreateListingRequest(
-  input: HostListingInput,
-): Promise<HostListingStorageResult<HostListingRecord | null>> {
-  await new Promise((resolve) => window.setTimeout(resolve, 700));
-  return persistListing(input, "PENDING_VERIFICATION");
+interface BackendApiEnvelope {
+  success: boolean;
+  message: string;
+  data: unknown;
 }
 
-const createListingRequest = simulateCreateListingRequest;
+function isBackendApiEnvelope(value: unknown): value is BackendApiEnvelope {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    "success" in value &&
+    "message" in value
+  );
+}
+
+function extractBackendPropertyId(value: unknown): number | null {
+  if (
+    value !== null &&
+    typeof value === "object" &&
+    "id" in value &&
+    typeof value.id === "number"
+  ) {
+    return value.id;
+  }
+
+  return null;
+}
+
+// Calls the real Java backend to create the property record. Returns the
+// real numeric property ID on success, or null if the user isn't logged
+// in, isn't verified, or the request otherwise fails - callers treat null
+// the same as "storage unavailable".
+async function createPropertyOnBackend(
+  input: HostListingInput,
+): Promise<string | null> {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const token = localStorage.getItem("rello_token");
+  const userId = localStorage.getItem("rello_user_id");
+
+  if (!token || !userId) {
+    return null;
+  }
+
+  const address = [input.address, input.area, input.city]
+    .filter(Boolean)
+    .join(", ");
+
+  try {
+    const response = await fetch("/api/properties", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        title: input.title,
+        description: input.description,
+        address,
+        price: input.price,
+        bedrooms: input.bedrooms,
+        bathrooms: input.bathrooms,
+        squareFootage: input.squareFootage ?? 0,
+        status: input.listingType,
+        seller: { id: Number(userId) },
+      }),
+    });
+
+    const data: unknown = await response.json().catch(() => null);
+
+    if (!response.ok || !isBackendApiEnvelope(data) || !data.success) {
+      return null;
+    }
+
+    const propertyId = extractBackendPropertyId(data.data);
+    return propertyId !== null ? String(propertyId) : null;
+  } catch {
+    return null;
+  }
+}
 
 export function subscribeToHostListings(callback: () => void): () => void {
   window.addEventListener(STORAGE_EVENT, callback);
@@ -178,5 +252,14 @@ export async function saveHostListingDraft(
 export async function submitHostListing(
   input: HostListingInput,
 ): Promise<HostListingStorageResult<HostListingRecord | null>> {
-  return createListingRequest(input);
+  const backendPropertyId = await createPropertyOnBackend(input);
+
+  if (!backendPropertyId) {
+    return { data: null, unavailable: true };
+  }
+
+  return persistListing(
+    { ...input, id: backendPropertyId },
+    "PENDING_VERIFICATION",
+  );
 }

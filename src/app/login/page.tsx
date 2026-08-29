@@ -21,6 +21,7 @@ interface LoginFormValues {
 interface LoginResponseData {
   accessToken: string;
   role: unknown;
+  userId: number;
 }
 
 interface ApiEnvelope<TData> {
@@ -44,7 +45,9 @@ function isLoginData(value: unknown): value is LoginResponseData {
     typeof value === "object" &&
     "accessToken" in value &&
     typeof value.accessToken === "string" &&
-    "role" in value
+    "role" in value &&
+    "userId" in value &&
+    typeof value.userId === "number"
   );
 }
 
@@ -149,6 +152,7 @@ export default function LoginPage() {
 
         localStorage.setItem("rello_token", data.data.accessToken);
         localStorage.setItem("rello_role", role);
+        localStorage.setItem("rello_user_id", String(data.data.userId));
         notify({
           title: "Logged in",
           description: getApiMessage(data, "Login successful"),

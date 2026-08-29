@@ -588,7 +588,7 @@ export default function CreateListingForm({
     }
 
     notify({ title: "Listing created successfully.", variant: "success" });
-    router.push(`/${role}/saved-listings`);
+    router.push(`/${role}/listings/${result.data.id}/tour`);
   };
 
   if (isLoadingDraft) {
