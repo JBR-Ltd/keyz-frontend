@@ -1,6 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
+import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { SubmitHandler, useForm } from "react-hook-form";
@@ -182,7 +183,17 @@ export default function ForgotPasswordPage() {
                     : { duration: 0.2 }
                 }
               >
-                {isSubmitting ? "Please wait..." : "Send Reset Code"}
+                {isSubmitting ? (
+                  <span className="inline-flex items-center gap-2">
+                    <Loader2
+                      className="h-4 w-4 animate-spin"
+                      aria-hidden="true"
+                    />
+                    Please wait...
+                  </span>
+                ) : (
+                  "Send Reset Code"
+                )}
               </motion.button>
             </form>
 

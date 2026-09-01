@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -307,7 +308,17 @@ export default function VerifyEmailPage() {
                     : { duration: 0.2 }
                 }
               >
-                {isSubmitting ? "Please wait..." : "Verify Email"}
+                {isSubmitting ? (
+                  <span className="inline-flex items-center gap-2">
+                    <Loader2
+                      className="h-4 w-4 animate-spin"
+                      aria-hidden="true"
+                    />
+                    Please wait...
+                  </span>
+                ) : (
+                  "Verify Email"
+                )}
               </motion.button>
             </form>
 

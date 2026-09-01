@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { EyeIcon, EyeOffIcon, X } from "lucide-react";
+import { EyeIcon, EyeOffIcon, Loader2, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -507,7 +507,17 @@ export default function RegisterPage() {
                     : { duration: 0.4, delay: 0.72, ease: "easeOut" }
                 }
               >
-                {isSubmitting ? "Creating account..." : "Create account"}
+                {isSubmitting ? (
+                  <span className="inline-flex items-center gap-2">
+                    <Loader2
+                      className="h-4 w-4 animate-spin"
+                      aria-hidden="true"
+                    />
+                    Creating account...
+                  </span>
+                ) : (
+                  "Create account"
+                )}
               </motion.button>
             </form>
 
