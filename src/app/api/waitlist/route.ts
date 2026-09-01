@@ -1,6 +1,12 @@
 const WAITLIST_ENDPOINT =
   process.env.WAITLIST_ENDPOINT;
 
+function getWaitlistUrl(): string | null {
+  return WAITLIST_ENDPOINT
+    ? `${WAITLIST_ENDPOINT.replace(/\/$/, "")}/api/subscribe`
+    : null;
+}
+
 type WaitlistPayload = {
   firstName: string;
   lastName: string;
@@ -40,6 +46,10 @@ async function readResponseBody(response: Response): Promise<unknown> {
     return null;
   }
 
+  if (response.headers.get("Content-Type")?.includes("text/html")) {
+    return null;
+  }
+
   try {
     return JSON.parse(text);
   } catch {
@@ -48,7 +58,9 @@ async function readResponseBody(response: Response): Promise<unknown> {
 }
 
 export async function POST(request: Request): Promise<Response> {
-  if (!WAITLIST_ENDPOINT) {
+  const waitlistUrl = getWaitlistUrl();
+
+  if (!waitlistUrl) {
     return Response.json(
       { message: "WAITLIST_ENDPOINT is not configured." },
       { status: 500 },
@@ -80,7 +92,7 @@ export async function POST(request: Request): Promise<Response> {
   };
 
   try {
-    const response = await fetch(WAITLIST_ENDPOINT, {
+    const response = await fetch(waitlistUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
