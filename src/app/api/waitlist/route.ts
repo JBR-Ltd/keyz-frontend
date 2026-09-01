@@ -1,12 +1,19 @@
 const WAITLIST_ENDPOINT =
   process.env.WAITLIST_ENDPOINT;
 
+function getWaitlistUrl(): string | null {
+  return WAITLIST_ENDPOINT
+    ? `${WAITLIST_ENDPOINT.replace(/\/$/, "")}/api/subscribe`
+    : null;
+}
+
 type WaitlistPayload = {
   firstName: string;
   lastName: string;
   email: string;
   phone: string;
   city: string;
+  role: string;
 };
 
 function isWaitlistPayload(value: unknown): value is WaitlistPayload {
@@ -22,11 +29,13 @@ function isWaitlistPayload(value: unknown): value is WaitlistPayload {
     typeof payload.email === "string" &&
     typeof payload.phone === "string" &&
     typeof payload.city === "string" &&
+    typeof payload.role === "string" &&
     payload.firstName.trim().length > 0 &&
     payload.lastName.trim().length > 0 &&
     payload.email.trim().length > 0 &&
     payload.phone.trim().length > 0 &&
-    payload.city.trim().length > 0
+    payload.city.trim().length > 0 &&
+    payload.role.trim().length > 0
   );
 }
 
@@ -34,6 +43,10 @@ async function readResponseBody(response: Response): Promise<unknown> {
   const text = await response.text();
 
   if (!text) {
+    return null;
+  }
+
+  if (response.headers.get("Content-Type")?.includes("text/html")) {
     return null;
   }
 
@@ -45,7 +58,9 @@ async function readResponseBody(response: Response): Promise<unknown> {
 }
 
 export async function POST(request: Request): Promise<Response> {
-  if (!WAITLIST_ENDPOINT) {
+  const waitlistUrl = getWaitlistUrl();
+
+  if (!waitlistUrl) {
     return Response.json(
       { message: "WAITLIST_ENDPOINT is not configured." },
       { status: 500 },
@@ -62,7 +77,7 @@ export async function POST(request: Request): Promise<Response> {
 
   if (!isWaitlistPayload(body)) {
     return Response.json(
-      { message: "Please provide your name, email, phone, and city." },
+      { message: "Please provide your name, email, phone, city, and role." },
       { status: 400 },
     );
   }
@@ -73,10 +88,11 @@ export async function POST(request: Request): Promise<Response> {
     email: body.email.trim(),
     phone: body.phone.trim(),
     city: body.city.trim(),
+    role: body.role.trim(),
   };
 
   try {
-    const response = await fetch(WAITLIST_ENDPOINT, {
+    const response = await fetch(waitlistUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
