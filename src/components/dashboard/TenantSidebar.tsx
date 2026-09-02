@@ -2,17 +2,13 @@
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
-  Bookmark,
   CalendarDays,
   ChevronRight,
-  Landmark,
   LoaderCircle,
   LogOut,
   Menu,
-  Scale,
   Search,
   Settings,
-  Star,
   X,
 } from "lucide-react";
 import Image from "next/image";
@@ -27,10 +23,6 @@ import relloLogoMark from "../../../public/rello-logo-cropped.svg";
 const TENANT_NAV_ITEMS = [
   { label: "Browse", href: "/tenant/browse", icon: Search },
   { label: "Bookings", href: "/tenant/bookings", icon: CalendarDays },
-  { label: "Escrow", href: "/tenant/escrow", icon: Landmark },
-  { label: "Disputes", href: "/tenant/disputes", icon: Scale },
-  { label: "Ratings", href: "/tenant/ratings", icon: Star },
-  { label: "Saved Listings", href: "/tenant/saved-listings", icon: Bookmark },
 ];
 
 const PROFILE_MENU_WIDTH = 224;
