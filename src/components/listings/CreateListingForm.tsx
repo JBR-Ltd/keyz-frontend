@@ -342,15 +342,10 @@ export default function CreateListingForm({
 
       setStorageUnavailable(result.unavailable);
 
-      if (
-        !result.data ||
-        result.data.ownerRole !== role ||
-        result.data.reviewStatus !== "DRAFT"
-      ) {
+      if (!result.data || result.data.ownerRole !== role) {
         notify({
-          title: "Draft could not be opened",
-          description:
-            "This draft is unavailable or has already been submitted.",
+          title: "Listing could not be opened",
+          description: result.message ?? "This listing is unavailable.",
           variant: "error",
         });
         setIsLoadingDraft(false);
@@ -547,7 +542,7 @@ export default function CreateListingForm({
     if (!result.data) {
       notify({
         title: "Draft could not be saved",
-        description: "Local listing storage is unavailable.",
+        description: result.message ?? "Local listing storage is unavailable.",
         variant: "error",
       });
       return;
@@ -580,14 +575,20 @@ export default function CreateListingForm({
 
     if (!result.data) {
       notify({
-        title: "Listing could not be created",
-        description: "Local listing storage is unavailable.",
+        title: "Listing could not be saved",
+        description: result.message ?? "The property server is unavailable.",
         variant: "error",
       });
       return;
     }
 
-    notify({ title: "Listing created successfully.", variant: "success" });
+    notify({
+      title: draftId
+        ? "Listing updated successfully."
+        : "Listing created successfully.",
+      description: result.message,
+      variant: "success",
+    });
     router.push(`/${role}/saved-listings`);
   };
 

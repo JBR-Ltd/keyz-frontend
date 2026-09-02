@@ -22,6 +22,10 @@ import {
   getHostVerificationSnapshot,
   saveHostPayoutVerification,
 } from "@/lib/hostVerification";
+import {
+  getPropertyPortfolio,
+  type PropertyPortfolio,
+} from "@/lib/hostListings";
 
 type LandlordRequest =
   | {
@@ -44,32 +48,22 @@ type LandlordRequest =
       image: string;
     };
 
-const landlordPortfolio = {
-  totalPropertiesCount: 9,
-  activeListingsCount: 7,
+interface DashboardStat {
+  icon: typeof Building2;
+  label: string;
+  tile: string;
+  tone: string;
+  trend: string;
+  value: number | string;
+}
+
+const EMPTY_LANDLORD_PORTFOLIO: PropertyPortfolio = {
+  totalPropertiesCount: 0,
+  activeListingsCount: 0,
   totalValueForSale: 0,
-  expectedMonthlyRentalIncome: 4250000,
-  pendingOffersCount: 5,
-  properties: [
-    {
-      id: 11,
-      title: "Lekki Garden Maisonette",
-      price: 750000,
-      status: "FOR_RENT",
-    },
-    {
-      id: 12,
-      title: "Ikoyi Waterfront Flat",
-      price: 1200000,
-      status: "FOR_RENT",
-    },
-    {
-      id: 13,
-      title: "Maitama Serviced Duplex",
-      price: 950000,
-      status: "FOR_RENT",
-    },
-  ],
+  expectedMonthlyRentalIncome: 0,
+  pendingOffersCount: 0,
+  properties: [],
 };
 
 // No backend field exists for this yet. Using placeholder value until available.
@@ -149,40 +143,42 @@ const ACTIVITY_ITEMS = [
   },
 ];
 
-const STATS = [
-  {
-    label: "Active Listings",
-    value: landlordPortfolio.activeListingsCount.toString().padStart(2, "0"),
-    trend: `${landlordPortfolio.totalPropertiesCount} total properties`,
-    icon: Building2,
-    tone: "bg-surface-soft",
-    tile: "bg-primary text-white",
-  },
-  {
-    label: "Pending Offers",
-    value: landlordPortfolio.pendingOffersCount.toString().padStart(2, "0"),
-    trend: "Awaiting response",
-    icon: FileCheck2,
-    tone: "bg-surface-soft",
-    tile: "bg-primary/10 text-primary",
-  },
-  {
-    label: "Monthly Rental Income",
-    value: landlordPortfolio.expectedMonthlyRentalIncome,
-    trend: "Expected recurring income",
-    icon: Landmark,
-    tone: "bg-surface-soft",
-    tile: "bg-primary text-white",
-  },
-  {
-    label: "Occupancy Rate",
-    value: estimatedOccupancyRate,
-    trend: "Estimated placeholder",
-    icon: Percent,
-    tone: "bg-[var(--color-bg)]",
-    tile: "bg-primary/10 text-primary",
-  },
-];
+function getDashboardStats(portfolio: PropertyPortfolio): DashboardStat[] {
+  return [
+    {
+      label: "Active Listings",
+      value: portfolio.activeListingsCount.toString().padStart(2, "0"),
+      trend: `${portfolio.totalPropertiesCount} total properties`,
+      icon: Building2,
+      tone: "bg-surface-soft",
+      tile: "bg-primary text-white",
+    },
+    {
+      label: "Pending Offers",
+      value: portfolio.pendingOffersCount.toString().padStart(2, "0"),
+      trend: "Awaiting response",
+      icon: FileCheck2,
+      tone: "bg-surface-soft",
+      tile: "bg-primary/10 text-primary",
+    },
+    {
+      label: "Monthly Rental Income",
+      value: portfolio.expectedMonthlyRentalIncome,
+      trend: "Expected recurring income",
+      icon: Landmark,
+      tone: "bg-surface-soft",
+      tile: "bg-primary text-white",
+    },
+    {
+      label: "Occupancy Rate",
+      value: estimatedOccupancyRate,
+      trend: "Estimated placeholder",
+      icon: Percent,
+      tone: "bg-[var(--color-bg)]",
+      tile: "bg-primary/10 text-primary",
+    },
+  ];
+}
 
 const STATUS_STYLES: Record<LandlordRequest["status"], string> = {
   Pending: "border border-primary/20 bg-surface-soft text-primary",
@@ -201,6 +197,9 @@ export default function LandlordDashboardPage() {
     getHostVerificationSnapshot("landlord"),
   );
   const [bannerDismissed, setBannerDismissed] = useState(false);
+  const [portfolio, setPortfolio] = useState(EMPTY_LANDLORD_PORTFOLIO);
+  const [portfolioError, setPortfolioError] = useState("");
+  const stats = getDashboardStats(portfolio);
   const maxChartValue = Math.max(...BOOKING_OVERVIEW.map(({ value }) => value));
   const identityPending = verification.identity.status === "pending";
   const identityApproved = verification.identity.status === "approved";
@@ -208,6 +207,30 @@ export default function LandlordDashboardPage() {
   const depositsReady = Boolean(verification.payout.depositsReady);
   const showVerificationBanner =
     !bannerDismissed && (identityPending || payoutPending);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadPortfolio = async (): Promise<void> => {
+      const result = await getPropertyPortfolio();
+
+      if (!active) {
+        return;
+      }
+
+      if (result.data) {
+        setPortfolio(result.data);
+      }
+
+      setPortfolioError(result.message ?? "");
+    };
+
+    void loadPortfolio();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!payoutPending || depositsReady) {
@@ -306,8 +329,14 @@ export default function LandlordDashboardPage() {
 
       {renderVerificationBanner()}
 
+      {portfolioError ? (
+        <p className="mb-6 rounded-lg border border-red-500/30 bg-bg px-4 py-3 font-body text-sm font-bold text-red-700">
+          {portfolioError}
+        </p>
+      ) : null}
+
       <section className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
-        {STATS.map(({ label, value, trend, icon: Icon, tone, tile }) => (
+        {stats.map(({ label, value, trend, icon: Icon, tone, tile }) => (
           <article
             key={label}
             className={`min-w-0 rounded-lg border border-primary/15 p-5 shadow-sm transition-all duration-200 ease-in-out hover:-translate-y-0.5 hover:shadow-md ${tone}`}

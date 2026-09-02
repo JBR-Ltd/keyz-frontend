@@ -1,6 +1,10 @@
-import { getHostListingById, type HostListingRecord } from "@/lib/hostListings";
-
-// ASSUMED SHAPE — confirm against real GET /api/properties/{id} response once built.
+import {
+  getBackendPropertyById,
+  getHostListingById,
+  getPublicProperties,
+  type BackendProperty,
+  type HostListingRecord,
+} from "@/lib/hostListings";
 export type PropertyListingStatus = "FOR_RENT" | "FOR_SALE";
 
 export type PropertyHostRole = "LANDLORD" | "AGENT";
@@ -330,7 +334,9 @@ export const MOCK_PROPERTY_DETAILS: PropertyDetail[] = [
 const DRAFT_IMAGE_FALLBACK =
   "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200&h=800&fit=crop&auto=format&q=80";
 
-function toPropertyDetail(listing: HostListingRecord): PropertyDetail {
+function hostListingToPropertyDetail(
+  listing: HostListingRecord,
+): PropertyDetail {
   const isLandlord = listing.ownerRole === "landlord";
 
   return {
@@ -369,11 +375,89 @@ function toPropertyDetail(listing: HostListingRecord): PropertyDetail {
   };
 }
 
+function getBackendPropertyLocation(address: string): PropertyDetailLocation {
+  const segments = address
+    .split(",")
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+  const city = segments.at(-1) ?? "Location unavailable";
+  const area = segments.at(-2) ?? segments[0] ?? "Area unavailable";
+
+  return {
+    city,
+    area,
+    address,
+  };
+}
+
+function backendPropertyToPropertyDetail(
+  property: BackendProperty,
+): PropertyDetail {
+  const hostRole: PropertyHostRole =
+    property.seller.role === "AGENT" ? "AGENT" : "LANDLORD";
+  const hostName = [property.seller.firstName, property.seller.lastName]
+    .filter(Boolean)
+    .join(" ");
+  const verified = property.verified ?? property.isVerified ?? false;
+
+  return {
+    id: String(property.id),
+    title: property.title,
+    description: property.description ?? "",
+    status: property.status === "FOR_SALE" ? "FOR_SALE" : "FOR_RENT",
+    price: property.price,
+    location: getBackendPropertyLocation(property.address),
+    bedrooms: property.bedrooms,
+    bathrooms: property.bathrooms,
+    sqft: property.squareFootage,
+    images: [property.imageUrl ?? DRAFT_IMAGE_FALLBACK],
+    verified,
+    host: {
+      id: String(property.seller.id),
+      name: hostName || "Property host",
+      role: hostRole,
+      verified:
+        property.seller.identityVerified ??
+        property.seller.isIdentityVerified ??
+        false,
+    },
+    amenities: [],
+    tour: {
+      videoUrl: property.videoWalkthroughUrl ?? undefined,
+      matterportUrl: property.virtualTourUrl ?? undefined,
+    },
+    reviews: {
+      averageRating: property.seller.sellerRating ?? 0,
+      count: 0,
+      items: [],
+    },
+  };
+}
+
+export interface PropertyQueryResult {
+  data: PropertyDetail[];
+  message?: string;
+}
+
+export async function getProperties(
+  filter: "all" | "rent" | "sale" = "all",
+): Promise<PropertyQueryResult> {
+  const result = await getPublicProperties(filter);
+
+  return {
+    data: result.data
+      .filter(
+        (property) =>
+          property.status === "FOR_RENT" || property.status === "FOR_SALE",
+      )
+      .map(backendPropertyToPropertyDetail),
+    message: result.message,
+  };
+}
+
 export async function getPropertyById(
   id: string,
 ): Promise<PropertyDetail | null> {
-  await new Promise((resolve) => window.setTimeout(resolve, 450));
-
   const mockProperty = MOCK_PROPERTY_DETAILS.find(
     (property) => property.id === id,
   );
@@ -382,6 +466,16 @@ export async function getPropertyById(
     return mockProperty;
   }
 
+  if (/^\d+$/.test(id)) {
+    const backendProperty = await getBackendPropertyById(id);
+
+    if (backendProperty.data) {
+      return backendPropertyToPropertyDetail(backendProperty.data);
+    }
+  }
+
   const storedListing = await getHostListingById(id);
-  return storedListing.data ? toPropertyDetail(storedListing.data) : null;
+  return storedListing.data
+    ? hostListingToPropertyDetail(storedListing.data)
+    : null;
 }

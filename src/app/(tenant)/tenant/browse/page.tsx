@@ -8,11 +8,8 @@ import Link from "next/link";
 import PropertyCard from "@/components/public/PropertyCard";
 import OverlayPortal from "@/components/ui/OverlayPortal";
 import { StatusBadge } from "@/components/ui/status-badge";
-import {
-  BROWSE_PROPERTIES,
-  TENANT_ACTIVITIES,
-  TENANT_STATUS_TONES,
-} from "@/lib/tenantActivity";
+import { TENANT_ACTIVITIES, TENANT_STATUS_TONES } from "@/lib/tenantActivity";
+import { getProperties, type PropertyDetail } from "@/lib/propertyDetails";
 import { useDialogFocus } from "@/lib/useDialogFocus";
 
 const activeActivities = TENANT_ACTIVITIES.filter(
@@ -38,11 +35,40 @@ function getMobileSearchSummary(): string {
 export default function TenantBrowsePage(): ReactElement {
   const reduceMotion = useReducedMotion();
   const [isSearchSheetOpen, setIsSearchSheetOpen] = useState(false);
+  const [properties, setProperties] = useState<PropertyDetail[]>([]);
+  const [propertiesLoading, setPropertiesLoading] = useState(true);
+  const [propertyError, setPropertyError] = useState("");
+  const [propertyFilter, setPropertyFilter] = useState<"rent" | "sale">("rent");
   const dialogRef = useDialogFocus<HTMLDivElement>(isSearchSheetOpen);
   const [activeSheetChips, setActiveSheetChips] = useState<string[]>([
     "Price Range",
   ]);
   const mobileSearchSummary = getMobileSearchSummary();
+
+  useEffect(() => {
+    let active = true;
+
+    const loadProperties = async (): Promise<void> => {
+      setPropertiesLoading(true);
+      setPropertyError("");
+
+      const result = await getProperties(propertyFilter);
+
+      if (!active) {
+        return;
+      }
+
+      setProperties(result.data);
+      setPropertyError(result.message ?? "");
+      setPropertiesLoading(false);
+    };
+
+    void loadProperties();
+
+    return () => {
+      active = false;
+    };
+  }, [propertyFilter]);
 
   useEffect(() => {
     if (!isSearchSheetOpen) {
@@ -126,13 +152,23 @@ export default function TenantBrowsePage(): ReactElement {
             <div className="flex items-center gap-2 px-4 font-body text-sm font-bold">
               <button
                 type="button"
-                className="h-9 rounded-full bg-accent px-4 text-primary transition-all duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                onClick={() => setPropertyFilter("rent")}
+                className={`h-9 rounded-full px-4 transition-all duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                  propertyFilter === "rent"
+                    ? "bg-accent text-primary"
+                    : "text-muted shadow-sm hover:text-primary"
+                }`}
               >
                 Rent
               </button>
               <button
                 type="button"
-                className="h-9 rounded-full px-4 text-muted shadow-sm transition-all duration-200 ease-in-out hover:border-primary/30 hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                onClick={() => setPropertyFilter("sale")}
+                className={`h-9 rounded-full px-4 transition-all duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                  propertyFilter === "sale"
+                    ? "bg-accent text-primary"
+                    : "text-muted shadow-sm hover:text-primary"
+                }`}
               >
                 Buy
               </button>
@@ -262,26 +298,50 @@ export default function TenantBrowsePage(): ReactElement {
             </h2>
           </div>
           <p className="font-body text-sm text-muted">
-            {BROWSE_PROPERTIES.length} homes shown
+            {propertiesLoading
+              ? "Loading homes..."
+              : `${properties.length} homes shown`}
           </p>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-          {BROWSE_PROPERTIES.map((property) => (
-            <PropertyCard
-              key={property.id}
-              id={property.id}
-              name={property.name}
-              location={property.location}
-              price={property.price}
-              listingType={property.listingType}
-              bedrooms={property.bedrooms}
-              bathrooms={property.bathrooms}
-              imageUrl={property.imageUrl}
-              featured={false}
-            />
-          ))}
-        </div>
+        {propertyError ? (
+          <p className="mb-5 rounded-lg border border-red-500/30 bg-bg px-4 py-3 font-body text-sm font-bold text-red-700">
+            {propertyError}
+          </p>
+        ) : null}
+
+        {propertiesLoading ? (
+          <div
+            className="grid gap-6 md:grid-cols-2 xl:grid-cols-3"
+            aria-label="Loading properties"
+          >
+            {[0, 1, 2].map((item) => (
+              <div
+                key={item}
+                className="h-80 animate-pulse rounded-xl bg-surface-soft"
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+            {properties.map((property) => (
+              <PropertyCard
+                key={property.id}
+                id={property.id}
+                name={property.title}
+                location={[property.location.area, property.location.city]
+                  .filter(Boolean)
+                  .join(", ")}
+                price={property.price}
+                listingType={property.status}
+                bedrooms={property.bedrooms}
+                bathrooms={property.bathrooms}
+                imageUrl={property.images[0]}
+                featured={false}
+              />
+            ))}
+          </div>
+        )}
       </section>
       <OverlayPortal>
         <AnimatePresence>
@@ -374,13 +434,23 @@ export default function TenantBrowsePage(): ReactElement {
                       <div className="grid grid-cols-2 rounded-full border border-border bg-bg p-1 shadow-sm">
                         <button
                           type="button"
-                          className="h-12 rounded-full bg-accent font-body text-sm font-bold text-primary transition-all duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                          onClick={() => setPropertyFilter("rent")}
+                          className={`h-12 rounded-full font-body text-sm font-bold transition-all duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                            propertyFilter === "rent"
+                              ? "bg-accent text-primary"
+                              : "text-muted hover:bg-primary/5 hover:text-primary"
+                          }`}
                         >
                           Rent
                         </button>
                         <button
                           type="button"
-                          className="h-12 rounded-full font-body text-sm font-bold text-muted transition-all duration-200 ease-in-out hover:bg-primary/5 hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                          onClick={() => setPropertyFilter("sale")}
+                          className={`h-12 rounded-full font-body text-sm font-bold transition-all duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                            propertyFilter === "sale"
+                              ? "bg-accent text-primary"
+                              : "text-muted hover:bg-primary/5 hover:text-primary"
+                          }`}
                         >
                           Buy
                         </button>
