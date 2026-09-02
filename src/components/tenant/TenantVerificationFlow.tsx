@@ -37,10 +37,10 @@ import {
   useTenantVerificationSnapshot,
 } from "@/lib/tenantVerification";
 
-interface MockSmileResponse {
+interface VerificationApiResponse {
+  data: unknown;
+  message: string;
   success: boolean;
-  status: "verified" | "failed";
-  message?: string;
 }
 
 interface StepCopy {
@@ -125,44 +125,91 @@ function isValidIdentityNumber(value: string): boolean {
   return /^\d{11}$/.test(value);
 }
 
-async function simulateSmileVerification(
-  value: string,
-): Promise<MockSmileResponse> {
-  await delay(1200);
-
-  // ASSUMED SHAPE: confirm against the real Smile ID response before production wiring.
-  if (value === "00000000000") {
-    return {
-      success: false,
-      status: "failed",
-      message: "We could not verify this number. Check it and try again.",
-    };
-  }
-
-  return {
-    success: true,
-    status: "verified",
-    message: "Verification completed.",
-  };
+function isVerificationApiResponse(
+  value: unknown,
+): value is VerificationApiResponse {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    "success" in value &&
+    typeof value.success === "boolean" &&
+    "message" in value &&
+    typeof value.message === "string" &&
+    "data" in value
+  );
 }
 
-async function simulateSelfieVerification(
-  hasImage: boolean,
-): Promise<MockSmileResponse> {
-  await delay(1200);
+async function parseVerificationResponse(
+  response: Response,
+): Promise<VerificationApiResponse> {
+  const data: unknown = await response.json().catch(() => null);
 
-  // ASSUMED SHAPE: confirm against the real Smile ID response before production wiring.
-  return hasImage
-    ? {
-        success: true,
-        status: "verified",
-        message: "Selfie liveness check completed.",
-      }
-    : {
-        success: false,
-        status: "failed",
-        message: "Add a selfie before verifying.",
-      };
+  if (!isVerificationApiResponse(data)) {
+    if (response.status === 401 || response.status === 403) {
+      throw new Error("Your session has expired. Log in again.");
+    }
+
+    throw new Error("The verification server returned an invalid response.");
+  }
+
+  if (!response.ok || !data.success) {
+    throw new Error(data.message || "Verification failed. Try again.");
+  }
+
+  return data;
+}
+
+function getAccessToken(): string {
+  const token = localStorage.getItem("rello_token") ?? "";
+
+  if (!token) {
+    throw new Error("Your session has expired. Log in again.");
+  }
+
+  return token;
+}
+
+async function verifyIdentityNumber(
+  step: "nin" | "bvn",
+  value: string,
+): Promise<VerificationApiResponse> {
+  const query = new URLSearchParams({ [step]: value });
+  const response = await fetch(
+    `/api/verification/dojah/${step}?${query.toString()}`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${getAccessToken()}`,
+      },
+    },
+  );
+
+  return parseVerificationResponse(response);
+}
+
+async function verifySelfie(
+  selfiePreview: string,
+): Promise<VerificationApiResponse> {
+  const imageResponse = await fetch(selfiePreview);
+
+  if (!imageResponse.ok) {
+    throw new Error("The selected selfie could not be prepared for upload.");
+  }
+
+  const image = await imageResponse.blob();
+  const extension = image.type === "image/png" ? "png" : "jpg";
+  const formData = new FormData();
+  formData.append("selfie", image, `tenant-selfie.${extension}`);
+
+  const response = await fetch("/api/verification/dojah/selfie", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${getAccessToken()}`,
+    },
+    body: formData,
+  });
+
+  return parseVerificationResponse(response);
 }
 
 export default function TenantVerificationFlow(): ReactElement {
@@ -354,16 +401,17 @@ export default function TenantVerificationFlow(): ReactElement {
     saveTenantVerificationStep(step, "pending");
 
     try {
-      const response = await simulateSmileVerification(value);
-
-      if (!response.success || response.status === "failed") {
-        saveTenantVerificationStep(step, "failed");
-        setStepError(response.message ?? "Verification failed. Try again.");
-        return;
-      }
+      await verifyIdentityNumber(step, value);
 
       saveTenantVerificationStep(step, "verified");
       await advanceAfterSuccess(step);
+    } catch (error) {
+      saveTenantVerificationStep(step, "failed");
+      setStepError(
+        error instanceof Error
+          ? error.message
+          : "Verification failed. Try again.",
+      );
     } finally {
       setIsProcessing(false);
     }
@@ -382,16 +430,15 @@ export default function TenantVerificationFlow(): ReactElement {
     saveTenantVerificationStep("selfie", "pending");
 
     try {
-      const response = await simulateSelfieVerification(Boolean(selfiePreview));
-
-      if (!response.success || response.status === "failed") {
-        saveTenantVerificationStep("selfie", "failed");
-        setStepError(response.message ?? "Selfie verification failed.");
-        return;
-      }
+      await verifySelfie(selfiePreview);
 
       saveTenantVerificationStep("selfie", "verified");
       await advanceAfterSuccess("selfie");
+    } catch (error) {
+      saveTenantVerificationStep("selfie", "failed");
+      setStepError(
+        error instanceof Error ? error.message : "Selfie verification failed.",
+      );
     } finally {
       setIsProcessing(false);
     }
@@ -540,8 +587,8 @@ export default function TenantVerificationFlow(): ReactElement {
               })}
             </div>
             <p className="relative mt-6 font-body text-xs leading-5 text-muted">
-              Verification is simulated in this preview. Identity numbers are
-              not stored in full.
+              Identity checks are processed securely through the verification
+              service. Identity numbers are not stored in full.
             </p>
           </section>
         </motion.div>
