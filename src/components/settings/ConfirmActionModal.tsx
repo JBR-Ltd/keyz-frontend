@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { AlertTriangle, X } from "lucide-react";
+import { AlertTriangle, LoaderCircle, X } from "lucide-react";
 import { ReactElement, useEffect } from "react";
 import OverlayPortal from "@/components/ui/OverlayPortal";
 import { useDialogFocus } from "@/lib/useDialogFocus";
@@ -19,6 +19,7 @@ interface ConfirmModalProps {
   title: string;
   description: string;
   confirmLabel: string;
+  isLoading?: boolean;
   onCancel: () => void;
   onConfirm: () => void;
 }
@@ -93,7 +94,7 @@ export default function ConfirmActionModal({
                 </h2>
                 <p className="mt-5 font-body leading-7 text-muted">
                   {isAccountMode
-                    ? "Choose whether to temporarily hide your account or permanently remove its data. Each option requires one more confirmation."
+                    ? "Permanently remove your account data. Temporary deactivation is not supported by the server yet."
                     : props.description}
                 </p>
                 {isAccountMode ? (
@@ -104,14 +105,15 @@ export default function ConfirmActionModal({
                           Deactivate Account
                         </h3>
                         <p className="mt-2 font-body text-sm leading-6 text-muted">
-                          Hide your profile until you sign in again.
+                          Temporary account deactivation is not currently
+                          available.
                         </p>
                         <button
                           type="button"
-                          onClick={() => props.onAction("deactivate")}
-                          className="mt-4 min-h-11 rounded-full border border-red-700 px-5 py-2.5 font-body text-sm font-medium text-red-700 transition-all duration-200 ease-in-out hover:scale-[1.02] hover:bg-red-700 hover:text-white hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+                          disabled
+                          className="mt-4 min-h-11 cursor-not-allowed rounded-full border border-red-700/30 px-5 py-2.5 font-body text-sm font-medium text-red-700/50"
                         >
-                          Deactivate account
+                          Deactivation unavailable
                         </button>
                       </div>
 
@@ -144,6 +146,7 @@ export default function ConfirmActionModal({
                     <button
                       type="button"
                       onClick={props.onCancel}
+                      disabled={props.isLoading}
                       className="min-h-12 rounded-full border border-primary/30 px-5 py-3 font-body text-sm font-medium text-primary transition-all duration-200 ease-in-out hover:scale-[1.02] hover:bg-primary/10 hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                     >
                       Cancel
@@ -151,9 +154,13 @@ export default function ConfirmActionModal({
                     <button
                       type="button"
                       onClick={props.onConfirm}
-                      className="min-h-12 rounded-full bg-red-700 px-5 py-3 font-body text-sm font-medium text-white transition-all duration-200 ease-in-out hover:scale-[1.02] hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+                      disabled={props.isLoading}
+                      className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-red-700 px-5 py-3 font-body text-sm font-medium text-white transition-all duration-200 ease-in-out hover:scale-[1.02] hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 disabled:cursor-wait disabled:opacity-70"
                     >
-                      {props.confirmLabel}
+                      {props.isLoading ? (
+                        <LoaderCircle className="animate-spin" size={18} />
+                      ) : null}
+                      {props.isLoading ? "Working" : props.confirmLabel}
                     </button>
                   </div>
                 )}

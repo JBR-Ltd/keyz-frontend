@@ -4,6 +4,7 @@ import { BadgeCheck, Mail, MapPin, Phone, UserRound } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { useToast } from "@/components/ui/toast";
+import { useAuthenticatedUser } from "@/lib/account";
 
 const inputClassName =
   "mt-2 min-h-14 w-full rounded-lg border border-border bg-bg px-4 py-3 font-body text-base text-[var(--color-text)] outline-none transition-all duration-200 ease-in-out placeholder:text-muted focus:border-accent focus:ring-2 focus:ring-accent/50";
@@ -11,6 +12,7 @@ const inputClassName =
 export default function ProfileSection() {
   const pathname = usePathname();
   const isLandlord = pathname.startsWith("/landlord");
+  const { user } = useAuthenticatedUser();
   const [isEditing, setIsEditing] = useState(false);
   const [firstName, setFirstName] = useState(
     isLandlord ? "Chinedu" : "Jemimah",
@@ -23,17 +25,34 @@ export default function ProfileSection() {
     isLandlord ? "Abuja, Nigeria" : "Lagos, Nigeria",
   );
   const { notify } = useToast();
-  const fullName = `${firstName} ${lastName}`;
+  const displayedFirstName = isEditing
+    ? firstName
+    : (user?.firstName ?? firstName);
+  const displayedLastName = isEditing ? lastName : (user?.lastName ?? lastName);
+  const fullName = [displayedFirstName, displayedLastName]
+    .filter(Boolean)
+    .join(" ");
+  const email =
+    user?.email ??
+    (isLandlord ? "chinedu.okafor@example.com" : "amara.okafor@example.com");
+  const initials = user
+    ? [user.firstName.charAt(0), user.lastName.charAt(0)].join("").toUpperCase()
+    : isLandlord
+      ? "CO"
+      : "AO";
+  const roleLabel =
+    user?.role.toLowerCase() ?? (isLandlord ? "landlord" : "tenant");
+  const isVerified = user?.identityVerified ?? false;
   const profileFields = [
     {
       label: "First name",
-      value: firstName,
+      value: displayedFirstName,
       onChange: setFirstName,
       autoComplete: "given-name",
     },
     {
       label: "Last name",
-      value: lastName,
+      value: displayedLastName,
       onChange: setLastName,
       autoComplete: "family-name",
     },
@@ -50,6 +69,15 @@ export default function ProfileSection() {
       autoComplete: "address-level2",
     },
   ];
+
+  const startEditing = (): void => {
+    if (user) {
+      setFirstName(user.firstName);
+      setLastName(user.lastName);
+    }
+
+    setIsEditing(true);
+  };
 
   const saveProfile = () => {
     setIsEditing(false);
@@ -76,16 +104,20 @@ export default function ProfileSection() {
               : "Keep your contact details accurate so agents and property owners can reach you about viewings and offers."}
           </p>
         </div>
-        <div className="inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1.5 font-body text-xs font-medium text-primary">
-          <BadgeCheck size={15} />
-          Verified {isLandlord ? "landlord" : "tenant"}
+        <div
+          className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 font-body text-xs font-medium text-primary ${
+            isVerified ? "bg-accent" : "bg-primary/5"
+          }`}
+        >
+          {isVerified ? <BadgeCheck size={15} /> : null}
+          {isVerified ? "Verified" : "Not verified"} {roleLabel}
         </div>
       </div>
 
       <div className="p-5 sm:p-7">
         <div className="grid gap-5 rounded-lg border border-border bg-surface-soft p-5 sm:grid-cols-[4.5rem_1fr] sm:items-center sm:p-6">
           <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-primary font-display text-2xl font-bold text-white shadow-sm">
-            {isLandlord ? "CO" : "AO"}
+            {initials}
           </div>
           <div className="min-w-0">
             <h3 className="font-display text-2xl font-bold text-primary">
@@ -94,9 +126,7 @@ export default function ProfileSection() {
             <div className="mt-3 flex flex-wrap gap-3 font-body text-sm text-muted">
               <span className="inline-flex items-center gap-2">
                 <Mail size={15} className="text-primary/60" />
-                {isLandlord
-                  ? "chinedu.okafor@example.com"
-                  : "amara.okafor@example.com"}
+                {email}
               </span>
               <span className="inline-flex items-center gap-2">
                 <MapPin size={15} className="text-primary/60" />
@@ -159,7 +189,7 @@ export default function ProfileSection() {
           ) : (
             <button
               type="button"
-              onClick={() => setIsEditing(true)}
+              onClick={startEditing}
               className="min-h-12 rounded-full bg-accent px-6 py-3 font-body text-sm font-medium text-primary transition-all duration-200 ease-in-out hover:scale-[1.02] hover:bg-primary hover:text-white hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             >
               Edit profile

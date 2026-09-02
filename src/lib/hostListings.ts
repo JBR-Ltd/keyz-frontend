@@ -1,6 +1,6 @@
 "use client";
 
-import { openDB, type DBSchema, type IDBPDatabase } from "idb";
+import { deleteDB, openDB, type DBSchema, type IDBPDatabase } from "idb";
 import type { PropertyListingStatus } from "@/lib/propertyDetails";
 
 export type HostListingRole = "landlord" | "agent";
@@ -414,6 +414,17 @@ async function uploadCoverPhoto(
 export function subscribeToHostListings(callback: () => void): () => void {
   window.addEventListener(STORAGE_EVENT, callback);
   return () => window.removeEventListener(STORAGE_EVENT, callback);
+}
+
+export async function clearHostListingStorage(): Promise<void> {
+  if (databasePromise) {
+    const database = await databasePromise;
+    database.close();
+    databasePromise = null;
+  }
+
+  await deleteDB(DATABASE_NAME);
+  publishStorageChange();
 }
 
 export async function getPublicProperties(
