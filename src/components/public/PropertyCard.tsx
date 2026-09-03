@@ -18,10 +18,6 @@ interface PropertyCardProps {
   featured: boolean;
 }
 
-function formatListingType(listingType: ListingType): string {
-  return listingType === "FOR_RENT" ? "For Rent" : "For Sale";
-}
-
 export default function PropertyCard({
   id,
   name,
@@ -54,11 +50,6 @@ export default function PropertyCard({
           className="transition-all duration-300 ease-in-out group-hover:scale-[1.03]"
           style={{ objectFit: "cover" }}
         />
-        <div className="absolute left-4 top-4 flex flex-wrap gap-2">
-          <span className="inline-flex rounded-full bg-bg px-3 py-1.5 font-body text-xs font-medium text-primary shadow-sm">
-            {formatListingType(listingType)}
-          </span>
-        </div>
       </div>
 
       <div className="p-5 sm:p-6">

@@ -38,7 +38,6 @@ export default function TenantBrowsePage(): ReactElement {
   const [properties, setProperties] = useState<PropertyDetail[]>([]);
   const [propertiesLoading, setPropertiesLoading] = useState(true);
   const [propertyError, setPropertyError] = useState("");
-  const [propertyFilter, setPropertyFilter] = useState<"rent" | "sale">("rent");
   const dialogRef = useDialogFocus<HTMLDivElement>(isSearchSheetOpen);
   const [activeSheetChips, setActiveSheetChips] = useState<string[]>([
     "Price Range",
@@ -52,7 +51,7 @@ export default function TenantBrowsePage(): ReactElement {
       setPropertiesLoading(true);
       setPropertyError("");
 
-      const result = await getProperties(propertyFilter);
+      const result = await getProperties("rent");
 
       if (!active) {
         return;
@@ -68,7 +67,7 @@ export default function TenantBrowsePage(): ReactElement {
     return () => {
       active = false;
     };
-  }, [propertyFilter]);
+  }, []);
 
   useEffect(() => {
     if (!isSearchSheetOpen) {
@@ -148,31 +147,6 @@ export default function TenantBrowsePage(): ReactElement {
             </label>
 
             <span className="h-8 w-px self-center bg-border" />
-
-            <div className="flex items-center gap-2 px-4 font-body text-sm font-bold">
-              <button
-                type="button"
-                onClick={() => setPropertyFilter("rent")}
-                className={`h-9 rounded-full px-4 transition-all duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
-                  propertyFilter === "rent"
-                    ? "bg-accent text-primary"
-                    : "text-muted shadow-sm hover:text-primary"
-                }`}
-              >
-                Rent
-              </button>
-              <button
-                type="button"
-                onClick={() => setPropertyFilter("sale")}
-                className={`h-9 rounded-full px-4 transition-all duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
-                  propertyFilter === "sale"
-                    ? "bg-accent text-primary"
-                    : "text-muted shadow-sm hover:text-primary"
-                }`}
-              >
-                Buy
-              </button>
-            </div>
 
             <button
               type="button"
@@ -426,36 +400,6 @@ export default function TenantBrowsePage(): ReactElement {
                         />
                       </div>
                     </label>
-
-                    <div>
-                      <p className="mb-2 font-body text-xs font-bold uppercase tracking-[0.14em] text-muted">
-                        Listing
-                      </p>
-                      <div className="grid grid-cols-2 rounded-full border border-border bg-bg p-1 shadow-sm">
-                        <button
-                          type="button"
-                          onClick={() => setPropertyFilter("rent")}
-                          className={`h-12 rounded-full font-body text-sm font-bold transition-all duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
-                            propertyFilter === "rent"
-                              ? "bg-accent text-primary"
-                              : "text-muted hover:bg-primary/5 hover:text-primary"
-                          }`}
-                        >
-                          Rent
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setPropertyFilter("sale")}
-                          className={`h-12 rounded-full font-body text-sm font-bold transition-all duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
-                            propertyFilter === "sale"
-                              ? "bg-accent text-primary"
-                              : "text-muted hover:bg-primary/5 hover:text-primary"
-                          }`}
-                        >
-                          Buy
-                        </button>
-                      </div>
-                    </div>
 
                     <div>
                       <p className="mb-2 font-body text-xs font-bold uppercase tracking-[0.14em] text-muted">

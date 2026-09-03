@@ -372,7 +372,7 @@ export default function HostIdentityVerificationFlow({
         </h1>
         <p className="mx-auto mt-4 max-w-md font-body text-base leading-7 text-white/70">
           {isAgent
-            ? "We will check your NIN, BVN, and selfie together through Smile ID so buyers know they are working with a trusted agent."
+            ? "We will check your NIN, BVN, and selfie together through Smile ID so residents know they are working with a trusted agent."
             : "KYB requires document upload and review by the Rello team. This usually takes 1 to 2 business days."}
         </p>
 
@@ -735,7 +735,7 @@ export default function HostIdentityVerificationFlow({
         </h1>
         <p className="mx-auto mt-3 max-w-sm font-body text-base leading-7 text-white/70">
           {isAgent
-            ? "You can now list sale properties on Rello with full agent trust signals."
+            ? "You can now list properties on Rello with full agent trust signals."
             : "Our team typically reviews submissions within 1 to 2 business days. We will notify you as soon as a decision is made."}
         </p>
         <button

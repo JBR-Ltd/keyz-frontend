@@ -33,11 +33,7 @@ import PropertyPrice from "@/components/property/PropertyPrice";
 import TenantVerificationGate from "@/components/tenant/TenantVerificationGate";
 import VerifiedBadge from "@/components/ui/VerifiedBadge";
 import { useToast } from "@/components/ui/toast";
-import {
-  getPropertyById,
-  PropertyDetail,
-  PropertyListingStatus,
-} from "@/lib/propertyDetails";
+import { getPropertyById, PropertyDetail } from "@/lib/propertyDetails";
 import { useDialogFocus } from "@/lib/useDialogFocus";
 
 interface PropertyPageProps {
@@ -65,10 +61,6 @@ const AMENITY_ICONS = {
   elevator: Home,
   "water supply": Waves,
 } satisfies Record<string, typeof Check>;
-
-function formatListingType(status: PropertyListingStatus): string {
-  return status === "FOR_RENT" ? "For Rent" : "For Sale";
-}
 
 function formatHostRole(role: PropertyDetail["host"]["role"]): string {
   return role === "LANDLORD" ? "Landlord" : "Agent";
@@ -335,11 +327,8 @@ export default function PropertyPage({
 
   const openPrimaryFlow = (): void => {
     notify({
-      title: property?.status === "FOR_RENT" ? "Booking ready" : "Offer ready",
-      description:
-        property?.status === "FOR_RENT"
-          ? "Identity verified. Booking flow can continue."
-          : "Identity verified. Offer flow can continue.",
+      title: "Request ready",
+      description: "Identity verified. You can continue with this property.",
       variant: "success",
     });
   };
@@ -364,8 +353,7 @@ export default function PropertyPage({
     property.tour.videoUrl || property.tour.matterportUrl,
   );
   const hostRole = formatHostRole(property.host.role);
-  const primaryCta =
-    property.status === "FOR_RENT" ? "Book Now" : "Submit Offer";
+  const primaryCta = "Continue";
 
   return (
     <main className="bg-bg pt-6 text-primary">
@@ -407,9 +395,6 @@ export default function PropertyPage({
                 >
                   <ArrowLeft size={19} aria-hidden="true" />
                 </button>
-                <span className="absolute left-16 top-4 rounded-full bg-bg px-3 py-1.5 font-body text-xs font-medium text-primary shadow-sm">
-                  {formatListingType(property.status)}
-                </span>
                 {property.verified ? (
                   <span className="absolute right-4 top-4">
                     <VerifiedBadge />
@@ -487,9 +472,6 @@ export default function PropertyPage({
               >
                 <ArrowLeft size={19} aria-hidden="true" />
               </button>
-              <span className="absolute left-16 top-4 rounded-full bg-bg px-3 py-1.5 font-body text-xs font-medium text-primary shadow-sm">
-                {formatListingType(property.status)}
-              </span>
               {property.verified ? (
                 <span className="absolute right-4 top-4">
                   <VerifiedBadge size="sm" />

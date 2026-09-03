@@ -313,8 +313,8 @@ export default function HostPayoutVerificationFlow({
         Add your bank account
       </h1>
       <p className="mx-auto mt-2 max-w-sm font-body text-sm leading-6 text-muted">
-        Use the account where Rello should send payouts after bookings or sales
-        close.
+        Use the account where Rello should send payouts after completed
+        transactions close.
       </p>
       <div className="grid gap-4 text-left">
         <label className="block">

@@ -211,7 +211,7 @@ export default function HostVerificationCenter({
         </h1>
         <p className="mt-4 max-w-2xl font-body text-sm leading-6 text-muted">
           Complete identity and payout checks to unlock listing creation, safer
-          buyer trust, and payout activation.
+          resident trust, and payout activation.
         </p>
 
         <div className="mt-8 rounded-xl border border-primary/10 bg-[var(--color-bg)] p-5 shadow-sm">

@@ -99,7 +99,7 @@ export const TENANT_STATS: TenantStat[] = [
     tile: "primary",
   },
   {
-    label: "Pending Offers",
+    label: "Pending Requests",
     value: tenantPortfolio.pendingOffersCount.toString().padStart(2, "0"),
     trend: "Awaiting response",
     direction: "up",
@@ -108,9 +108,9 @@ export const TENANT_STATS: TenantStat[] = [
     tile: "primary",
   },
   {
-    label: "Total Invested",
+    label: "Portfolio Value",
     value: tenantPortfolio.totalValueForSale,
-    trend: "Across purchases",
+    trend: "Across your homes",
     direction: "down",
     icon: Landmark,
     tone: "soft",

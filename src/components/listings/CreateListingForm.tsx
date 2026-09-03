@@ -305,13 +305,12 @@ export default function CreateListingForm({
   const [listingStep, setListingStep] = useState<ListingStep>("basics");
   const listingType: PropertyListingStatus =
     role === "landlord" ? "FOR_RENT" : "FOR_SALE";
-  const typeLabel = listingType === "FOR_RENT" ? "For Rent" : "For Sale";
+  const typeLabel = "Property listing";
   const typeHelper =
     listingType === "FOR_RENT"
       ? "Your account is set up for rental listings."
-      : "Your account is set up for sale listings.";
-  const priceLabel =
-    listingType === "FOR_RENT" ? "Monthly Rent (₦)" : "Sale Price (₦)";
+      : "Your account is set up for property listings.";
+  const priceLabel = "Listing price";
   const canSubmit = !hasErrors(validateForm(values, photos));
   const listingStepIndex = LISTING_STEPS.findIndex(
     (step) => step.id === listingStep,

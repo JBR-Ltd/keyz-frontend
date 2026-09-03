@@ -510,7 +510,9 @@ export default function LandlordDashboardPage() {
                       <span
                         className={`inline-flex shrink-0 rounded-full px-3 py-1.5 font-body text-xs font-medium ${REQUEST_TYPE_STYLES[request.requestType]}`}
                       >
-                        {request.requestType}
+                        {request.requestType === "Rental"
+                          ? "Rental"
+                          : "Request"}
                       </span>
                       <h3 className="font-body text-lg font-bold text-primary">
                         {request.title}
@@ -533,7 +535,7 @@ export default function LandlordDashboardPage() {
                     <span>
                       {request.requestType === "Rental"
                         ? request.requestedDates
-                        : "Sale offer submitted"}
+                        : "Request submitted"}
                     </span>
                   </div>
                   <div className="text-right">

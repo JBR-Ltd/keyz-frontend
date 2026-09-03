@@ -33,8 +33,8 @@ const ROLE_STATS = {
   agent: [
     { value: "14", label: "Active Listings", icon: Building2 },
     { value: "05", label: "Pending Offers", icon: FileCheck2 },
-    { value: "₦320M", label: "Total Sales Value", icon: Banknote },
-    { value: "11", label: "Properties Sold", icon: Trophy },
+    { value: "₦320M", label: "Portfolio Value", icon: Banknote },
+    { value: "11", label: "Completed Listings", icon: Trophy },
   ],
   admin: [
     { value: "248", label: "Active Users", icon: Building2 },

@@ -4,7 +4,7 @@ interface RoleDashboardStubProps {
 
 const ROLE_DESCRIPTIONS: Record<string, string> = {
   Agent:
-    "List and sell properties. Verified agents connect buyers with quality FOR_SALE listings.",
+    "List and manage properties. Verified agents connect tenants with quality homes.",
   Admin:
     "Admin backend support is not connected yet. This dashboard uses placeholder data for design review.",
 };

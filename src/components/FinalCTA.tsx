@@ -24,8 +24,8 @@ export default function FinalCTA() {
           Is Closer Than You Think
         </h2>
         <p className="text-white/70 text-lg md:text-xl leading-relaxed mb-10 max-w-xl">
-          Join thousands of satisfied clients discovering smarter ways to buy,
-          rent and invest in real estate
+          Join thousands of satisfied clients discovering smarter ways to find a
+          home, rent and invest in real estate
         </p>
         <Link
           href="#"

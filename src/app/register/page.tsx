@@ -23,7 +23,7 @@ const roleOptions: Array<{
   {
     label: "Tenant",
     value: "TENANT",
-    description: "Find verified homes to rent or buy without agent stress.",
+    description: "Find verified homes to rent without agent stress.",
   },
   {
     label: "Landlord",
@@ -34,7 +34,7 @@ const roleOptions: Array<{
     label: "Agent",
     value: "AGENT",
     description:
-      "List and sell properties. Verified agents connect buyers with quality FOR_SALE listings.",
+      "List and manage properties. Verified agents connect tenants with quality homes.",
   },
 ];
 

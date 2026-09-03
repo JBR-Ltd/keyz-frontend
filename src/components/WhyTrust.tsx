@@ -3,7 +3,7 @@ import ScrollReveal from "@/components/ScrollReveal";
 const FEATURES = [
   {
     title: "Verified Listings",
-    desc: "We ensure every property is professionally reviewed and verified to protect buyers and investors from scam and misinformation",
+    desc: "We ensure every property is professionally reviewed and verified to protect renters and residents from scam and misinformation",
     icon: (
       <svg
         width="48"

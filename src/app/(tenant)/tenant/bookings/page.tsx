@@ -79,8 +79,8 @@ export default function TenantBookingsPage(): ReactElement {
           Bookings
         </h1>
         <p className="mt-4 max-w-2xl font-body text-base leading-7 text-muted">
-          Track your rentals, purchase offers, escrow status, and saved homes
-          from one scannable workspace.
+          Track your rentals, property requests, and booking status from one
+          scannable workspace.
         </p>
       </header>
 
