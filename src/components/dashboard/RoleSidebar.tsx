@@ -33,6 +33,12 @@ const DEFAULT_ROLE_NAV_ITEMS = [
   { label: "Strikes", slug: "ratings", icon: Star },
 ];
 
+const LANDLORD_NAV_ITEMS = [
+  { label: "Dashboard", slug: "dashboard", icon: LayoutDashboard },
+  { label: "My Listings", slug: "saved-listings", icon: Bookmark },
+  { label: "Bookings", slug: "bookings", icon: CalendarDays },
+];
+
 const ADMIN_NAV_ITEMS = [
   { label: "Dashboard", slug: "dashboard", icon: LayoutDashboard },
   { label: "Bookings", slug: "bookings", icon: CalendarDays },
@@ -477,7 +483,11 @@ export default function RoleSidebar({
   const dashboardHref = `/${rolePath}/dashboard`;
   const settingsHref = `/${rolePath}/settings`;
   const navItems =
-    rolePath === "admin" ? ADMIN_NAV_ITEMS : DEFAULT_ROLE_NAV_ITEMS;
+    rolePath === "admin"
+      ? ADMIN_NAV_ITEMS
+      : rolePath === "landlord"
+        ? LANDLORD_NAV_ITEMS
+        : DEFAULT_ROLE_NAV_ITEMS;
   const profile = ROLE_PROFILES[rolePath];
 
   useEffect(() => {

@@ -3,12 +3,13 @@
 import type { ReactElement, ReactNode } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
+  Bookmark,
+  CalendarDays,
   ChevronDown,
-  House,
+  LayoutDashboard,
   LoaderCircle,
   LogOut,
   Menu,
-  Search,
   Settings,
   ShieldCheck,
   X,
@@ -22,29 +23,30 @@ import { logOutAccount, useAuthenticatedUser } from "@/lib/account";
 import { useDialogFocus } from "@/lib/useDialogFocus";
 import relloLogoMark from "../../../public/rello-logo-cropped.svg";
 
-const TENANT_NAV_ITEMS = [
-  { label: "Browse", href: "/tenant/browse", icon: Search },
-  { label: "My Home", href: "/tenant/bookings", icon: House },
+const LANDLORD_NAV_ITEMS = [
+  { label: "Dashboard", href: "/landlord/dashboard", icon: LayoutDashboard },
+  { label: "My Listings", href: "/landlord/saved-listings", icon: Bookmark },
+  { label: "Bookings", href: "/landlord/bookings", icon: CalendarDays },
 ];
 
-interface TenantSidebarProps {
+interface LandlordHeaderProps {
   actions: ReactNode;
   showVerificationAction: boolean;
   verificationHref: string;
   verifiedStepCount: number;
 }
 
-interface TenantNavigationProps {
-  onNavigate?: () => void;
+interface LandlordNavigationProps {
   mobile?: boolean;
+  onNavigate?: () => void;
 }
 
-function TenantLogo(): ReactElement {
+function LandlordLogo(): ReactElement {
   return (
     <Link
-      href="/tenant/browse"
+      href="/landlord/dashboard"
       className="flex shrink-0 items-center gap-3 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-      aria-label="Rello tenant portal"
+      aria-label="Rello landlord portal"
     >
       <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-primary">
         <Image
@@ -60,27 +62,27 @@ function TenantLogo(): ReactElement {
           Rello
         </span>
         <span className="mt-1 block whitespace-nowrap font-body text-[10px] font-medium uppercase tracking-[0.18em] text-muted">
-          Tenant portal
+          Landlord portal
         </span>
       </span>
     </Link>
   );
 }
 
-function TenantNavigation({
-  onNavigate,
+function LandlordNavigation({
   mobile = false,
-}: TenantNavigationProps): ReactElement {
+  onNavigate,
+}: LandlordNavigationProps): ReactElement {
   const pathname = usePathname();
 
   return (
-    <nav aria-label="Tenant navigation">
+    <nav aria-label="Landlord navigation">
       <ul
         className={
           mobile ? "space-y-2" : "flex h-20 items-stretch gap-1 xl:gap-3"
         }
       >
-        {TENANT_NAV_ITEMS.map(({ label, href, icon: Icon }) => {
+        {LANDLORD_NAV_ITEMS.map(({ label, href, icon: Icon }) => {
           const isActive = pathname === href;
 
           return (
@@ -144,12 +146,12 @@ function VerificationMenuCard({
         </span>
         <span className="min-w-0">
           <span className="block font-body text-xs font-bold text-primary">
-            Identity not verified
+            Verification incomplete
           </span>
           <span className="mt-1 block font-body text-[11px] leading-4 text-muted">
             {verifiedStepCount > 0
-              ? `${verifiedStepCount} of 3 completed`
-              : "Required to book"}
+              ? `${verifiedStepCount} of 2 completed`
+              : "Required to list"}
           </span>
         </span>
       </div>
@@ -158,18 +160,20 @@ function VerificationMenuCard({
         onClick={onNavigate}
         className="mt-3 flex min-h-9 items-center justify-center rounded-full bg-primary px-4 py-2 font-body text-xs font-bold text-white transition-colors hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
       >
-        {verifiedStepCount > 0 ? "Continue verification" : "Verify identity"}
+        {verifiedStepCount > 0
+          ? "Continue verification"
+          : "Verify landlord account"}
       </Link>
     </div>
   );
 }
 
-export default function TenantSidebar({
+export default function LandlordHeader({
   actions,
   showVerificationAction,
   verificationHref,
   verifiedStepCount,
-}: TenantSidebarProps): ReactElement {
+}: LandlordHeaderProps): ReactElement {
   const pathname = usePathname();
   const router = useRouter();
   const reduceMotion = useReducedMotion();
@@ -182,11 +186,11 @@ export default function TenantSidebar({
   const { user } = useAuthenticatedUser();
   const profileName = user
     ? `${user.firstName} ${user.lastName}`.trim()
-    : "Tenant";
+    : "Landlord";
   const profileInitials = user
     ? `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase()
-    : "T";
-  const isSettingsActive = pathname.startsWith("/tenant/settings");
+    : "L";
+  const isSettingsActive = pathname.startsWith("/landlord/settings");
 
   useEffect(() => {
     if (!isProfileOpen) {
@@ -252,10 +256,10 @@ export default function TenantSidebar({
     <>
       <header className="sticky top-0 z-50 border-b border-border bg-bg">
         <div className="mx-auto flex h-20 w-full max-w-[96rem] items-center gap-4 px-4 sm:px-6 lg:px-8">
-          <TenantLogo />
+          <LandlordLogo />
 
           <div className="hidden min-w-0 flex-1 justify-center lg:flex">
-            <TenantNavigation />
+            <LandlordNavigation />
           </div>
 
           <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
@@ -308,7 +312,7 @@ export default function TenantSidebar({
                       verifiedStepCount={verifiedStepCount}
                     />
                     <Link
-                      href="/tenant/settings"
+                      href="/landlord/settings"
                       role="menuitem"
                       onClick={() => setIsProfileOpen(false)}
                       className="flex items-center gap-3 rounded-lg px-4 py-3 font-body text-sm font-medium text-primary transition-colors hover:bg-primary/5"
@@ -365,7 +369,7 @@ export default function TenantSidebar({
                 ref={drawerRef}
                 role="dialog"
                 aria-modal="true"
-                aria-label="Tenant navigation"
+                aria-label="Landlord navigation"
                 className="fixed inset-y-0 right-0 z-[110] flex w-[min(88vw,22rem)] flex-col border-l border-border bg-bg shadow-xl lg:hidden"
                 initial={reduceMotion ? false : { x: "100%" }}
                 animate={reduceMotion ? undefined : { x: 0 }}
@@ -373,7 +377,7 @@ export default function TenantSidebar({
                 transition={{ duration: 0.25, ease: "easeOut" }}
               >
                 <div className="flex h-20 items-center justify-between border-b border-border px-5">
-                  <TenantLogo />
+                  <LandlordLogo />
                   <button
                     type="button"
                     onClick={() => setIsMobileOpen(false)}
@@ -385,7 +389,7 @@ export default function TenantSidebar({
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-5">
-                  <TenantNavigation
+                  <LandlordNavigation
                     mobile
                     onNavigate={() => setIsMobileOpen(false)}
                   />
@@ -404,7 +408,7 @@ export default function TenantSidebar({
                         {profileName}
                       </span>
                       <span className="mt-0.5 block font-body text-xs text-muted">
-                        Tenant
+                        Landlord
                       </span>
                     </span>
                   </div>
@@ -415,7 +419,7 @@ export default function TenantSidebar({
                     verifiedStepCount={verifiedStepCount}
                   />
                   <Link
-                    href="/tenant/settings"
+                    href="/landlord/settings"
                     onClick={() => setIsMobileOpen(false)}
                     className="flex min-h-11 items-center gap-3 rounded-lg px-3 font-body text-sm font-medium text-primary transition-colors hover:bg-primary/5"
                   >

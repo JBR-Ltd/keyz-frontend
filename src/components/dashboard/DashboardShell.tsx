@@ -2,12 +2,12 @@
 
 import type { ReactElement, ReactNode } from "react";
 import { useSyncExternalStore } from "react";
-import Link from "next/link";
-import { ShieldCheck } from "lucide-react";
 import { usePathname } from "next/navigation";
 import MessagesDropdown from "@/components/chat/MessagesDropdown";
+import LandlordHeader from "@/components/dashboard/LandlordHeader";
 import RoleSidebar from "@/components/dashboard/RoleSidebar";
 import TenantSidebar from "@/components/dashboard/TenantSidebar";
+import { getHostVerificationSnapshot } from "@/lib/hostVerification";
 import {
   countVerifiedTenantSteps,
   isTenantVerified,
@@ -37,6 +37,18 @@ function getSidebarSnapshot(): boolean {
   return localStorage.getItem(SIDEBAR_STORAGE_KEY) === "true";
 }
 
+function subscribeToLandlordVerification(callback: () => void): () => void {
+  window.addEventListener("storage", callback);
+
+  return () => window.removeEventListener("storage", callback);
+}
+
+function getLandlordVerificationStorageSnapshot(): string {
+  const snapshot = getHostVerificationSnapshot("landlord");
+
+  return `${snapshot.identity.status}:${snapshot.payout.status}`;
+}
+
 export default function DashboardShell({
   children,
   rolePath,
@@ -44,6 +56,11 @@ export default function DashboardShell({
 }: DashboardShellProps): ReactElement {
   const pathname = usePathname();
   const { state: tenantVerificationState } = useTenantVerificationSnapshot();
+  const landlordVerificationStatus = useSyncExternalStore(
+    subscribeToLandlordVerification,
+    getLandlordVerificationStorageSnapshot,
+    () => "",
+  );
   const isCollapsed = useSyncExternalStore(
     subscribeToSidebar,
     getSidebarSnapshot,
@@ -56,6 +73,11 @@ export default function DashboardShell({
     rolePath === "tenant" && !isTenantVerified(tenantVerificationState);
   const verificationHref =
     "/tenant/verify?source=dashboard&returnTo=" + encodeURIComponent(pathname);
+  const verifiedLandlordStepCount =
+    Number(landlordVerificationStatus.startsWith("approved:")) +
+    Number(landlordVerificationStatus.endsWith(":approved"));
+  const showLandlordVerificationAction =
+    rolePath === "landlord" && verifiedLandlordStepCount < 2;
 
   const toggleSidebar = (): void => {
     const nextValue = !isCollapsed;
@@ -65,41 +87,24 @@ export default function DashboardShell({
   };
 
   const sidebarOffset = isCollapsed ? "lg:ml-20" : "lg:ml-72";
-  const tenantActions = (
-    <>
-      {showTenantVerificationAction ? (
-        <Link
-          href={verificationHref}
-          aria-label={
-            verifiedTenantStepCount > 0
-              ? "Continue identity verification"
-              : "Start identity verification"
-          }
-          className="group inline-flex min-h-10 items-center gap-2 rounded-full bg-surface-soft p-1.5 text-primary shadow-sm transition-all duration-200 ease-in-out hover:bg-primary/5 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-accent sm:pr-3"
-        >
-          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent/15 text-accent-alt">
-            <ShieldCheck size={16} strokeWidth={2} aria-hidden="true" />
-          </span>
-          <span className="hidden text-left xl:block">
-            <span className="block font-body text-xs font-bold leading-tight">
-              {verifiedTenantStepCount > 0
-                ? "Continue verification"
-                : "Start verification"}
-            </span>
-            <span className="mt-0.5 block font-accent text-[8px] font-bold uppercase tracking-[0.14em] text-accent-alt">
-              Action required
-            </span>
-          </span>
-        </Link>
-      ) : null}
-      <MessagesDropdown />
-    </>
-  );
+  const tenantActions = <MessagesDropdown />;
 
   return (
     <div className="min-h-screen bg-[var(--color-bg)]">
       {rolePath === "tenant" ? (
-        <TenantSidebar actions={tenantActions} />
+        <TenantSidebar
+          actions={tenantActions}
+          showVerificationAction={showTenantVerificationAction}
+          verificationHref={verificationHref}
+          verifiedStepCount={verifiedTenantStepCount}
+        />
+      ) : rolePath === "landlord" ? (
+        <LandlordHeader
+          actions={<MessagesDropdown />}
+          showVerificationAction={showLandlordVerificationAction}
+          verificationHref="/landlord/verify"
+          verifiedStepCount={verifiedLandlordStepCount}
+        />
       ) : (
         <>
           <RoleSidebar
@@ -116,7 +121,7 @@ export default function DashboardShell({
 
       <div
         className={
-          rolePath === "tenant"
+          rolePath === "tenant" || rolePath === "landlord"
             ? "min-w-0"
             : `min-w-0 transition-[margin] duration-200 ease-in-out ${sidebarOffset}`
         }
