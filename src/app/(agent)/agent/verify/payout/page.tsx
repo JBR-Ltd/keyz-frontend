@@ -1,10 +1,5 @@
-import { Suspense } from "react";
-import HostPayoutVerificationFlow from "@/components/verification/HostPayoutVerificationFlow";
+import { redirect } from "next/navigation";
 
-export default function AgentPayoutVerificationPage() {
-  return (
-    <Suspense fallback={null}>
-      <HostPayoutVerificationFlow role="agent" />
-    </Suspense>
-  );
+export default function AgentVerificationRedirectPage() {
+  redirect("/agent/verify");
 }

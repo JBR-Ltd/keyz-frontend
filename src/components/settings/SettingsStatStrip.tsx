@@ -1,12 +1,4 @@
-import {
-  Banknote,
-  Building2,
-  CalendarCheck,
-  FileCheck2,
-  Home,
-  Trophy,
-} from "lucide-react";
-import PropertyPrice from "@/components/property/PropertyPrice";
+import { Building2, CalendarCheck, FileCheck2, Home } from "lucide-react";
 import { IconTile } from "@/components/ui/icon-tile";
 import { utilityCardVariants } from "@/components/ui/utility-card";
 
@@ -15,12 +7,6 @@ interface SettingsStatStripProps {
 }
 
 const ROLE_STATS = {
-  agent: [
-    { value: "14", label: "Active Listings", icon: Building2 },
-    { value: "05", label: "Pending Offers", icon: FileCheck2 },
-    { value: "₦320M", label: "Portfolio Value", icon: Banknote },
-    { value: "11", label: "Completed Listings", icon: Trophy },
-  ],
   admin: [
     { value: "248", label: "Active Users", icon: Building2 },
     { value: "14", label: "Pending Reviews", icon: CalendarCheck },
@@ -30,7 +16,7 @@ const ROLE_STATS = {
 };
 
 export default function SettingsStatStrip({ role }: SettingsStatStripProps) {
-  if (role === "tenant" || role === "landlord") {
+  if (role !== "admin") {
     return null;
   }
 
@@ -45,11 +31,7 @@ export default function SettingsStatStrip({ role }: SettingsStatStripProps) {
             <Icon size={24} strokeWidth={1.7} />
           </IconTile>
           <p className="mt-4 font-display text-3xl font-bold leading-none text-primary">
-            {typeof value === "string" && value.startsWith("₦") ? (
-              <PropertyPrice value={value} />
-            ) : (
-              value
-            )}
+            {value}
           </p>
           <p className="mt-2 font-body text-xs font-medium uppercase tracking-[0.14em] text-muted">
             {label}

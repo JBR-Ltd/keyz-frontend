@@ -24,13 +24,10 @@ import { logOutAccount, useAuthenticatedUser } from "@/lib/account";
 import { useDialogFocus } from "@/lib/useDialogFocus";
 import relloLogoMark from "../../../public/rello-logo-cropped.svg";
 
-const DEFAULT_ROLE_NAV_ITEMS = [
+const AGENT_NAV_ITEMS = [
   { label: "Dashboard", slug: "dashboard", icon: LayoutDashboard },
   { label: "My Listings", slug: "saved-listings", icon: Bookmark },
   { label: "Bookings", slug: "bookings", icon: CalendarDays },
-  { label: "Payouts", slug: "escrow", icon: Landmark },
-  { label: "Requests", slug: "disputes", icon: Scale },
-  { label: "Strikes", slug: "ratings", icon: Star },
 ];
 
 const LANDLORD_NAV_ITEMS = [
@@ -98,7 +95,7 @@ interface RoleLogoLinkProps {
 
 interface RoleNavigationProps {
   isCollapsed?: boolean;
-  navItems: typeof DEFAULT_ROLE_NAV_ITEMS;
+  navItems: typeof AGENT_NAV_ITEMS;
   onNavigate?: () => void;
   onTooltipChange?: (tooltip: SidebarTooltip | null) => void;
   roleLabel: string;
@@ -487,7 +484,7 @@ export default function RoleSidebar({
       ? ADMIN_NAV_ITEMS
       : rolePath === "landlord"
         ? LANDLORD_NAV_ITEMS
-        : DEFAULT_ROLE_NAV_ITEMS;
+        : AGENT_NAV_ITEMS;
   const profile = ROLE_PROFILES[rolePath];
 
   useEffect(() => {

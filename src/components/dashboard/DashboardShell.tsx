@@ -4,6 +4,7 @@ import type { ReactElement, ReactNode } from "react";
 import { useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
 import MessagesDropdown from "@/components/chat/MessagesDropdown";
+import AgentHeader from "@/components/dashboard/AgentHeader";
 import LandlordHeader from "@/components/dashboard/LandlordHeader";
 import RoleSidebar from "@/components/dashboard/RoleSidebar";
 import TenantSidebar from "@/components/dashboard/TenantSidebar";
@@ -37,7 +38,7 @@ function getSidebarSnapshot(): boolean {
   return localStorage.getItem(SIDEBAR_STORAGE_KEY) === "true";
 }
 
-function subscribeToLandlordVerification(callback: () => void): () => void {
+function subscribeToHostVerification(callback: () => void): () => void {
   window.addEventListener("storage", callback);
 
   return () => window.removeEventListener("storage", callback);
@@ -45,6 +46,12 @@ function subscribeToLandlordVerification(callback: () => void): () => void {
 
 function getLandlordVerificationStorageSnapshot(): string {
   const snapshot = getHostVerificationSnapshot("landlord");
+
+  return `${snapshot.identity.status}:${snapshot.payout.status}`;
+}
+
+function getAgentVerificationStorageSnapshot(): string {
+  const snapshot = getHostVerificationSnapshot("agent");
 
   return `${snapshot.identity.status}:${snapshot.payout.status}`;
 }
@@ -57,8 +64,13 @@ export default function DashboardShell({
   const pathname = usePathname();
   const { state: tenantVerificationState } = useTenantVerificationSnapshot();
   const landlordVerificationStatus = useSyncExternalStore(
-    subscribeToLandlordVerification,
+    subscribeToHostVerification,
     getLandlordVerificationStorageSnapshot,
+    () => "",
+  );
+  const agentVerificationStatus = useSyncExternalStore(
+    subscribeToHostVerification,
+    getAgentVerificationStorageSnapshot,
     () => "",
   );
   const isCollapsed = useSyncExternalStore(
@@ -78,6 +90,11 @@ export default function DashboardShell({
     Number(landlordVerificationStatus.endsWith(":approved"));
   const showLandlordVerificationAction =
     rolePath === "landlord" && verifiedLandlordStepCount < 2;
+  const verifiedAgentStepCount =
+    Number(agentVerificationStatus.startsWith("approved:")) +
+    Number(agentVerificationStatus.endsWith(":approved"));
+  const showAgentVerificationAction =
+    rolePath === "agent" && verifiedAgentStepCount < 2;
 
   const toggleSidebar = (): void => {
     const nextValue = !isCollapsed;
@@ -105,6 +122,13 @@ export default function DashboardShell({
           verificationHref="/landlord/verify"
           verifiedStepCount={verifiedLandlordStepCount}
         />
+      ) : rolePath === "agent" ? (
+        <AgentHeader
+          actions={<MessagesDropdown />}
+          showVerificationAction={showAgentVerificationAction}
+          verificationHref="/agent/verify"
+          verifiedStepCount={verifiedAgentStepCount}
+        />
       ) : (
         <>
           <RoleSidebar
@@ -121,7 +145,9 @@ export default function DashboardShell({
 
       <div
         className={
-          rolePath === "tenant" || rolePath === "landlord"
+          rolePath === "tenant" ||
+          rolePath === "landlord" ||
+          rolePath === "agent"
             ? "min-w-0"
             : `min-w-0 transition-[margin] duration-200 ease-in-out ${sidebarOffset}`
         }

@@ -1,5 +1,5 @@
-import HostIdentityVerificationFlow from "@/components/verification/HostIdentityVerificationFlow";
+import { redirect } from "next/navigation";
 
-export default function AgentIdentityVerificationPage() {
-  return <HostIdentityVerificationFlow role="agent" />;
+export default function AgentVerificationRedirectPage() {
+  redirect("/agent/verify");
 }
