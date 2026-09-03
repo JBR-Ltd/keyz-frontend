@@ -4,7 +4,6 @@ import {
   CalendarCheck,
   FileCheck2,
   Home,
-  Percent,
   Trophy,
 } from "lucide-react";
 import PropertyPrice from "@/components/property/PropertyPrice";
@@ -16,12 +15,6 @@ interface SettingsStatStripProps {
 }
 
 const ROLE_STATS = {
-  landlord: [
-    { value: "08", label: "Active Listings", icon: Building2 },
-    { value: "06", label: "Pending Requests", icon: FileCheck2 },
-    { value: "₦4.8M", label: "Total Earnings", icon: Banknote },
-    { value: "92%", label: "Occupancy Rate", icon: Percent },
-  ],
   agent: [
     { value: "14", label: "Active Listings", icon: Building2 },
     { value: "05", label: "Pending Offers", icon: FileCheck2 },
@@ -37,7 +30,7 @@ const ROLE_STATS = {
 };
 
 export default function SettingsStatStrip({ role }: SettingsStatStripProps) {
-  if (role === "tenant") {
+  if (role === "tenant" || role === "landlord") {
     return null;
   }
 
