@@ -1,6 +1,6 @@
 "use client";
 
-import { Download } from "lucide-react";
+import { Download, LoaderCircle } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { useToast } from "@/components/ui/toast";
@@ -56,6 +56,7 @@ export default function PrivacySection() {
   const [controls, setControls] = useState(
     isLandlord ? LANDLORD_CONTROLS : INITIAL_CONTROLS,
   );
+  const [isPreparingArchive, setIsPreparingArchive] = useState(false);
   const { notify } = useToast();
 
   const toggleControl = (id: string) => {
@@ -64,6 +65,17 @@ export default function PrivacySection() {
         control.id === id ? { ...control, enabled: !control.enabled } : control,
       ),
     );
+  };
+
+  const requestArchive = async (): Promise<void> => {
+    setIsPreparingArchive(true);
+    await new Promise((resolve) => setTimeout(resolve, 900));
+    setIsPreparingArchive(false);
+    notify({
+      title: "Archive requested",
+      description: "Your simulated data archive is being prepared.",
+      variant: "success",
+    });
   };
 
   return (
@@ -116,31 +128,29 @@ export default function PrivacySection() {
         ))}
       </div>
 
-      <div className="grid border-t border-border lg:grid-cols-[1fr_auto]">
-        <div className="p-6 sm:p-8">
-          <p className="font-accent text-xs font-bold uppercase tracking-[0.3em] text-primary">
-            Your archive
-          </p>
-          <h2 className="mt-4 font-display text-3xl font-bold leading-none text-primary sm:text-4xl">
-            Take your data with you.
+      <div className="grid gap-5 px-5 py-7 sm:grid-cols-[1fr_auto] sm:items-center sm:px-7">
+        <div>
+          <h2 className="font-body text-lg font-bold text-primary">
+            Download your data
           </h2>
+          <p className="mt-2 max-w-2xl font-body text-sm leading-6 text-muted">
+            Request a copy of your profile, account activity, and personal
+            information.
+          </p>
         </div>
-        <div className="border-t border-border lg:w-72 lg:border-l lg:border-t-0">
-          <button
-            type="button"
-            onClick={() =>
-              notify({
-                title: "Archive requested",
-                description: "Your simulated data archive is being prepared.",
-                variant: "success",
-              })
-            }
-            className="flex min-h-16 h-full w-full items-center justify-center gap-3 rounded-full bg-accent px-6 py-4 font-body text-sm font-medium text-primary transition-all duration-200 ease-in-out hover:scale-[1.02] hover:bg-primary hover:text-white hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-          >
-            <Download size={18} />
-            Download data
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => void requestArchive()}
+          disabled={isPreparingArchive}
+          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-primary/30 px-5 py-2.5 font-body text-sm font-bold text-primary transition-all duration-200 ease-in-out hover:border-primary hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-60"
+        >
+          {isPreparingArchive ? (
+            <LoaderCircle className="animate-spin" size={17} />
+          ) : (
+            <Download size={17} />
+          )}
+          {isPreparingArchive ? "Preparing archive" : "Request archive"}
+        </button>
       </div>
     </section>
   );

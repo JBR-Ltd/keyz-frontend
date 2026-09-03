@@ -1,6 +1,14 @@
 "use client";
 
-import { BadgeCheck, Mail, MapPin, Phone, UserRound } from "lucide-react";
+import {
+  BadgeCheck,
+  Mail,
+  MapPin,
+  Phone,
+  ShieldCheck,
+  UserRound,
+} from "lucide-react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { useToast } from "@/components/ui/toast";
@@ -40,9 +48,17 @@ export default function ProfileSection() {
     : isLandlord
       ? "CO"
       : "AO";
+  const pathnameRole = pathname.split("/")[1];
   const roleLabel =
-    user?.role.toLowerCase() ?? (isLandlord ? "landlord" : "tenant");
+    user?.role.toLowerCase() ??
+    (pathnameRole === "landlord" ||
+    pathnameRole === "agent" ||
+    pathnameRole === "admin"
+      ? pathnameRole
+      : "tenant");
   const isVerified = user?.identityVerified ?? false;
+  const canVerifyIdentity = roleLabel !== "admin";
+  const verificationHref = "/" + roleLabel + "/verify";
   const profileFields = [
     {
       label: "First name",
@@ -89,50 +105,102 @@ export default function ProfileSection() {
   };
 
   return (
-    <section className="overflow-hidden rounded-lg border border-border bg-bg shadow-sm">
-      <div className="grid gap-6 border-b border-border bg-surface-soft p-6 sm:p-8 lg:grid-cols-[1fr_auto] lg:items-end">
-        <div>
-          <p className="font-accent text-xs font-bold uppercase tracking-[0.3em] text-primary">
-            Personal information
-          </p>
-          <h2 className="mt-3 font-display text-3xl font-bold leading-none text-primary sm:text-4xl">
-            Profile details
-          </h2>
-          <p className="mt-4 max-w-2xl font-body text-sm leading-6 text-muted">
-            {isLandlord
-              ? "Keep your ownership and contact details accurate so tenants and agents can reach you about bookings and property requests."
-              : "Keep your contact details accurate so agents and property owners can reach you about viewings and offers."}
-          </p>
-        </div>
-        <div
-          className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 font-body text-xs font-medium text-primary ${
-            isVerified ? "bg-accent" : "bg-primary/5"
-          }`}
-        >
-          {isVerified ? <BadgeCheck size={15} /> : null}
-          {isVerified ? "Verified" : "Not verified"} {roleLabel}
+    <section className="overflow-hidden rounded-2xl border border-border bg-bg shadow-sm">
+      <div className="relative overflow-hidden bg-primary px-6 py-8 text-white sm:px-8 sm:py-10">
+        <div className="absolute -right-16 -top-24 h-64 w-64 rounded-full bg-accent/15 blur-2xl" />
+        <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-4 sm:gap-5">
+            <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-white font-display text-2xl font-bold text-primary shadow-lg ring-4 ring-white/10 sm:h-24 sm:w-24 sm:text-3xl">
+              {initials}
+            </div>
+            <div className="min-w-0">
+              <p className="font-body text-sm text-white/65">Your account</p>
+              <h2 className="mt-1 truncate font-display text-3xl font-bold leading-tight sm:text-4xl">
+                {fullName}
+              </h2>
+              <p className="mt-2 font-body text-sm capitalize text-white/70">
+                {roleLabel} account
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <div
+              className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 font-body text-xs font-bold ${isVerified ? "bg-accent text-primary" : "bg-white/10 text-white"}`}
+            >
+              {isVerified ? <BadgeCheck size={15} /> : null}
+              {isVerified ? "Verified" : "Not verified"}
+            </div>
+            {!isEditing ? (
+              <button
+                type="button"
+                onClick={startEditing}
+                className="min-h-10 rounded-full border border-white/25 px-4 py-2 font-body text-sm font-bold text-white transition-all duration-200 ease-in-out hover:border-accent hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                Edit profile
+              </button>
+            ) : null}
+          </div>
         </div>
       </div>
 
-      <div className="p-5 sm:p-7">
-        <div className="grid gap-5 rounded-lg border border-border bg-surface-soft p-5 sm:grid-cols-[4.5rem_1fr] sm:items-center sm:p-6">
-          <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-primary font-display text-2xl font-bold text-white shadow-sm">
-            {initials}
-          </div>
-          <div className="min-w-0">
-            <h3 className="font-display text-2xl font-bold text-primary">
-              {fullName}
-            </h3>
-            <div className="mt-3 flex flex-wrap gap-3 font-body text-sm text-muted">
-              <span className="inline-flex items-center gap-2">
-                <Mail size={15} className="text-primary/60" />
-                {email}
+      {!isVerified && canVerifyIdentity ? (
+        <div className="border-b border-border bg-accent/10 px-6 py-5 sm:px-8">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex gap-3">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent text-primary">
+                <ShieldCheck size={21} aria-hidden="true" />
               </span>
-              <span className="inline-flex items-center gap-2">
-                <MapPin size={15} className="text-primary/60" />
-                {location}
-              </span>
+              <div>
+                <h3 className="font-body text-sm font-bold text-primary">
+                  Identity verification required
+                </h3>
+                <p className="mt-1 max-w-2xl font-body text-sm leading-6 text-muted">
+                  Verify your identity to access protected property actions and
+                  strengthen trust across your account.
+                </p>
+              </div>
             </div>
+            <Link
+              href={verificationHref}
+              className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-full bg-primary px-5 py-2.5 font-body text-sm font-bold text-white transition-all duration-200 ease-in-out hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            >
+              Verify identity
+            </Link>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="border-b border-border px-6 py-7 sm:px-8">
+        <p className="font-accent text-xs font-bold uppercase tracking-[0.3em] text-accent-alt">
+          Personal information
+        </p>
+        <h3 className="mt-3 font-display text-2xl font-bold leading-tight text-primary sm:text-3xl">
+          Profile details
+        </h3>
+        <p className="mt-4 max-w-2xl font-body text-sm leading-6 text-muted">
+          {isLandlord
+            ? "Keep your ownership and contact details accurate so tenants and agents can reach you about bookings and property requests."
+            : "Keep your contact details accurate so agents and property owners can reach you about viewings and offers."}
+        </p>
+      </div>
+
+      <div className="p-6 sm:p-8">
+        <div className="grid gap-4 border-b border-border pb-6 sm:grid-cols-2">
+          <div className="rounded-xl bg-surface-soft p-4">
+            <span className="flex items-center gap-2 font-body text-xs font-bold uppercase tracking-[0.14em] text-muted">
+              <Mail size={14} /> Email address
+            </span>
+            <span className="mt-2 block break-words font-body text-sm font-semibold text-primary">
+              {email}
+            </span>
+          </div>
+          <div className="rounded-xl bg-surface-soft p-4">
+            <span className="flex items-center gap-2 font-body text-xs font-bold uppercase tracking-[0.14em] text-muted">
+              <MapPin size={14} /> Location
+            </span>
+            <span className="mt-2 block font-body text-sm font-semibold text-primary">
+              {location}
+            </span>
           </div>
         </div>
 
@@ -140,7 +208,7 @@ export default function ProfileSection() {
           {profileFields.map((field) => (
             <label
               key={field.label}
-              className="min-w-0 rounded-lg border border-border bg-bg p-5 shadow-sm transition-all duration-200 ease-in-out hover:bg-surface-soft hover:shadow-md"
+              className="min-w-0 rounded-xl border border-border bg-bg p-5 transition-all duration-200 ease-in-out hover:border-primary/30 hover:bg-surface-soft"
             >
               <span className="flex items-center gap-2 font-body text-xs font-medium uppercase tracking-[0.14em] text-muted">
                 {field.label === "Phone" ? (
@@ -186,15 +254,7 @@ export default function ProfileSection() {
                 Cancel
               </button>
             </>
-          ) : (
-            <button
-              type="button"
-              onClick={startEditing}
-              className="min-h-12 rounded-full bg-accent px-6 py-3 font-body text-sm font-medium text-primary transition-all duration-200 ease-in-out hover:scale-[1.02] hover:bg-primary hover:text-white hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            >
-              Edit profile
-            </button>
-          )}
+          ) : null}
         </div>
       </div>
     </section>

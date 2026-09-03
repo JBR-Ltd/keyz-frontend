@@ -1,6 +1,5 @@
 import {
   Banknote,
-  Bookmark,
   Building2,
   CalendarCheck,
   FileCheck2,
@@ -16,14 +15,7 @@ interface SettingsStatStripProps {
   role: "tenant" | "landlord" | "agent" | "admin";
 }
 
-const tenantPendingOffersCount = "01"; // Mirrors portfolio pendingOffersCount until settings uses live data.
-
 const ROLE_STATS = {
-  tenant: [
-    { value: "12", label: "Saved Homes", icon: Bookmark },
-    { value: "04", label: "Active Viewings", icon: CalendarCheck },
-    { value: tenantPendingOffersCount, label: "Open Offers", icon: FileCheck2 },
-  ],
   landlord: [
     { value: "08", label: "Active Listings", icon: Building2 },
     { value: "06", label: "Pending Requests", icon: FileCheck2 },
@@ -45,11 +37,12 @@ const ROLE_STATS = {
 };
 
 export default function SettingsStatStrip({ role }: SettingsStatStripProps) {
-  const gridClass =
-    role === "tenant" ? "sm:grid-cols-3" : "sm:grid-cols-2 lg:grid-cols-4";
+  if (role === "tenant") {
+    return null;
+  }
 
   return (
-    <section className={`mt-8 grid gap-5 ${gridClass}`}>
+    <section className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
       {ROLE_STATS[role].map(({ value, label, icon: Icon }) => (
         <article
           key={label}
