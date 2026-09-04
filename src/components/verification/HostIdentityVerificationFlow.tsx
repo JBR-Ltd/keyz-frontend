@@ -28,6 +28,10 @@ import {
 } from "react";
 import VerifiedBadge from "@/components/ui/VerifiedBadge";
 import {
+  submitAgentVerification,
+  submitLandlordVerification,
+} from "@/lib/identityVerification";
+import {
   approveAgentIdentity,
   getHostVerificationSnapshot,
   saveHostIdentityVerification,
@@ -38,18 +42,6 @@ import { cn } from "@/lib/utils";
 
 interface HostIdentityVerificationFlowProps {
   role: HostVerificationRole;
-}
-
-interface MockAgentVerificationResponse {
-  success: boolean;
-  status: "approved" | "failed";
-  message?: string;
-}
-
-interface MockKybResponse {
-  success: boolean;
-  status: "pending" | "failed";
-  message?: string;
 }
 
 interface UploadField {
@@ -87,12 +79,6 @@ const UPLOAD_FIELDS: UploadField[] = [
   },
 ];
 
-function delay(durationMs: number): Promise<void> {
-  return new Promise((resolve) => {
-    window.setTimeout(resolve, durationMs);
-  });
-}
-
 function isValidIdentityNumber(value: string): boolean {
   return /^\d{11}$/.test(value);
 }
@@ -103,49 +89,7 @@ function hasAllDocuments(documents: UploadedDocument[]): boolean {
   );
 }
 
-async function simulateAgentVerification(
-  nin: string,
-  bvn: string,
-  hasSelfie: boolean,
-): Promise<MockAgentVerificationResponse> {
-  await delay(1400);
 
-  // ASSUMED SHAPE: confirm against the real compound Agent Smile ID response before production wiring.
-  if (nin === "00000000000" || bvn === "00000000000" || !hasSelfie) {
-    return {
-      success: false,
-      status: "failed",
-      message: "We could not verify these details. Check them and try again.",
-    };
-  }
-
-  return {
-    success: true,
-    status: "approved",
-    message: "Agent identity checks passed.",
-  };
-}
-
-async function simulateKybSubmission(
-  documents: UploadedDocument[],
-): Promise<MockKybResponse> {
-  await delay(1300);
-
-  // ASSUMED SHAPE: API_DOCS.md only documents documentUrl, so these KYB fields must be confirmed before production wiring.
-  if (!hasAllDocuments(documents)) {
-    return {
-      success: false,
-      status: "failed",
-      message: "Upload every required document before submitting.",
-    };
-  }
-
-  return {
-    success: true,
-    status: "pending",
-    message: "KYB submitted successfully.",
-  };
-}
 
 export default function HostIdentityVerificationFlow({
   role,
@@ -180,7 +124,8 @@ export default function HostIdentityVerificationFlow({
   const ninValid = isValidIdentityNumber(nin);
   const bvnValid = isValidIdentityNumber(bvn);
   const agentReady = ninValid && bvnValid && Boolean(selfiePreview);
-  const landlordReady = hasAllDocuments(documents);
+  const landlordReady =
+    ninValid && Boolean(selfiePreview) && hasAllDocuments(documents);
 
   useEffect(() => {
     return () => {
@@ -293,20 +238,18 @@ export default function HostIdentityVerificationFlow({
     setIsProcessing(true);
 
     try {
-      const response = await simulateAgentVerification(
-        nin,
-        bvn,
-        Boolean(selfiePreview),
-      );
+      // Dojah runs NIN, BVN and the selfie together and records nothing unless
+      // all three pass, so an agent cannot end up partly verified
+      const result = await submitAgentVerification(nin, bvn, selfiePreview);
 
-      if (!response.success || response.status === "failed") {
+      if (!result.data) {
         saveHostIdentityVerification(role, {
           status: "failed",
           submittedAt: new Date().toISOString(),
           approvedAt: null,
-          rejectedReason: response.message ?? "Verification failed.",
+          rejectedReason: result.message ?? "Verification failed.",
         });
-        setFormError(response.message ?? "Verification failed. Try again.");
+        setFormError(result.message ?? "Verification failed. Try again.");
         return;
       }
 
@@ -321,17 +264,32 @@ export default function HostIdentityVerificationFlow({
     setFormError("");
 
     if (!landlordReady) {
-      setFormError("Upload every required document before submitting.");
+      setFormError(
+        "Enter your NIN, add a selfie, and upload every document before submitting.",
+      );
       return;
     }
 
     setIsProcessing(true);
 
     try {
-      const response = await simulateKybSubmission(documents);
+      // NIN then selfie, both through Dojah. This is what actually marks a
+      // landlord verified; the documents below are a separate human review.
+      const identity = await submitLandlordVerification(nin, selfiePreview);
 
-      if (!response.success || response.status === "failed") {
-        setFormError(response.message ?? "Document upload failed. Try again.");
+      if (!identity.data) {
+        saveHostIdentityVerification(role, {
+          status: "failed",
+          submittedAt: new Date().toISOString(),
+          approvedAt: null,
+          rejectedReason: identity.message ?? "Verification failed.",
+        });
+        setFormError(identity.message ?? "Verification failed. Try again.");
+        return;
+      }
+
+      if (!hasAllDocuments(documents)) {
+        setFormError("Upload every required document before submitting.");
         return;
       }
 
@@ -372,7 +330,7 @@ export default function HostIdentityVerificationFlow({
         </h1>
         <p className="mx-auto mt-4 max-w-md font-body text-base leading-7 text-white/70">
           {isAgent
-            ? "We will check your NIN, BVN, and selfie together through Smile ID so residents know they are working with a trusted agent."
+            ? "We will check your NIN, BVN, and selfie together through Dojah so residents know they are working with a trusted agent."
             : "KYB requires document upload and review by the Rello team. This usually takes 1 to 2 business days."}
         </p>
 
@@ -380,7 +338,7 @@ export default function HostIdentityVerificationFlow({
           <div className="flex items-center gap-3">
             <Lock className="h-5 w-5 text-accent" />
             <p className="font-body text-sm font-bold text-white/80">
-              {isAgent ? "Compound Smile ID check" : "Reviewed by Rello"}
+              {isAgent ? "Compound Dojah check" : "Reviewed by Rello"}
             </p>
           </div>
           <p className="mt-3 font-body text-xs leading-6 text-white/70">
@@ -573,8 +531,7 @@ export default function HostIdentityVerificationFlow({
           Submit your agent identity check
         </h1>
         <p className="mx-auto mt-2 max-w-sm font-body text-sm leading-6 text-muted">
-          Enter your NIN, BVN, and selfie together. We submit them as one Smile
-          ID verification request.
+          Enter your NIN, BVN, and selfie together. We submit them as one Dojah verification request.
         </p>
       </div>
       {renderNumberField("NIN", nin, setNin, IdCard)}
@@ -612,8 +569,19 @@ export default function HostIdentityVerificationFlow({
           Submit documents for review
         </h1>
         <p className="mx-auto mt-2 max-w-sm font-body text-sm leading-6 text-muted">
-          Upload the core documents our review team needs before landlord
-          listing access is unlocked.
+          Confirm your identity through Dojah, then upload the documents our
+          review team needs before listing access is unlocked.
+        </p>
+      </div>
+      {/* Identity first: the backend will not mark a landlord verified without these */}
+      {renderNumberField("NIN", nin, setNin, IdCard)}
+      {renderSelfieField()}
+      <div className="border-t border-border pt-5">
+        <h2 className="font-body text-sm font-bold text-primary">
+          Ownership documents
+        </h2>
+        <p className="mt-1 font-body text-xs leading-5 text-muted">
+          Reviewed by a person after your identity clears.
         </p>
       </div>
       {UPLOAD_FIELDS.map((field) => {

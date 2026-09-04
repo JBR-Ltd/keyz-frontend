@@ -32,6 +32,8 @@ import {
 
 interface ActiveChatThread {
   conversationId: string;
+  otherUserId: number | null;
+  propertyId: number;
   otherPartyName: string;
   otherPartyRole: ChatPartyRole;
   propertyName: string;
@@ -352,6 +354,8 @@ export default function TenantBookingsPage(): ReactElement {
                           onClick={() =>
                             setActiveThread({
                               conversationId,
+                              otherUserId: booking.host?.id ?? null,
+                              propertyId: booking.propertyId,
                               otherPartyName: hostName,
                               otherPartyRole:
                                 booking.host?.role === "AGENT"
@@ -423,6 +427,8 @@ export default function TenantBookingsPage(): ReactElement {
 
       <ChatThread
         conversationId={activeThread?.conversationId ?? null}
+        otherUserId={activeThread?.otherUserId ?? null}
+        propertyId={activeThread?.propertyId}
         otherPartyName={activeThread?.otherPartyName ?? ""}
         otherPartyRole={activeThread?.otherPartyRole ?? "Agent"}
         propertyName={activeThread?.propertyName ?? ""}
