@@ -4,7 +4,6 @@ import {
   CreditCard,
   LockKeyhole,
   ShieldCheck,
-  UserRound,
 } from "lucide-react";
 import { SettingsSectionId } from "@/components/settings/types";
 
@@ -13,12 +12,6 @@ interface SettingsSectionListProps {
 }
 
 const SETTINGS_SECTIONS = [
-  {
-    id: "profile",
-    title: "Profile",
-    description: "Update your personal details and contact information.",
-    icon: UserRound,
-  },
   {
     id: "security",
     title: "Security",
@@ -47,7 +40,7 @@ const SETTINGS_SECTIONS = [
   id: SettingsSectionId;
   title: string;
   description: string;
-  icon: typeof UserRound;
+  icon: typeof LockKeyhole;
 }[];
 
 export default function SettingsSectionList({

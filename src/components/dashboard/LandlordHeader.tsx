@@ -12,6 +12,7 @@ import {
   Menu,
   Settings,
   ShieldCheck,
+  UserRound,
   X,
 } from "lucide-react";
 import Image from "next/image";
@@ -190,7 +191,9 @@ export default function LandlordHeader({
   const profileInitials = user
     ? `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase()
     : "L";
-  const isSettingsActive = pathname.startsWith("/landlord/settings");
+  const isAccountActive =
+    pathname.startsWith("/landlord/profile") ||
+    pathname.startsWith("/landlord/settings");
 
   useEffect(() => {
     if (!isProfileOpen) {
@@ -273,7 +276,7 @@ export default function LandlordHeader({
                 aria-haspopup="menu"
                 aria-expanded={isProfileOpen}
                 className={`flex min-h-11 items-center gap-2 rounded-full p-1.5 pr-2 font-body text-sm text-primary transition-all duration-200 ease-in-out hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
-                  isSettingsActive ? "bg-primary/5" : ""
+                  isAccountActive ? "bg-primary/5" : ""
                 }`}
               >
                 <span className="relative flex h-8 w-8 items-center justify-center rounded-full bg-primary font-body text-xs font-bold text-white">
@@ -311,6 +314,15 @@ export default function LandlordHeader({
                       show={showVerificationAction}
                       verifiedStepCount={verifiedStepCount}
                     />
+                    <Link
+                      href="/landlord/profile"
+                      role="menuitem"
+                      onClick={() => setIsProfileOpen(false)}
+                      className="flex items-center gap-3 rounded-lg px-4 py-3 font-body text-sm font-medium text-primary transition-colors hover:bg-primary/5"
+                    >
+                      <UserRound size={17} strokeWidth={1.9} />
+                      Profile
+                    </Link>
                     <Link
                       href="/landlord/settings"
                       role="menuitem"
@@ -418,6 +430,14 @@ export default function LandlordHeader({
                     show={showVerificationAction}
                     verifiedStepCount={verifiedStepCount}
                   />
+                  <Link
+                    href="/landlord/profile"
+                    onClick={() => setIsMobileOpen(false)}
+                    className="flex min-h-11 items-center gap-3 rounded-lg px-3 font-body text-sm font-medium text-primary transition-colors hover:bg-primary/5"
+                  >
+                    <UserRound size={17} />
+                    Profile
+                  </Link>
                   <Link
                     href="/landlord/settings"
                     onClick={() => setIsMobileOpen(false)}
