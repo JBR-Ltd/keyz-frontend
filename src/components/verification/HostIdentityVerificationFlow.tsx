@@ -2,11 +2,8 @@
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
-  BriefcaseBusiness,
   Camera,
   Check,
-  Clock,
-  FileText,
   IdCard,
   Landmark,
   Loader2,
@@ -14,7 +11,6 @@ import {
   ScanFace,
   ShieldCheck,
   Upload,
-  X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
@@ -29,10 +25,12 @@ import {
 import VerifiedBadge from "@/components/ui/VerifiedBadge";
 import {
   approveAgentIdentity,
+  getHostIdentityStatus,
   getHostVerificationSnapshot,
   saveHostIdentityVerification,
   HostVerificationRole,
-  submitLandlordIdentityReview,
+  verifyHostNin,
+  verifyHostSelfie,
 } from "@/lib/hostVerification";
 import { cn } from "@/lib/utils";
 
@@ -46,46 +44,8 @@ interface MockAgentVerificationResponse {
   message?: string;
 }
 
-interface MockKybResponse {
-  success: boolean;
-  status: "pending" | "failed";
-  message?: string;
-}
-
-interface UploadField {
-  id: "registration" | "validId" | "address";
-  title: string;
-  description: string;
-}
-
-interface UploadedDocument {
-  id: UploadField["id"];
-  name: string;
-}
-
-type IdentityScreen = "overview" | "step" | "complete" | "submitted";
+type IdentityScreen = "overview" | "step" | "complete";
 type SelfieSource = "camera" | "upload" | null;
-
-const UPLOAD_FIELDS: UploadField[] = [
-  {
-    id: "registration",
-    title: "Business registration document",
-    description:
-      "CAC certificate, incorporation document, or equivalent ownership record.",
-  },
-  {
-    id: "validId",
-    title: "Valid identity document",
-    description:
-      "Government-issued ID for the person managing the property account.",
-  },
-  {
-    id: "address",
-    title: "Proof of address",
-    description:
-      "Utility bill, bank statement, or address document dated recently.",
-  },
-];
 
 function delay(durationMs: number): Promise<void> {
   return new Promise((resolve) => {
@@ -95,12 +55,6 @@ function delay(durationMs: number): Promise<void> {
 
 function isValidIdentityNumber(value: string): boolean {
   return /^\d{11}$/.test(value);
-}
-
-function hasAllDocuments(documents: UploadedDocument[]): boolean {
-  return UPLOAD_FIELDS.every((field) =>
-    documents.some((document) => document.id === field.id),
-  );
 }
 
 async function simulateAgentVerification(
@@ -126,27 +80,6 @@ async function simulateAgentVerification(
   };
 }
 
-async function simulateKybSubmission(
-  documents: UploadedDocument[],
-): Promise<MockKybResponse> {
-  await delay(1300);
-
-  // ASSUMED SHAPE: API_DOCS.md only documents documentUrl, so these KYB fields must be confirmed before production wiring.
-  if (!hasAllDocuments(documents)) {
-    return {
-      success: false,
-      status: "failed",
-      message: "Upload every required document before submitting.",
-    };
-  }
-
-  return {
-    success: true,
-    status: "pending",
-    message: "KYB submitted successfully.",
-  };
-}
-
 export default function HostIdentityVerificationFlow({
   role,
 }: HostIdentityVerificationFlowProps): ReactElement {
@@ -163,30 +96,64 @@ export default function HostIdentityVerificationFlow({
       return "complete";
     }
 
-    if (role === "landlord" && snapshot.identity.status === "pending") {
-      return "submitted";
-    }
-
     return "overview";
   });
   const [nin, setNin] = useState("");
   const [bvn, setBvn] = useState("");
   const [selfiePreview, setSelfiePreview] = useState("");
   const [selfieSource, setSelfieSource] = useState<SelfieSource>(null);
-  const [documents, setDocuments] = useState<UploadedDocument[]>([]);
   const [cameraError, setCameraError] = useState("");
   const [formError, setFormError] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const ninValid = isValidIdentityNumber(nin);
   const bvnValid = isValidIdentityNumber(bvn);
   const agentReady = ninValid && bvnValid && Boolean(selfiePreview);
-  const landlordReady = hasAllDocuments(documents);
+  const landlordReady = ninValid && Boolean(selfiePreview);
 
   useEffect(() => {
     return () => {
       streamRef.current?.getTracks().forEach((track) => track.stop());
     };
   }, []);
+
+  useEffect(() => {
+    if (isAgent) {
+      return;
+    }
+
+    let active = true;
+
+    void getHostIdentityStatus().then((result) => {
+      if (!active || !result.data || result.data.role !== "LANDLORD") {
+        return;
+      }
+
+      const current = getHostVerificationSnapshot(role);
+      const hasStarted =
+        result.data.ninVerified || result.data.selfieVerified;
+      const verifiedAt = result.data.identityVerified
+        ? current.identity.approvedAt ?? new Date().toISOString()
+        : null;
+
+      saveHostIdentityVerification(role, {
+        status: result.data.identityVerified
+          ? "approved"
+          : hasStarted
+            ? "pending"
+            : "not_started",
+        submittedAt: hasStarted
+          ? current.identity.submittedAt ?? new Date().toISOString()
+          : null,
+        approvedAt: verifiedAt,
+        rejectedReason: null,
+      });
+      setScreen(result.data.identityVerified ? "complete" : "overview");
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [isAgent, role]);
 
   const exitFlow = (): void => {
     router.push(centerHref);
@@ -261,27 +228,6 @@ export default function HostIdentityVerificationFlow({
     setFormError("");
   };
 
-  const handleDocumentUpload = (
-    event: ChangeEvent<HTMLInputElement>,
-    id: UploadField["id"],
-  ): void => {
-    const file = event.target.files?.[0];
-
-    if (!file) {
-      return;
-    }
-
-    setDocuments((current) => [
-      ...current.filter((document) => document.id !== id),
-      { id, name: file.name },
-    ]);
-    setFormError("");
-  };
-
-  const removeDocument = (id: UploadField["id"]): void => {
-    setDocuments((current) => current.filter((document) => document.id !== id));
-  };
-
   const submitAgentIdentity = async (): Promise<void> => {
     setFormError("");
 
@@ -321,22 +267,45 @@ export default function HostIdentityVerificationFlow({
     setFormError("");
 
     if (!landlordReady) {
-      setFormError("Upload every required document before submitting.");
+      setFormError("Enter a valid NIN and add a selfie before submitting.");
       return;
     }
 
     setIsProcessing(true);
 
     try {
-      const response = await simulateKybSubmission(documents);
+      await verifyHostNin(nin);
+      await verifyHostSelfie(selfiePreview);
 
-      if (!response.success || response.status === "failed") {
-        setFormError(response.message ?? "Document upload failed. Try again.");
-        return;
+      const status = await getHostIdentityStatus();
+
+      if (!status.success || !status.data?.identityVerified) {
+        throw new Error(
+          status.message || "Your verification status could not be confirmed.",
+        );
       }
 
-      submitLandlordIdentityReview(role);
-      setScreen("submitted");
+      const verifiedAt = new Date().toISOString();
+      saveHostIdentityVerification(role, {
+        status: "approved",
+        submittedAt: verifiedAt,
+        approvedAt: verifiedAt,
+        rejectedReason: null,
+      });
+      setScreen("complete");
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Verification failed. Try again.";
+
+      saveHostIdentityVerification(role, {
+        status: "failed",
+        submittedAt: new Date().toISOString(),
+        approvedAt: null,
+        rejectedReason: message,
+      });
+      setFormError(message);
     } finally {
       setIsProcessing(false);
     }
@@ -368,25 +337,25 @@ export default function HostIdentityVerificationFlow({
         <h1 className="mt-3 font-display text-4xl font-bold leading-tight text-white">
           {isAgent
             ? "Let's verify your identity as an agent."
-            : "Let's verify your business."}
+            : "Let's verify your landlord identity."}
         </h1>
         <p className="mx-auto mt-4 max-w-md font-body text-base leading-7 text-white/70">
           {isAgent
             ? "We will check your NIN, BVN, and selfie together through Smile ID so residents know they are working with a trusted agent."
-            : "KYB requires document upload and review by the Rello team. This usually takes 1 to 2 business days."}
+            : "Confirm your NIN and complete a selfie liveness check to unlock listing creation."}
         </p>
 
         <div className="mx-auto mt-12 max-w-xl rounded-lg border border-white/10 bg-primary p-6 text-left">
           <div className="flex items-center gap-3">
             <Lock className="h-5 w-5 text-accent" />
             <p className="font-body text-sm font-bold text-white/80">
-              {isAgent ? "Compound Smile ID check" : "Reviewed by Rello"}
+              {isAgent ? "Compound Smile ID check" : "NIN and selfie check"}
             </p>
           </div>
           <p className="mt-3 font-body text-xs leading-6 text-white/70">
             {isAgent
               ? "Your identity details are submitted once and verified together for a faster approval decision."
-              : "Your uploaded documents are checked securely before listing access is unlocked."}
+              : "These identity checks are required before the backend allows a property listing to be created."}
           </p>
         </div>
 
@@ -395,7 +364,7 @@ export default function HostIdentityVerificationFlow({
           onClick={() => setScreen("step")}
           className="mt-10 rounded-full bg-accent px-10 py-4 font-body text-sm font-medium text-primary transition-all duration-200 ease-in-out hover:scale-[1.02] hover:bg-primary hover:text-white hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         >
-          {isAgent ? "Begin Verification" : "Submit Documents"}
+          {isAgent ? "Begin Verification" : "Verify Identity"}
         </button>
         <button
           type="button"
@@ -606,69 +575,18 @@ export default function HostIdentityVerificationFlow({
     <form onSubmit={submitStep} className="space-y-5">
       <div className="text-center">
         <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl bg-accent/10 text-accent">
-          <BriefcaseBusiness size={27} />
+          <ShieldCheck size={27} />
         </span>
         <h1 className="mt-4 font-display text-2xl font-bold text-primary">
-          Submit documents for review
+          Verify your landlord identity
         </h1>
         <p className="mx-auto mt-2 max-w-sm font-body text-sm leading-6 text-muted">
-          Upload the core documents our review team needs before landlord
-          listing access is unlocked.
+          Enter your NIN and submit a clear selfie. Both checks must pass before
+          you can create a listing.
         </p>
       </div>
-      {UPLOAD_FIELDS.map((field) => {
-        const uploaded = documents.find((document) => document.id === field.id);
-
-        return (
-          <section
-            key={field.id}
-            className="rounded-xl border border-dashed border-primary/20 bg-[var(--color-bg)] p-5 shadow-sm"
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2 className="font-body text-sm font-bold text-primary">
-                  {field.title}
-                </h2>
-                <p className="mt-2 font-body text-xs leading-5 text-muted">
-                  {field.description}
-                </p>
-              </div>
-              <FileText className="h-5 w-5 shrink-0 text-accent" />
-            </div>
-            {uploaded ? (
-              <div className="mt-4 flex items-center justify-between gap-3 rounded-lg border border-primary/10 bg-surface-soft px-4 py-3">
-                <span className="truncate font-body text-sm font-medium text-primary">
-                  {uploaded.name}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => removeDocument(field.id)}
-                  className="shrink-0 rounded-full p-1 text-muted transition-all duration-200 ease-in-out hover:bg-primary/10 hover:text-primary"
-                  aria-label={`Remove ${field.title}`}
-                >
-                  <X size={16} />
-                </button>
-              </div>
-            ) : (
-              <label className="mt-4 flex cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-border bg-white px-4 py-6 text-center transition-all duration-200 ease-in-out hover:border-accent hover:bg-accent/5">
-                <Upload className="h-6 w-6 text-accent" />
-                <span className="mt-2 font-body text-sm font-bold text-primary">
-                  Click to upload
-                </span>
-                <span className="mt-1 font-body text-xs text-muted">
-                  PDF, JPG, or PNG
-                </span>
-                <input
-                  type="file"
-                  accept="image/*,.pdf"
-                  className="sr-only"
-                  onChange={(event) => handleDocumentUpload(event, field.id)}
-                />
-              </label>
-            )}
-          </section>
-        );
-      })}
+      {renderNumberField("NIN", nin, setNin, IdCard)}
+      {renderSelfieField()}
       {formError ? (
         <p className="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 font-body text-sm font-bold text-red-700">
           {formError}
@@ -682,10 +600,10 @@ export default function HostIdentityVerificationFlow({
         {isProcessing ? (
           <span className="inline-flex items-center gap-2">
             <Loader2 className="h-4 w-4 animate-spin" />
-            Uploading documents...
+            Verifying your identity...
           </span>
         ) : (
-          "Submit for Review"
+          "Verify Identity"
         )}
       </button>
     </form>
@@ -720,23 +638,17 @@ export default function HostIdentityVerificationFlow({
         transition={{ duration: 0.5, ease: "easeOut" }}
       >
         <div className="flex justify-center">
-          {isAgent ? (
-            <span className="scale-125">
-              <VerifiedBadge size="md" />
-            </span>
-          ) : (
-            <span className="flex h-16 w-16 items-center justify-center rounded-full bg-accent/15 text-accent">
-              <Clock size={30} />
-            </span>
-          )}
+          <span className="scale-125">
+            <VerifiedBadge size="md" />
+          </span>
         </div>
         <h1 className="mt-6 font-display text-4xl font-bold text-white">
-          {isAgent ? "You're verified." : "Your documents are under review."}
+          You&apos;re verified.
         </h1>
         <p className="mx-auto mt-3 max-w-sm font-body text-base leading-7 text-white/70">
           {isAgent
             ? "You can now list properties on Rello with full agent trust signals."
-            : "Our team typically reviews submissions within 1 to 2 business days. We will notify you as soon as a decision is made."}
+            : "Your landlord identity is verified. You can now create and submit property listings."}
         </p>
         <button
           type="button"
@@ -753,7 +665,7 @@ export default function HostIdentityVerificationFlow({
     return renderStep();
   }
 
-  if (screen === "complete" || screen === "submitted") {
+  if (screen === "complete") {
     return renderComplete();
   }
 

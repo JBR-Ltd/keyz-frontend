@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import HostIdentityVerificationFlow from "@/components/verification/HostIdentityVerificationFlow";
 
 export default function LandlordIdentityVerificationPage() {
-  redirect("/landlord/verify");
+  return <HostIdentityVerificationFlow role="landlord" />;
 }

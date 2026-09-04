@@ -1,17 +1,21 @@
 "use client";
 
 import type { ReactElement, ReactNode } from "react";
-import { useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
 import MessagesDropdown from "@/components/chat/MessagesDropdown";
 import AgentHeader from "@/components/dashboard/AgentHeader";
 import LandlordHeader from "@/components/dashboard/LandlordHeader";
 import RoleSidebar from "@/components/dashboard/RoleSidebar";
 import TenantSidebar from "@/components/dashboard/TenantSidebar";
-import { getHostVerificationSnapshot } from "@/lib/hostVerification";
+import {
+  getHostIdentityStatus,
+  getHostVerificationSnapshot,
+} from "@/lib/hostVerification";
 import {
   countVerifiedTenantSteps,
   isTenantVerified,
+  saveTenantVerificationState,
   useTenantVerificationSnapshot,
 } from "@/lib/tenantVerification";
 
@@ -40,14 +44,18 @@ function getSidebarSnapshot(): boolean {
 
 function subscribeToHostVerification(callback: () => void): () => void {
   window.addEventListener("storage", callback);
+  window.addEventListener("rello-host-verification-change", callback);
 
-  return () => window.removeEventListener("storage", callback);
+  return () => {
+    window.removeEventListener("storage", callback);
+    window.removeEventListener("rello-host-verification-change", callback);
+  };
 }
 
 function getLandlordVerificationStorageSnapshot(): string {
   const snapshot = getHostVerificationSnapshot("landlord");
 
-  return `${snapshot.identity.status}:${snapshot.payout.status}`;
+  return snapshot.identity.status;
 }
 
 function getAgentVerificationStorageSnapshot(): string {
@@ -63,6 +71,36 @@ export default function DashboardShell({
 }: DashboardShellProps): ReactElement {
   const pathname = usePathname();
   const { state: tenantVerificationState } = useTenantVerificationSnapshot();
+
+  useEffect(() => {
+    if (rolePath !== "tenant") {
+      return;
+    }
+
+    let isActive = true;
+
+    void getHostIdentityStatus().then((result) => {
+      if (
+        !isActive ||
+        !result.success ||
+        !result.data ||
+        result.data.role.toUpperCase() !== "TENANT"
+      ) {
+        return;
+      }
+
+      saveTenantVerificationState({
+        nin: result.data.ninVerified ? "verified" : "not_started",
+        bvn: result.data.bvnVerified ? "verified" : "not_started",
+        selfie: result.data.selfieVerified ? "verified" : "not_started",
+      });
+    });
+
+    return () => {
+      isActive = false;
+    };
+  }, [rolePath]);
+
   const landlordVerificationStatus = useSyncExternalStore(
     subscribeToHostVerification,
     getLandlordVerificationStorageSnapshot,
@@ -86,10 +124,9 @@ export default function DashboardShell({
   const verificationHref =
     "/tenant/verify?source=dashboard&returnTo=" + encodeURIComponent(pathname);
   const verifiedLandlordStepCount =
-    Number(landlordVerificationStatus.startsWith("approved:")) +
-    Number(landlordVerificationStatus.endsWith(":approved"));
+    landlordVerificationStatus === "approved" ? 2 : 0;
   const showLandlordVerificationAction =
-    rolePath === "landlord" && verifiedLandlordStepCount < 2;
+    rolePath === "landlord" && landlordVerificationStatus !== "approved";
   const verifiedAgentStepCount =
     Number(agentVerificationStatus.startsWith("approved:")) +
     Number(agentVerificationStatus.endsWith(":approved"));

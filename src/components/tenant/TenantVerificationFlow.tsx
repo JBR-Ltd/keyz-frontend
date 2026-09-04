@@ -30,8 +30,8 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   countVerifiedTenantSteps,
-  getFirstIncompleteTenantVerificationStep,
   isTenantVerified,
+  saveTenantVerificationState,
   saveTenantVerificationStep,
   TenantVerificationStep,
   useTenantVerificationSnapshot,
@@ -41,6 +41,13 @@ interface VerificationApiResponse {
   data: unknown;
   message: string;
   success: boolean;
+}
+
+interface TenantVerificationStatus {
+  bvnVerified: boolean;
+  identityVerified: boolean;
+  ninVerified: boolean;
+  selfieVerified: boolean;
 }
 
 interface StepCopy {
@@ -79,7 +86,7 @@ const STEP_COPY: Record<TenantVerificationStep, StepCopy> = {
       "Your National Identification Number confirms your identity before high-trust actions like bookings and offers.",
     helper:
       "Your NIN is only used to confirm your identity and is never stored in full.",
-    button: "Verify NIN",
+    button: "Continue to BVN",
     icon: IdCard,
   },
   bvn: {
@@ -139,6 +146,23 @@ function isVerificationApiResponse(
   );
 }
 
+function isTenantVerificationStatus(
+  value: unknown,
+): value is TenantVerificationStatus {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    "identityVerified" in value &&
+    typeof value.identityVerified === "boolean" &&
+    "ninVerified" in value &&
+    typeof value.ninVerified === "boolean" &&
+    "bvnVerified" in value &&
+    typeof value.bvnVerified === "boolean" &&
+    "selfieVerified" in value &&
+    typeof value.selfieVerified === "boolean"
+  );
+}
+
 async function parseVerificationResponse(
   response: Response,
 ): Promise<VerificationApiResponse> {
@@ -169,13 +193,13 @@ function getAccessToken(): string {
   return token;
 }
 
-async function verifyIdentityNumber(
-  step: "nin" | "bvn",
-  value: string,
+async function verifyTenantIdentityNumbers(
+  nin: string,
+  bvn: string,
 ): Promise<VerificationApiResponse> {
-  const query = new URLSearchParams({ [step]: value });
+  const query = new URLSearchParams({ nin, bvn });
   const response = await fetch(
-    `/api/verification/dojah/${step}?${query.toString()}`,
+    `/api/verification/tenant?${query.toString()}`,
     {
       method: "POST",
       headers: {
@@ -212,6 +236,22 @@ async function verifySelfie(
   return parseVerificationResponse(response);
 }
 
+async function getTenantVerificationStatus(): Promise<TenantVerificationStatus> {
+  const response = await fetch("/api/verification/status", {
+    headers: {
+      Authorization: `Bearer ${getAccessToken()}`,
+    },
+  });
+  const envelope = await parseVerificationResponse(response);
+  const data = envelope.data;
+
+  if (!isTenantVerificationStatus(data)) {
+    throw new Error("The verification server returned an invalid status.");
+  }
+
+  return data;
+}
+
 export default function TenantVerificationFlow(): ReactElement {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -243,7 +283,10 @@ export default function TenantVerificationFlow(): ReactElement {
   );
 
   const firstIncompleteStep = useMemo(
-    () => getFirstIncompleteTenantVerificationStep(state),
+    () =>
+      state.nin === "verified" && state.bvn === "verified"
+        ? "selfie"
+        : "nin",
     [state],
   );
 
@@ -397,16 +440,40 @@ export default function TenantVerificationFlow(): ReactElement {
       return;
     }
 
+    if (step === "nin") {
+      saveTenantVerificationStep("nin", "pending");
+      setScreen("bvn");
+      return;
+    }
+
+    if (!isValidIdentityNumber(nin)) {
+      saveTenantVerificationStep("nin", "failed");
+      setStepError("Go back and enter your 11-digit NIN first.");
+      return;
+    }
+
     setIsProcessing(true);
-    saveTenantVerificationStep(step, "pending");
+    saveTenantVerificationState({
+      ...state,
+      nin: "pending",
+      bvn: "pending",
+    });
 
     try {
-      await verifyIdentityNumber(step, value);
+      await verifyTenantIdentityNumbers(nin, bvn);
 
-      saveTenantVerificationStep(step, "verified");
-      await advanceAfterSuccess(step);
+      saveTenantVerificationState({
+        ...state,
+        nin: "verified",
+        bvn: "verified",
+      });
+      await advanceAfterSuccess("bvn");
     } catch (error) {
-      saveTenantVerificationStep(step, "failed");
+      saveTenantVerificationState({
+        ...state,
+        nin: "failed",
+        bvn: "failed",
+      });
       setStepError(
         error instanceof Error
           ? error.message
@@ -431,8 +498,18 @@ export default function TenantVerificationFlow(): ReactElement {
 
     try {
       await verifySelfie(selfiePreview);
+      const status = await getTenantVerificationStatus();
 
-      saveTenantVerificationStep("selfie", "verified");
+      saveTenantVerificationState({
+        nin: status.ninVerified ? "verified" : "failed",
+        bvn: status.bvnVerified ? "verified" : "failed",
+        selfie: status.selfieVerified ? "verified" : "failed",
+      });
+
+      if (!status.identityVerified) {
+        throw new Error("Your identity verification is not complete yet.");
+      }
+
       await advanceAfterSuccess("selfie");
     } catch (error) {
       saveTenantVerificationStep("selfie", "failed");
@@ -1096,7 +1173,7 @@ export default function TenantVerificationFlow(): ReactElement {
   };
 
   if (screen === "overview") {
-    return renderOverview();
+    return tenantVerified ? renderComplete() : renderOverview();
   }
 
   if (screen === "complete") {

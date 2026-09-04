@@ -2,12 +2,14 @@
 
 import { Banknote, Clock, Home, Lock, ShieldCheck } from "lucide-react";
 import Link from "next/link";
-import { ReactElement, useState } from "react";
+import { ReactElement, useEffect, useState } from "react";
 import VerifiedBadge from "@/components/ui/VerifiedBadge";
 import {
+  getHostIdentityStatus,
   getHostVerificationSnapshot,
   HostVerificationRole,
   maskAccountNumber,
+  saveHostIdentityVerification,
 } from "@/lib/hostVerification";
 import { cn } from "@/lib/utils";
 
@@ -84,15 +86,53 @@ function StatusBadge({ children }: { children: string }): ReactElement {
 export default function HostVerificationCenter({
   role,
 }: HostVerificationCenterProps): ReactElement {
-  const [snapshot] = useState(() => getHostVerificationSnapshot(role));
+  const [snapshot, setSnapshot] = useState(() =>
+    getHostVerificationSnapshot(role),
+  );
   const isAgent = role === "agent";
   const rolePath = role;
   const identity = snapshot.identity;
   const payout = snapshot.payout;
-  const completeCount =
-    (identity.status === "approved" ? 1 : 0) +
-    (payout.status === "approved" ? 1 : 0);
-  const progressPercent = `${(completeCount / 2) * 100}%`;
+  const identityComplete = identity.status === "approved";
+  const progressPercent = identityComplete ? "100%" : "0%";
+
+  useEffect(() => {
+    if (role !== "landlord") {
+      return;
+    }
+
+    let active = true;
+
+    void getHostIdentityStatus().then((result) => {
+      if (!active || !result.data || result.data.role !== "LANDLORD") {
+        return;
+      }
+
+      const current = getHostVerificationSnapshot(role);
+      const hasStarted =
+        result.data.ninVerified || result.data.selfieVerified;
+      const verifiedAt = result.data.identityVerified
+        ? current.identity.approvedAt ?? new Date().toISOString()
+        : null;
+      const nextSnapshot = saveHostIdentityVerification(role, {
+        status: result.data.identityVerified
+          ? "approved"
+          : hasStarted
+            ? "pending"
+            : "not_started",
+        submittedAt: hasStarted
+          ? current.identity.submittedAt ?? new Date().toISOString()
+          : null,
+        approvedAt: verifiedAt,
+        rejectedReason: null,
+      });
+      setSnapshot(nextSnapshot);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [role]);
 
   const renderIdentityStatus = (): ReactElement => {
     if (identity.status === "approved") {
@@ -207,20 +247,22 @@ export default function HostVerificationCenter({
           Verification Center
         </p>
         <h1 className="mt-4 font-display text-4xl font-bold leading-[0.92] text-primary sm:text-5xl">
-          Get fully verified
+          Verification and payouts
         </h1>
         <p className="mt-4 max-w-2xl font-body text-sm leading-6 text-muted">
-          Complete identity and payout checks to unlock listing creation, safer
-          resident trust, and payout activation.
+          Verify your identity to create listings. Payout setup is separate
+          and is only required before you receive earnings.
         </p>
 
         <div className="mt-8 rounded-xl border border-primary/10 bg-[var(--color-bg)] p-5 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="font-body text-sm font-bold text-primary">
-              {completeCount} of 2 complete
+              {identityComplete
+                ? "Landlord verification complete"
+                : "Landlord verification required"}
             </p>
             <p className="font-body text-xs text-muted">
-              Property verification starts after your first listing is created.
+              Payout setup does not block listing creation.
             </p>
           </div>
           <div className="mt-4 h-2 overflow-hidden rounded-full bg-border">
