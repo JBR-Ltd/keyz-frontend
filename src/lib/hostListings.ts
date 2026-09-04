@@ -111,6 +111,12 @@ export interface HostListingStorageResult<TValue> {
   unavailable: boolean;
 }
 
+export interface PublicPropertiesResult
+  extends HostListingStorageResult<BackendProperty[]> {
+  hasNext: boolean;
+  totalItems: number;
+}
+
 const DATABASE_NAME = "rello-host-listings";
 const DATABASE_VERSION = 1;
 const STORAGE_EVENT = "rello-host-listings-change";
@@ -432,7 +438,7 @@ export async function getPublicProperties(
   filter: "all" | "rent" | "sale" = "all",
   page = 0,
   size = 12,
-): Promise<HostListingStorageResult<BackendProperty[]>> {
+): Promise<PublicPropertiesResult> {
   try {
     const response = await fetch(
       `/api/properties/${filter}?page=${page}&size=${size}`,
@@ -447,14 +453,21 @@ export async function getPublicProperties(
       throw new Error("The property server returned an invalid property list.");
     }
 
-    return { data: envelope.data.items, unavailable: false };
+    return {
+      data: envelope.data.items,
+      hasNext: envelope.data.hasNext,
+      totalItems: envelope.data.totalItems,
+      unavailable: false,
+    };
   } catch (error) {
     return {
       data: [],
+      hasNext: false,
       message:
         error instanceof Error
           ? error.message
           : "Properties could not be loaded.",
+      totalItems: 0,
       unavailable: false,
     };
   }

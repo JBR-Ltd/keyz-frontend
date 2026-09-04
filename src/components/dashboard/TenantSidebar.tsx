@@ -11,6 +11,7 @@ import {
   Search,
   Settings,
   ShieldCheck,
+  UserRound,
   X,
 } from "lucide-react";
 import Image from "next/image";
@@ -19,6 +20,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import OverlayPortal from "@/components/ui/OverlayPortal";
 import { logOutAccount, useAuthenticatedUser } from "@/lib/account";
+import { subscribeTenantHeaderSearch } from "@/lib/tenantHeaderSearch";
 import { useDialogFocus } from "@/lib/useDialogFocus";
 import relloLogoMark from "../../../public/rello-logo-cropped.svg";
 
@@ -176,6 +178,7 @@ export default function TenantSidebar({
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isHeaderSearchRequested, setIsHeaderSearchRequested] = useState(false);
   const profileButtonRef = useRef<HTMLButtonElement>(null);
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const drawerRef = useDialogFocus<HTMLElement>(isMobileOpen);
@@ -186,7 +189,15 @@ export default function TenantSidebar({
   const profileInitials = user
     ? `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase()
     : "T";
-  const isSettingsActive = pathname.startsWith("/tenant/settings");
+  const isAccountActive =
+    pathname.startsWith("/tenant/profile") ||
+    pathname.startsWith("/tenant/settings");
+  const isHeaderSearchVisible =
+    pathname === "/tenant/browse" && isHeaderSearchRequested;
+
+  useEffect(() => {
+    return subscribeTenantHeaderSearch(setIsHeaderSearchRequested);
+  }, []);
 
   useEffect(() => {
     if (!isProfileOpen) {
@@ -254,8 +265,23 @@ export default function TenantSidebar({
         <div className="mx-auto flex h-20 w-full max-w-[96rem] items-center gap-4 px-4 sm:px-6 lg:px-8">
           <TenantLogo />
 
-          <div className="hidden min-w-0 flex-1 justify-center lg:flex">
-            <TenantNavigation />
+          <div className="relative hidden h-20 min-w-0 flex-1 items-center justify-center lg:flex">
+            <motion.div
+              className={`absolute inset-y-0 flex items-stretch justify-center ${
+                isHeaderSearchVisible ? "pointer-events-none" : ""
+              }`}
+              animate={{
+                opacity: isHeaderSearchVisible ? 0 : 1,
+                scale: isHeaderSearchVisible ? 0.96 : 1,
+              }}
+              transition={{
+                duration: reduceMotion ? 0 : 0.2,
+                ease: "easeOut",
+              }}
+              aria-hidden={isHeaderSearchVisible}
+            >
+              <TenantNavigation />
+            </motion.div>
           </div>
 
           <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
@@ -269,7 +295,7 @@ export default function TenantSidebar({
                 aria-haspopup="menu"
                 aria-expanded={isProfileOpen}
                 className={`flex min-h-11 items-center gap-2 rounded-full p-1.5 pr-2 font-body text-sm text-primary transition-all duration-200 ease-in-out hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
-                  isSettingsActive ? "bg-primary/5" : ""
+                  isAccountActive ? "bg-primary/5" : ""
                 }`}
               >
                 <span className="relative flex h-8 w-8 items-center justify-center rounded-full bg-primary font-body text-xs font-bold text-white">
@@ -307,6 +333,15 @@ export default function TenantSidebar({
                       show={showVerificationAction}
                       verifiedStepCount={verifiedStepCount}
                     />
+                    <Link
+                      href="/tenant/profile"
+                      role="menuitem"
+                      onClick={() => setIsProfileOpen(false)}
+                      className="flex items-center gap-3 rounded-lg px-4 py-3 font-body text-sm font-medium text-primary transition-colors hover:bg-primary/5"
+                    >
+                      <UserRound size={17} strokeWidth={1.9} />
+                      Profile
+                    </Link>
                     <Link
                       href="/tenant/settings"
                       role="menuitem"
@@ -414,6 +449,14 @@ export default function TenantSidebar({
                     show={showVerificationAction}
                     verifiedStepCount={verifiedStepCount}
                   />
+                  <Link
+                    href="/tenant/profile"
+                    onClick={() => setIsMobileOpen(false)}
+                    className="flex min-h-11 items-center gap-3 rounded-lg px-3 font-body text-sm font-medium text-primary transition-colors hover:bg-primary/5"
+                  >
+                    <UserRound size={17} />
+                    Profile
+                  </Link>
                   <Link
                     href="/tenant/settings"
                     onClick={() => setIsMobileOpen(false)}

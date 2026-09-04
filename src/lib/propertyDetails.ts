@@ -431,13 +431,17 @@ function backendPropertyToPropertyDetail(
 
 export interface PropertyQueryResult {
   data: PropertyDetail[];
+  hasNext: boolean;
   message?: string;
+  totalItems: number;
 }
 
 export async function getProperties(
   filter: "all" | "rent" | "sale" = "all",
+  page = 0,
+  size = 12,
 ): Promise<PropertyQueryResult> {
-  const result = await getPublicProperties(filter);
+  const result = await getPublicProperties(filter, page, size);
 
   return {
     data: result.data
@@ -446,7 +450,9 @@ export async function getProperties(
           property.status === "FOR_RENT" || property.status === "FOR_SALE",
       )
       .map(backendPropertyToPropertyDetail),
+    hasNext: result.hasNext,
     message: result.message,
+    totalItems: result.totalItems,
   };
 }
 
