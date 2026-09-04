@@ -5,6 +5,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { Loader2 } from "lucide-react";
 import Footer from "@/components/Footer";
 import Navbar from "@/components/Navbar";
+import { Select, toSelectOptions } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
 
 const cities = [
@@ -284,21 +285,14 @@ export default function WaitlistPage() {
                     <span className="font-body text-sm font-bold text-primary">
                       Role
                     </span>
-                    <select
+                    <Select
                       name="role"
-                      defaultValue=""
                       required
+                      ariaLabel="Role"
+                      placeholder="Select your role"
                       className="mt-2 min-h-14 w-full border border-primary bg-white px-4 py-3 font-body text-base text-slate-950 outline-none transition-all duration-200 ease-in-out focus:border-accent focus:ring-2 focus:ring-accent/30"
-                    >
-                      <option value="" disabled>
-                        Select your role
-                      </option>
-                      {roles.map((role) => (
-                        <option key={role} value={role}>
-                          {role}
-                        </option>
-                      ))}
-                    </select>
+                      options={toSelectOptions([...roles])}
+                    />
                   </label>
 
                   {status === "error" && message ? (

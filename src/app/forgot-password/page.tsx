@@ -9,6 +9,7 @@ import AuthBanner from "@/components/auth/AuthBanner";
 import AuthInput from "@/components/auth/AuthInput";
 import AuthSplitLayout from "@/components/auth/AuthSplitLayout";
 import { useToast } from "@/components/ui/toast";
+import { resolveApiError } from "@/lib/errors";
 
 interface ForgotPasswordFormValues {
   email: string;
@@ -38,6 +39,7 @@ export default function ForgotPasswordPage() {
   const { notify } = useToast();
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [requestedEmail, setRequestedEmail] = useState("");
   const {
     formState: { errors, isSubmitting },
     handleSubmit,
@@ -66,7 +68,7 @@ export default function ForgotPasswordPage() {
       const data: unknown = await response.json().catch(() => null);
 
       if (!response.ok || (isApiEnvelope(data) && !data.success)) {
-        throw new Error(getApiMessage(data, "Password reset request failed"));
+        throw new Error(resolveApiError(data, "Password reset request failed"));
       }
 
       const message = getApiMessage(
@@ -75,6 +77,7 @@ export default function ForgotPasswordPage() {
       );
 
       setSuccessMessage(message);
+      setRequestedEmail(values.email);
       notify({
         title: "Reset code sent",
         description: message,
@@ -160,7 +163,7 @@ export default function ForgotPasswordPage() {
 
               {successMessage ? (
                 <Link
-                  href="/reset-password"
+                  href={`/reset-password?email=${encodeURIComponent(requestedEmail)}`}
                   className="inline-flex min-h-12 items-center justify-center rounded-full border border-primary px-5 py-3 font-body text-sm font-medium text-primary transition-all duration-200 ease-in-out hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 >
                   Enter reset code

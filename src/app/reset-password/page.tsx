@@ -10,8 +10,10 @@ import AuthBanner from "@/components/auth/AuthBanner";
 import AuthInput from "@/components/auth/AuthInput";
 import AuthSplitLayout from "@/components/auth/AuthSplitLayout";
 import { useToast } from "@/components/ui/toast";
+import { resolveApiError } from "@/lib/errors";
 
 interface ResetPasswordFormValues {
+  email: string;
   token: string;
   newPassword: string;
 }
@@ -40,12 +42,17 @@ export default function ResetPasswordPage() {
   const reduceMotion = useReducedMotion();
   const { notify } = useToast();
   const [errorMessage, setErrorMessage] = useState("");
-  const [initialToken] = useState(() => {
+  const [initialParams] = useState(() => {
     if (typeof window === "undefined") {
-      return "";
+      return { email: "", token: "" };
     }
 
-    return new URLSearchParams(window.location.search).get("token") ?? "";
+    const params = new URLSearchParams(window.location.search);
+
+    return {
+      email: params.get("email") ?? "",
+      token: params.get("token") ?? "",
+    };
   });
   const {
     formState: { errors, isSubmitting },
@@ -53,7 +60,8 @@ export default function ResetPasswordPage() {
     register,
   } = useForm<ResetPasswordFormValues>({
     defaultValues: {
-      token: initialToken,
+      email: initialParams.email,
+      token: initialParams.token,
       newPassword: "",
     },
     mode: "onSubmit",
@@ -75,7 +83,7 @@ export default function ResetPasswordPage() {
       const data: unknown = await response.json().catch(() => null);
 
       if (!response.ok || (isApiEnvelope(data) && !data.success)) {
-        throw new Error(getApiMessage(data, "Password reset failed"));
+        throw new Error(resolveApiError(data, "Password reset failed"));
       }
 
       const message = getApiMessage(data, "Password reset successfully");
@@ -136,6 +144,17 @@ export default function ResetPasswordPage() {
                   type="error"
                 />
               ) : null}
+
+              <AuthInput
+                label="Email"
+                name="email"
+                type="email"
+                placeholder="you@example.com"
+                autoComplete="email"
+                error={errors.email?.message}
+                register={register}
+                rules={{ required: "Email is required" }}
+              />
 
               <AuthInput
                 label="Reset Code"

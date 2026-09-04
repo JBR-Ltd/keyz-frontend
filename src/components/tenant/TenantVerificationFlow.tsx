@@ -843,15 +843,20 @@ export default function TenantVerificationFlow(): ReactElement {
       >
         <div className="sticky top-0 z-20 bg-primary/95 px-5 py-4 shadow-md">
           <div className="mx-auto grid max-w-6xl grid-cols-[auto_1fr_auto] items-center gap-4">
-            <button
-              type="button"
-              onClick={goBack}
-              disabled={isProcessing}
-              className="inline-flex min-h-10 items-center gap-2 justify-self-start rounded-full bg-white/10 px-3 font-body text-sm font-medium text-white shadow-sm transition-all duration-200 ease-in-out hover:bg-white/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <ArrowLeft size={16} aria-hidden="true" />
-              Back
-            </button>
+            {/* Nothing to go back to on the first check, but the column stays so the progress bar keeps its place */}
+            {activeIndex > 0 ? (
+              <button
+                type="button"
+                onClick={goBack}
+                disabled={isProcessing}
+                className="inline-flex min-h-10 items-center gap-2 justify-self-start rounded-full bg-white/10 px-3 font-body text-sm font-medium text-white shadow-sm transition-all duration-200 ease-in-out hover:bg-white/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <ArrowLeft size={16} aria-hidden="true" />
+                Back
+              </button>
+            ) : (
+              <span aria-hidden="true" />
+            )}
             {renderProgressSegments(activeStep)}
             <button
               type="button"

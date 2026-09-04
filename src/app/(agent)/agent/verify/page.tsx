@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { Select } from "@/components/ui/select";
 import { useAuthenticatedUser } from "@/lib/account";
 import {
   approveAgentIdentity,
@@ -103,7 +104,8 @@ function FlowCard({
 
 interface IdentityNumberScreenProps {
   label: string;
-  onBack: () => void;
+  /** Omitted on the first step, where there is nothing to go back to. */
+  onBack?: () => void;
   onContinue: () => void;
   progress: number;
   supportingText: string;
@@ -312,7 +314,6 @@ export default function AgentVerificationPage(): ReactElement {
           progress={25}
           value={nin}
           onValueChange={setNin}
-          onBack={() => setScreen("overview")}
           onContinue={() => setScreen("bvn")}
         />
       );
@@ -508,15 +509,17 @@ export default function AgentVerificationPage(): ReactElement {
           <div className="space-y-5">
             <label className="block font-body text-sm font-bold text-primary">
               Bank
-              <select
+              <Select
+                ariaLabel="Bank"
                 value={bankCode}
-                onChange={(event) => setBankCode(event.target.value)}
+                onValueChange={setBankCode}
                 className="mt-2 min-h-14 w-full rounded-xl border border-primary/15 bg-bg px-4 font-body text-sm text-primary outline-none focus:border-accent focus:ring-4 focus:ring-accent/10"
-              >
-                <option value="058">Guaranty Trust Bank</option>
-                <option value="044">Access Bank</option>
-                <option value="033">United Bank for Africa</option>
-              </select>
+                options={[
+                  { label: "Guaranty Trust Bank", value: "058" },
+                  { label: "Access Bank", value: "044" },
+                  { label: "United Bank for Africa", value: "033" },
+                ]}
+              />
             </label>
             <label className="block font-body text-sm font-bold text-primary">
               Account number

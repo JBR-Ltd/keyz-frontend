@@ -1,6 +1,7 @@
 "use client";
 
 import { deleteDB, openDB, type DBSchema, type IDBPDatabase } from "idb";
+import { resolveApiError } from "@/lib/errors";
 import type { PropertyListingStatus } from "@/lib/propertyDetails";
 
 export type HostListingRole = "landlord" | "agent";
@@ -11,36 +12,44 @@ export type HostListingReviewStatus =
   | "VERIFIED"
   | "REJECTED";
 
-export interface BackendPropertySeller {
-  firstName?: string;
+/** Mirrors PartySummary on the backend: what a stranger may see about a person. */
+export interface BackendPropertyHost {
   id: number;
-  identityVerified?: boolean;
-  isIdentityVerified?: boolean;
-  lastName?: string;
-  role: "LANDLORD" | "AGENT" | "TENANT";
-  sellerRating?: number;
+  identityVerified: boolean;
+  name: string;
+  rating?: number | null;
+  role: "ADMIN" | "AGENT" | "LANDLORD" | "TENANT";
 }
 
+/** Mirrors PropertySummaryResponse. The Property entity is no longer returned to clients. */
 export interface BackendProperty {
   address: string;
   bathrooms: number;
   bedrooms: number;
   description?: string | null;
-  flaggedAsDuplicate?: boolean;
+  host: BackendPropertyHost | null;
   id: number;
   imageUrl?: string | null;
-  isFlaggedAsDuplicate?: boolean;
-  isVerified?: boolean;
   latitude?: number | null;
+  listedByName?: string | null;
   longitude?: number | null;
   price: number;
-  seller: BackendPropertySeller;
   squareFootage?: number;
   status: "FOR_RENT" | "FOR_SALE" | "RENTED" | "SOLD";
   title: string;
-  verified?: boolean;
+  verified: boolean;
   videoWalkthroughUrl?: string | null;
   virtualTourUrl?: string | null;
+}
+
+/** Mirrors PageResponse. Public listing endpoints are paged. */
+export interface BackendPage<TItem> {
+  hasNext: boolean;
+  items: TItem[];
+  page: number;
+  size: number;
+  totalItems: number;
+  totalPages: number;
 }
 
 export interface PropertyPortfolio {
@@ -152,18 +161,23 @@ function isApiEnvelope(value: unknown): value is ApiEnvelope {
   );
 }
 
-function isBackendPropertySeller(
-  value: unknown,
-): value is BackendPropertySeller {
+function isBackendPropertyHost(value: unknown): value is BackendPropertyHost {
   return (
     value !== null &&
     typeof value === "object" &&
     "id" in value &&
     typeof value.id === "number" &&
-    "role" in value &&
-    (value.role === "LANDLORD" ||
-      value.role === "AGENT" ||
-      value.role === "TENANT")
+    "name" in value &&
+    typeof value.name === "string"
+  );
+}
+
+function isBackendPage(value: unknown): value is BackendPage<unknown> {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    "items" in value &&
+    Array.isArray(value.items)
   );
 }
 
@@ -188,8 +202,7 @@ function isBackendProperty(value: unknown): value is BackendProperty {
       value.status === "FOR_SALE" ||
       value.status === "RENTED" ||
       value.status === "SOLD") &&
-    "seller" in value &&
-    isBackendPropertySeller(value.seller)
+    (!("host" in value) || value.host === null || isBackendPropertyHost(value.host))
   );
 }
 
@@ -217,16 +230,8 @@ function getAccessToken(): string {
   return localStorage.getItem("rello_token") ?? "";
 }
 
-function isPropertyVerified(property: BackendProperty): boolean {
-  return property.verified ?? property.isVerified ?? false;
-}
-
-function isPropertyFlagged(property: BackendProperty): boolean {
-  return property.flaggedAsDuplicate ?? property.isFlaggedAsDuplicate ?? false;
-}
-
 function getListingRole(property: BackendProperty): HostListingRole {
-  return property.seller.role === "AGENT" ? "agent" : "landlord";
+  return property.host?.role === "AGENT" ? "agent" : "landlord";
 }
 
 function getListingStatus(property: BackendProperty): PropertyListingStatus {
@@ -234,11 +239,7 @@ function getListingStatus(property: BackendProperty): PropertyListingStatus {
 }
 
 function getReviewStatus(property: BackendProperty): HostListingReviewStatus {
-  if (isPropertyFlagged(property)) {
-    return "REJECTED";
-  }
-
-  return isPropertyVerified(property) ? "VERIFIED" : "PENDING_VERIFICATION";
+  return property.verified ? "VERIFIED" : "PENDING_VERIFICATION";
 }
 
 function getRemotePhoto(property: BackendProperty): HostListingPhoto[] {
@@ -299,7 +300,7 @@ async function parseApiResponse(response: Response): Promise<ApiEnvelope> {
   }
 
   if (!response.ok || !data.success) {
-    throw new Error(data.message || "The property request failed.");
+    throw new Error(resolveApiError(data, "The property request failed."));
   }
 
   return data;
@@ -429,19 +430,24 @@ export async function clearHostListingStorage(): Promise<void> {
 
 export async function getPublicProperties(
   filter: "all" | "rent" | "sale" = "all",
+  page = 0,
+  size = 12,
 ): Promise<HostListingStorageResult<BackendProperty[]>> {
   try {
-    const response = await fetch(`/api/properties/${filter}`);
+    const response = await fetch(
+      `/api/properties/${filter}?page=${page}&size=${size}`,
+    );
     const envelope = await parseApiResponse(response);
 
+    // These endpoints are paged now, so the listings sit under `items`
     if (
-      !Array.isArray(envelope.data) ||
-      !envelope.data.every(isBackendProperty)
+      !isBackendPage(envelope.data) ||
+      !envelope.data.items.every(isBackendProperty)
     ) {
       throw new Error("The property server returned an invalid property list.");
     }
 
-    return { data: envelope.data, unavailable: false };
+    return { data: envelope.data.items, unavailable: false };
   } catch (error) {
     return {
       data: [],
@@ -457,21 +463,12 @@ export async function getPublicProperties(
 export async function getBackendPropertyById(
   id: string,
 ): Promise<HostListingStorageResult<BackendProperty | null>> {
+  // A listing page is public, so this works logged out. The token only adds context.
   const token = getAccessToken();
-
-  if (!token) {
-    return {
-      data: null,
-      message: "Log in to view this property.",
-      unavailable: false,
-    };
-  }
 
   try {
     const property = await requestBackendProperty(id, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
     });
 
     return { data: property, unavailable: false };

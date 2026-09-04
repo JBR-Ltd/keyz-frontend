@@ -7,8 +7,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { SubmitHandler, useForm } from "react-hook-form";
+import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
 import { isAccountRole } from "@/components/auth/RoleGuard";
 import { useToast } from "@/components/ui/toast";
+import { resolveApiError } from "@/lib/errors";
 
 const loginPhotoUrl =
   "https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=1200&h=1400&fit=crop&auto=format&q=80";
@@ -132,7 +134,7 @@ export default function LoginPage() {
       const data: unknown = await response.json().catch(() => null);
 
       if (!response.ok || (isApiEnvelope(data) && !data.success)) {
-        throw new Error(getApiMessage(data, "Login failed"));
+        throw new Error(resolveApiError(data, "Login failed"));
       }
 
       if (isApiEnvelope(data) && isLoginData(data.data)) {
@@ -444,6 +446,18 @@ export default function LoginPage() {
                 )}
               </motion.button>
             </form>
+
+            <div className="mt-6 flex items-center gap-4">
+              <span className="h-px flex-1 bg-border" />
+              <span className="font-accent text-xs font-bold uppercase tracking-[0.22em] text-muted">
+                or
+              </span>
+              <span className="h-px flex-1 bg-border" />
+            </div>
+
+            <div className="mt-6">
+              <GoogleAuthButton label="Continue with Google" />
+            </div>
 
             <motion.p
               className="mt-6 text-center font-body text-sm text-muted"

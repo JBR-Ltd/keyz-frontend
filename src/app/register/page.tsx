@@ -7,7 +7,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { SubmitHandler, useForm } from "react-hook-form";
+import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
 import { useToast } from "@/components/ui/toast";
+import { resolveApiError } from "@/lib/errors";
 
 type UserRole = "LANDLORD" | "AGENT" | "TENANT";
 
@@ -59,10 +61,6 @@ function isApiEnvelope(value: unknown): value is ApiEnvelope<unknown> {
     "message" in value &&
     typeof value.message === "string"
   );
-}
-
-function getApiMessage(value: unknown, fallback: string): string {
-  return isApiEnvelope(value) ? value.message : fallback;
 }
 
 function createDeviceFingerprint(): string {
@@ -133,7 +131,7 @@ export default function RegisterPage() {
       const data: unknown = await response.json().catch(() => null);
 
       if (!response.ok || (isApiEnvelope(data) && !data.success)) {
-        throw new Error(getApiMessage(data, "Registration failed"));
+        throw new Error(resolveApiError(data, "Registration failed"));
       }
 
       sessionStorage.setItem(VERIFY_EMAIL_STORAGE_KEY, values.email);
@@ -520,6 +518,26 @@ export default function RegisterPage() {
                 )}
               </motion.button>
             </form>
+
+            <div className="mt-6 flex items-center gap-4">
+              <span className="h-px flex-1 bg-border" />
+              <span className="font-accent text-xs font-bold uppercase tracking-[0.22em] text-muted">
+                or
+              </span>
+              <span className="h-px flex-1 bg-border" />
+            </div>
+
+            <div className="mt-6">
+              {/* Role is already chosen above, so Google sign-up always has one to send */}
+              <GoogleAuthButton
+                label="Sign up with Google"
+                role={selectedRole}
+              />
+            </div>
+
+            <p className="mt-3 text-center font-body text-xs text-muted">
+              You are signing up as a {selectedRole.toLowerCase()}.
+            </p>
 
             <motion.p
               className="mt-6 text-center font-body text-sm text-muted"

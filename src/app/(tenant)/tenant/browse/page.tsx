@@ -2,15 +2,23 @@
 
 import { useEffect, useState, type ReactElement } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { ChevronDown, MapPin, Search, X } from "lucide-react";
+import { MapPin, Search, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import PropertyCard from "@/components/public/PropertyCard";
 import OverlayPortal from "@/components/ui/OverlayPortal";
+import { Select, type SelectOption } from "@/components/ui/select";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { TENANT_ACTIVITIES, TENANT_STATUS_TONES } from "@/lib/tenantActivity";
 import { getProperties, type PropertyDetail } from "@/lib/propertyDetails";
 import { useDialogFocus } from "@/lib/useDialogFocus";
+
+const PROPERTY_TYPE_OPTIONS: SelectOption[] = [
+  { label: "Apartment", value: "apartment" },
+  { label: "Duplex", value: "duplex" },
+  { label: "Studio", value: "studio" },
+  { label: "Shortlet", value: "shortlet" },
+];
 
 const activeActivities = TENANT_ACTIVITIES.filter(
   (activity) =>
@@ -127,22 +135,11 @@ export default function TenantBrowsePage(): ReactElement {
 
             <label className="flex h-full items-center gap-3 px-6">
               <span className="sr-only">Property type</span>
-              <select
-                defaultValue=""
-                className="min-w-32 appearance-none bg-transparent font-body text-sm font-bold text-primary outline-none"
-              >
-                <option value="" disabled>
-                  Any type
-                </option>
-                <option value="apartment">Apartment</option>
-                <option value="duplex">Duplex</option>
-                <option value="studio">Studio</option>
-                <option value="shortlet">Shortlet</option>
-              </select>
-              <ChevronDown
-                size={16}
-                className="text-muted"
-                aria-hidden="true"
+              <Select
+                ariaLabel="Property type"
+                placeholder="Any type"
+                className="min-w-32 bg-transparent font-body text-sm font-bold text-primary outline-none"
+                options={PROPERTY_TYPE_OPTIONS}
               />
             </label>
 
@@ -381,22 +378,11 @@ export default function TenantBrowsePage(): ReactElement {
                         Type
                       </span>
                       <div className="flex items-center gap-3 rounded bg-bg px-4 py-4 shadow-sm focus-within:ring-2 focus-within:ring-accent">
-                        <select
-                          defaultValue=""
-                          className="min-w-0 flex-1 appearance-none bg-transparent font-body text-base font-bold text-primary outline-none"
-                        >
-                          <option value="" disabled>
-                            Any type
-                          </option>
-                          <option value="apartment">Apartment</option>
-                          <option value="duplex">Duplex</option>
-                          <option value="studio">Studio</option>
-                          <option value="shortlet">Shortlet</option>
-                        </select>
-                        <ChevronDown
-                          size={18}
-                          className="text-muted"
-                          aria-hidden="true"
+                        <Select
+                          ariaLabel="Property type"
+                          placeholder="Any type"
+                          className="min-w-0 flex-1 bg-transparent font-body text-base font-bold text-primary outline-none"
+                          options={PROPERTY_TYPE_OPTIONS}
                         />
                       </div>
                     </label>

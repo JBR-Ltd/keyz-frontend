@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { resolveApiError } from "@/lib/errors";
 import { clearHostListingStorage } from "@/lib/hostListings";
 
 export interface AuthenticatedUser {
@@ -82,7 +83,7 @@ async function parseApiResponse(response: Response): Promise<ApiEnvelope> {
   }
 
   if (!response.ok || !value.success) {
-    throw new Error(value.message || "The account request failed.");
+    throw new Error(resolveApiError(value, "The account request failed."));
   }
 
   return value;

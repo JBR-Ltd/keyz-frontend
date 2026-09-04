@@ -394,11 +394,9 @@ function backendPropertyToPropertyDetail(
   property: BackendProperty,
 ): PropertyDetail {
   const hostRole: PropertyHostRole =
-    property.seller.role === "AGENT" ? "AGENT" : "LANDLORD";
-  const hostName = [property.seller.firstName, property.seller.lastName]
-    .filter(Boolean)
-    .join(" ");
-  const verified = property.verified ?? property.isVerified ?? false;
+    property.host?.role === "AGENT" ? "AGENT" : "LANDLORD";
+  const hostName = property.host?.name ?? "";
+  const verified = property.verified;
 
   return {
     id: String(property.id),
@@ -413,13 +411,10 @@ function backendPropertyToPropertyDetail(
     images: [property.imageUrl ?? DRAFT_IMAGE_FALLBACK],
     verified,
     host: {
-      id: String(property.seller.id),
+      id: String(property.host?.id ?? 0),
       name: hostName || "Property host",
       role: hostRole,
-      verified:
-        property.seller.identityVerified ??
-        property.seller.isIdentityVerified ??
-        false,
+      verified: property.host?.identityVerified ?? false,
     },
     amenities: [],
     tour: {
@@ -427,7 +422,7 @@ function backendPropertyToPropertyDetail(
       matterportUrl: property.virtualTourUrl ?? undefined,
     },
     reviews: {
-      averageRating: property.seller.sellerRating ?? 0,
+      averageRating: property.host?.rating ?? 0,
       count: 0,
       items: [],
     },

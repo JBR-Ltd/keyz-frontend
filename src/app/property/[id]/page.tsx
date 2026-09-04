@@ -5,6 +5,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   ArrowLeft,
   ArrowRight,
+  ArrowUpRight,
   Bath,
   BedDouble,
   Check,
@@ -769,13 +770,24 @@ export default function PropertyPage({
                 </span>
               )}
               <div className="min-w-0 flex-1">
-                <p className="truncate font-body text-sm font-bold text-primary">
+                <Link
+                  href={`/host/${property.host.id}`}
+                  className="block truncate font-body text-sm font-bold text-primary transition-all duration-200 ease-in-out hover:text-accent-alt focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                >
                   {property.host.name}
-                </p>
+                </Link>
                 <p className="mt-1 font-body text-xs text-muted">{hostRole}</p>
               </div>
               {property.host.verified ? <VerifiedBadge size="sm" /> : null}
             </div>
+
+            <Link
+              href={`/host/${property.host.id}`}
+              className="mt-4 inline-flex items-center gap-2 font-body text-sm font-medium text-muted transition-all duration-200 ease-in-out hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            >
+              See all homes from this {hostRole.toLowerCase()}
+              <ArrowUpRight size={15} />
+            </Link>
 
             <div className="my-6 border-t border-border" />
 

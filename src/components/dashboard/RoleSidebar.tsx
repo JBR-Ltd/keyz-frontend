@@ -12,6 +12,7 @@ import {
   Menu,
   Scale,
   Settings,
+  ShieldCheck,
   Star,
   X,
 } from "lucide-react";
@@ -38,11 +39,11 @@ const LANDLORD_NAV_ITEMS = [
 
 const ADMIN_NAV_ITEMS = [
   { label: "Dashboard", slug: "dashboard", icon: LayoutDashboard },
+  { label: "Disputes", slug: "disputes", icon: Scale },
+  { label: "Verifications", slug: "verifications", icon: ShieldCheck },
   { label: "Bookings", slug: "bookings", icon: CalendarDays },
   { label: "Escrow", slug: "escrow", icon: Landmark },
-  { label: "Disputes", slug: "disputes", icon: Scale },
   { label: "Ratings", slug: "ratings", icon: Star },
-  { label: "Saved Listings", slug: "saved-listings", icon: Bookmark },
 ];
 
 const ROLE_PROFILES = {

@@ -31,6 +31,7 @@ import {
   setupHostPayout,
   submitLandlordIdentityReview,
 } from "@/lib/hostVerification";
+import { Select } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
 interface BankOption {
@@ -1155,21 +1156,20 @@ export default function LandlordVerificationFlow(): ReactElement | null {
               <span className="font-body text-sm font-bold text-primary">
                 Bank
               </span>
-              <select
+              <Select
+                ariaLabel="Bank"
+                placeholder="Select a bank"
                 value={bankCode}
-                onChange={(event) => {
-                  setBankCode(event.target.value);
+                onValueChange={(nextBankCode) => {
+                  setBankCode(nextBankCode);
                   setFormError("");
                 }}
                 className="mt-2 min-h-12 w-full rounded-xl border border-primary/20 bg-surface-soft px-4 py-3 font-body text-base text-primary outline-none transition-colors focus:border-accent focus:ring-2 focus:ring-accent/30"
-              >
-                <option value="">Select a bank</option>
-                {BANK_OPTIONS.map((bank) => (
-                  <option key={bank.code} value={bank.code}>
-                    {bank.name}
-                  </option>
-                ))}
-              </select>
+                options={BANK_OPTIONS.map((bank) => ({
+                  label: bank.name,
+                  value: bank.code,
+                }))}
+              />
             </label>
             <label>
               <span className="font-body text-sm font-bold text-primary">

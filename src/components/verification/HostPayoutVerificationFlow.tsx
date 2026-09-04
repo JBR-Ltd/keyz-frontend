@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChangeEvent, FormEvent, ReactElement, useMemo, useState } from "react";
+import { Select } from "@/components/ui/select";
 import VerifiedBadge from "@/components/ui/VerifiedBadge";
 import {
   approveHostPayout,
@@ -319,20 +320,20 @@ export default function HostPayoutVerificationFlow({
       <div className="grid gap-4 text-left">
         <label className="block">
           <span className="font-body text-sm font-bold text-primary">Bank</span>
-          <select
+          <Select
+            ariaLabel="Bank"
+            placeholder="Select your bank"
             value={bankName}
-            onChange={(event) => {
-              setBankName(event.target.value);
+            onValueChange={(nextBank) => {
+              setBankName(nextBank);
               setFormError("");
             }}
             className="mt-2 w-full rounded-lg border border-border bg-white px-4 py-3 font-body text-base text-primary transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-accent/40"
-          >
-            {BANK_OPTIONS.map((bank) => (
-              <option key={bank.code} value={bank.name}>
-                {bank.name}
-              </option>
-            ))}
-          </select>
+            options={BANK_OPTIONS.map((bank) => ({
+              label: bank.name,
+              value: bank.name,
+            }))}
+          />
         </label>
         <label className="block">
           <span className="font-body text-sm font-bold text-primary">

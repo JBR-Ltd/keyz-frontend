@@ -1,5 +1,8 @@
+"use client";
+
 import type { ReactElement } from "react";
 import { MapPin, Search } from "lucide-react";
+import { Select } from "@/components/ui/select";
 
 export default function HeroSearchBar(): ReactElement {
   return (
@@ -21,18 +24,17 @@ export default function HeroSearchBar(): ReactElement {
 
         <label className="flex min-h-14 items-center rounded-lg bg-[var(--color-surface-soft)] px-4 transition-all duration-200 ease-in-out focus-within:ring-2 focus-within:ring-[color-mix(in_srgb,var(--color-accent)_40%,transparent)]">
           <span className="sr-only">Property type</span>
-          <select
-            defaultValue=""
+          <Select
+            ariaLabel="Property type"
+            placeholder="Any type"
             className="w-full bg-transparent font-body text-base text-primary outline-none"
-          >
-            <option value="" disabled>
-              Any type
-            </option>
-            <option value="apartment">Apartment</option>
-            <option value="duplex">Duplex</option>
-            <option value="studio">Studio</option>
-            <option value="shortlet">Shortlet</option>
-          </select>
+            options={[
+              { label: "Apartment", value: "apartment" },
+              { label: "Duplex", value: "duplex" },
+              { label: "Studio", value: "studio" },
+              { label: "Shortlet", value: "shortlet" },
+            ]}
+          />
         </label>
 
         <button

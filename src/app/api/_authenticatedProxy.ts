@@ -3,7 +3,7 @@ const REQUEST_TIMEOUT_MS = 90000;
 
 interface AuthenticatedProxyOptions {
   backendPath: string;
-  method: "DELETE" | "GET" | "POST";
+  method: "DELETE" | "GET" | "PATCH" | "POST";
   request: Request;
 }
 
@@ -38,7 +38,8 @@ export async function proxyAuthenticatedRequest({
     REQUEST_TIMEOUT_MS,
   );
   const backendUrl = `${API_BASE_URL.replace(/\/$/, "")}${backendPath}`;
-  const body = method === "POST" ? await request.text() : undefined;
+  const body =
+    method === "POST" || method === "PATCH" ? await request.text() : undefined;
   const headers = new Headers({ Authorization: authorization });
 
   if (body) {
