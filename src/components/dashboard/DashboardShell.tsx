@@ -8,7 +8,10 @@ import AgentHeader from "@/components/dashboard/AgentHeader";
 import LandlordHeader from "@/components/dashboard/LandlordHeader";
 import RoleSidebar from "@/components/dashboard/RoleSidebar";
 import TenantSidebar from "@/components/dashboard/TenantSidebar";
-import { getHostVerificationSnapshot } from "@/lib/hostVerification";
+import {
+  countVerifiedHostSteps,
+  useHostVerification,
+} from "@/lib/hostVerification";
 import {
   countVerifiedTenantSteps,
   isTenantVerified,
@@ -38,24 +41,6 @@ function getSidebarSnapshot(): boolean {
   return localStorage.getItem(SIDEBAR_STORAGE_KEY) === "true";
 }
 
-function subscribeToHostVerification(callback: () => void): () => void {
-  window.addEventListener("storage", callback);
-
-  return () => window.removeEventListener("storage", callback);
-}
-
-function getLandlordVerificationStorageSnapshot(): string {
-  const snapshot = getHostVerificationSnapshot("landlord");
-
-  return `${snapshot.identity.status}:${snapshot.payout.status}`;
-}
-
-function getAgentVerificationStorageSnapshot(): string {
-  const snapshot = getHostVerificationSnapshot("agent");
-
-  return `${snapshot.identity.status}:${snapshot.payout.status}`;
-}
-
 export default function DashboardShell({
   children,
   rolePath,
@@ -63,16 +48,8 @@ export default function DashboardShell({
 }: DashboardShellProps): ReactElement {
   const pathname = usePathname();
   const { state: tenantVerificationState } = useTenantVerificationSnapshot();
-  const landlordVerificationStatus = useSyncExternalStore(
-    subscribeToHostVerification,
-    getLandlordVerificationStorageSnapshot,
-    () => "",
-  );
-  const agentVerificationStatus = useSyncExternalStore(
-    subscribeToHostVerification,
-    getAgentVerificationStorageSnapshot,
-    () => "",
-  );
+  const { isLoading: isHostStatusLoading, snapshot: hostVerification } =
+    useHostVerification();
   const isCollapsed = useSyncExternalStore(
     subscribeToSidebar,
     getSidebarSnapshot,
@@ -85,16 +62,11 @@ export default function DashboardShell({
     rolePath === "tenant" && !isTenantVerified(tenantVerificationState);
   const verificationHref =
     "/tenant/verify?source=dashboard&returnTo=" + encodeURIComponent(pathname);
-  const verifiedLandlordStepCount =
-    Number(landlordVerificationStatus.startsWith("approved:")) +
-    Number(landlordVerificationStatus.endsWith(":approved"));
-  const showLandlordVerificationAction =
-    rolePath === "landlord" && verifiedLandlordStepCount < 2;
-  const verifiedAgentStepCount =
-    Number(agentVerificationStatus.startsWith("approved:")) +
-    Number(agentVerificationStatus.endsWith(":approved"));
-  const showAgentVerificationAction =
-    rolePath === "agent" && verifiedAgentStepCount < 2;
+  const verifiedHostStepCount = countVerifiedHostSteps(hostVerification);
+  // Nothing is prompted until the status is known, so the banner cannot flash
+  // "verify your account" at a host who is already verified
+  const showHostVerificationAction =
+    !isHostStatusLoading && verifiedHostStepCount < 3;
 
   const toggleSidebar = (): void => {
     const nextValue = !isCollapsed;
@@ -118,16 +90,16 @@ export default function DashboardShell({
       ) : rolePath === "landlord" ? (
         <LandlordHeader
           actions={<MessagesDropdown />}
-          showVerificationAction={showLandlordVerificationAction}
+          showVerificationAction={showHostVerificationAction}
           verificationHref="/landlord/verify"
-          verifiedStepCount={verifiedLandlordStepCount}
+          verifiedStepCount={verifiedHostStepCount}
         />
       ) : rolePath === "agent" ? (
         <AgentHeader
           actions={<MessagesDropdown />}
-          showVerificationAction={showAgentVerificationAction}
+          showVerificationAction={showHostVerificationAction}
           verificationHref="/agent/verify"
-          verifiedStepCount={verifiedAgentStepCount}
+          verifiedStepCount={verifiedHostStepCount}
         />
       ) : (
         <>

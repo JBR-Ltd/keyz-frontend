@@ -9,6 +9,8 @@ export type EscrowStatus =
   | "AWAITING_PAYMENT"
   | "HELD"
   | "DISPUTED"
+  /** Transfer sent to the bank, waiting on confirmation. */
+  | "RELEASING"
   | "RELEASED"
   | "REFUNDED"
   | "FAILED";

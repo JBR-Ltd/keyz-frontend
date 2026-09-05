@@ -17,6 +17,17 @@ export interface VerificationStatus {
   required: IdentityCheck[];
   role: "ADMIN" | "AGENT" | "LANDLORD" | "TENANT";
   selfieVerified: boolean;
+
+  // Host-only. Absent for tenants.
+  /** Why the last document submission was rejected. */
+  kybRejectionReason?: string | null;
+  /** NOT_STARTED, PENDING, APPROVED or REJECTED. */
+  kybStatus?: string | null;
+  payoutAccountLast4?: string | null;
+  payoutAccountName?: string | null;
+  payoutBankCode?: string | null;
+  /** NOT_STARTED or APPROVED. */
+  payoutStatus?: string | null;
 }
 
 export interface IdentityResult<TValue> {

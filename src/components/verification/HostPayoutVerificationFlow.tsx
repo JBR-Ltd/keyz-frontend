@@ -4,13 +4,18 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   Banknote,
   Check,
-  Clock,
   Landmark,
   Loader2,
   Lock,
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChangeEvent, FormEvent, ReactElement, useMemo, useState } from "react";
+import {
+  ChangeEvent,
+  FormEvent,
+  ReactElement,
+  useEffect,
+  useState,
+} from "react";
 import { Select } from "@/components/ui/select";
 import {
   resolvePayoutAccount,
@@ -19,10 +24,8 @@ import {
 } from "@/lib/payout";
 import VerifiedBadge from "@/components/ui/VerifiedBadge";
 import {
-  getHostVerificationSnapshot,
-  saveHostPayoutVerification,
+  getHostVerification,
   HostVerificationRole,
-  setupHostPayout,
 } from "@/lib/hostVerification";
 import { cn } from "@/lib/utils";
 
@@ -35,7 +38,7 @@ interface BankOption {
   code: string;
 }
 
-type PayoutScreen = "overview" | "setup" | "pending" | "complete";
+type PayoutScreen = "loading" | "overview" | "setup" | "complete";
 
 const BANK_OPTIONS: BankOption[] = [
   { name: "Access Bank", code: "044" },
@@ -60,21 +63,30 @@ export default function HostPayoutVerificationFlow({
   const searchParams = useSearchParams();
   const reduceMotion = useReducedMotion();
   const centerHref = `/${role}/verify`;
-  const snapshot = useMemo(() => getHostVerificationSnapshot(role), [role]);
-  const initialMode =
+  const initialMode: PayoutScreen =
     searchParams.get("mode") === "setup" ? "setup" : "overview";
-  const [screen, setScreen] = useState<PayoutScreen>(() => {
-    if (snapshot.payout.status === "approved") {
-      return "complete";
-    }
-
-    return initialMode;
-  });
+  const [screen, setScreen] = useState<PayoutScreen>("loading");
   const [bankName, setBankName] = useState(BANK_OPTIONS[0].name);
   const [accountNumber, setAccountNumber] = useState("");
   const [resolved, setResolved] = useState<ResolvedAccount | null>(null);
   const [formError, setFormError] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+
+    void getHostVerification().then((result) => {
+      if (!active) {
+        return;
+      }
+
+      setScreen(result.data?.payout.status === "approved" ? "complete" : initialMode);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [initialMode]);
 
   const exitFlow = (): void => {
     router.push(centerHref);
@@ -133,24 +145,10 @@ export default function HostPayoutVerificationFlow({
       const result = await savePayoutAccount(bankCode, accountNumber);
 
       if (!result.data) {
-        saveHostPayoutVerification(role, {
-          status: "failed",
-          setupAt: new Date().toISOString(),
-          approvedAt: null,
-          bankName,
-          accountNumber,
-          accountName: resolved.accountName,
-          payoutId: null,
-        });
         setFormError(result.message ?? "Payout setup failed. Try again.");
         return;
       }
 
-      setupHostPayout(role, {
-        bankName,
-        accountNumber,
-        accountName: resolved.accountName,
-      });
       setScreen("complete");
     } finally {
       setIsProcessing(false);
@@ -369,35 +367,6 @@ export default function HostPayoutVerificationFlow({
     </main>
   );
 
-  const renderPending = (): ReactElement => (
-    <main className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-primary px-5 py-16 text-white">
-      <motion.div
-        className="w-full max-w-lg text-center"
-        initial={reduceMotion ? false : { opacity: 0, scale: 0.9 }}
-        animate={reduceMotion ? undefined : { opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5, ease: "easeOut" }}
-      >
-        <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-accent/15 text-accent">
-          <Clock size={30} />
-        </span>
-        <h1 className="mt-6 font-display text-4xl font-bold text-white">
-          Check your bank account.
-        </h1>
-        <p className="mx-auto mt-3 max-w-sm font-body text-base leading-7 text-white/70">
-          We have sent two small deposits. Come back in 1 to 2 business days to
-          confirm the amounts and activate payouts.
-        </p>
-        <button
-          type="button"
-          onClick={exitFlow}
-          className="mt-10 rounded-full bg-accent px-10 py-4 font-body text-sm font-medium text-primary transition-all duration-200 ease-in-out hover:scale-[1.02] hover:bg-primary hover:text-white hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-        >
-          Back to Verification Center
-        </button>
-      </motion.div>
-    </main>
-  );
-
   const renderComplete = (): ReactElement => (
     <main className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-primary px-5 py-16 text-white">
       <motion.div
@@ -432,8 +401,12 @@ export default function HostPayoutVerificationFlow({
     return renderOverview();
   }
 
-  if (screen === "pending") {
-    return renderPending();
+  if (screen === "loading") {
+    return (
+      <main className="fixed inset-0 z-[100] flex items-center justify-center bg-primary text-white">
+        <Loader2 className="h-8 w-8 animate-spin text-accent" aria-label="Loading" />
+      </main>
+    );
   }
 
   if (screen === "complete") {

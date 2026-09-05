@@ -19,8 +19,8 @@ import Link from "next/link";
 import { ReactElement, useEffect, useState } from "react";
 import PropertyPrice from "@/components/property/PropertyPrice";
 import {
-  getHostVerificationSnapshot,
-  saveHostPayoutVerification,
+  countVerifiedHostSteps,
+  useHostVerification,
 } from "@/lib/hostVerification";
 import {
   getPropertyPortfolio,
@@ -193,20 +193,17 @@ const REQUEST_TYPE_STYLES: Record<LandlordRequest["requestType"], string> = {
 
 export default function LandlordDashboardPage() {
   const reduceMotion = useReducedMotion();
-  const [verification, setVerification] = useState(() =>
-    getHostVerificationSnapshot("landlord"),
-  );
+  const { snapshot: verification } = useHostVerification();
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const [portfolio, setPortfolio] = useState(EMPTY_LANDLORD_PORTFOLIO);
   const [portfolioError, setPortfolioError] = useState("");
   const stats = getDashboardStats(portfolio);
   const maxChartValue = Math.max(...BOOKING_OVERVIEW.map(({ value }) => value));
-  const identityPending = verification.identity.status === "pending";
-  const identityApproved = verification.identity.status === "approved";
-  const payoutPending = verification.payout.status === "pending";
-  const depositsReady = Boolean(verification.payout.depositsReady);
+  const kybPending = verification?.kyb.status === "pending";
+  const kybRejected = verification?.kyb.status === "rejected";
+  const stepsDone = countVerifiedHostSteps(verification);
   const showVerificationBanner =
-    !bannerDismissed && (identityPending || payoutPending);
+    !bannerDismissed && verification !== null && stepsDone < 3;
 
   useEffect(() => {
     let active = true;
@@ -232,48 +229,17 @@ export default function LandlordDashboardPage() {
     };
   }, []);
 
-  useEffect(() => {
-    if (!payoutPending || depositsReady) {
-      return;
-    }
-
-    const setupTime = verification.payout.setupAt
-      ? new Date(verification.payout.setupAt).getTime()
-      : Date.now();
-    const remainingDelay = Math.max(0, 2000 - (Date.now() - setupTime));
-    const timeoutId = window.setTimeout(() => {
-      const nextSnapshot = saveHostPayoutVerification("landlord", {
-        ...verification.payout,
-        depositsReady: true,
-      });
-
-      setVerification(nextSnapshot);
-    }, remainingDelay);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [depositsReady, payoutPending, verification.payout]);
-
   const renderVerificationBanner = (): ReactElement | null => {
     if (!showVerificationBanner) {
       return null;
     }
 
-    let message = "Your host verification is in progress.";
-    let showConfirmationLink = false;
-
-    if (identityPending && payoutPending && !depositsReady) {
-      message =
-        "Your host verification is in progress. Business review and payout setup are both underway.";
-    } else if (identityPending && payoutPending && depositsReady) {
-      message =
-        "Check your bank account. Enter your deposit amounts to activate payouts.";
-      showConfirmationLink = true;
-    } else if (identityApproved && payoutPending) {
-      message = "Your business is verified! Payout setup is still in progress.";
-    } else if (identityPending) {
-      message =
-        "Your host verification is in progress. Business review is underway.";
-    }
+    // Rejection is the only state the host has to act on right now, so it leads
+    const message = kybRejected
+      ? "Your business documents were not accepted. Upload new ones to keep listing."
+      : kybPending
+        ? "Your business documents are under review. This usually takes 1 to 2 business days."
+        : `Your account is ${stepsDone} of 3 verified. Finish the remaining checks to publish listings.`;
 
     return (
       <section
@@ -286,14 +252,14 @@ export default function LandlordDashboardPage() {
         />
         <p className="min-w-0 flex-1 font-body text-sm leading-6 text-primary">
           {message}{" "}
-          {showConfirmationLink ? (
+          {kybPending ? null : (
             <Link
-              href="/landlord/verify?mode=confirm"
+              href="/landlord/verify"
               className="whitespace-nowrap font-bold text-primary underline decoration-accent underline-offset-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             >
-              Enter Amounts
+              {kybRejected ? "Upload documents" : "Continue"}
             </Link>
-          ) : null}
+          )}
         </p>
         <button
           type="button"

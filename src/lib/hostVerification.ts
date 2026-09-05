@@ -1,249 +1,235 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import { resolveApiError } from "@/lib/errors";
+import {
+  getVerificationStatus,
+  type IdentityCheck,
+  type VerificationStatus,
+} from "@/lib/identityVerification";
+
+// === Types
+
 export type HostVerificationRole = "landlord" | "agent";
 
-export type HostIdentityStatus =
+export type HostCheckStatus =
   | "not_started"
+  | "partial"
   | "pending"
   | "approved"
-  | "rejected"
-  | "failed";
+  | "rejected";
 
-export type HostPayoutStatus =
-  | "not_started"
-  | "pending"
-  | "approved"
-  | "failed";
-
-export interface HostIdentityVerification {
-  status: HostIdentityStatus;
-  submittedAt: string | null;
-  approvedAt: string | null;
-  rejectedReason: string | null;
+export interface HostIdentityState {
+  /** Checks already passed, for showing progress on a part-finished flow. */
+  completed: IdentityCheck[];
+  outstanding: IdentityCheck[];
+  required: IdentityCheck[];
+  status: HostCheckStatus;
 }
 
-export interface HostPayoutVerification {
-  status: HostPayoutStatus;
-  setupAt: string | null;
-  approvedAt: string | null;
-  bankName: string | null;
-  accountNumber: string | null;
+export interface HostKybState {
+  rejectionReason: string | null;
+  status: HostCheckStatus;
+}
+
+export interface HostPayoutState {
+  accountLast4: string | null;
   accountName: string | null;
-  payoutId: number | null;
-  depositsReady?: boolean;
+  bankCode: string | null;
+  status: HostCheckStatus;
 }
 
 export interface HostVerificationSnapshot {
-  identity: HostIdentityVerification;
-  payout: HostPayoutVerification;
+  identity: HostIdentityState;
+  kyb: HostKybState;
+  payout: HostPayoutState;
 }
 
-export interface HostPayoutInput {
-  bankName: string;
-  accountNumber: string;
-  accountName: string;
+export interface HostVerificationResult {
+  data: HostVerificationSnapshot | null;
+  message?: string;
 }
 
-const DEFAULT_HOST_VERIFICATION_SNAPSHOT: HostVerificationSnapshot = {
-  identity: {
-    status: "not_started",
-    submittedAt: null,
-    approvedAt: null,
-    rejectedReason: null,
-  },
-  payout: {
-    status: "not_started",
-    setupAt: null,
-    approvedAt: null,
-    bankName: null,
-    accountNumber: null,
-    accountName: null,
-    payoutId: null,
-  },
+// === Helpers
+
+const BANK_NAMES: Record<string, string> = {
+  "011": "First Bank of Nigeria",
+  "033": "United Bank for Africa",
+  "044": "Access Bank",
+  "057": "Zenith Bank",
+  "058": "Guaranty Trust Bank",
+  "070": "Fidelity Bank",
+  "214": "First City Monument Bank",
+  "221": "Stanbic IBTC Bank",
+  "232": "Sterling Bank",
+  "999992": "OPay",
+  "999991": "PalmPay",
+  "50211": "Kuda Bank",
+  "090267": "Kuda Microfinance Bank",
+  "100004": "OPay Digital Services",
 };
 
-function getStorageKey(role: HostVerificationRole): string {
-  return `rello_${role}_verification`;
-}
-
-function isHostIdentityStatus(value: unknown): value is HostIdentityStatus {
-  return (
-    value === "not_started" ||
-    value === "pending" ||
-    value === "approved" ||
-    value === "rejected" ||
-    value === "failed"
-  );
-}
-
-function isHostPayoutStatus(value: unknown): value is HostPayoutStatus {
-  return (
-    value === "not_started" ||
-    value === "pending" ||
-    value === "approved" ||
-    value === "failed"
-  );
-}
-
-function isNullableString(value: unknown): value is string | null {
-  return typeof value === "string" || value === null;
-}
-
-function isHostVerificationSnapshot(
-  value: unknown,
-): value is HostVerificationSnapshot {
-  if (value === null || typeof value !== "object") {
-    return false;
+export function getBankName(bankCode: string | null): string {
+  if (!bankCode) {
+    return "Bank";
   }
 
-  if (!("identity" in value) || !("payout" in value)) {
-    return false;
-  }
-
-  const { identity, payout } = value;
-
-  if (identity === null || typeof identity !== "object") {
-    return false;
-  }
-
-  if (payout === null || typeof payout !== "object") {
-    return false;
-  }
-
-  return (
-    "status" in identity &&
-    isHostIdentityStatus(identity.status) &&
-    "submittedAt" in identity &&
-    isNullableString(identity.submittedAt) &&
-    "approvedAt" in identity &&
-    isNullableString(identity.approvedAt) &&
-    "rejectedReason" in identity &&
-    isNullableString(identity.rejectedReason) &&
-    "status" in payout &&
-    isHostPayoutStatus(payout.status) &&
-    "setupAt" in payout &&
-    isNullableString(payout.setupAt) &&
-    "approvedAt" in payout &&
-    isNullableString(payout.approvedAt) &&
-    "bankName" in payout &&
-    isNullableString(payout.bankName) &&
-    "accountNumber" in payout &&
-    isNullableString(payout.accountNumber) &&
-    "accountName" in payout &&
-    isNullableString(payout.accountName) &&
-    "payoutId" in payout &&
-    (typeof payout.payoutId === "number" || payout.payoutId === null)
-  );
+  return BANK_NAMES[bankCode] ?? "Your bank";
 }
 
-export function getHostVerificationSnapshot(
-  role: HostVerificationRole,
-): HostVerificationSnapshot {
-  if (typeof window === "undefined") {
-    return DEFAULT_HOST_VERIFICATION_SNAPSHOT;
-  }
-
-  const storedValue = localStorage.getItem(getStorageKey(role));
-
-  if (!storedValue) {
-    return DEFAULT_HOST_VERIFICATION_SNAPSHOT;
-  }
-
-  try {
-    const parsed: unknown = JSON.parse(storedValue);
-
-    if (isHostVerificationSnapshot(parsed)) {
-      return parsed;
-    }
-  } catch {
-    return DEFAULT_HOST_VERIFICATION_SNAPSHOT;
-  }
-
-  return DEFAULT_HOST_VERIFICATION_SNAPSHOT;
-}
-
-export function saveHostIdentityVerification(
-  role: HostVerificationRole,
-  identity: HostIdentityVerification,
-): HostVerificationSnapshot {
-  const current = getHostVerificationSnapshot(role);
-  const nextSnapshot = {
-    ...current,
-    identity,
-  };
-
-  localStorage.setItem(getStorageKey(role), JSON.stringify(nextSnapshot));
-
-  return nextSnapshot;
-}
-
-export function saveHostPayoutVerification(
-  role: HostVerificationRole,
-  payout: HostPayoutVerification,
-): HostVerificationSnapshot {
-  const current = getHostVerificationSnapshot(role);
-  const nextSnapshot = {
-    ...current,
-    payout,
-  };
-
-  localStorage.setItem(getStorageKey(role), JSON.stringify(nextSnapshot));
-
-  return nextSnapshot;
-}
-
-export function submitLandlordIdentityReview(
-  role: HostVerificationRole,
-): HostVerificationSnapshot {
-  return saveHostIdentityVerification(role, {
-    status: "pending",
-    submittedAt: new Date().toISOString(),
-    approvedAt: null,
-    rejectedReason: null,
-  });
-}
-
-export function approveAgentIdentity(
-  role: HostVerificationRole,
-): HostVerificationSnapshot {
-  return saveHostIdentityVerification(role, {
-    status: "approved",
-    submittedAt: new Date().toISOString(),
-    approvedAt: new Date().toISOString(),
-    rejectedReason: null,
-  });
-}
-
-export function setupHostPayout(
-  role: HostVerificationRole,
-  input: HostPayoutInput,
-): HostVerificationSnapshot {
-  return saveHostPayoutVerification(role, {
-    status: "pending",
-    setupAt: new Date().toISOString(),
-    approvedAt: null,
-    bankName: input.bankName,
-    accountNumber: input.accountNumber,
-    accountName: input.accountName,
-    payoutId: 1,
-    depositsReady: false,
-  });
-}
-
-export function approveHostPayout(
-  role: HostVerificationRole,
-): HostVerificationSnapshot {
-  const current = getHostVerificationSnapshot(role);
-
-  return saveHostPayoutVerification(role, {
-    ...current.payout,
-    status: "approved",
-    approvedAt: new Date().toISOString(),
-  });
-}
-
-export function maskAccountNumber(accountNumber: string | null): string {
-  if (!accountNumber || accountNumber.length < 4) {
+export function maskAccountNumber(accountLast4: string | null): string {
+  if (!accountLast4) {
     return "Account ending unavailable";
   }
 
-  return `•••• ${accountNumber.slice(-4)}`;
+  return `•••• ${accountLast4}`;
+}
+
+function toCheckStatus(value: string | null | undefined): HostCheckStatus {
+  switch (value) {
+    case "APPROVED":
+      return "approved";
+    case "PENDING":
+      return "pending";
+    case "REJECTED":
+      return "rejected";
+    default:
+      return "not_started";
+  }
+}
+
+/**
+ * Identity is decided by Dojah in the moment, so there is no pending state.
+ * A host who passed some checks but not all is "partial", which the flow uses
+ * to skip the steps they already cleared.
+ */
+function toIdentityState(status: VerificationStatus): HostIdentityState {
+  const required = status.required ?? [];
+  const outstanding = status.outstanding ?? [];
+  const completed = required.filter((check) => !outstanding.includes(check));
+
+  if (status.identityVerified) {
+    return { completed, outstanding: [], required, status: "approved" };
+  }
+
+  return {
+    completed,
+    outstanding,
+    required,
+    status: completed.length > 0 ? "partial" : "not_started",
+  };
+}
+
+function toSnapshot(status: VerificationStatus): HostVerificationSnapshot {
+  return {
+    identity: toIdentityState(status),
+    kyb: {
+      rejectionReason: status.kybRejectionReason ?? null,
+      status: toCheckStatus(status.kybStatus),
+    },
+    payout: {
+      accountLast4: status.payoutAccountLast4 ?? null,
+      accountName: status.payoutAccountName ?? null,
+      bankCode: status.payoutBankCode ?? null,
+      status: toCheckStatus(status.payoutStatus),
+    },
+  };
+}
+
+function getAccessToken(): string {
+  return localStorage.getItem("rello_token") ?? "";
+}
+
+// === Requests
+
+/**
+ * The host's verification state, read from the server every time.
+ * Nothing about verification is cached in the browser: a stale local copy is
+ * how a host ends up being told they are verified while the server refuses
+ * their listings.
+ */
+export async function getHostVerification(): Promise<HostVerificationResult> {
+  const result = await getVerificationStatus();
+
+  if (!result.data) {
+    return { data: null, message: result.message };
+  }
+
+  return { data: toSnapshot(result.data) };
+}
+
+/** Business registration and proof of address. Both are reviewed by a person. */
+export async function submitKybDocuments(
+  businessDocument: File,
+  addressDocument: File,
+): Promise<{ data: boolean; message?: string }> {
+  const token = getAccessToken();
+
+  if (!token) {
+    return { data: false, message: "Your session has expired. Log in again." };
+  }
+
+  try {
+    const formData = new FormData();
+    formData.append("businessDocument", businessDocument);
+    formData.append("addressDocument", addressDocument);
+
+    const response = await fetch("/api/verification/kyb", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
+
+    if (response.ok) {
+      return { data: true };
+    }
+
+    const payload: unknown = await response.json().catch(() => null);
+
+    return {
+      data: false,
+      message: resolveApiError(payload, "Those documents could not be sent."),
+    };
+  } catch {
+    return { data: false, message: "Those documents could not be sent." };
+  }
+}
+
+// === Hooks
+
+export interface UseHostVerification {
+  isLoading: boolean;
+  refresh: () => void;
+  snapshot: HostVerificationSnapshot | null;
+}
+
+/** Reads the host's verification state once on mount. */
+export function useHostVerification(): UseHostVerification {
+  const [snapshot, setSnapshot] = useState<HostVerificationSnapshot | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const refresh = useCallback((): void => {
+    void getHostVerification().then((result) => {
+      setSnapshot(result.data);
+      setIsLoading(false);
+    });
+  }, []);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  return { isLoading, refresh, snapshot };
+}
+
+/** How many of the three host checks are done. */
+export function countVerifiedHostSteps(
+  snapshot: HostVerificationSnapshot | null,
+): number {
+  if (!snapshot) {
+    return 0;
+  }
+
+  return [snapshot.identity.status, snapshot.kyb.status, snapshot.payout.status]
+    .filter((status) => status === "approved").length;
 }
