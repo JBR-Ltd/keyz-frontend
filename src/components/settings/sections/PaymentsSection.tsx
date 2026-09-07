@@ -1,6 +1,7 @@
 "use client";
 
 import { CreditCard, Plus } from "lucide-react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import PropertyPrice from "@/components/property/PropertyPrice";
 import { useToast } from "@/components/ui/toast";
@@ -115,24 +116,31 @@ export default function PaymentsSection() {
                 Scroll to explore
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() =>
-                notify({
-                  title: isLandlord ? "Payout account" : "Payment method",
-                  description: isLandlord
-                    ? "Adding payout accounts is simulated here."
-                    : "Adding payment methods is simulated here.",
-                  variant: "success",
-                })
-              }
-              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent text-primary transition-all duration-200 ease-in-out hover:scale-[1.02] hover:bg-primary hover:text-white hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-              aria-label={
-                isLandlord ? "Add payout account" : "Add payment method"
-              }
-            >
-              <Plus size={22} />
-            </button>
+            {isLandlord ? (
+              <Link
+                href="/landlord/verify/payout"
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent text-primary transition-all duration-200 ease-in-out hover:scale-[1.02] hover:bg-primary hover:text-white hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                aria-label="Add payout account"
+              >
+                <Plus size={22} />
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={() =>
+                  notify({
+                    title: "Payment method",
+                    description:
+                      "Cards are added when you pay for a booking, not here.",
+                    variant: "success",
+                  })
+                }
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent text-primary transition-all duration-200 ease-in-out hover:scale-[1.02] hover:bg-primary hover:text-white hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                aria-label="Add payment method"
+              >
+                <Plus size={22} />
+              </button>
+            )}
           </div>
 
           <div className="-mx-5 flex snap-x gap-4 overflow-x-auto px-5 py-7 sm:-mx-8 sm:px-8 lg:mx-0 lg:px-0">

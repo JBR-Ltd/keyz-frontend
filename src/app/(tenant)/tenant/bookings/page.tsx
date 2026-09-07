@@ -33,6 +33,7 @@ import { TENANT_ACTIVITY_IMAGES } from "@/lib/tenantActivity";
 
 interface ActiveChatThread {
   conversationId: string;
+  otherUserId: number;
   otherPartyName: string;
   otherPartyRole: ChatPartyRole;
   propertyName: string;
@@ -173,6 +174,7 @@ export default function TenantBookingsPage(): ReactElement {
         currentUser.id,
         String(primaryBooking.host.id),
       ]),
+      otherUserId: primaryBooking.host.id,
       otherPartyName: primaryBooking.host.name,
       otherPartyRole: getHostRole(primaryBooking),
       propertyName: primaryBooking.propertyTitle,
@@ -516,6 +518,7 @@ export default function TenantBookingsPage(): ReactElement {
 
       <ChatThread
         conversationId={activeThread?.conversationId ?? null}
+        otherUserId={activeThread?.otherUserId ?? null}
         otherPartyName={activeThread?.otherPartyName ?? ""}
         otherPartyRole={activeThread?.otherPartyRole ?? "Agent"}
         propertyName={activeThread?.propertyName ?? ""}

@@ -30,8 +30,10 @@ export interface AdminMetrics {
 }
 
 export interface KybSubmission {
+  addressDocumentUrl: string | null;
   documentUrl: string | null;
   id: number;
+  rejectionReason: string | null;
   status: string;
   user: PartySummary | null;
 }
@@ -166,13 +168,21 @@ export async function getKybQueue(): Promise<AdminResult<KybSubmission[]>> {
   }
 }
 
+/** A rejection must carry a reason: the host is shown it so they know what to fix. */
 export async function decideKyb(
   kybId: number,
   approved: boolean,
+  reason?: string,
 ): Promise<AdminResult<boolean>> {
   try {
+    const query = new URLSearchParams({ approved: String(approved) });
+
+    if (!approved && reason) {
+      query.set("reason", reason);
+    }
+
     const { ok, payload } = await adminRequest(
-      `/api/admin/kyb/${kybId}/decision?approved=${approved}`,
+      `/api/admin/kyb/${kybId}/decision?${query.toString()}`,
       { method: "POST" },
     );
 

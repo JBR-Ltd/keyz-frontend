@@ -54,6 +54,8 @@ export default function MessageHostButton({
 
       <ChatThread
         conversationId={isThreadOpen ? conversationId : null}
+        otherUserId={Number(hostId) || null}
+        propertyId={Number(propertyId) || undefined}
         otherPartyName={hostName}
         otherPartyRole={hostLabel}
         propertyName={propertyName}

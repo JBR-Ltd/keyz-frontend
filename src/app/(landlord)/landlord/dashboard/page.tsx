@@ -307,6 +307,7 @@ const BOOKING_STATUS_TONES: Record<
 const ESCROW_STATUS_LABELS: Record<EscrowStatus, string> = {
   AWAITING_PAYMENT: "Awaiting payment",
   HELD: "Held",
+  RELEASING: "Releasing",
   DISPUTED: "Disputed",
   RELEASED: "Paid out",
   REFUNDED: "Refunded",
@@ -319,6 +320,7 @@ const ESCROW_STATUS_TONES: Record<
 > = {
   AWAITING_PAYMENT: "accent",
   HELD: "primary",
+  RELEASING: "primary",
   DISPUTED: "danger",
   RELEASED: "neutral",
   REFUNDED: "neutral",

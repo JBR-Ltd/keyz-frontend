@@ -1,5 +1,10 @@
+import { Suspense } from "react";
 import HostVerificationCenter from "@/components/verification/HostVerificationCenter";
 
 export default function LandlordVerificationPage() {
-  return <HostVerificationCenter role="landlord" />;
+  return (
+    <Suspense fallback={null}>
+      <HostVerificationCenter role="landlord" />
+    </Suspense>
+  );
 }
