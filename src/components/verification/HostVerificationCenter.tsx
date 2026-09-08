@@ -197,6 +197,7 @@ export default function HostVerificationCenter({
   }
 
   const { identity, kyb, payout } = snapshot;
+  const isLandlord = role === "landlord";
   const completeCount = [identity.status, kyb.status, payout.status].filter(
     (status: HostCheckStatus) => status === "approved",
   ).length;
@@ -311,18 +312,18 @@ export default function HostVerificationCenter({
           Verification Center
         </p>
         <h1 className="mt-4 font-display text-4xl font-bold leading-[0.92] text-primary sm:text-5xl">
-          Get fully verified
+          {isLandlord ? "Manage your account setup" : "Get fully verified"}
         </h1>
         <p className="mt-4 max-w-2xl font-body text-sm leading-6 text-muted">
-          Complete these checks to publish listings and receive payouts. Your
-          identity is confirmed straight away; business documents are reviewed
-          by our team.
+          {isLandlord
+            ? "Identity verification, business documents, and payout setup are tracked separately. Missing payout details will not change your identity status."
+            : "Complete these checks to publish listings and receive payouts. Your identity is confirmed straight away; business documents are reviewed by our team."}
         </p>
 
         <div className="mt-8 rounded-xl border border-primary/10 bg-[var(--color-bg)] p-5 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="font-body text-sm font-bold text-primary">
-              {completeCount} of 3 complete
+              {completeCount} of 3 setup tasks complete
             </p>
             <p className="font-body text-xs text-muted">
               Property verification starts after your first listing is created.
