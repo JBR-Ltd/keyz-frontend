@@ -409,7 +409,7 @@ function mapDashboardProperty(
       ? "Review property"
       : tenancyStatus === "Available"
         ? "View property"
-        : "Manage booking",
+        : "Manage tenancy",
     status: needsAttention
       ? "Needs attention"
       : tenancyStatus === "Occupied"
@@ -453,7 +453,7 @@ function getAttentionItems(
   if (pendingBookings > 0) {
     items.push({
       id: "booking-requests",
-      title: `Respond to ${pendingBookings} booking request${pendingBookings === 1 ? "" : "s"}`,
+      title: `Respond to ${pendingBookings} tenancy request${pendingBookings === 1 ? "" : "s"}`,
       description: "Review each tenant request and respond when you are ready.",
       actionLabel: "Review requests",
       href: "/landlord/bookings",
@@ -519,7 +519,7 @@ function getSummaryItems(
       tone: "primary",
     },
     {
-      label: "Booking requests",
+      label: "Tenancy requests",
       source: "bookings",
       value: String(pendingRequests).padStart(2, "0"),
       detail: pendingRequests ? "Waiting for a response" : "Nothing waiting",
@@ -527,7 +527,7 @@ function getSummaryItems(
       tone: "accent",
     },
     {
-      label: "Upcoming stays",
+      label: "Upcoming move-ins",
       source: "bookings",
       value: String(upcomingStays).padStart(2, "0"),
       detail: upcomingStays ? "Confirmed handovers" : "None scheduled",
@@ -667,7 +667,7 @@ export default function LandlordDashboardPage(): ReactElement {
     ? "Properties could not be loaded."
     : "";
   const resolvedBookingsError = forceError
-    ? "Bookings could not be loaded."
+    ? "Tenancies could not be loaded."
     : "";
   const resolvedEscrowError = forceError ? "Payments could not be loaded." : "";
   const attentionError = forceError ? "Action items could not be loaded." : "";
@@ -1029,7 +1029,7 @@ export default function LandlordDashboardPage(): ReactElement {
                 Tenancies
               </p>
               <h2 className="mt-2 font-display text-3xl font-bold text-primary">
-                Upcoming bookings
+                Upcoming tenancies
               </h2>
             </div>
             <Link
@@ -1065,7 +1065,7 @@ export default function LandlordDashboardPage(): ReactElement {
             <div className="px-5 py-12 text-center sm:px-6">
               <AlertCircle size={28} className="mx-auto text-red-700" />
               <p className="mt-4 font-body text-sm font-bold text-primary">
-                Bookings could not be loaded
+                Tenancies could not be loaded
               </p>
               <p className="mt-2 font-body text-sm text-muted">
                 {resolvedBookingsError}
@@ -1105,10 +1105,10 @@ export default function LandlordDashboardPage(): ReactElement {
             <div className="px-5 py-12 text-center sm:px-6">
               <CalendarCheck2 size={28} className="mx-auto text-primary/35" />
               <p className="mt-4 font-body text-sm font-bold text-primary">
-                No upcoming bookings
+                No upcoming tenancies
               </p>
               <p className="mt-2 font-body text-sm text-muted">
-                Confirmed stays and new requests will appear here.
+                Confirmed tenancies and new requests will appear here.
               </p>
             </div>
           )}

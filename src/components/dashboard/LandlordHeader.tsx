@@ -27,7 +27,7 @@ import relloLogoMark from "../../../public/rello-logo-cropped.svg";
 const LANDLORD_NAV_ITEMS = [
   { label: "Dashboard", href: "/landlord/dashboard", icon: LayoutDashboard },
   { label: "My Listings", href: "/landlord/saved-listings", icon: Bookmark },
-  { label: "Bookings", href: "/landlord/bookings", icon: CalendarDays },
+  { label: "Tenancies", href: "/landlord/bookings", icon: CalendarDays },
 ];
 
 interface LandlordHeaderProps {
@@ -151,8 +151,8 @@ function VerificationMenuCard({
           </span>
           <span className="mt-1 block font-body text-[11px] leading-4 text-muted">
             {verifiedStepCount > 0
-              ? `${verifiedStepCount} of 3 completed`
-              : "Required to list"}
+              ? `${verifiedStepCount} of 2 identity checks completed`
+              : "Confirm your identity"}
           </span>
         </span>
       </div>

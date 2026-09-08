@@ -2,8 +2,6 @@
 
 import { useEffect, useMemo, useState, type ReactElement } from "react";
 import {
-  ArrowUpRight,
-  CalendarCheck,
   Check,
   Clock3,
   FileCheck2,
@@ -11,6 +9,7 @@ import {
   Loader2,
   MapPin,
   MessageCircle,
+  Search,
   UsersRound,
   X,
 } from "lucide-react";
@@ -21,7 +20,6 @@ import {
   StatusBadge,
   type StatusBadgeProps,
 } from "@/components/ui/status-badge";
-import { utilityCardVariants } from "@/components/ui/utility-card";
 import { useToast } from "@/components/ui/toast";
 import {
   getHostBookings,
@@ -30,6 +28,26 @@ import {
   type BookingStatus,
 } from "@/lib/bookings";
 import { TENANT_ACTIVITY_IMAGES } from "@/lib/tenantActivity";
+
+// === Types
+
+type TenancyStage = "active" | "past" | "request" | "upcoming";
+type TenancyTab = "all" | TenancyStage;
+
+interface TenancyTabItem {
+  id: TenancyTab;
+  label: string;
+}
+
+// === Constants
+
+const TENANCY_TABS: TenancyTabItem[] = [
+  { id: "all", label: "All" },
+  { id: "request", label: "Requests" },
+  { id: "upcoming", label: "Upcoming" },
+  { id: "active", label: "Active" },
+  { id: "past", label: "Past" },
+];
 
 const STATUS_TONES: Record<
   BookingStatus,
@@ -58,26 +76,37 @@ function formatStayDates(booking: Booking): string {
   return `${format(booking.startDate)} to ${format(booking.endDate)}`;
 }
 
-function formatRelativeTime(value: string | null): string {
-  if (!value) {
-    return "Recently";
-  }
-
-  const days = Math.floor(
-    (Date.now() - new Date(value).getTime()) / (1000 * 60 * 60 * 24),
-  );
-
-  if (days <= 0) return "Today";
-  if (days === 1) return "Yesterday";
-
-  return `${days} days ago`;
-}
-
 function coverImage(booking: Booking, index: number): string {
   return (
     booking.propertyImageUrl ??
     TENANT_ACTIVITY_IMAGES[index % TENANT_ACTIVITY_IMAGES.length]
   );
+}
+
+function getTenancyStage(booking: Booking, now: number): TenancyStage {
+  if (booking.status === "PENDING") {
+    return "request";
+  }
+
+  if (booking.status === "COMPLETED" || booking.status === "CANCELLED") {
+    return "past";
+  }
+
+  return new Date(booking.startDate).getTime() > now ? "upcoming" : "active";
+}
+
+function matchesSearch(booking: Booking, query: string): boolean {
+  const normalizedQuery = query.trim().toLowerCase();
+
+  if (!normalizedQuery) {
+    return true;
+  }
+
+  return [
+    booking.tenant?.name ?? "",
+    booking.propertyTitle,
+    booking.propertyAddress,
+  ].some((value) => value.toLowerCase().includes(normalizedQuery));
 }
 
 export default function LandlordBookingsPage(): ReactElement {
@@ -86,6 +115,8 @@ export default function LandlordBookingsPage(): ReactElement {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [pendingId, setPendingId] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState<TenancyTab>("all");
+  const [query, setQuery] = useState("");
   // Captured once so the "upcoming" count stays stable across re-renders
   const [now, setNow] = useState(0);
 
@@ -108,56 +139,22 @@ export default function LandlordBookingsPage(): ReactElement {
     };
   }, []);
 
-  const stats = useMemo(() => {
-    const confirmed = bookings.filter(
-      (booking) => booking.status === "CONFIRMED",
-    );
-    const pending = bookings.filter((booking) => booking.status === "PENDING");
-    const expectedIncome = confirmed.reduce(
-      (total, booking) => total + booking.totalPrice,
-      0,
-    );
-    const upcoming = confirmed.filter(
-      (booking) => new Date(booking.startDate).getTime() > now,
-    );
+  const visibleBookings = useMemo(
+    () =>
+      bookings.filter(
+        (booking) =>
+          (activeTab === "all" ||
+            getTenancyStage(booking, now) === activeTab) &&
+          matchesSearch(booking, query),
+      ),
+    [activeTab, bookings, now, query],
+  );
 
-    return [
-      {
-        label: "Active stays",
-        value: String(confirmed.length).padStart(2, "0"),
-        trend: `${bookings.length} bookings in total`,
-        icon: KeyRound,
-        tone: "default" as const,
-        tile: "primary" as const,
-      },
-      {
-        label: "Pending requests",
-        value: String(pending.length).padStart(2, "0"),
-        trend: pending.length ? "Need a response" : "Nothing waiting",
-        icon: FileCheck2,
-        tone: "accentTint" as const,
-        tile: "accent" as const,
-      },
-      {
-        label: "Expected income",
-        value: expectedIncome,
-        trend: "From confirmed stays",
-        icon: ArrowUpRight,
-        tone: "primaryTint" as const,
-        tile: "primary" as const,
-      },
-      {
-        label: "Upcoming handovers",
-        value: String(upcoming.length).padStart(2, "0"),
-        trend: upcoming.length ? "Starting soon" : "None scheduled",
-        icon: CalendarCheck,
-        tone: "soft" as const,
-        tile: "neutral" as const,
-      },
-    ];
-  }, [bookings, now]);
-
-  const timeline = useMemo(() => bookings.slice(0, 3), [bookings]);
+  const countForTab = (tab: TenancyTab): number =>
+    tab === "all"
+      ? bookings.length
+      : bookings.filter((booking) => getTenancyStage(booking, now) === tab)
+          .length;
 
   const changeStatus = async (
     booking: Booking,
@@ -169,7 +166,7 @@ export default function LandlordBookingsPage(): ReactElement {
 
     if (!result.data) {
       notify({
-        title: "Booking not updated",
+        title: "Tenancy not updated",
         description: result.message ?? "Try again in a moment.",
         variant: "error",
       });
@@ -182,61 +179,68 @@ export default function LandlordBookingsPage(): ReactElement {
     );
 
     notify({
-      title: `Booking ${STATUS_LABELS[status].toLowerCase()}`,
+      title: `Tenancy ${STATUS_LABELS[status].toLowerCase()}`,
       variant: "success",
     });
   };
 
   return (
     <main className="min-h-screen overflow-x-hidden px-5 py-12 sm:px-8 lg:px-10 lg:py-16 xl:px-14">
-      <header className="pb-10">
-        <p className="font-accent text-xs font-bold uppercase tracking-[0.3em] text-primary">
-          Your hosting desk
-        </p>
-        <h1 className="mt-4 font-display text-4xl font-bold leading-[0.92] text-primary sm:text-5xl">
-          Bookings
-        </h1>
-        <p className="mt-4 max-w-2xl font-body text-base leading-7 text-muted">
-          Review incoming requests, coordinate handovers, and follow every
-          active stay from one workspace.
-        </p>
-      </header>
-
-      <section className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
-        {stats.map(({ label, value, trend, icon: Icon, tone, tile }) => (
-          <article
-            key={label}
-            className={utilityCardVariants({ tone, interactive: true })}
+      <div className="flex flex-col gap-4 rounded-lg bg-bg p-4 shadow-sm lg:flex-row lg:items-center lg:justify-between">
+        <div className="overflow-x-auto">
+          <div
+            className="flex min-w-max gap-1"
+            role="tablist"
+            aria-label="Tenancy status"
           >
-            <IconTile tone={tile}>
-              <Icon size={22} />
-            </IconTile>
-            <p className="mt-2 font-body text-xs font-medium uppercase tracking-[0.14em] text-muted">
-              {label}
-            </p>
-            <p className="mt-4 break-words font-display text-3xl font-bold leading-none text-primary">
-              {typeof value === "number" ? (
-                <PropertyPrice value={value} />
-              ) : (
-                value
-              )}
-            </p>
-            <p className="mt-4 font-body text-xs font-bold text-primary">
-              {trend}
-            </p>
-          </article>
-        ))}
-      </section>
+            {TENANCY_TABS.map((tab) => {
+              const active = activeTab === tab.id;
 
-      <section className="mt-10 min-w-0 overflow-hidden rounded-lg bg-[var(--color-bg)] shadow-sm">
-        <div className="border-b border-primary/20 bg-surface-soft px-5 py-5 sm:px-6">
-          <p className="font-accent text-xs font-bold uppercase tracking-[0.25em] text-primary">
-            Booking pipeline
-          </p>
-          <h2 className="mt-2 font-display text-3xl font-bold text-primary">
-            Requests and active stays
-          </h2>
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={
+                    active
+                      ? "inline-flex min-h-11 items-center gap-2 rounded-full bg-primary px-4 font-body text-sm font-bold text-white"
+                      : "inline-flex min-h-11 items-center gap-2 rounded-full px-4 font-body text-sm font-bold text-muted hover:bg-primary/5 hover:text-primary"
+                  }
+                >
+                  {tab.label}
+                  <span
+                    className={
+                      active
+                        ? "rounded-full bg-white/15 px-2 py-0.5 text-[11px]"
+                        : "rounded-full bg-primary/5 px-2 py-0.5 text-[11px] text-primary"
+                    }
+                  >
+                    {countForTab(tab.id)}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
+
+        <label className="relative block w-full lg:max-w-xs">
+          <span className="sr-only">Search tenancies</span>
+          <Search
+            size={18}
+            className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-muted"
+          />
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search tenant or property"
+            className="h-12 w-full rounded-full border border-primary/10 bg-surface-soft pl-11 pr-4 font-body text-sm text-primary outline-none placeholder:text-muted focus:border-accent focus:ring-2 focus:ring-accent/20"
+          />
+        </label>
+      </div>
+
+      <section className="mt-7 min-w-0 overflow-hidden rounded-lg bg-[var(--color-bg)] shadow-sm">
 
         {loadError ? (
           <p className="border-b border-border px-5 py-3 font-body text-xs text-red-700 sm:px-6">
@@ -245,16 +249,54 @@ export default function LandlordBookingsPage(): ReactElement {
         ) : null}
 
         {isLoading ? (
-          <p className="px-5 py-10 text-center font-body text-sm text-muted sm:px-6">
-            Loading bookings...
-          </p>
-        ) : bookings.length === 0 ? (
-          <p className="px-5 py-10 text-center font-body text-sm text-muted sm:px-6">
-            No booking requests yet. They appear here once your listings are
-            live.
-          </p>
+          <div
+            className="divide-y divide-primary/10 animate-pulse motion-reduce:animate-none"
+            aria-label="Loading tenancies"
+            aria-busy="true"
+          >
+            {[0, 1, 2, 3].map((item) => (
+              <div
+                key={item}
+                className="grid h-36 gap-4 p-5 sm:grid-cols-[8rem_1fr] sm:p-6"
+              >
+                <div className="rounded-lg bg-primary/10" />
+                <div className="space-y-4 py-2">
+                  <div className="h-4 w-2/5 rounded-full bg-primary/10" />
+                  <div className="h-3 w-3/5 rounded-full bg-primary/5" />
+                  <div className="h-3 w-1/3 rounded-full bg-primary/5" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : visibleBookings.length === 0 ? (
+          <div className="grid min-h-[28rem] place-items-center px-6 py-16 text-center">
+            <div className="max-w-md">
+              <IconTile
+                size="lg"
+                shape="circle"
+                tone="accent"
+                className="mx-auto h-20 w-20"
+              >
+                {query.trim() ? <Search size={52} /> : <FileCheck2 size={56} />}
+              </IconTile>
+              <h2 className="mt-6 font-display text-3xl font-bold text-primary">
+                {query.trim()
+                  ? "No matching tenancies"
+                  : activeTab === "request"
+                    ? "No requests waiting"
+                    : "Nothing here yet"}
+              </h2>
+              <p className="mx-auto mt-3 font-body text-sm leading-6 text-muted">
+                {query.trim()
+                  ? "Try another tenant name, property, or location."
+                  : activeTab === "request"
+                    ? "New tenant requests will appear here when they arrive."
+                    : "Tenancies in this stage will appear here automatically."}
+              </p>
+            </div>
+          </div>
         ) : (
-          bookings.map((booking, index) => {
+          visibleBookings.map((booking, index) => {
             const tenantName = booking.tenant?.name ?? "Tenant";
             const isBusy = pendingId === booking.id;
 
@@ -373,46 +415,6 @@ export default function LandlordBookingsPage(): ReactElement {
         )}
       </section>
 
-      <section className="mt-10 overflow-hidden rounded-lg bg-[var(--color-bg)] shadow-sm">
-        <div className="border-b border-primary/20 bg-surface-soft px-5 py-5 sm:px-6">
-          <p className="font-accent text-xs font-bold uppercase tracking-[0.25em] text-primary">
-            Timeline
-          </p>
-          <h2 className="mt-2 font-display text-3xl font-bold text-primary">
-            Recent activity
-          </h2>
-        </div>
-        <div className="grid md:grid-cols-3">
-          {timeline.length === 0 ? (
-            <p className="p-5 font-body text-sm text-muted sm:p-6">
-              Booking activity will appear here.
-            </p>
-          ) : (
-            timeline.map((booking) => (
-              <article
-                key={booking.id}
-                className="grid grid-cols-[3rem_1fr] gap-4 border-b border-border p-5 transition-all duration-200 ease-in-out last:border-b-0 hover:bg-surface-soft hover:shadow-md sm:p-6 md:border-b-0 md:border-r md:last:border-r-0"
-              >
-                <IconTile tone="accent" size="lg" shape="circle">
-                  <FileCheck2 size={20} />
-                </IconTile>
-                <div className="min-w-0">
-                  <h3 className="font-body text-sm font-bold text-primary">
-                    {STATUS_LABELS[booking.status]}
-                  </h3>
-                  <p className="mt-2 font-body text-sm leading-6 text-muted">
-                    {booking.tenant?.name ?? "A tenant"} booked{" "}
-                    {booking.propertyTitle}.
-                  </p>
-                  <p className="mt-3 font-body text-xs font-medium uppercase tracking-[0.12em] text-primary">
-                    {formatRelativeTime(booking.createdAt)}
-                  </p>
-                </div>
-              </article>
-            ))
-          )}
-        </div>
-      </section>
     </main>
   );
 }
