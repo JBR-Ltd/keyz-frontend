@@ -5,6 +5,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   ArrowLeft,
   ArrowRight,
+  ArrowUpRight,
   Bath,
   BedDouble,
   Check,
@@ -33,11 +34,7 @@ import PropertyPrice from "@/components/property/PropertyPrice";
 import TenantVerificationGate from "@/components/tenant/TenantVerificationGate";
 import VerifiedBadge from "@/components/ui/VerifiedBadge";
 import { useToast } from "@/components/ui/toast";
-import {
-  getPropertyById,
-  PropertyDetail,
-  PropertyListingStatus,
-} from "@/lib/propertyDetails";
+import { getPropertyById, PropertyDetail } from "@/lib/propertyDetails";
 import { useDialogFocus } from "@/lib/useDialogFocus";
 
 interface PropertyPageProps {
@@ -65,10 +62,6 @@ const AMENITY_ICONS = {
   elevator: Home,
   "water supply": Waves,
 } satisfies Record<string, typeof Check>;
-
-function formatListingType(status: PropertyListingStatus): string {
-  return status === "FOR_RENT" ? "For Rent" : "For Sale";
-}
 
 function formatHostRole(role: PropertyDetail["host"]["role"]): string {
   return role === "LANDLORD" ? "Landlord" : "Agent";
@@ -335,11 +328,8 @@ export default function PropertyPage({
 
   const openPrimaryFlow = (): void => {
     notify({
-      title: property?.status === "FOR_RENT" ? "Booking ready" : "Offer ready",
-      description:
-        property?.status === "FOR_RENT"
-          ? "Identity verified. Booking flow can continue."
-          : "Identity verified. Offer flow can continue.",
+      title: "Request ready",
+      description: "Identity verified. You can continue with this property.",
       variant: "success",
     });
   };
@@ -364,8 +354,7 @@ export default function PropertyPage({
     property.tour.videoUrl || property.tour.matterportUrl,
   );
   const hostRole = formatHostRole(property.host.role);
-  const primaryCta =
-    property.status === "FOR_RENT" ? "Book Now" : "Submit Offer";
+  const primaryCta = "Continue";
 
   return (
     <main className="bg-bg pt-6 text-primary">
@@ -377,45 +366,43 @@ export default function PropertyPage({
             )}`}
           >
             {visibleGalleryImages[0] ? (
-              <button
-                type="button"
-                onClick={() => openLightbox(visibleGalleryImages[0].index)}
+              <div
                 className={`group relative min-h-0 overflow-hidden bg-surface-soft ${getOuterCornerClass(
                   visibleGalleryImages.length,
                   0,
                   property.images.length,
                 )}`}
-                aria-label={`Open ${property.title} photo 1`}
               >
-                <Image
-                  src={visibleGalleryImages[0].src}
-                  alt={property.title}
-                  fill
-                  priority
-                  sizes="(min-width: 1024px) 60vw, 100vw"
-                  className="object-cover transition-all duration-300 ease-in-out group-hover:scale-[1.02]"
-                  style={{ objectFit: "cover" }}
-                />
                 <button
                   type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    handleBack();
-                  }}
+                  onClick={() => openLightbox(visibleGalleryImages[0].index)}
+                  className="absolute inset-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
+                  aria-label={`Open ${property.title} photo 1`}
+                >
+                  <Image
+                    src={visibleGalleryImages[0].src}
+                    alt={property.title}
+                    fill
+                    priority
+                    sizes="(min-width: 1024px) 60vw, 100vw"
+                    className="object-cover transition-all duration-300 ease-in-out group-hover:scale-[1.02]"
+                    style={{ objectFit: "cover" }}
+                  />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleBack}
                   aria-label="Go back"
                   className="absolute left-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-primary text-white transition-all duration-200 ease-in-out hover:bg-black/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 >
                   <ArrowLeft size={19} aria-hidden="true" />
                 </button>
-                <span className="absolute left-16 top-4 rounded-full bg-bg px-3 py-1.5 font-body text-xs font-medium text-primary shadow-sm">
-                  {formatListingType(property.status)}
-                </span>
                 {property.verified ? (
                   <span className="absolute right-4 top-4">
                     <VerifiedBadge />
                   </span>
                 ) : null}
-              </button>
+              </div>
             ) : null}
 
             {sideGalleryImages.length > 0 ? (
@@ -461,41 +448,39 @@ export default function PropertyPage({
           </div>
 
           <div className="lg:hidden">
-            <button
-              type="button"
-              onClick={() => openLightbox(0)}
+            <div
               className="group relative aspect-video w-full overflow-hidden rounded-2xl bg-surface-soft shadow-sm"
-              aria-label={`Open ${property.title} photo 1`}
             >
-              <Image
-                src={property.images[0]}
-                alt={property.title}
-                fill
-                priority
-                sizes="100vw"
-                className="object-cover transition-all duration-300 ease-in-out group-hover:scale-[1.02]"
-                style={{ objectFit: "cover" }}
-              />
               <button
                 type="button"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  handleBack();
-                }}
+                onClick={() => openLightbox(0)}
+                className="absolute inset-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
+                aria-label={`Open ${property.title} photo 1`}
+              >
+                <Image
+                  src={property.images[0]}
+                  alt={property.title}
+                  fill
+                  priority
+                  sizes="100vw"
+                  className="object-cover transition-all duration-300 ease-in-out group-hover:scale-[1.02]"
+                  style={{ objectFit: "cover" }}
+                />
+              </button>
+              <button
+                type="button"
+                onClick={handleBack}
                 aria-label="Go back"
                 className="absolute left-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-primary text-white transition-all duration-200 ease-in-out hover:bg-black/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               >
                 <ArrowLeft size={19} aria-hidden="true" />
               </button>
-              <span className="absolute left-16 top-4 rounded-full bg-bg px-3 py-1.5 font-body text-xs font-medium text-primary shadow-sm">
-                {formatListingType(property.status)}
-              </span>
               {property.verified ? (
                 <span className="absolute right-4 top-4">
                   <VerifiedBadge size="sm" />
                 </span>
               ) : null}
-            </button>
+            </div>
 
             {mobileThumbnails.length > 0 ? (
               <div className="mt-3 flex snap-x gap-2 overflow-x-auto pb-2">
@@ -787,13 +772,24 @@ export default function PropertyPage({
                 </span>
               )}
               <div className="min-w-0 flex-1">
-                <p className="truncate font-body text-sm font-bold text-primary">
+                <Link
+                  href={`/host/${property.host.id}`}
+                  className="block truncate font-body text-sm font-bold text-primary transition-all duration-200 ease-in-out hover:text-accent-alt focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                >
                   {property.host.name}
-                </p>
+                </Link>
                 <p className="mt-1 font-body text-xs text-muted">{hostRole}</p>
               </div>
               {property.host.verified ? <VerifiedBadge size="sm" /> : null}
             </div>
+
+            <Link
+              href={`/host/${property.host.id}`}
+              className="mt-4 inline-flex items-center gap-2 font-body text-sm font-medium text-muted transition-all duration-200 ease-in-out hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            >
+              See all homes from this {hostRole.toLowerCase()}
+              <ArrowUpRight size={15} />
+            </Link>
 
             <div className="my-6 border-t border-border" />
 

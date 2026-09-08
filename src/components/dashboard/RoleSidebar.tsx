@@ -7,10 +7,12 @@ import {
   ChevronRight,
   Landmark,
   LayoutDashboard,
+  LoaderCircle,
   LogOut,
   Menu,
   Scale,
   Settings,
+  ShieldCheck,
   Star,
   X,
 } from "lucide-react";
@@ -19,25 +21,29 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { SyntheticEvent, useEffect, useRef, useState } from "react";
 import OverlayPortal from "@/components/ui/OverlayPortal";
+import { logOutAccount, useAuthenticatedUser } from "@/lib/account";
 import { useDialogFocus } from "@/lib/useDialogFocus";
 import relloLogoMark from "../../../public/rello-logo-cropped.svg";
 
-const DEFAULT_ROLE_NAV_ITEMS = [
+const AGENT_NAV_ITEMS = [
   { label: "Dashboard", slug: "dashboard", icon: LayoutDashboard },
   { label: "My Listings", slug: "saved-listings", icon: Bookmark },
   { label: "Bookings", slug: "bookings", icon: CalendarDays },
-  { label: "Payouts", slug: "escrow", icon: Landmark },
-  { label: "Requests", slug: "disputes", icon: Scale },
-  { label: "Strikes", slug: "ratings", icon: Star },
+];
+
+const LANDLORD_NAV_ITEMS = [
+  { label: "Dashboard", slug: "dashboard", icon: LayoutDashboard },
+  { label: "My Listings", slug: "saved-listings", icon: Bookmark },
+  { label: "Bookings", slug: "bookings", icon: CalendarDays },
 ];
 
 const ADMIN_NAV_ITEMS = [
   { label: "Dashboard", slug: "dashboard", icon: LayoutDashboard },
+  { label: "Disputes", slug: "disputes", icon: Scale },
+  { label: "Verifications", slug: "verifications", icon: ShieldCheck },
   { label: "Bookings", slug: "bookings", icon: CalendarDays },
   { label: "Escrow", slug: "escrow", icon: Landmark },
-  { label: "Disputes", slug: "disputes", icon: Scale },
   { label: "Ratings", slug: "ratings", icon: Star },
-  { label: "Saved Listings", slug: "saved-listings", icon: Bookmark },
 ];
 
 const ROLE_PROFILES = {
@@ -90,7 +96,7 @@ interface RoleLogoLinkProps {
 
 interface RoleNavigationProps {
   isCollapsed?: boolean;
-  navItems: typeof DEFAULT_ROLE_NAV_ITEMS;
+  navItems: typeof AGENT_NAV_ITEMS;
   onNavigate?: () => void;
   onTooltipChange?: (tooltip: SidebarTooltip | null) => void;
   roleLabel: string;
@@ -283,8 +289,16 @@ function RoleProfileCard({
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ left: 96, top: 0 });
+  const { user } = useAuthenticatedUser();
   const isSettingsActive = pathname.startsWith(settingsHref);
+  const profileName = user
+    ? `${user.firstName} ${user.lastName}`.trim()
+    : profile.name;
+  const profileInitials = user
+    ? `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase()
+    : profile.initials;
 
   useEffect(() => {
     if (!isMenuOpen) {
@@ -331,9 +345,9 @@ function RoleProfileCard({
     setIsMenuOpen((current) => !current);
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("rello_token");
-    localStorage.removeItem("rello_role");
+  const handleLogout = async (): Promise<void> => {
+    setIsLoggingOut(true);
+    await logOutAccount();
     setIsMenuOpen(false);
     onNavigate?.();
     router.replace("/login");
@@ -385,7 +399,7 @@ function RoleProfileCard({
             isCollapsed ? "h-10 w-10" : "h-12 w-12"
           }`}
         >
-          {profile.initials}
+          {profileInitials}
         </span>
         <span
           className={`min-w-0 overflow-hidden transition-all duration-300 ease-in-out ${
@@ -395,7 +409,7 @@ function RoleProfileCard({
           }`}
         >
           <span className="block truncate font-body text-sm font-bold">
-            {profile.name}
+            {profileName}
           </span>
           <span className="mt-1 block font-body text-xs text-muted">
             {roleLabel}
@@ -437,10 +451,15 @@ function RoleProfileCard({
               type="button"
               role="menuitem"
               onClick={handleLogout}
-              className="mt-1 flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left font-body text-sm font-medium text-primary transition-all duration-200 ease-in-out hover:bg-primary/5"
+              disabled={isLoggingOut}
+              className="mt-1 flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left font-body text-sm font-medium text-primary transition-all duration-200 ease-in-out hover:bg-primary/5 disabled:cursor-wait disabled:opacity-70"
             >
-              <LogOut size={17} strokeWidth={1.9} />
-              Logout
+              {isLoggingOut ? (
+                <LoaderCircle className="animate-spin" size={17} />
+              ) : (
+                <LogOut size={17} strokeWidth={1.9} />
+              )}
+              {isLoggingOut ? "Logging out" : "Logout"}
             </button>
           </motion.div>
         ) : null}
@@ -462,7 +481,11 @@ export default function RoleSidebar({
   const dashboardHref = `/${rolePath}/dashboard`;
   const settingsHref = `/${rolePath}/settings`;
   const navItems =
-    rolePath === "admin" ? ADMIN_NAV_ITEMS : DEFAULT_ROLE_NAV_ITEMS;
+    rolePath === "admin"
+      ? ADMIN_NAV_ITEMS
+      : rolePath === "landlord"
+        ? LANDLORD_NAV_ITEMS
+        : AGENT_NAV_ITEMS;
   const profile = ROLE_PROFILES[rolePath];
 
   useEffect(() => {

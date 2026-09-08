@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -14,7 +15,9 @@ import { SubmitHandler, useForm } from "react-hook-form";
 import AuthBanner from "@/components/auth/AuthBanner";
 import AuthInput from "@/components/auth/AuthInput";
 import AuthSplitLayout from "@/components/auth/AuthSplitLayout";
+import { isAccountRole } from "@/components/auth/RoleGuard";
 import { useToast } from "@/components/ui/toast";
+import { resolveApiError } from "@/lib/errors";
 
 interface VerifyEmailFormValues {
   email: string;
@@ -47,6 +50,7 @@ export default function VerifyEmailPage() {
   const reduceMotion = useReducedMotion();
   const { notify } = useToast();
   const [errorMessage, setErrorMessage] = useState("");
+  const [isResending, setIsResending] = useState(false);
   const [otpError, setOtpError] = useState("");
   const [otpDigits, setOtpDigits] = useState(() =>
     Array.from({ length: OTP_LENGTH }, (): string => ""),
@@ -65,6 +69,7 @@ export default function VerifyEmailPage() {
   });
   const {
     formState: { errors, isSubmitting },
+    getValues,
     handleSubmit,
     register,
   } = useForm<VerifyEmailFormValues>({
@@ -162,20 +167,52 @@ export default function VerifyEmailPage() {
       const data: unknown = await response.json().catch(() => null);
 
       if (!response.ok || (isApiEnvelope(data) && !data.success)) {
-        throw new Error(getApiMessage(data, "Email verification failed"));
+        throw new Error(resolveApiError(data, "Email verification failed"));
       }
 
-      const message = getApiMessage(
-        data,
-        "Email verified successfully! You can now log in.",
-      );
+      const message = getApiMessage(data, "Email verified. Welcome to Rello.");
+
+      sessionStorage.removeItem(VERIFY_EMAIL_STORAGE_KEY);
+
+      // Verifying already proves the address, so sign them in here rather than
+      // sending them to a login screen that would establish nothing new
+      const session =
+        data !== null && typeof data === "object" && "data" in data
+          ? data.data
+          : null;
+
+      if (
+        session !== null &&
+        typeof session === "object" &&
+        "accessToken" in session &&
+        typeof session.accessToken === "string" &&
+        "role" in session &&
+        isAccountRole(session.role)
+      ) {
+        const role = session.role.toUpperCase();
+
+        localStorage.setItem("rello_token", session.accessToken);
+        localStorage.setItem("rello_role", role);
+
+        notify({
+          title: "Email verified",
+          description: message,
+          variant: "success",
+        });
+
+        router.replace(
+          role === "TENANT"
+            ? "/tenant/browse"
+            : `/${role.toLowerCase()}/dashboard`,
+        );
+        return;
+      }
 
       notify({
         title: "Email verified",
         description: message,
         variant: "success",
       });
-      sessionStorage.removeItem(VERIFY_EMAIL_STORAGE_KEY);
       router.push(`/login?message=${encodeURIComponent(message)}`);
     } catch (error) {
       const message =
@@ -187,6 +224,44 @@ export default function VerifyEmailPage() {
         description: message,
         variant: "error",
       });
+    }
+  };
+
+  const handleResend = async (): Promise<void> => {
+    const email = getValues("email");
+
+    if (!email) {
+      setErrorMessage("Enter your email address first.");
+      return;
+    }
+
+    setIsResending(true);
+
+    try {
+      const response = await fetch(
+        `/api/auth/resend-verification?email=${encodeURIComponent(email)}`,
+        { method: "POST" },
+      );
+      const data: unknown = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(resolveApiError(data, "A new code could not be sent."));
+      }
+
+      notify({
+        title: "Code sent",
+        description: "Check your inbox for a new verification code.",
+        variant: "success",
+      });
+    } catch (error) {
+      notify({
+        title: "Code not sent",
+        description:
+          error instanceof Error ? error.message : "Try again in a moment.",
+        variant: "error",
+      });
+    } finally {
+      setIsResending(false);
     }
   };
 
@@ -289,6 +364,24 @@ export default function VerifyEmailPage() {
                     </motion.p>
                   ) : null}
                 </AnimatePresence>
+
+                {/* Sits with the code field, because that is where a stale code is noticed */}
+                <div className="mt-3 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => void handleResend()}
+                    disabled={isResending}
+                    className="inline-flex items-center gap-2 rounded font-body text-sm font-medium text-muted underline-offset-4 transition-all duration-200 ease-in-out hover:text-primary hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-70"
+                  >
+                    {isResending ? (
+                      <Loader2
+                        className="h-3.5 w-3.5 animate-spin"
+                        aria-hidden="true"
+                      />
+                    ) : null}
+                    {isResending ? "Sending a new code" : "Send a new code"}
+                  </button>
+                </div>
               </fieldset>
 
               <motion.button
@@ -307,7 +400,17 @@ export default function VerifyEmailPage() {
                     : { duration: 0.2 }
                 }
               >
-                {isSubmitting ? "Please wait..." : "Verify Email"}
+                {isSubmitting ? (
+                  <span className="inline-flex items-center gap-2">
+                    <Loader2
+                      className="h-4 w-4 animate-spin"
+                      aria-hidden="true"
+                    />
+                    Please wait...
+                  </span>
+                ) : (
+                  "Verify Email"
+                )}
               </motion.button>
             </form>
 

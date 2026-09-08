@@ -2,8 +2,10 @@
 
 import { FormEvent, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
+import { Loader2 } from "lucide-react";
 import Footer from "@/components/Footer";
 import Navbar from "@/components/Navbar";
+import { Select, toSelectOptions } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
 
 const cities = [
@@ -283,21 +285,14 @@ export default function WaitlistPage() {
                     <span className="font-body text-sm font-bold text-primary">
                       Role
                     </span>
-                    <select
+                    <Select
                       name="role"
-                      defaultValue=""
                       required
+                      ariaLabel="Role"
+                      placeholder="Select your role"
                       className="mt-2 min-h-14 w-full border border-primary bg-white px-4 py-3 font-body text-base text-slate-950 outline-none transition-all duration-200 ease-in-out focus:border-accent focus:ring-2 focus:ring-accent/30"
-                    >
-                      <option value="" disabled>
-                        Select your role
-                      </option>
-                      {roles.map((role) => (
-                        <option key={role} value={role}>
-                          {role}
-                        </option>
-                      ))}
-                    </select>
+                      options={toSelectOptions([...roles])}
+                    />
                   </label>
 
                   {status === "error" && message ? (
@@ -318,7 +313,17 @@ export default function WaitlistPage() {
                     className="inline-flex min-h-14 w-full items-center justify-center bg-primary px-5 py-4 font-body text-base font-bold text-white transition-all duration-200 ease-in-out hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-70"
                     whileTap={reduceMotion ? undefined : { scale: 0.98 }}
                   >
-                    {status === "submitting" ? "Joining..." : "Join Waitlist"}
+                    {status === "submitting" ? (
+                      <span className="inline-flex items-center gap-2">
+                        <Loader2
+                          className="h-4 w-4 animate-spin"
+                          aria-hidden="true"
+                        />
+                        Joining...
+                      </span>
+                    ) : (
+                      "Join Waitlist"
+                    )}
                   </motion.button>
                 </form>
               </>

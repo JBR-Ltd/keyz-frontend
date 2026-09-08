@@ -1,25 +1,13 @@
+"use client";
+
 import type { ReactElement } from "react";
 import { MapPin, Search } from "lucide-react";
+import { Select } from "@/components/ui/select";
 
 export default function HeroSearchBar(): ReactElement {
   return (
     <div className="w-full overflow-hidden rounded-2xl bg-[var(--color-bg)] p-2 shadow-sm ring-1 ring-[var(--color-border)] lg:max-w-3xl">
-      <div className="grid gap-2 sm:grid-cols-2 sm:items-center xl:grid-cols-[auto_1.15fr_0.85fr_auto]">
-        <div className="grid grid-cols-2 rounded-lg bg-[var(--color-surface-soft)] p-1 font-body text-sm font-medium text-primary">
-          <button
-            type="button"
-            className="rounded-md bg-primary px-4 py-3 text-white transition-all duration-200 ease-in-out"
-          >
-            Rent
-          </button>
-          <button
-            type="button"
-            className="rounded-md px-4 py-3 text-muted transition-all duration-200 ease-in-out hover:bg-primary/5 hover:text-primary"
-          >
-            Buy
-          </button>
-        </div>
-
+      <div className="grid gap-2 sm:grid-cols-2 sm:items-center xl:grid-cols-[1.15fr_0.85fr_auto]">
         <label className="flex min-h-14 items-center gap-3 rounded-lg bg-[var(--color-surface-soft)] px-4 transition-all duration-200 ease-in-out focus-within:ring-2 focus-within:ring-[color-mix(in_srgb,var(--color-accent)_40%,transparent)]">
           <MapPin
             className="shrink-0 text-accent"
@@ -36,18 +24,17 @@ export default function HeroSearchBar(): ReactElement {
 
         <label className="flex min-h-14 items-center rounded-lg bg-[var(--color-surface-soft)] px-4 transition-all duration-200 ease-in-out focus-within:ring-2 focus-within:ring-[color-mix(in_srgb,var(--color-accent)_40%,transparent)]">
           <span className="sr-only">Property type</span>
-          <select
-            defaultValue=""
+          <Select
+            ariaLabel="Property type"
+            placeholder="Any type"
             className="w-full bg-transparent font-body text-base text-primary outline-none"
-          >
-            <option value="" disabled>
-              Any type
-            </option>
-            <option value="apartment">Apartment</option>
-            <option value="duplex">Duplex</option>
-            <option value="studio">Studio</option>
-            <option value="shortlet">Shortlet</option>
-          </select>
+            options={[
+              { label: "Apartment", value: "apartment" },
+              { label: "Duplex", value: "duplex" },
+              { label: "Studio", value: "studio" },
+              { label: "Shortlet", value: "shortlet" },
+            ]}
+          />
         </label>
 
         <button

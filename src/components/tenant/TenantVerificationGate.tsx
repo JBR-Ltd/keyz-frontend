@@ -115,14 +115,14 @@ export default function TenantVerificationGate({
                     className="mt-4 font-display text-3xl font-bold leading-none text-primary"
                   >
                     {intent === "offer"
-                      ? "Verify your identity to make an offer"
+                      ? "Verify your identity to continue"
                       : "Verify your identity to book"}
                   </h2>
                   <p className="mt-5 font-body leading-7 text-muted">
                     For everyone&apos;s safety, we require quick identity
                     verification before{" "}
-                    {intent === "offer" ? "making an offer" : "booking"}. It
-                    only takes a couple of minutes.
+                    {intent === "offer" ? "continuing" : "booking"}. It only
+                    takes a couple of minutes.
                   </p>
                   <div className="mt-8 grid gap-3 sm:grid-cols-2">
                     <Button
@@ -139,7 +139,7 @@ export default function TenantVerificationGate({
                       className="min-h-12 rounded-full bg-accent px-5 py-3 font-body text-sm font-medium text-primary transition-all duration-200 ease-in-out hover:scale-[1.02] hover:bg-primary hover:text-white hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                     >
                       {intent === "offer"
-                        ? "Verify to make offer"
+                        ? "Verify and continue"
                         : "Verify to book"}
                     </button>
                   </div>

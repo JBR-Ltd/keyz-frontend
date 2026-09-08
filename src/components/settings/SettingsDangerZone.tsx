@@ -1,9 +1,11 @@
 "use client";
 
 import { AlertTriangle } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import ConfirmActionModal from "@/components/settings/ConfirmActionModal";
 import { useToast } from "@/components/ui/toast";
+import { deleteAccount } from "@/lib/account";
 
 type AccountAction = "deactivate" | "delete";
 
@@ -13,46 +15,64 @@ const ACTION_CONTENT: Record<
     title: string;
     description: string;
     confirmLabel: string;
-    toastTitle: string;
   }
 > = {
   deactivate: {
     title: "Deactivate account?",
     description: "Your profile will be hidden until you sign in again.",
     confirmLabel: "Deactivate account",
-    toastTitle: "Account deactivated",
   },
   delete: {
     title: "Delete account?",
     description: "This permanently removes your profile and account data.",
     confirmLabel: "Delete account",
-    toastTitle: "Deletion requested",
   },
 };
 
 export default function SettingsDangerZone() {
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [pendingAction, setPendingAction] = useState<AccountAction | null>(
     null,
   );
   const { notify } = useToast();
 
-  const handleActionRequest = (action: AccountAction) => {
+  const handleActionRequest = (action: AccountAction): void => {
     setIsOpen(false);
-    setPendingAction(action);
-  };
 
-  const handleConfirm = () => {
-    if (!pendingAction) {
+    if (action === "deactivate") {
+      notify({
+        title: "Deactivation unavailable",
+        description:
+          "The server does not support temporary account deactivation yet.",
+        variant: "error",
+      });
       return;
     }
 
+    setPendingAction(action);
+  };
+
+  const handleConfirm = async (): Promise<void> => {
+    if (pendingAction !== "delete") {
+      return;
+    }
+
+    setIsDeleting(true);
+    const result = await deleteAccount();
+    setIsDeleting(false);
+
     notify({
-      title: ACTION_CONTENT[pendingAction].toastTitle,
-      description: "This is a simulated account action.",
-      variant: "success",
+      title: result.success ? "Account deleted" : "Account not deleted",
+      description: result.message,
+      variant: result.success ? "success" : "error",
     });
-    setPendingAction(null);
+
+    if (result.success) {
+      setPendingAction(null);
+      router.replace("/login");
+    }
   };
 
   const pendingContent = pendingAction ? ACTION_CONTENT[pendingAction] : null;
@@ -91,6 +111,7 @@ export default function SettingsDangerZone() {
           pendingContent?.description ?? "Confirm this account action."
         }
         confirmLabel={pendingContent?.confirmLabel ?? "Confirm"}
+        isLoading={isDeleting}
         onCancel={() => setPendingAction(null)}
         onConfirm={handleConfirm}
       />

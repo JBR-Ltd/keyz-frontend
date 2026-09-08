@@ -3,7 +3,6 @@ import {
   CreditCard,
   LockKeyhole,
   ShieldCheck,
-  UserRound,
 } from "lucide-react";
 import { SettingsSectionId } from "@/components/settings/types";
 
@@ -13,7 +12,6 @@ interface SettingsTabBarProps {
 }
 
 const SETTINGS_TABS = [
-  { id: "profile", label: "Profile", icon: UserRound },
   { id: "security", label: "Security", icon: LockKeyhole },
   { id: "notifications", label: "Notifications", icon: Bell },
   { id: "payments", label: "Payments", icon: CreditCard },
@@ -21,7 +19,7 @@ const SETTINGS_TABS = [
 ] satisfies {
   id: SettingsSectionId;
   label: string;
-  icon: typeof UserRound;
+  icon: typeof LockKeyhole;
 }[];
 
 export default function SettingsTabBar({

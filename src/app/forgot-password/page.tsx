@@ -1,6 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
+import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { SubmitHandler, useForm } from "react-hook-form";
@@ -8,6 +9,7 @@ import AuthBanner from "@/components/auth/AuthBanner";
 import AuthInput from "@/components/auth/AuthInput";
 import AuthSplitLayout from "@/components/auth/AuthSplitLayout";
 import { useToast } from "@/components/ui/toast";
+import { resolveApiError } from "@/lib/errors";
 
 interface ForgotPasswordFormValues {
   email: string;
@@ -37,6 +39,7 @@ export default function ForgotPasswordPage() {
   const { notify } = useToast();
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [requestedEmail, setRequestedEmail] = useState("");
   const {
     formState: { errors, isSubmitting },
     handleSubmit,
@@ -65,7 +68,7 @@ export default function ForgotPasswordPage() {
       const data: unknown = await response.json().catch(() => null);
 
       if (!response.ok || (isApiEnvelope(data) && !data.success)) {
-        throw new Error(getApiMessage(data, "Password reset request failed"));
+        throw new Error(resolveApiError(data, "Password reset request failed"));
       }
 
       const message = getApiMessage(
@@ -74,6 +77,7 @@ export default function ForgotPasswordPage() {
       );
 
       setSuccessMessage(message);
+      setRequestedEmail(values.email);
       notify({
         title: "Reset code sent",
         description: message,
@@ -159,7 +163,7 @@ export default function ForgotPasswordPage() {
 
               {successMessage ? (
                 <Link
-                  href="/reset-password"
+                  href={`/reset-password?email=${encodeURIComponent(requestedEmail)}`}
                   className="inline-flex min-h-12 items-center justify-center rounded-full border border-primary px-5 py-3 font-body text-sm font-medium text-primary transition-all duration-200 ease-in-out hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 >
                   Enter reset code
@@ -182,7 +186,17 @@ export default function ForgotPasswordPage() {
                     : { duration: 0.2 }
                 }
               >
-                {isSubmitting ? "Please wait..." : "Send Reset Code"}
+                {isSubmitting ? (
+                  <span className="inline-flex items-center gap-2">
+                    <Loader2
+                      className="h-4 w-4 animate-spin"
+                      aria-hidden="true"
+                    />
+                    Please wait...
+                  </span>
+                ) : (
+                  "Send Reset Code"
+                )}
               </motion.button>
             </form>
 

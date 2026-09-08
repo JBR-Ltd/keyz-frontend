@@ -1,13 +1,15 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { EyeIcon, EyeOffIcon, X } from "lucide-react";
+import { EyeIcon, EyeOffIcon, Loader2, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { SubmitHandler, useForm } from "react-hook-form";
+import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
 import { useToast } from "@/components/ui/toast";
+import { resolveApiError } from "@/lib/errors";
 
 type UserRole = "LANDLORD" | "AGENT" | "TENANT";
 
@@ -23,7 +25,7 @@ const roleOptions: Array<{
   {
     label: "Tenant",
     value: "TENANT",
-    description: "Find verified homes to rent or buy without agent stress.",
+    description: "Find verified homes to rent without agent stress.",
   },
   {
     label: "Landlord",
@@ -34,7 +36,7 @@ const roleOptions: Array<{
     label: "Agent",
     value: "AGENT",
     description:
-      "List and sell properties. Verified agents connect buyers with quality FOR_SALE listings.",
+      "List and manage properties. Verified agents connect tenants with quality homes.",
   },
 ];
 
@@ -59,10 +61,6 @@ function isApiEnvelope(value: unknown): value is ApiEnvelope<unknown> {
     "message" in value &&
     typeof value.message === "string"
   );
-}
-
-function getApiMessage(value: unknown, fallback: string): string {
-  return isApiEnvelope(value) ? value.message : fallback;
 }
 
 function createDeviceFingerprint(): string {
@@ -133,7 +131,7 @@ export default function RegisterPage() {
       const data: unknown = await response.json().catch(() => null);
 
       if (!response.ok || (isApiEnvelope(data) && !data.success)) {
-        throw new Error(getApiMessage(data, "Registration failed"));
+        throw new Error(resolveApiError(data, "Registration failed"));
       }
 
       sessionStorage.setItem(VERIFY_EMAIL_STORAGE_KEY, values.email);
@@ -507,9 +505,39 @@ export default function RegisterPage() {
                     : { duration: 0.4, delay: 0.72, ease: "easeOut" }
                 }
               >
-                {isSubmitting ? "Creating account..." : "Create account"}
+                {isSubmitting ? (
+                  <span className="inline-flex items-center gap-2">
+                    <Loader2
+                      className="h-4 w-4 animate-spin"
+                      aria-hidden="true"
+                    />
+                    Creating account...
+                  </span>
+                ) : (
+                  "Create account"
+                )}
               </motion.button>
             </form>
+
+            <div className="mt-6 flex items-center gap-4">
+              <span className="h-px flex-1 bg-border" />
+              <span className="font-accent text-xs font-bold uppercase tracking-[0.22em] text-muted">
+                or
+              </span>
+              <span className="h-px flex-1 bg-border" />
+            </div>
+
+            <div className="mt-6">
+              {/* Role is already chosen above, so Google sign-up always has one to send */}
+              <GoogleAuthButton
+                label="Sign up with Google"
+                role={selectedRole}
+              />
+            </div>
+
+            <p className="mt-3 text-center font-body text-xs text-muted">
+              You are signing up as a {selectedRole.toLowerCase()}.
+            </p>
 
             <motion.p
               className="mt-6 text-center font-body text-sm text-muted"

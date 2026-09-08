@@ -1,6 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
+import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -9,8 +10,10 @@ import AuthBanner from "@/components/auth/AuthBanner";
 import AuthInput from "@/components/auth/AuthInput";
 import AuthSplitLayout from "@/components/auth/AuthSplitLayout";
 import { useToast } from "@/components/ui/toast";
+import { resolveApiError } from "@/lib/errors";
 
 interface ResetPasswordFormValues {
+  email: string;
   token: string;
   newPassword: string;
 }
@@ -39,12 +42,17 @@ export default function ResetPasswordPage() {
   const reduceMotion = useReducedMotion();
   const { notify } = useToast();
   const [errorMessage, setErrorMessage] = useState("");
-  const [initialToken] = useState(() => {
+  const [initialParams] = useState(() => {
     if (typeof window === "undefined") {
-      return "";
+      return { email: "", token: "" };
     }
 
-    return new URLSearchParams(window.location.search).get("token") ?? "";
+    const params = new URLSearchParams(window.location.search);
+
+    return {
+      email: params.get("email") ?? "",
+      token: params.get("token") ?? "",
+    };
   });
   const {
     formState: { errors, isSubmitting },
@@ -52,7 +60,8 @@ export default function ResetPasswordPage() {
     register,
   } = useForm<ResetPasswordFormValues>({
     defaultValues: {
-      token: initialToken,
+      email: initialParams.email,
+      token: initialParams.token,
       newPassword: "",
     },
     mode: "onSubmit",
@@ -74,7 +83,7 @@ export default function ResetPasswordPage() {
       const data: unknown = await response.json().catch(() => null);
 
       if (!response.ok || (isApiEnvelope(data) && !data.success)) {
-        throw new Error(getApiMessage(data, "Password reset failed"));
+        throw new Error(resolveApiError(data, "Password reset failed"));
       }
 
       const message = getApiMessage(data, "Password reset successfully");
@@ -137,6 +146,17 @@ export default function ResetPasswordPage() {
               ) : null}
 
               <AuthInput
+                label="Email"
+                name="email"
+                type="email"
+                placeholder="you@example.com"
+                autoComplete="email"
+                error={errors.email?.message}
+                register={register}
+                rules={{ required: "Email is required" }}
+              />
+
+              <AuthInput
                 label="Reset Code"
                 name="token"
                 type="text"
@@ -175,7 +195,17 @@ export default function ResetPasswordPage() {
                     : { duration: 0.2 }
                 }
               >
-                {isSubmitting ? "Please wait..." : "Reset Password"}
+                {isSubmitting ? (
+                  <span className="inline-flex items-center gap-2">
+                    <Loader2
+                      className="h-4 w-4 animate-spin"
+                      aria-hidden="true"
+                    />
+                    Please wait...
+                  </span>
+                ) : (
+                  "Reset Password"
+                )}
               </motion.button>
             </form>
 

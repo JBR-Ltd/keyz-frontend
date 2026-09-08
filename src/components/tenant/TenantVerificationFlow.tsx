@@ -30,17 +30,24 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   countVerifiedTenantSteps,
-  getFirstIncompleteTenantVerificationStep,
   isTenantVerified,
+  saveTenantVerificationState,
   saveTenantVerificationStep,
   TenantVerificationStep,
   useTenantVerificationSnapshot,
 } from "@/lib/tenantVerification";
 
-interface MockSmileResponse {
+interface VerificationApiResponse {
+  data: unknown;
+  message: string;
   success: boolean;
-  status: "verified" | "failed";
-  message?: string;
+}
+
+interface TenantVerificationStatus {
+  bvnVerified: boolean;
+  identityVerified: boolean;
+  ninVerified: boolean;
+  selfieVerified: boolean;
 }
 
 interface StepCopy {
@@ -79,7 +86,7 @@ const STEP_COPY: Record<TenantVerificationStep, StepCopy> = {
       "Your National Identification Number confirms your identity before high-trust actions like bookings and offers.",
     helper:
       "Your NIN is only used to confirm your identity and is never stored in full.",
-    button: "Verify NIN",
+    button: "Continue to BVN",
     icon: IdCard,
   },
   bvn: {
@@ -125,44 +132,124 @@ function isValidIdentityNumber(value: string): boolean {
   return /^\d{11}$/.test(value);
 }
 
-async function simulateSmileVerification(
-  value: string,
-): Promise<MockSmileResponse> {
-  await delay(1200);
-
-  // ASSUMED SHAPE: confirm against the real Smile ID response before production wiring.
-  if (value === "00000000000") {
-    return {
-      success: false,
-      status: "failed",
-      message: "We could not verify this number. Check it and try again.",
-    };
-  }
-
-  return {
-    success: true,
-    status: "verified",
-    message: "Verification completed.",
-  };
+function isVerificationApiResponse(
+  value: unknown,
+): value is VerificationApiResponse {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    "success" in value &&
+    typeof value.success === "boolean" &&
+    "message" in value &&
+    typeof value.message === "string" &&
+    "data" in value
+  );
 }
 
-async function simulateSelfieVerification(
-  hasImage: boolean,
-): Promise<MockSmileResponse> {
-  await delay(1200);
+function isTenantVerificationStatus(
+  value: unknown,
+): value is TenantVerificationStatus {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    "identityVerified" in value &&
+    typeof value.identityVerified === "boolean" &&
+    "ninVerified" in value &&
+    typeof value.ninVerified === "boolean" &&
+    "bvnVerified" in value &&
+    typeof value.bvnVerified === "boolean" &&
+    "selfieVerified" in value &&
+    typeof value.selfieVerified === "boolean"
+  );
+}
 
-  // ASSUMED SHAPE: confirm against the real Smile ID response before production wiring.
-  return hasImage
-    ? {
-        success: true,
-        status: "verified",
-        message: "Selfie liveness check completed.",
-      }
-    : {
-        success: false,
-        status: "failed",
-        message: "Add a selfie before verifying.",
-      };
+async function parseVerificationResponse(
+  response: Response,
+): Promise<VerificationApiResponse> {
+  const data: unknown = await response.json().catch(() => null);
+
+  if (!isVerificationApiResponse(data)) {
+    if (response.status === 401 || response.status === 403) {
+      throw new Error("Your session has expired. Log in again.");
+    }
+
+    throw new Error("The verification server returned an invalid response.");
+  }
+
+  if (!response.ok || !data.success) {
+    throw new Error(data.message || "Verification failed. Try again.");
+  }
+
+  return data;
+}
+
+function getAccessToken(): string {
+  const token = localStorage.getItem("rello_token") ?? "";
+
+  if (!token) {
+    throw new Error("Your session has expired. Log in again.");
+  }
+
+  return token;
+}
+
+async function verifyTenantIdentityNumbers(
+  nin: string,
+  bvn: string,
+): Promise<VerificationApiResponse> {
+  const query = new URLSearchParams({ nin, bvn });
+  const response = await fetch(
+    `/api/verification/tenant?${query.toString()}`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${getAccessToken()}`,
+      },
+    },
+  );
+
+  return parseVerificationResponse(response);
+}
+
+async function verifySelfie(
+  selfiePreview: string,
+): Promise<VerificationApiResponse> {
+  const imageResponse = await fetch(selfiePreview);
+
+  if (!imageResponse.ok) {
+    throw new Error("The selected selfie could not be prepared for upload.");
+  }
+
+  const image = await imageResponse.blob();
+  const extension = image.type === "image/png" ? "png" : "jpg";
+  const formData = new FormData();
+  formData.append("selfie", image, `tenant-selfie.${extension}`);
+
+  const response = await fetch("/api/verification/dojah/selfie", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${getAccessToken()}`,
+    },
+    body: formData,
+  });
+
+  return parseVerificationResponse(response);
+}
+
+async function getTenantVerificationStatus(): Promise<TenantVerificationStatus> {
+  const response = await fetch("/api/verification/status", {
+    headers: {
+      Authorization: `Bearer ${getAccessToken()}`,
+    },
+  });
+  const envelope = await parseVerificationResponse(response);
+  const data = envelope.data;
+
+  if (!isTenantVerificationStatus(data)) {
+    throw new Error("The verification server returned an invalid status.");
+  }
+
+  return data;
 }
 
 export default function TenantVerificationFlow(): ReactElement {
@@ -196,7 +283,10 @@ export default function TenantVerificationFlow(): ReactElement {
   );
 
   const firstIncompleteStep = useMemo(
-    () => getFirstIncompleteTenantVerificationStep(state),
+    () =>
+      state.nin === "verified" && state.bvn === "verified"
+        ? "selfie"
+        : "nin",
     [state],
   );
 
@@ -350,20 +440,45 @@ export default function TenantVerificationFlow(): ReactElement {
       return;
     }
 
+    if (step === "nin") {
+      saveTenantVerificationStep("nin", "pending");
+      setScreen("bvn");
+      return;
+    }
+
+    if (!isValidIdentityNumber(nin)) {
+      saveTenantVerificationStep("nin", "failed");
+      setStepError("Go back and enter your 11-digit NIN first.");
+      return;
+    }
+
     setIsProcessing(true);
-    saveTenantVerificationStep(step, "pending");
+    saveTenantVerificationState({
+      ...state,
+      nin: "pending",
+      bvn: "pending",
+    });
 
     try {
-      const response = await simulateSmileVerification(value);
+      await verifyTenantIdentityNumbers(nin, bvn);
 
-      if (!response.success || response.status === "failed") {
-        saveTenantVerificationStep(step, "failed");
-        setStepError(response.message ?? "Verification failed. Try again.");
-        return;
-      }
-
-      saveTenantVerificationStep(step, "verified");
-      await advanceAfterSuccess(step);
+      saveTenantVerificationState({
+        ...state,
+        nin: "verified",
+        bvn: "verified",
+      });
+      await advanceAfterSuccess("bvn");
+    } catch (error) {
+      saveTenantVerificationState({
+        ...state,
+        nin: "failed",
+        bvn: "failed",
+      });
+      setStepError(
+        error instanceof Error
+          ? error.message
+          : "Verification failed. Try again.",
+      );
     } finally {
       setIsProcessing(false);
     }
@@ -382,16 +497,25 @@ export default function TenantVerificationFlow(): ReactElement {
     saveTenantVerificationStep("selfie", "pending");
 
     try {
-      const response = await simulateSelfieVerification(Boolean(selfiePreview));
+      await verifySelfie(selfiePreview);
+      const status = await getTenantVerificationStatus();
 
-      if (!response.success || response.status === "failed") {
-        saveTenantVerificationStep("selfie", "failed");
-        setStepError(response.message ?? "Selfie verification failed.");
-        return;
+      saveTenantVerificationState({
+        nin: status.ninVerified ? "verified" : "failed",
+        bvn: status.bvnVerified ? "verified" : "failed",
+        selfie: status.selfieVerified ? "verified" : "failed",
+      });
+
+      if (!status.identityVerified) {
+        throw new Error("Your identity verification is not complete yet.");
       }
 
-      saveTenantVerificationStep("selfie", "verified");
       await advanceAfterSuccess("selfie");
+    } catch (error) {
+      saveTenantVerificationStep("selfie", "failed");
+      setStepError(
+        error instanceof Error ? error.message : "Selfie verification failed.",
+      );
     } finally {
       setIsProcessing(false);
     }
@@ -540,8 +664,8 @@ export default function TenantVerificationFlow(): ReactElement {
               })}
             </div>
             <p className="relative mt-6 font-body text-xs leading-5 text-muted">
-              Verification is simulated in this preview. Identity numbers are
-              not stored in full.
+              Identity checks are processed securely through the verification
+              service. Identity numbers are not stored in full.
             </p>
           </section>
         </motion.div>
@@ -796,15 +920,20 @@ export default function TenantVerificationFlow(): ReactElement {
       >
         <div className="sticky top-0 z-20 bg-primary/95 px-5 py-4 shadow-md">
           <div className="mx-auto grid max-w-6xl grid-cols-[auto_1fr_auto] items-center gap-4">
-            <button
-              type="button"
-              onClick={goBack}
-              disabled={isProcessing}
-              className="inline-flex min-h-10 items-center gap-2 justify-self-start rounded-full bg-white/10 px-3 font-body text-sm font-medium text-white shadow-sm transition-all duration-200 ease-in-out hover:bg-white/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <ArrowLeft size={16} aria-hidden="true" />
-              Back
-            </button>
+            {/* Nothing to go back to on the first check, but the column stays so the progress bar keeps its place */}
+            {activeIndex > 0 ? (
+              <button
+                type="button"
+                onClick={goBack}
+                disabled={isProcessing}
+                className="inline-flex min-h-10 items-center gap-2 justify-self-start rounded-full bg-white/10 px-3 font-body text-sm font-medium text-white shadow-sm transition-all duration-200 ease-in-out hover:bg-white/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <ArrowLeft size={16} aria-hidden="true" />
+                Back
+              </button>
+            ) : (
+              <span aria-hidden="true" />
+            )}
             {renderProgressSegments(activeStep)}
             <button
               type="button"
@@ -1044,7 +1173,7 @@ export default function TenantVerificationFlow(): ReactElement {
   };
 
   if (screen === "overview") {
-    return renderOverview();
+    return tenantVerified ? renderComplete() : renderOverview();
   }
 
   if (screen === "complete") {

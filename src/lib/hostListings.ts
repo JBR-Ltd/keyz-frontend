@@ -1,6 +1,7 @@
 "use client";
 
-import { openDB, type DBSchema, type IDBPDatabase } from "idb";
+import { deleteDB, openDB, type DBSchema, type IDBPDatabase } from "idb";
+import { resolveApiError } from "@/lib/errors";
 import type { PropertyListingStatus } from "@/lib/propertyDetails";
 
 export type HostListingRole = "landlord" | "agent";
@@ -11,34 +12,83 @@ export type HostListingReviewStatus =
   | "VERIFIED"
   | "REJECTED";
 
+/** Mirrors PartySummary on the backend: what a stranger may see about a person. */
+export interface BackendPropertyHost {
+  id: number;
+  identityVerified: boolean;
+  name: string;
+  rating?: number | null;
+  role: "ADMIN" | "AGENT" | "LANDLORD" | "TENANT";
+}
+
+/** Mirrors PropertySummaryResponse. The Property entity is no longer returned to clients. */
+export interface BackendProperty {
+  address: string;
+  bathrooms: number;
+  bedrooms: number;
+  description?: string | null;
+  host: BackendPropertyHost | null;
+  id: number;
+  imageUrl?: string | null;
+  latitude?: number | null;
+  listedByName?: string | null;
+  longitude?: number | null;
+  price: number;
+  squareFootage?: number;
+  status: "FOR_RENT" | "FOR_SALE" | "RENTED" | "SOLD";
+  title: string;
+  verified: boolean;
+  videoWalkthroughUrl?: string | null;
+  virtualTourUrl?: string | null;
+}
+
+/** Mirrors PageResponse. Public listing endpoints are paged. */
+export interface BackendPage<TItem> {
+  hasNext: boolean;
+  items: TItem[];
+  page: number;
+  size: number;
+  totalItems: number;
+  totalPages: number;
+}
+
+export interface PropertyPortfolio {
+  activeListingsCount: number;
+  expectedMonthlyRentalIncome: number;
+  pendingOffersCount: number;
+  properties: BackendProperty[];
+  totalPropertiesCount: number;
+  totalValueForSale: number;
+}
+
 export interface HostListingPhoto {
-  id: string;
   dataUrl: string;
+  id: string;
   name: string;
   type: string;
 }
 
 export interface HostListingInput {
-  id?: string;
-  ownerRole: HostListingRole;
-  listingType: PropertyListingStatus;
-  title: string;
-  description: string;
-  price: number;
-  city: string;
-  area: string;
   address: string;
-  bedrooms: number;
-  bathrooms: number;
-  squareFootage?: number;
   amenities: string[];
+  area: string;
+  bathrooms: number;
+  bedrooms: number;
+  city: string;
+  description: string;
+  id?: string;
+  listingType: PropertyListingStatus;
+  ownerRole: HostListingRole;
   photos: HostListingPhoto[];
+  price: number;
+  squareFootage?: number;
+  title: string;
 }
 
 export interface HostListingRecord extends HostListingInput {
+  createdAt: string;
   id: string;
   reviewStatus: HostListingReviewStatus;
-  createdAt: string;
   updatedAt: string;
 }
 
@@ -49,9 +99,22 @@ interface HostListingsDatabase extends DBSchema {
   };
 }
 
+interface ApiEnvelope {
+  data: unknown;
+  message: string;
+  success: boolean;
+}
+
 export interface HostListingStorageResult<TValue> {
   data: TValue;
+  message?: string;
   unavailable: boolean;
+}
+
+export interface PublicPropertiesResult
+  extends HostListingStorageResult<BackendProperty[]> {
+  hasNext: boolean;
+  totalItems: number;
 }
 
 const DATABASE_NAME = "rello-host-listings";
@@ -92,6 +155,201 @@ function publishStorageChange(): void {
   window.dispatchEvent(new Event(STORAGE_EVENT));
 }
 
+function isApiEnvelope(value: unknown): value is ApiEnvelope {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    "success" in value &&
+    typeof value.success === "boolean" &&
+    "message" in value &&
+    typeof value.message === "string" &&
+    "data" in value
+  );
+}
+
+function isBackendPropertyHost(value: unknown): value is BackendPropertyHost {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    "id" in value &&
+    typeof value.id === "number" &&
+    "name" in value &&
+    typeof value.name === "string"
+  );
+}
+
+function isBackendPage(value: unknown): value is BackendPage<unknown> {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    "items" in value &&
+    Array.isArray(value.items)
+  );
+}
+
+function isBackendProperty(value: unknown): value is BackendProperty {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    "id" in value &&
+    typeof value.id === "number" &&
+    "title" in value &&
+    typeof value.title === "string" &&
+    "address" in value &&
+    typeof value.address === "string" &&
+    "price" in value &&
+    typeof value.price === "number" &&
+    "bedrooms" in value &&
+    typeof value.bedrooms === "number" &&
+    "bathrooms" in value &&
+    typeof value.bathrooms === "number" &&
+    "status" in value &&
+    (value.status === "FOR_RENT" ||
+      value.status === "FOR_SALE" ||
+      value.status === "RENTED" ||
+      value.status === "SOLD") &&
+    (!("host" in value) || value.host === null || isBackendPropertyHost(value.host))
+  );
+}
+
+function isPropertyPortfolio(value: unknown): value is PropertyPortfolio {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    "totalPropertiesCount" in value &&
+    typeof value.totalPropertiesCount === "number" &&
+    "activeListingsCount" in value &&
+    typeof value.activeListingsCount === "number" &&
+    "totalValueForSale" in value &&
+    typeof value.totalValueForSale === "number" &&
+    "expectedMonthlyRentalIncome" in value &&
+    typeof value.expectedMonthlyRentalIncome === "number" &&
+    "pendingOffersCount" in value &&
+    typeof value.pendingOffersCount === "number" &&
+    "properties" in value &&
+    Array.isArray(value.properties) &&
+    value.properties.every(isBackendProperty)
+  );
+}
+
+function getAccessToken(): string {
+  return localStorage.getItem("rello_token") ?? "";
+}
+
+function getListingRole(property: BackendProperty): HostListingRole {
+  return property.host?.role === "AGENT" ? "agent" : "landlord";
+}
+
+function getListingStatus(property: BackendProperty): PropertyListingStatus {
+  return property.status === "FOR_SALE" ? "FOR_SALE" : "FOR_RENT";
+}
+
+function getReviewStatus(property: BackendProperty): HostListingReviewStatus {
+  return property.verified ? "VERIFIED" : "PENDING_VERIFICATION";
+}
+
+function getRemotePhoto(property: BackendProperty): HostListingPhoto[] {
+  if (!property.imageUrl) {
+    return [];
+  }
+
+  return [
+    {
+      id: `property-${property.id}-cover`,
+      dataUrl: property.imageUrl,
+      name: "Property cover",
+      type: "image/jpeg",
+    },
+  ];
+}
+
+function mapBackendProperty(
+  property: BackendProperty,
+  localListing?: HostListingRecord,
+): HostListingRecord {
+  const now = new Date().toISOString();
+
+  return {
+    id: String(property.id),
+    ownerRole: getListingRole(property),
+    listingType: getListingStatus(property),
+    title: property.title,
+    description: property.description ?? "",
+    price: property.price,
+    city: localListing?.city ?? "",
+    area: localListing?.area ?? property.address,
+    address: localListing?.address ?? property.address,
+    bedrooms: property.bedrooms,
+    bathrooms: property.bathrooms,
+    squareFootage: property.squareFootage,
+    amenities: localListing?.amenities ?? [],
+    photos: localListing?.photos.length
+      ? localListing.photos
+      : getRemotePhoto(property),
+    reviewStatus: getReviewStatus(property),
+    createdAt: localListing?.createdAt ?? now,
+    updatedAt: now,
+  };
+}
+
+async function parseApiResponse(response: Response): Promise<ApiEnvelope> {
+  const data: unknown = await response.json().catch(() => null);
+
+  if (!isApiEnvelope(data)) {
+    if (response.status === 401 || response.status === 403) {
+      throw new Error(
+        "Your session has expired or your account is not eligible.",
+      );
+    }
+
+    throw new Error("The property server returned an invalid response.");
+  }
+
+  if (!response.ok || !data.success) {
+    throw new Error(resolveApiError(data, "The property request failed."));
+  }
+
+  return data;
+}
+
+async function requestBackendProperty(
+  path: string,
+  init?: RequestInit,
+): Promise<BackendProperty> {
+  const response = await fetch(`/api/properties/${path}`, init);
+  const envelope = await parseApiResponse(response);
+
+  if (!isBackendProperty(envelope.data)) {
+    throw new Error("The property server returned an invalid listing.");
+  }
+
+  return envelope.data;
+}
+
+async function getStoredListings(): Promise<HostListingRecord[]> {
+  const database = await getDatabase();
+  return database.getAll("listings");
+}
+
+async function persistRecord(
+  record: HostListingRecord,
+): Promise<HostListingStorageResult<HostListingRecord | null>> {
+  try {
+    const database = await getDatabase();
+    await database.put("listings", record);
+    publishStorageChange();
+
+    return { data: record, unavailable: false };
+  } catch {
+    return {
+      data: record,
+      message:
+        "The listing was saved remotely, but local metadata is unavailable.",
+      unavailable: true,
+    };
+  }
+}
+
 async function persistListing(
   input: HostListingInput,
   reviewStatus: HostListingReviewStatus,
@@ -115,91 +373,49 @@ async function persistListing(
 
     return { data: record, unavailable: false };
   } catch {
-    return { data: null, unavailable: true };
+    return {
+      data: null,
+      message: "Local listing storage is unavailable.",
+      unavailable: true,
+    };
   }
 }
 
-interface BackendApiEnvelope {
-  success: boolean;
-  message: string;
-  data: unknown;
+function buildPropertyRequest(input: HostListingInput): object {
+  return {
+    title: input.title,
+    description: input.description,
+    address: [input.address, input.area, input.city].filter(Boolean).join(", "),
+    price: input.price,
+    bedrooms: input.bedrooms,
+    bathrooms: input.bathrooms,
+    squareFootage: input.squareFootage ?? 0,
+    status: input.listingType,
+  };
 }
 
-function isBackendApiEnvelope(value: unknown): value is BackendApiEnvelope {
-  return (
-    value !== null &&
-    typeof value === "object" &&
-    "success" in value &&
-    "message" in value
-  );
-}
+async function uploadCoverPhoto(
+  propertyId: number,
+  photo: HostListingPhoto,
+  token: string,
+): Promise<BackendProperty> {
+  const imageResponse = await fetch(photo.dataUrl);
 
-function extractBackendPropertyId(value: unknown): number | null {
-  if (
-    value !== null &&
-    typeof value === "object" &&
-    "id" in value &&
-    typeof value.id === "number"
-  ) {
-    return value.id;
+  if (!imageResponse.ok) {
+    throw new Error("The cover photo could not be prepared for upload.");
   }
 
-  return null;
-}
+  const image = await imageResponse.blob();
+  const formData = new FormData();
+  formData.append("image", image, photo.name);
 
-// Calls the real Java backend to create the property record. Returns the
-// real numeric property ID on success, or null if the user isn't logged
-// in, isn't verified, or the request otherwise fails - callers treat null
-// the same as "storage unavailable".
-async function createPropertyOnBackend(
-  input: HostListingInput,
-): Promise<string | null> {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
-  const token = localStorage.getItem("rello_token");
-  const userId = localStorage.getItem("rello_user_id");
-
-  if (!token || !userId) {
-    return null;
-  }
-
-  const address = [input.address, input.area, input.city]
-    .filter(Boolean)
-    .join(", ");
-
-  try {
-    const response = await fetch("/api/properties", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        title: input.title,
-        description: input.description,
-        address,
-        price: input.price,
-        bedrooms: input.bedrooms,
-        bathrooms: input.bathrooms,
-        squareFootage: input.squareFootage ?? 0,
-        status: input.listingType,
-        seller: { id: Number(userId) },
-      }),
-    });
-
-    const data: unknown = await response.json().catch(() => null);
-
-    if (!response.ok || !isBackendApiEnvelope(data) || !data.success) {
-      return null;
-    }
-
-    const propertyId = extractBackendPropertyId(data.data);
-    return propertyId !== null ? String(propertyId) : null;
-  } catch {
-    return null;
-  }
+  return requestBackendProperty(`${propertyId}/upload-image`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  });
 }
 
 export function subscribeToHostListings(callback: () => void): () => void {
@@ -207,40 +423,204 @@ export function subscribeToHostListings(callback: () => void): () => void {
   return () => window.removeEventListener(STORAGE_EVENT, callback);
 }
 
+export async function clearHostListingStorage(): Promise<void> {
+  if (databasePromise) {
+    const database = await databasePromise;
+    database.close();
+    databasePromise = null;
+  }
+
+  await deleteDB(DATABASE_NAME);
+  publishStorageChange();
+}
+
+export async function getPublicProperties(
+  filter: "all" | "rent" | "sale" = "all",
+  page = 0,
+  size = 12,
+): Promise<PublicPropertiesResult> {
+  try {
+    const response = await fetch(
+      `/api/properties/${filter}?page=${page}&size=${size}`,
+    );
+    const envelope = await parseApiResponse(response);
+
+    // These endpoints are paged now, so the listings sit under `items`
+    if (
+      !isBackendPage(envelope.data) ||
+      !envelope.data.items.every(isBackendProperty)
+    ) {
+      throw new Error("The property server returned an invalid property list.");
+    }
+
+    return {
+      data: envelope.data.items,
+      hasNext: envelope.data.hasNext,
+      totalItems: envelope.data.totalItems,
+      unavailable: false,
+    };
+  } catch (error) {
+    return {
+      data: [],
+      hasNext: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Properties could not be loaded.",
+      totalItems: 0,
+      unavailable: false,
+    };
+  }
+}
+
+export async function getBackendPropertyById(
+  id: string,
+): Promise<HostListingStorageResult<BackendProperty | null>> {
+  // A listing page is public, so this works logged out. The token only adds context.
+  const token = getAccessToken();
+
+  try {
+    const property = await requestBackendProperty(id, {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+
+    return { data: property, unavailable: false };
+  } catch (error) {
+    return {
+      data: null,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Property could not be loaded.",
+      unavailable: false,
+    };
+  }
+}
+
+export async function getPropertyPortfolio(): Promise<
+  HostListingStorageResult<PropertyPortfolio | null>
+> {
+  const token = getAccessToken();
+
+  if (!token) {
+    return {
+      data: null,
+      message: "Log in to view your property portfolio.",
+      unavailable: false,
+    };
+  }
+
+  try {
+    const response = await fetch("/api/properties/portfolio", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    const envelope = await parseApiResponse(response);
+
+    if (!isPropertyPortfolio(envelope.data)) {
+      throw new Error("The property server returned an invalid portfolio.");
+    }
+
+    return { data: envelope.data, unavailable: false };
+  } catch (error) {
+    return {
+      data: null,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Portfolio could not be loaded.",
+      unavailable: false,
+    };
+  }
+}
+
 export async function getHostListings(
   role: HostListingRole,
 ): Promise<HostListingStorageResult<HostListingRecord[]>> {
-  try {
-    const database = await getDatabase();
-    const listings = await database.getAll("listings");
+  let storedListings: HostListingRecord[] = [];
+  let storageUnavailable = false;
 
-    return {
-      data: listings
-        .filter((listing) => listing.ownerRole === role)
-        .sort(
-          (left, right) =>
-            new Date(right.updatedAt).getTime() -
-            new Date(left.updatedAt).getTime(),
-        ),
-      unavailable: false,
-    };
+  try {
+    storedListings = (await getStoredListings()).filter(
+      (listing) => listing.ownerRole === role,
+    );
   } catch {
-    return { data: [], unavailable: true };
+    storageUnavailable = true;
   }
+
+  const portfolioResult = await getPropertyPortfolio();
+
+  if (!portfolioResult.data) {
+    return {
+      data: storedListings.sort(
+        (left, right) =>
+          new Date(right.updatedAt).getTime() -
+          new Date(left.updatedAt).getTime(),
+      ),
+      message: portfolioResult.message,
+      unavailable: storageUnavailable,
+    };
+  }
+
+  const remoteIds = new Set(
+    portfolioResult.data.properties.map((property) => String(property.id)),
+  );
+  const remoteListings = portfolioResult.data.properties
+    .filter((property) => getListingRole(property) === role)
+    .map((property) =>
+      mapBackendProperty(
+        property,
+        storedListings.find((listing) => listing.id === String(property.id)),
+      ),
+    );
+  const localOnlyListings = storedListings.filter(
+    (listing) => listing.reviewStatus === "DRAFT" || !remoteIds.has(listing.id),
+  );
+
+  return {
+    data: [...localOnlyListings, ...remoteListings].sort(
+      (left, right) =>
+        new Date(right.updatedAt).getTime() -
+        new Date(left.updatedAt).getTime(),
+    ),
+    unavailable: storageUnavailable,
+  };
 }
 
 export async function getHostListingById(
   id: string,
 ): Promise<HostListingStorageResult<HostListingRecord | null>> {
+  let storedListing: HostListingRecord | undefined;
+  let storageUnavailable = false;
+
   try {
-    const database = await getDatabase();
-    return {
-      data: (await database.get("listings", id)) ?? null,
-      unavailable: false,
-    };
+    storedListing = await (await getDatabase()).get("listings", id);
   } catch {
-    return { data: null, unavailable: true };
+    storageUnavailable = true;
   }
+
+  if (!/^\d+$/.test(id)) {
+    return {
+      data: storedListing ?? null,
+      unavailable: storageUnavailable,
+    };
+  }
+
+  const propertyResult = await getBackendPropertyById(id);
+
+  if (!propertyResult.data) {
+    return {
+      data: storedListing ?? null,
+      message: propertyResult.message,
+      unavailable: storageUnavailable,
+    };
+  }
+
+  return {
+    data: mapBackendProperty(propertyResult.data, storedListing),
+    unavailable: storageUnavailable,
+  };
 }
 
 export async function saveHostListingDraft(
@@ -252,14 +632,73 @@ export async function saveHostListingDraft(
 export async function submitHostListing(
   input: HostListingInput,
 ): Promise<HostListingStorageResult<HostListingRecord | null>> {
-  const backendPropertyId = await createPropertyOnBackend(input);
+  const token = getAccessToken();
 
-  if (!backendPropertyId) {
-    return { data: null, unavailable: true };
+  if (!token) {
+    return {
+      data: null,
+      message: "Your session has expired. Log in again.",
+      unavailable: false,
+    };
   }
 
-  return persistListing(
-    { ...input, id: backendPropertyId },
-    "PENDING_VERIFICATION",
-  );
+  try {
+    const isUpdate = Boolean(input.id && /^\d+$/.test(input.id));
+    let property = await requestBackendProperty(
+      isUpdate ? (input.id ?? "") : "create",
+      {
+        method: isUpdate ? "PUT" : "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(buildPropertyRequest(input)),
+      },
+    );
+
+    const coverPhoto = input.photos[0];
+    let message = isUpdate
+      ? "Listing updated successfully."
+      : "Listing created successfully.";
+
+    if (coverPhoto) {
+      try {
+        property = await uploadCoverPhoto(property.id, coverPhoto, token);
+      } catch (error) {
+        message =
+          error instanceof Error
+            ? `${message} ${error.message}`
+            : `${message} The cover photo could not be uploaded.`;
+      }
+    }
+
+    const existing = input.id
+      ? await (await getDatabase()).get("listings", input.id)
+      : undefined;
+    const record = mapBackendProperty(property, {
+      ...input,
+      id: String(property.id),
+      reviewStatus: getReviewStatus(property),
+      createdAt: existing?.createdAt ?? new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+
+    if (input.id && input.id !== record.id) {
+      await (await getDatabase()).delete("listings", input.id);
+    }
+
+    const persisted = await persistRecord(record);
+
+    return {
+      ...persisted,
+      message,
+    };
+  } catch (error) {
+    return {
+      data: null,
+      message:
+        error instanceof Error ? error.message : "Listing could not be saved.",
+      unavailable: false,
+    };
+  }
 }

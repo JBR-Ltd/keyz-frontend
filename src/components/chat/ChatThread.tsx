@@ -5,20 +5,21 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { MessageCircle, Send, X } from "lucide-react";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import OverlayPortal from "@/components/ui/OverlayPortal";
+import { useAuthenticatedUser } from "@/lib/account";
 import {
-  appendMessage,
-  ChatMessage,
-  ChatPartyRole,
-  createChatMessage,
   getConversation,
-  getCurrentChatUser,
-  markConversationRead,
-  upsertConversationMetadata,
-} from "@/lib/chat/chatStorage";
+  sendChatMessage,
+  type ServerChatMessage,
+} from "@/lib/chat/chatClient";
+import type { ChatMessage, ChatPartyRole } from "@/lib/chat/chatStorage";
 import { useDialogFocus } from "@/lib/useDialogFocus";
 
 interface ChatThreadProps {
   conversationId: string | null;
+  /** The counterparty's real account id. Required to reach the server. */
+  otherUserId: number | null;
+  /** Scopes the thread to a listing, so one pair can hold several conversations. */
+  propertyId?: number;
   otherPartyName: string;
   otherPartyRole: ChatPartyRole;
   propertyName: string;
@@ -53,8 +54,24 @@ function getDateLabel(value: string): string {
   }).format(messageDate);
 }
 
+/** The server speaks in numeric ids and `content`; the view speaks in strings and `body`. */
+function toDisplayMessage(message: ServerChatMessage): ChatMessage {
+  return {
+    id: String(message.id),
+    conversationId: "",
+    senderId: String(message.senderId),
+    senderName: message.senderName,
+    body: message.content,
+    timestamp: message.timestamp,
+    status: message.read ? "delivered" : "sent",
+    read: message.read,
+  };
+}
+
 export default function ChatThread({
   conversationId,
+  otherUserId,
+  propertyId,
   otherPartyName,
   otherPartyRole,
   propertyName,
@@ -67,37 +84,31 @@ export default function ChatThread({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [sendingIds, setSendingIds] = useState<string[]>([]);
-  const [storageUnavailable, setStorageUnavailable] = useState(false);
-  const currentUser = getCurrentChatUser();
+  const [loadError, setLoadError] = useState("");
+  const { user } = useAuthenticatedUser();
+  const currentUserId = user ? String(user.id) : "";
 
   useEffect(() => {
     if (!conversationId) {
       return;
     }
 
+    if (otherUserId === null) {
+      return;
+    }
+
     let active = true;
-    const activeConversationId = conversationId;
 
     async function loadMessages(): Promise<void> {
-      const metadataResult = await upsertConversationMetadata({
-        conversationId: activeConversationId,
-        propertyName,
-        otherPartyName,
-        otherPartyRole,
-      });
-      const readResult = await markConversationRead(activeConversationId);
-      const conversationResult = await getConversation(activeConversationId);
+      // Loading the thread is what marks it read, so there is no second call to miss
+      const result = await getConversation(otherUserId as number, propertyId);
 
       if (!active) {
         return;
       }
 
-      setStorageUnavailable(
-        metadataResult.unavailable ||
-          readResult.unavailable ||
-          conversationResult.unavailable,
-      );
-      setMessages(conversationResult.data);
+      setLoadError(result.message ?? "");
+      setMessages(result.data.map(toDisplayMessage));
     }
 
     void loadMessages();
@@ -106,7 +117,7 @@ export default function ChatThread({
     return () => {
       active = false;
     };
-  }, [conversationId, otherPartyName, otherPartyRole, propertyName]);
+  }, [conversationId, otherUserId, propertyId]);
 
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ block: "end" });
@@ -134,50 +145,53 @@ export default function ChatThread({
     return null;
   }
 
-  const handleSend = (event: FormEvent<HTMLFormElement>): void => {
+  const handleSend = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
 
     const body = draft.trim();
 
-    if (!body) {
+    if (!body || otherUserId === null) {
       return;
     }
 
-    const optimisticMessage = createChatMessage(
-      conversationId,
-      currentUser.id,
-      currentUser.name,
+    // Shown immediately, reconciled with the saved message when the server answers
+    const optimisticId = `pending-${Date.now()}`;
+    const optimistic: ChatMessage = {
+      id: optimisticId,
+      conversationId: "",
+      senderId: currentUserId,
+      senderName: user ? `${user.firstName} ${user.lastName}`.trim() : "You",
       body,
-      true,
-      "sent",
-    );
+      timestamp: new Date().toISOString(),
+      status: "sent",
+      read: false,
+    };
 
     setDraft("");
-    setMessages((current) => [...current, optimisticMessage]);
-    setSendingIds((current) => [...current, optimisticMessage.id]);
+    setMessages((current) => [...current, optimistic]);
+    setSendingIds((current) => [...current, optimisticId]);
 
-    window.setTimeout(() => {
-      const deliveredMessage: ChatMessage = {
-        ...optimisticMessage,
-        status: "delivered",
-      };
+    const result = await sendChatMessage(otherUserId, body, propertyId);
 
+    setSendingIds((current) => current.filter((id) => id !== optimisticId));
+
+    if (!result.data) {
+      // Drop the bubble rather than leave a message that looks delivered but is not
       setMessages((current) =>
-        current.map((message) =>
-          message.id === optimisticMessage.id ? deliveredMessage : message,
-        ),
+        current.filter((message) => message.id !== optimisticId),
       );
-      setSendingIds((current) =>
-        current.filter((id) => id !== optimisticMessage.id),
-      );
+      setDraft(body);
+      setLoadError(result.message ?? "That message was not sent.");
+      return;
+    }
 
-      void appendMessage(conversationId, deliveredMessage).then((result) => {
-        if (result.unavailable) {
-          setStorageUnavailable(true);
-        }
-      });
-    }, 450);
+    // The stored version is what other people will see, contact details stripped
+    const saved = toDisplayMessage(result.data);
+    setMessages((current) =>
+      current.map((message) => (message.id === optimisticId ? saved : message)),
+    );
   };
+
 
   return (
     <OverlayPortal>
@@ -225,9 +239,9 @@ export default function ChatThread({
                   <X size={18} aria-hidden="true" />
                 </button>
               </div>
-              {storageUnavailable ? (
+              {loadError ? (
                 <p className="mt-3 rounded-lg bg-accent/10 shadow-sm px-3 py-2 font-body text-xs leading-5 text-primary">
-                  Local message storage is unavailable in this browser session.
+                  {loadError}
                 </p>
               ) : null}
             </header>
@@ -245,7 +259,7 @@ export default function ChatThread({
               ) : (
                 <div className="space-y-4">
                   {messages.map((message, index) => {
-                    const isCurrentUser = message.senderId === currentUser.id;
+                    const isCurrentUser = message.senderId === currentUserId;
                     const previousMessage = messages[index - 1];
                     const showDateLabel =
                       !previousMessage ||
@@ -294,7 +308,7 @@ export default function ChatThread({
             </div>
 
             <form
-              onSubmit={handleSend}
+              onSubmit={(event) => void handleSend(event)}
               className="shrink-0 border-t border-border bg-bg px-4 py-3"
             >
               <div className="flex items-center gap-2 rounded-full border border-border bg-white px-3 py-2 shadow-sm">

@@ -4,12 +4,19 @@ import type { ReactElement } from "react";
 import { MessageCircle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import ChatThread from "@/components/chat/ChatThread";
+import type { ChatPartyRole } from "@/lib/chat/chatStorage";
 import {
-  ConversationSummary,
-  getAllConversations,
-  seedMockConversations,
-  subscribeToChatStorage,
-} from "@/lib/chat/chatStorage";
+  getChatThreads,
+  getUnreadCount,
+  type ChatThread as ChatThreadSummary,
+} from "@/lib/chat/chatClient";
+
+function toDisplayRole(role: string): ChatPartyRole {
+  if (role === "LANDLORD") return "Landlord";
+  if (role === "ADMIN") return "Admin";
+  if (role === "TENANT") return "Tenant";
+  return "Agent";
+}
 
 function formatRelativeTimestamp(value: string): string {
   const diffMs = Date.now() - new Date(value).getTime();
@@ -41,50 +48,41 @@ export default function MessagesDropdown(): ReactElement {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
-  const [conversations, setConversations] = useState<ConversationSummary[]>([]);
+  const [conversations, setConversations] = useState<ChatThreadSummary[]>([]);
   const [activeConversation, setActiveConversation] =
-    useState<ConversationSummary | null>(null);
-  const [storageUnavailable, setStorageUnavailable] = useState(false);
-  const unreadCount = conversations.reduce(
-    (total, conversation) => total + conversation.unreadCount,
-    0,
-  );
+    useState<ChatThreadSummary | null>(null);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loadError, setLoadError] = useState("");
 
   useEffect(() => {
     let active = true;
 
-    async function loadConversations(): Promise<void> {
-      const seedResult = await seedMockConversations();
-      const conversationsResult = await getAllConversations();
+    async function loadThreads(): Promise<void> {
+      const [threads, unread] = await Promise.all([
+        getChatThreads(),
+        getUnreadCount(),
+      ]);
 
       if (!active) {
         return;
       }
 
-      setStorageUnavailable(
-        seedResult.unavailable || conversationsResult.unavailable,
-      );
-      setConversations(conversationsResult.data);
+      setLoadError(threads.message ?? "");
+      setConversations(threads.data);
+      setUnreadCount(unread.data);
     }
 
-    void loadConversations();
+    void loadThreads();
 
-    const unsubscribe = subscribeToChatStorage(() => {
-      void getAllConversations().then((result) => {
-        if (!active) {
-          return;
-        }
-
-        setStorageUnavailable(result.unavailable);
-        setConversations(result.data);
-      });
-    });
+    // Refresh when the panel opens, so a badge is never stale on the way in
+    if (isOpen) {
+      void loadThreads();
+    }
 
     return () => {
       active = false;
-      unsubscribe();
     };
-  }, []);
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -123,7 +121,7 @@ export default function MessagesDropdown(): ReactElement {
     };
   }, [isOpen]);
 
-  const handleConversationOpen = (conversation: ConversationSummary): void => {
+  const handleConversationOpen = (conversation: ChatThreadSummary): void => {
     triggerRef.current?.focus();
     setActiveConversation(conversation);
     setIsOpen(false);
@@ -159,14 +157,13 @@ export default function MessagesDropdown(): ReactElement {
             <h2 className="font-body text-sm font-semibold text-primary">
               Messages
             </h2>
-            {storageUnavailable ? (
-              <p className="mt-2 rounded-lg bg-accent/10 shadow-sm px-3 py-2 font-body text-xs leading-5 text-primary">
-                Local message storage is unavailable in this browser session.
-              </p>
-            ) : null}
           </div>
 
-          {conversations.length === 0 ? (
+          {loadError ? (
+            <div className="px-5 py-10 text-center">
+              <p className="font-body text-sm text-red-700">{loadError}</p>
+            </div>
+          ) : conversations.length === 0 ? (
             <div className="px-5 py-10 text-center">
               <p className="font-body text-sm text-muted">
                 No conversations yet
@@ -176,7 +173,7 @@ export default function MessagesDropdown(): ReactElement {
             <div className="max-h-[22rem] overflow-y-auto py-1">
               {conversations.map((conversation) => (
                 <button
-                  key={conversation.conversationId}
+                  key={conversation.otherUserId}
                   type="button"
                   onClick={() => handleConversationOpen(conversation)}
                   className="grid w-full grid-cols-[minmax(0,1fr)_auto] gap-3 px-4 py-3 text-left transition-all duration-200 ease-in-out hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
@@ -185,14 +182,11 @@ export default function MessagesDropdown(): ReactElement {
                   <span className="min-w-0">
                     <span className="flex min-w-0 items-center gap-2">
                       <span className="truncate font-body text-sm font-bold text-primary">
-                        {conversation.otherPartyName}
+                        {conversation.otherUserName}
                       </span>
                       <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 font-body text-[10px] font-bold text-primary">
-                        {conversation.otherPartyRole}
+                        {toDisplayRole(conversation.otherUserRole)}
                       </span>
-                    </span>
-                    <span className="mt-1 block truncate font-body text-xs text-muted">
-                      {conversation.propertyName}
                     </span>
                     <span className="mt-1 block truncate font-body text-xs text-muted">
                       {conversation.lastMessage}
@@ -200,9 +194,11 @@ export default function MessagesDropdown(): ReactElement {
                   </span>
                   <span className="flex flex-col items-end gap-2">
                     <span className="font-body text-[11px] font-bold text-muted">
-                      {formatRelativeTimestamp(conversation.lastTimestamp)}
+                      {conversation.lastMessageTimestamp
+                        ? formatRelativeTimestamp(conversation.lastMessageTimestamp)
+                        : ""}
                     </span>
-                    {conversation.unreadCount > 0 ? (
+                    {!conversation.lastMessageRead ? (
                       <span className="h-2.5 w-2.5 rounded-full bg-accent" />
                     ) : null}
                   </span>
@@ -214,10 +210,11 @@ export default function MessagesDropdown(): ReactElement {
       ) : null}
 
       <ChatThread
-        conversationId={activeConversation?.conversationId ?? null}
-        otherPartyName={activeConversation?.otherPartyName ?? ""}
-        otherPartyRole={activeConversation?.otherPartyRole ?? "Agent"}
-        propertyName={activeConversation?.propertyName ?? ""}
+        conversationId={activeConversation ? String(activeConversation.otherUserId) : null}
+        otherUserId={activeConversation?.otherUserId ?? null}
+        otherPartyName={activeConversation?.otherUserName ?? ""}
+        otherPartyRole={toDisplayRole(activeConversation?.otherUserRole ?? "AGENT")}
+        propertyName=""
         onClose={() => setActiveConversation(null)}
       />
     </div>

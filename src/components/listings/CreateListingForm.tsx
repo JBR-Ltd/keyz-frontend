@@ -9,10 +9,12 @@ import type {
 } from "react";
 import {
   ArrowLeft,
+  Camera,
   Check,
   Home,
   ImagePlus,
   Loader2,
+  MapPin,
   Minus,
   Plus,
   Upload,
@@ -21,6 +23,7 @@ import {
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { Select, toSelectOptions } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
 import {
   getHostListingById,
@@ -31,6 +34,11 @@ import {
   type HostListingRole,
 } from "@/lib/hostListings";
 import type { PropertyListingStatus } from "@/lib/propertyDetails";
+import {
+  readDeviceLocation,
+  submitPropertyProof,
+  type ProofCapture,
+} from "@/lib/propertyVerification";
 import { cn } from "@/lib/utils";
 
 interface CreateListingFormProps {
@@ -88,7 +96,13 @@ interface ListingStepOption {
 
 type ListingFormExperience = "classic" | "guided";
 
-type ListingStep = "basics" | "location" | "amenities" | "photos" | "review";
+type ListingStep =
+  | "basics"
+  | "location"
+  | "amenities"
+  | "photos"
+  | "verify"
+  | "review";
 
 const AMENITIES = [
   "Parking",
@@ -110,6 +124,7 @@ const LISTING_STEPS: ListingStepOption[] = [
   { id: "location", label: "Property" },
   { id: "amenities", label: "Amenities" },
   { id: "photos", label: "Photos" },
+  { id: "verify", label: "Proof" },
   { id: "review", label: "Review" },
 ];
 
@@ -303,15 +318,16 @@ export default function CreateListingForm({
   );
   const [storageUnavailable, setStorageUnavailable] = useState(false);
   const [listingStep, setListingStep] = useState<ListingStep>("basics");
-  const listingType: PropertyListingStatus =
-    role === "landlord" ? "FOR_RENT" : "FOR_SALE";
-  const typeLabel = listingType === "FOR_RENT" ? "For Rent" : "For Sale";
+  const [proofCapture, setProofCapture] = useState<ProofCapture | null>(null);
+  const [isCapturing, setIsCapturing] = useState(false);
+  // Rentals only for now, for landlords and agents alike. Sale reopens with the backend flag.
+  const listingType: PropertyListingStatus = "FOR_RENT";
+  const typeLabel = "Rental listing";
   const typeHelper =
-    listingType === "FOR_RENT"
-      ? "Your account is set up for rental listings."
-      : "Your account is set up for sale listings.";
-  const priceLabel =
-    listingType === "FOR_RENT" ? "Monthly Rent (₦)" : "Sale Price (₦)";
+    role === "agent"
+      ? "You are listing this rental on the owner's behalf."
+      : "Your account is set up for rental listings.";
+  const priceLabel = "Listing price";
   const canSubmit = !hasErrors(validateForm(values, photos));
   const listingStepIndex = LISTING_STEPS.findIndex(
     (step) => step.id === listingStep,
@@ -342,15 +358,10 @@ export default function CreateListingForm({
 
       setStorageUnavailable(result.unavailable);
 
-      if (
-        !result.data ||
-        result.data.ownerRole !== role ||
-        result.data.reviewStatus !== "DRAFT"
-      ) {
+      if (!result.data || result.data.ownerRole !== role) {
         notify({
-          title: "Draft could not be opened",
-          description:
-            "This draft is unavailable or has already been submitted.",
+          title: "Listing could not be opened",
+          description: result.message ?? "This listing is unavailable.",
           variant: "error",
         });
         setIsLoadingDraft(false);
@@ -470,6 +481,52 @@ export default function CreateListingForm({
     event.target.value = "";
   };
 
+  const handleProofCapture = async (
+    event: ChangeEvent<HTMLInputElement>,
+  ): Promise<void> => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file) {
+      return;
+    }
+
+    setIsCapturing(true);
+
+    try {
+      // Read the fix and the photo together so the location belongs to this capture
+      const [dataUrl, fix] = await Promise.all([
+        readFileAsDataUrl(file),
+        readDeviceLocation(),
+      ]);
+
+      setProofCapture({
+        capturedAt: new Date().toISOString(),
+        dataUrl,
+        fix,
+        name: file.name || "proof.jpg",
+        type: file.type || "image/jpeg",
+      });
+
+      if (!fix) {
+        notify({
+          title: "Location unavailable",
+          description:
+            "Turn on location for your browser, then take the photo again.",
+          variant: "error",
+        });
+      }
+    } catch {
+      notify({
+        title: "Photo could not be read",
+        description: "Take the photo again.",
+        variant: "error",
+      });
+    } finally {
+      setIsCapturing(false);
+    }
+  };
+
   const handleDrop = (event: DragEvent<HTMLLabelElement>): void => {
     event.preventDefault();
     void addFiles(Array.from(event.dataTransfer.files));
@@ -547,7 +604,7 @@ export default function CreateListingForm({
     if (!result.data) {
       notify({
         title: "Draft could not be saved",
-        description: "Local listing storage is unavailable.",
+        description: result.message ?? "Local listing storage is unavailable.",
         variant: "error",
       });
       return;
@@ -580,14 +637,38 @@ export default function CreateListingForm({
 
     if (!result.data) {
       notify({
-        title: "Listing could not be created",
-        description: "Local listing storage is unavailable.",
+        title: "Listing could not be saved",
+        description: result.message ?? "The property server is unavailable.",
         variant: "error",
       });
       return;
     }
 
-    notify({ title: "Listing created successfully.", variant: "success" });
+    // The proof needs the listing's real id, so it can only go up once the listing exists
+    const propertyId = Number(result.data.id);
+
+    if (proofCapture && Number.isFinite(propertyId)) {
+      const proofResult = await submitPropertyProof(propertyId, proofCapture);
+
+      notify({
+        title: proofResult.success
+          ? "Listing verified and live"
+          : "Listing saved, not yet verified",
+        description: proofResult.message,
+        variant: proofResult.success ? "success" : "error",
+      });
+
+      router.push(`/${role}/listings/${result.data.id}/tour`);
+      return;
+    }
+
+    notify({
+      title: draftId
+        ? "Listing updated successfully."
+        : "Listing saved. Verify it at the property to go live.",
+      description: result.message,
+      variant: "success",
+    });
     router.push(`/${role}/listings/${result.data.id}/tour`);
   };
 
@@ -797,21 +878,15 @@ export default function CreateListingForm({
                       <span className="font-body text-sm font-bold text-primary">
                         City
                       </span>
-                      <select
+                      <Select
                         value={values.city}
-                        onChange={(event) =>
-                          updateValue("city", event.target.value)
-                        }
+                        onValueChange={(city) => updateValue("city", city)}
                         className={INPUT_CLASS_NAME}
-                        aria-invalid={Boolean(errors.city)}
-                      >
-                        <option value="">Select a city</option>
-                        {CITIES.map((city) => (
-                          <option key={city} value={city}>
-                            {city}
-                          </option>
-                        ))}
-                      </select>
+                        invalid={Boolean(errors.city)}
+                        ariaLabel="City"
+                        placeholder="Select a city"
+                        options={toSelectOptions(CITIES)}
+                      />
                       {errors.city ? (
                         <span className="mt-2 block font-body text-sm font-medium text-red-700">
                           {errors.city}
@@ -1065,6 +1140,93 @@ export default function CreateListingForm({
                       <ImagePlus size={19} aria-hidden="true" />
                       <span className="font-body text-sm">
                         No photos selected yet.
+                      </span>
+                    </div>
+                  )}
+                </section>
+              ) : null}
+
+              {listingStep === "verify" ? (
+                <section aria-labelledby="guided-listing-verify">
+                  <p className="font-body text-xs font-medium uppercase tracking-wide text-muted">
+                    Proof of property
+                  </p>
+                  <h2
+                    id="guided-listing-verify"
+                    className="mt-2 font-display text-2xl font-bold text-primary"
+                  >
+                    Take one photo at the property
+                  </h2>
+                  <p className="mt-2 font-body text-sm leading-6 text-muted">
+                    Stand at the property and take this photo now. Rello checks
+                    where it was taken, and the listing goes live once it
+                    matches the address.
+                  </p>
+
+                  <label className="mt-6 flex min-h-32 cursor-pointer items-center justify-center gap-4 rounded-xl border border-dashed border-primary/25 bg-transparent px-5 py-6 text-left transition-all duration-200 hover:border-accent hover:shadow-sm focus-within:ring-2 focus-within:ring-accent">
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-primary/15 text-primary">
+                      {isCapturing ? (
+                        <Loader2
+                          className="h-5 w-5 animate-spin"
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        <Camera size={20} aria-hidden="true" />
+                      )}
+                    </span>
+                    <span>
+                      <span className="block font-body text-sm font-bold text-primary">
+                        {proofCapture
+                          ? "Take the photo again"
+                          : "Open camera and take the photo"}
+                      </span>
+                      <span className="mt-1 block font-body text-xs text-muted">
+                        {isCapturing
+                          ? "Reading your location..."
+                          : "Your camera opens directly, so the photo cannot be picked from your gallery"}
+                      </span>
+                    </span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      className="sr-only"
+                      onChange={(event) => void handleProofCapture(event)}
+                    />
+                  </label>
+
+                  {proofCapture ? (
+                    <div className="mt-6">
+                      <div className="relative aspect-video overflow-hidden rounded-xl border border-border bg-surface-soft">
+                        <Image
+                          src={proofCapture.dataUrl}
+                          alt="Photo taken at the property"
+                          fill
+                          sizes="(min-width: 1024px) 640px, 100vw"
+                          className="object-cover"
+                          unoptimized
+                        />
+                      </div>
+                      <div className="mt-3 flex items-center gap-3 rounded-lg border border-border px-4 py-3">
+                        <MapPin
+                          size={18}
+                          aria-hidden="true"
+                          className={
+                            proofCapture.fix ? "text-accent-alt" : "text-muted"
+                          }
+                        />
+                        <span className="font-body text-sm text-primary">
+                          {proofCapture.fix
+                            ? `Location captured, accurate to about ${Math.round(proofCapture.fix.accuracy)} metres.`
+                            : "No location captured. Turn on location access and take the photo again."}
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="mt-5 flex items-center gap-3 rounded-lg border border-border px-4 py-3 text-muted">
+                      <MapPin size={19} aria-hidden="true" />
+                      <span className="font-body text-sm">
+                        You can skip this and verify later from your listings.
                       </span>
                     </div>
                   )}
@@ -1356,21 +1518,15 @@ export default function CreateListingForm({
                   <span className="font-body text-sm font-bold text-primary">
                     City
                   </span>
-                  <select
-                    value={values.city}
-                    onChange={(event) =>
-                      updateValue("city", event.target.value)
-                    }
-                    className={INPUT_CLASS_NAME}
-                    aria-invalid={Boolean(errors.city)}
-                  >
-                    <option value="">Select a city</option>
-                    {CITIES.map((city) => (
-                      <option key={city} value={city}>
-                        {city}
-                      </option>
-                    ))}
-                  </select>
+                  <Select
+                        value={values.city}
+                        onValueChange={(city) => updateValue("city", city)}
+                        className={INPUT_CLASS_NAME}
+                        invalid={Boolean(errors.city)}
+                        ariaLabel="City"
+                        placeholder="Select a city"
+                        options={toSelectOptions(CITIES)}
+                      />
                   {errors.city ? (
                     <span className="mt-2 block font-body text-sm font-medium text-red-700">
                       {errors.city}

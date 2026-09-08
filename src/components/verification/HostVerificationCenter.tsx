@@ -1,13 +1,25 @@
 "use client";
 
-import { Banknote, Clock, Home, Lock, ShieldCheck } from "lucide-react";
+import {
+  AlertCircle,
+  Banknote,
+  Clock,
+  FileText,
+  Home,
+  Loader2,
+  Lock,
+  ShieldCheck,
+} from "lucide-react";
 import Link from "next/link";
-import { ReactElement, useState } from "react";
+import { ReactElement, useCallback, useEffect, useState } from "react";
 import VerifiedBadge from "@/components/ui/VerifiedBadge";
 import {
-  getHostVerificationSnapshot,
-  HostVerificationRole,
+  getBankName,
+  getHostVerification,
   maskAccountNumber,
+  type HostCheckStatus,
+  type HostVerificationRole,
+  type HostVerificationSnapshot,
 } from "@/lib/hostVerification";
 import { cn } from "@/lib/utils";
 
@@ -24,13 +36,11 @@ interface StatusCardProps {
   title: string;
 }
 
-function formatDate(value: string | null): string {
-  if (!value) {
-    return "Date unavailable";
-  }
-
-  return new Date(value).toLocaleDateString("en-NG");
-}
+const CHECK_LABELS: Record<string, string> = {
+  NIN: "NIN",
+  BVN: "BVN",
+  SELFIE: "Selfie",
+};
 
 function StatusCard({
   actionHref,
@@ -72,7 +82,7 @@ function StatusCard({
   );
 }
 
-function StatusBadge({ children }: { children: string }): ReactElement {
+function PendingBadge({ children }: { children: string }): ReactElement {
   return (
     <span className="inline-flex items-center gap-2 rounded-full bg-accent/10 px-3 py-1 font-body text-xs font-bold text-primary">
       <Clock size={14} />
@@ -81,124 +91,219 @@ function StatusBadge({ children }: { children: string }): ReactElement {
   );
 }
 
+function ActionBadge(): ReactElement {
+  return (
+    <span className="inline-flex items-center gap-2 rounded-full border border-red-500/30 bg-red-500/10 px-3 py-1 font-body text-xs font-bold text-red-700">
+      <AlertCircle size={14} />
+      Action needed
+    </span>
+  );
+}
+
+function NotStarted(): ReactElement {
+  return <p className="font-body text-sm text-muted">Not started</p>;
+}
+
 export default function HostVerificationCenter({
   role,
 }: HostVerificationCenterProps): ReactElement {
-  const [snapshot] = useState(() => getHostVerificationSnapshot(role));
-  const isAgent = role === "agent";
-  const rolePath = role;
-  const identity = snapshot.identity;
-  const payout = snapshot.payout;
-  const completeCount =
-    (identity.status === "approved" ? 1 : 0) +
-    (payout.status === "approved" ? 1 : 0);
-  const progressPercent = `${(completeCount / 2) * 100}%`;
+  const [snapshot, setSnapshot] = useState<HostVerificationSnapshot | null>(
+    null,
+  );
+  const [loadError, setLoadError] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
 
-  const renderIdentityStatus = (): ReactElement => {
+  const load = useCallback(async (): Promise<void> => {
+    const result = await getHostVerification();
+
+    if (!result.data) {
+      setLoadError(result.message ?? "Your status could not be loaded.");
+    } else {
+      setLoadError("");
+      setSnapshot(result.data);
+    }
+
+    setIsLoading(false);
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    void getHostVerification().then((result) => {
+      if (!active) {
+        return;
+      }
+
+      if (!result.data) {
+        setLoadError(result.message ?? "Your status could not be loaded.");
+      } else {
+        setLoadError("");
+        setSnapshot(result.data);
+      }
+
+      setIsLoading(false);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // Finishing a flow in another tab should not leave a stale page behind here
+  useEffect(() => {
+    const refresh = (): void => {
+      if (document.visibilityState === "visible") {
+        void load();
+      }
+    };
+
+    document.addEventListener("visibilitychange", refresh);
+
+    return () => document.removeEventListener("visibilitychange", refresh);
+  }, [load]);
+
+  if (isLoading) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-surface-soft">
+        <Loader2
+          className="h-8 w-8 animate-spin text-primary"
+          aria-label="Loading your verification status"
+        />
+      </main>
+    );
+  }
+
+  if (!snapshot) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-surface-soft px-5">
+        <div className="max-w-md text-center">
+          <AlertCircle className="mx-auto h-10 w-10 text-muted" />
+          <p className="mt-4 font-body text-sm leading-6 text-muted">
+            {loadError || "Your status could not be loaded."}
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setIsLoading(true);
+              void load();
+            }}
+            className="mt-6 inline-flex min-h-11 items-center rounded-full bg-accent px-5 py-3 font-body text-sm font-medium text-primary transition-all hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          >
+            Try again
+          </button>
+        </div>
+      </main>
+    );
+  }
+
+  const { identity, kyb, payout } = snapshot;
+  const isLandlord = role === "landlord";
+  const completeCount = [identity.status, kyb.status, payout.status].filter(
+    (status: HostCheckStatus) => status === "approved",
+  ).length;
+
+  const renderIdentity = (): ReactElement => {
     if (identity.status === "approved") {
       return (
         <div className="space-y-3">
           <VerifiedBadge size="sm" />
           <p className="font-body text-sm text-muted">
-            {isAgent ? "Verified" : "Approved"} on{" "}
-            {formatDate(identity.approvedAt)}
+            {identity.required.map((check) => CHECK_LABELS[check]).join(", ")}{" "}
+            confirmed
           </p>
         </div>
       );
     }
 
-    if (role === "landlord" && identity.status === "pending") {
+    if (identity.status === "partial") {
       return (
         <div className="space-y-3">
-          <StatusBadge>Under review</StatusBadge>
+          <PendingBadge>Part finished</PendingBadge>
           <p className="font-body text-sm leading-6 text-muted">
-            Usually takes 1 to 2 business days. We will notify you once it is
-            reviewed.
+            {identity.outstanding
+              .map((check) => CHECK_LABELS[check])
+              .join(" and ")}{" "}
+            still to go.
           </p>
         </div>
       );
     }
 
-    if (identity.status === "rejected") {
-      return (
-        <div className="space-y-3">
-          <span className="inline-flex rounded-full border border-red-500/30 bg-red-500/10 px-3 py-1 font-body text-xs font-bold text-red-700">
-            Action needed
-          </span>
-          <p className="font-body text-sm leading-6 text-muted">
-            {identity.rejectedReason ??
-              "Review the issue and resubmit your details."}
-          </p>
-        </div>
-      );
-    }
-
-    if (identity.status === "failed") {
-      return (
-        <p className="font-body text-sm leading-6 text-red-700">
-          We could not verify your details. Try again when you are ready.
-        </p>
-      );
-    }
-
-    return <p className="font-body text-sm text-muted">Not started</p>;
+    return <NotStarted />;
   };
 
-  const renderPayoutStatus = (): ReactElement => {
-    if (payout.status === "approved") {
+  const renderKyb = (): ReactElement => {
+    if (kyb.status === "approved") {
       return (
         <div className="space-y-3">
           <VerifiedBadge size="sm" />
           <p className="font-body text-sm text-muted">
-            Active since {formatDate(payout.approvedAt)}
-          </p>
-          <p className="font-body text-sm font-bold text-primary">
-            {payout.bankName} · {maskAccountNumber(payout.accountNumber)}
+            Business documents approved
           </p>
         </div>
       );
     }
 
-    if (payout.status === "pending") {
+    if (kyb.status === "pending") {
       return (
         <div className="space-y-3">
-          <StatusBadge>Verifying deposits</StatusBadge>
+          <PendingBadge>Under review</PendingBadge>
           <p className="font-body text-sm leading-6 text-muted">
-            Check your bank account in 1 to 2 business days, then confirm below.
+            Usually takes 1 to 2 business days. We will email you the decision.
           </p>
         </div>
       );
     }
 
-    if (payout.status === "failed") {
+    if (kyb.status === "rejected") {
       return (
-        <p className="font-body text-sm leading-6 text-red-700">
-          Payout setup failed. Check the account details and try again.
-        </p>
+        <div className="space-y-3">
+          <ActionBadge />
+          <p className="font-body text-sm leading-6 text-muted">
+            {kyb.rejectionReason ?? "Upload clearer documents and resubmit."}
+          </p>
+        </div>
       );
     }
 
-    return <p className="font-body text-sm text-muted">Not started</p>;
+    return <NotStarted />;
+  };
+
+  const renderPayout = (): ReactElement => {
+    if (payout.status === "approved") {
+      return (
+        <div className="space-y-3">
+          <VerifiedBadge size="sm" />
+          <p className="font-body text-sm font-bold text-primary">
+            {getBankName(payout.bankCode)} ·{" "}
+            {maskAccountNumber(payout.accountLast4)}
+          </p>
+          <p className="font-body text-sm text-muted">{payout.accountName}</p>
+        </div>
+      );
+    }
+
+    return <NotStarted />;
   };
 
   const identityActionLabel =
-    identity.status === "rejected" || identity.status === "failed"
-      ? "Try Again"
-      : identity.status === "not_started"
-        ? "Begin"
+    identity.status === "approved"
+      ? undefined
+      : identity.status === "partial"
+        ? "Finish"
+        : "Begin";
+
+  // Documents are collected inside the identity flow, so there is nowhere
+  // separate to send a host who has not verified their identity yet
+  const kybActionLabel =
+    kyb.status === "rejected"
+      ? "Resubmit"
+      : kyb.status === "not_started" && identity.status === "approved"
+        ? "Upload documents"
         : undefined;
+
   const payoutActionLabel =
-    payout.status === "pending"
-      ? "Enter Deposit Amounts"
-      : payout.status === "failed"
-        ? "Try Again"
-        : payout.status === "not_started"
-          ? "Set Up Payout"
-          : undefined;
-  const payoutHref =
-    payout.status === "pending"
-      ? `/${rolePath}/verify/payout?mode=confirm`
-      : `/${rolePath}/verify/payout`;
+    payout.status === "approved" ? undefined : "Set up payout";
 
   return (
     <main className="min-h-screen bg-surface-soft px-5 py-12 sm:px-8 lg:px-10 lg:py-16">
@@ -207,17 +312,18 @@ export default function HostVerificationCenter({
           Verification Center
         </p>
         <h1 className="mt-4 font-display text-4xl font-bold leading-[0.92] text-primary sm:text-5xl">
-          Get fully verified
+          {isLandlord ? "Manage your account setup" : "Get fully verified"}
         </h1>
         <p className="mt-4 max-w-2xl font-body text-sm leading-6 text-muted">
-          Complete identity and payout checks to unlock listing creation, safer
-          buyer trust, and payout activation.
+          {isLandlord
+            ? "Identity verification, business documents, and payout setup are tracked separately. Missing payout details will not change your identity status."
+            : "Complete these checks to publish listings and receive payouts. Your identity is confirmed straight away; business documents are reviewed by our team."}
         </p>
 
         <div className="mt-8 rounded-xl border border-primary/10 bg-[var(--color-bg)] p-5 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="font-body text-sm font-bold text-primary">
-              {completeCount} of 2 complete
+              {completeCount} of 3 setup tasks complete
             </p>
             <p className="font-body text-xs text-muted">
               Property verification starts after your first listing is created.
@@ -226,30 +332,39 @@ export default function HostVerificationCenter({
           <div className="mt-4 h-2 overflow-hidden rounded-full bg-border">
             <div
               className="h-full rounded-full bg-accent transition-all duration-300 ease-in-out"
-              style={{ width: progressPercent }}
+              style={{ width: `${(completeCount / 3) * 100}%` }}
             />
           </div>
         </div>
 
-        <div className="mt-8 grid gap-5 lg:grid-cols-3">
+        <div className="mt-8 grid gap-5 sm:grid-cols-2">
           <StatusCard
             actionHref={
-              identityActionLabel ? `/${rolePath}/verify/identity` : undefined
+              identityActionLabel ? `/${role}/verify/identity` : undefined
             }
             actionLabel={identityActionLabel}
             icon={ShieldCheck}
             title="Identity Verification"
           >
-            {renderIdentityStatus()}
+            {renderIdentity()}
           </StatusCard>
 
           <StatusCard
-            actionHref={payoutActionLabel ? payoutHref : undefined}
+            actionHref={kybActionLabel ? `/${role}/verify/identity` : undefined}
+            actionLabel={kybActionLabel}
+            icon={FileText}
+            title="Business Documents"
+          >
+            {renderKyb()}
+          </StatusCard>
+
+          <StatusCard
+            actionHref={payoutActionLabel ? `/${role}/verify/payout` : undefined}
             actionLabel={payoutActionLabel}
             icon={Banknote}
             title="Payout Setup"
           >
-            {renderPayoutStatus()}
+            {renderPayout()}
           </StatusCard>
 
           <StatusCard icon={Home} locked title="Property Verification">
@@ -259,8 +374,8 @@ export default function HostVerificationCenter({
                 Locked
               </span>
               <p className="font-body text-sm leading-6 text-muted">
-                Available once you add a property. Listing-specific property
-                checks will live in the Add Listing flow.
+                Available once you add a property. Each listing is verified with
+                a photo taken at the address.
               </p>
             </div>
           </StatusCard>

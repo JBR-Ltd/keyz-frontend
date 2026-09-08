@@ -11,5 +11,11 @@ export default async function AgentCreateListingPage({
   const { draft } = await searchParams;
   const initialListingId = typeof draft === "string" ? draft : undefined;
 
-  return <CreateListingForm initialListingId={initialListingId} role="agent" />;
+  return (
+    <CreateListingForm
+      initialListingId={initialListingId}
+      experience="guided"
+      role="agent"
+    />
+  );
 }
