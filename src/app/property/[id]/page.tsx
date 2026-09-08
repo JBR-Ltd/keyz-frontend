@@ -366,31 +366,32 @@ export default function PropertyPage({
             )}`}
           >
             {visibleGalleryImages[0] ? (
-              <button
-                type="button"
-                onClick={() => openLightbox(visibleGalleryImages[0].index)}
+              <div
                 className={`group relative min-h-0 overflow-hidden bg-surface-soft ${getOuterCornerClass(
                   visibleGalleryImages.length,
                   0,
                   property.images.length,
                 )}`}
-                aria-label={`Open ${property.title} photo 1`}
               >
-                <Image
-                  src={visibleGalleryImages[0].src}
-                  alt={property.title}
-                  fill
-                  priority
-                  sizes="(min-width: 1024px) 60vw, 100vw"
-                  className="object-cover transition-all duration-300 ease-in-out group-hover:scale-[1.02]"
-                  style={{ objectFit: "cover" }}
-                />
                 <button
                   type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    handleBack();
-                  }}
+                  onClick={() => openLightbox(visibleGalleryImages[0].index)}
+                  className="absolute inset-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
+                  aria-label={`Open ${property.title} photo 1`}
+                >
+                  <Image
+                    src={visibleGalleryImages[0].src}
+                    alt={property.title}
+                    fill
+                    priority
+                    sizes="(min-width: 1024px) 60vw, 100vw"
+                    className="object-cover transition-all duration-300 ease-in-out group-hover:scale-[1.02]"
+                    style={{ objectFit: "cover" }}
+                  />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleBack}
                   aria-label="Go back"
                   className="absolute left-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-primary text-white transition-all duration-200 ease-in-out hover:bg-black/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 >
@@ -401,7 +402,7 @@ export default function PropertyPage({
                     <VerifiedBadge />
                   </span>
                 ) : null}
-              </button>
+              </div>
             ) : null}
 
             {sideGalleryImages.length > 0 ? (
@@ -447,27 +448,28 @@ export default function PropertyPage({
           </div>
 
           <div className="lg:hidden">
-            <button
-              type="button"
-              onClick={() => openLightbox(0)}
+            <div
               className="group relative aspect-video w-full overflow-hidden rounded-2xl bg-surface-soft shadow-sm"
-              aria-label={`Open ${property.title} photo 1`}
             >
-              <Image
-                src={property.images[0]}
-                alt={property.title}
-                fill
-                priority
-                sizes="100vw"
-                className="object-cover transition-all duration-300 ease-in-out group-hover:scale-[1.02]"
-                style={{ objectFit: "cover" }}
-              />
               <button
                 type="button"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  handleBack();
-                }}
+                onClick={() => openLightbox(0)}
+                className="absolute inset-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
+                aria-label={`Open ${property.title} photo 1`}
+              >
+                <Image
+                  src={property.images[0]}
+                  alt={property.title}
+                  fill
+                  priority
+                  sizes="100vw"
+                  className="object-cover transition-all duration-300 ease-in-out group-hover:scale-[1.02]"
+                  style={{ objectFit: "cover" }}
+                />
+              </button>
+              <button
+                type="button"
+                onClick={handleBack}
                 aria-label="Go back"
                 className="absolute left-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-primary text-white transition-all duration-200 ease-in-out hover:bg-black/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               >
@@ -478,7 +480,7 @@ export default function PropertyPage({
                   <VerifiedBadge size="sm" />
                 </span>
               ) : null}
-            </button>
+            </div>
 
             {mobileThumbnails.length > 0 ? (
               <div className="mt-3 flex snap-x gap-2 overflow-x-auto pb-2">
