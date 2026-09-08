@@ -102,18 +102,27 @@ export default function HostListingsView({
 
   return (
     <main className="min-h-screen overflow-x-hidden px-5 py-12 sm:px-8 lg:px-10 lg:py-16 xl:px-14">
-      <header className="flex flex-col gap-6 pb-10 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="font-accent text-xs font-bold uppercase tracking-[0.3em] text-primary">
-            Property workspace
-          </p>
-          <h1 className="mt-4 font-display text-4xl font-bold leading-[0.92] text-primary sm:text-5xl">
-            My Listings
-          </h1>
-          <p className="mt-4 max-w-2xl font-body text-base leading-7 text-muted">
-            Create listings and track their verification status from one place.
-          </p>
-        </div>
+      <header
+        className={`flex gap-6 pb-10 ${
+          role === "agent"
+            ? "justify-end"
+            : "flex-col sm:flex-row sm:items-end sm:justify-between"
+        }`}
+      >
+        {role === "landlord" ? (
+          <div>
+            <p className="font-accent text-xs font-bold uppercase tracking-[0.3em] text-primary">
+              Property workspace
+            </p>
+            <h1 className="mt-4 font-display text-4xl font-bold leading-[0.92] text-primary sm:text-5xl">
+              My Listings
+            </h1>
+            <p className="mt-4 max-w-2xl font-body text-base leading-7 text-muted">
+              Create listings and track their verification status from one
+              place.
+            </p>
+          </div>
+        ) : null}
         <Link
           href={createHref}
           className="inline-flex min-h-12 w-fit items-center justify-center gap-2 rounded-full bg-accent px-6 py-3 font-body text-sm font-bold text-primary transition-all duration-200 ease-in-out hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"

@@ -27,7 +27,7 @@ import relloLogoMark from "../../../public/rello-logo-cropped.svg";
 const AGENT_NAV_ITEMS = [
   { label: "Dashboard", href: "/agent/dashboard", icon: LayoutDashboard },
   { label: "My Listings", href: "/agent/saved-listings", icon: Bookmark },
-  { label: "Bookings", href: "/agent/bookings", icon: CalendarDays },
+  { label: "Tenancies", href: "/agent/bookings", icon: CalendarDays },
 ];
 
 interface AgentHeaderProps {
