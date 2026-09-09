@@ -2,7 +2,7 @@
 
 import type { ReactElement } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { MessageCircle, Send, X } from "lucide-react";
+import { Loader2, MessageCircle, Phone, Send, X } from "lucide-react";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import OverlayPortal from "@/components/ui/OverlayPortal";
 import { useAuthenticatedUser } from "@/lib/account";
@@ -12,6 +12,7 @@ import {
   type ServerChatMessage,
 } from "@/lib/chat/chatClient";
 import type { ChatMessage, ChatPartyRole } from "@/lib/chat/chatStorage";
+import { startCall } from "@/lib/calls";
 import { useDialogFocus } from "@/lib/useDialogFocus";
 
 interface ChatThreadProps {
@@ -85,6 +86,7 @@ export default function ChatThread({
   const [draft, setDraft] = useState("");
   const [sendingIds, setSendingIds] = useState<string[]>([]);
   const [loadError, setLoadError] = useState("");
+  const [isCalling, setIsCalling] = useState(false);
   const { user } = useAuthenticatedUser();
   const currentUserId = user ? String(user.id) : "";
 
@@ -144,6 +146,31 @@ export default function ChatThread({
   if (!conversationId) {
     return null;
   }
+
+  /**
+   * Rings the other party and opens the room.
+   *
+   * A browser tab rather than an embedded frame: the call keeps running when the
+   * thread is closed, and the platform handles the camera permission prompt.
+   */
+  const placeCall = async (): Promise<void> => {
+    if (otherUserId === null || propertyId === undefined) {
+      return;
+    }
+
+    setIsCalling(true);
+    const result = await startCall(otherUserId, propertyId);
+    setIsCalling(false);
+
+    if (result.data === null) {
+      setLoadError(result.message ?? "That call could not be started.");
+      return;
+    }
+
+    if (result.data.joinUrl) {
+      window.open(result.data.joinUrl, "_blank", "noopener,noreferrer");
+    }
+  };
 
   const handleSend = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
@@ -230,14 +257,31 @@ export default function ChatThread({
                     {propertyName}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted transition-all duration-200 ease-in-out hover:bg-primary/10 hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                  aria-label="Close messages"
-                >
-                  <X size={18} aria-hidden="true" />
-                </button>
+                <div className="flex shrink-0 items-center gap-1">
+                  {otherUserId !== null && propertyId !== undefined ? (
+                    <button
+                      type="button"
+                      onClick={() => void placeCall()}
+                      disabled={isCalling}
+                      className="flex h-9 w-9 items-center justify-center rounded-full text-muted transition-all duration-200 ease-in-out hover:bg-primary/10 hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-60"
+                      aria-label={`Call ${otherPartyName}`}
+                    >
+                      {isCalling ? (
+                        <Loader2 size={18} className="animate-spin" aria-hidden="true" />
+                      ) : (
+                        <Phone size={18} aria-hidden="true" />
+                      )}
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="flex h-9 w-9 items-center justify-center rounded-full text-muted transition-all duration-200 ease-in-out hover:bg-primary/10 hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    aria-label="Close messages"
+                  >
+                    <X size={18} aria-hidden="true" />
+                  </button>
+                </div>
               </div>
               {loadError ? (
                 <p className="mt-3 rounded-lg bg-accent/10 shadow-sm px-3 py-2 font-body text-xs leading-5 text-primary">

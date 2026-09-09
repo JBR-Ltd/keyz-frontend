@@ -30,6 +30,12 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
+      # next-env.d.ts is generated rather than committed, and it is what declares
+      # the image and route modules. Without this step every image import fails
+      # to typecheck on a fresh checkout, even though it builds locally.
+      - name: Generate Next types
+        run: pnpm exec next typegen
+
       # Runs before the build: next build does not fail on type errors in every
       # configuration, and a type error should never reach a deploy
       - name: Typecheck
@@ -53,6 +59,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # gitleaks-action needs a paid licence on an organisation repository and
+      # fails the job without one. The CLI is the same scanner with no licence.
+      - name: Scan for secrets
+        run: |
+          curl -sSfL -o gitleaks.tar.gz https://github.com/gitleaks/gitleaks/releases/download/v8.24.3/gitleaks_8.24.3_linux_x64.tar.gz
+          tar -xzf gitleaks.tar.gz gitleaks
+          ./gitleaks git . --redact --no-banner

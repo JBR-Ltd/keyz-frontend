@@ -25,6 +25,25 @@ interface LoginResponseData {
   role: unknown;
 }
 
+/** What login answers with when the account asks for a second step. */
+interface TwoFactorChallengeData {
+  challengeReference: string;
+  twoFactorRequired: true;
+}
+
+function isTwoFactorChallenge(
+  value: unknown,
+): value is TwoFactorChallengeData {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    "twoFactorRequired" in value &&
+    value.twoFactorRequired === true &&
+    "challengeReference" in value &&
+    typeof value.challengeReference === "string"
+  );
+}
+
 interface ApiEnvelope<TData> {
   success: boolean;
   message: string;
@@ -83,6 +102,10 @@ export default function LoginPage() {
   const reduceMotion = useReducedMotion();
   const { notify } = useToast();
   const [errorMessage, setErrorMessage] = useState("");
+  /** Set when the password was right but the account wants a code as well. */
+  const [challengeReference, setChallengeReference] = useState("");
+  const [code, setCode] = useState("");
+  const [isVerifying, setIsVerifying] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [successMessage, setSuccessMessage] = useState(() => {
     if (typeof window === "undefined") {
@@ -117,6 +140,65 @@ export default function LoginPage() {
     }
   }, [notify, successMessage]);
 
+  /** Shared by both steps: a session only exists once this has run. */
+  const startSession = (data: LoginResponseData): void => {
+    if (!isAccountRole(data.role)) {
+      throw new Error("Unable to determine account type, please contact support");
+    }
+
+    const role = data.role.toUpperCase();
+    const rolePath = role.toLowerCase();
+
+    localStorage.setItem("rello_token", data.accessToken);
+    localStorage.setItem("rello_role", role);
+    notify({ title: "Logged in", variant: "success" });
+    router.replace(
+      role === "TENANT" ? "/tenant/browse" : "/" + rolePath + "/dashboard",
+    );
+  };
+
+  const submitCode = async (): Promise<void> => {
+    setErrorMessage("");
+    setIsVerifying(true);
+
+    try {
+      const response = await fetch("/api/auth/2fa/verify", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Device-Fingerprint": createDeviceFingerprint(),
+        },
+        body: JSON.stringify({
+          reference: challengeReference,
+          code: code.trim(),
+        }),
+      });
+      const data: unknown = await response.json().catch(() => null);
+
+      if (!response.ok || (isApiEnvelope(data) && !data.success)) {
+        throw new Error(resolveApiError(data, "That code is not right."));
+      }
+
+      if (!isApiEnvelope(data) || !isLoginData(data.data)) {
+        throw new Error("That code is not right.");
+      }
+
+      startSession(data.data);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "That code is not right.";
+
+      setErrorMessage(message);
+      notify({
+        title: "Could not sign you in",
+        description: message,
+        variant: "error",
+      });
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
   const onSubmit: SubmitHandler<LoginFormValues> = async (values) => {
     setErrorMessage("");
     setSuccessMessage("");
@@ -137,26 +219,20 @@ export default function LoginPage() {
         throw new Error(resolveApiError(data, "Login failed"));
       }
 
-      if (isApiEnvelope(data) && isLoginData(data.data)) {
-        if (!isAccountRole(data.data.role)) {
-          throw new Error(
-            "Unable to determine account type, please contact support",
-          );
-        }
-
-        const role = data.data.role.toUpperCase();
-        const rolePath = role.toLowerCase();
-        const redirectPath =
-          role === "TENANT" ? "/tenant/browse" : "/" + rolePath + "/dashboard";
-
-        localStorage.setItem("rello_token", data.data.accessToken);
-        localStorage.setItem("rello_role", role);
+      // The password was right, but no session is issued until the code is
+      if (isApiEnvelope(data) && isTwoFactorChallenge(data.data)) {
+        setChallengeReference(data.data.challengeReference);
+        setCode("");
         notify({
-          title: "Logged in",
-          description: getApiMessage(data, "Login successful"),
+          title: "Check your email",
+          description: "Enter the six digit code to finish signing in.",
           variant: "success",
         });
-        router.replace(redirectPath);
+        return;
+      }
+
+      if (isApiEnvelope(data) && isLoginData(data.data)) {
+        startSession(data.data);
         return;
       }
 
@@ -252,7 +328,60 @@ export default function LoginPage() {
               Pick up right where you left off.
             </motion.p>
 
-            <form className="mt-8 grid gap-5" onSubmit={handleSubmit(onSubmit)}>
+            {challengeReference ? (
+              <div className="mt-8 grid gap-5">
+                <p className="font-body text-sm leading-6 text-muted">
+                  Your password was right. We emailed a six digit code to finish
+                  signing in.
+                </p>
+
+                {errorMessage ? (
+                  <p className="rounded-lg border-l-4 border-red-700 bg-red-700/5 p-4 font-body text-sm font-medium text-red-700">
+                    {errorMessage}
+                  </p>
+                ) : null}
+
+                <label className="block font-body text-sm font-bold text-primary">
+                  Your code
+                  <input
+                    value={code}
+                    onChange={(event) => setCode(event.target.value)}
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    maxLength={6}
+                    placeholder="000000"
+                    autoFocus
+                    className="mt-2 min-h-14 w-full rounded-lg border border-border bg-bg px-4 font-body text-lg tracking-[0.5em] text-primary outline-none focus:border-accent focus:ring-2 focus:ring-accent/30"
+                  />
+                </label>
+
+                <button
+                  type="button"
+                  onClick={() => void submitCode()}
+                  disabled={isVerifying || code.trim().length < 6}
+                  className="min-h-14 rounded-full bg-primary px-6 font-body text-sm font-bold text-white transition-all duration-200 ease-in-out hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isVerifying ? "Checking..." : "Finish signing in"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setChallengeReference("");
+                    setCode("");
+                    setErrorMessage("");
+                  }}
+                  className="font-body text-sm font-medium text-muted transition-colors hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                >
+                  Start again
+                </button>
+              </div>
+            ) : null}
+
+            <form
+              className={`mt-8 grid gap-5 ${challengeReference ? "hidden" : ""}`}
+              onSubmit={handleSubmit(onSubmit)}
+            >
               <AnimatePresence>
                 {successMessage ? (
                   <motion.div

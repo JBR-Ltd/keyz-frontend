@@ -21,6 +21,7 @@ import {
   uploadAvatar,
   useAuthenticatedUser,
   type AuthenticatedUser,
+  type ProfileEdit,
 } from "@/lib/account";
 
 const inputClassName =
@@ -73,16 +74,41 @@ export default function ProfileSection(): ReactElement {
   };
 
   const save = async (): Promise<void> => {
+    const original = draftFrom(user);
+    // Only what actually changed: sending a field back unchanged is how a blank
+    // one gets rejected for being blank
+    const edit: ProfileEdit = {};
+
+    if (draft.city !== original.city) {
+      edit.city = draft.city.trim();
+    }
+
+    if (draft.phone !== original.phone) {
+      edit.phone = draft.phone.trim();
+    }
+
+    if (draft.username !== original.username) {
+      edit.username = draft.username.trim();
+    }
+
+    // A verified name is fixed, so it is never sent
+    if (!isVerified) {
+      if (draft.firstName !== original.firstName) {
+        edit.firstName = draft.firstName.trim();
+      }
+
+      if (draft.lastName !== original.lastName) {
+        edit.lastName = draft.lastName.trim();
+      }
+    }
+
+    if (Object.keys(edit).length === 0) {
+      setIsEditing(false);
+      return;
+    }
+
     setIsSaving(true);
-    const result = await updateProfile({
-      city: draft.city,
-      phone: draft.phone,
-      username: draft.username,
-      // A verified name is fixed, so it is not sent at all
-      ...(isVerified
-        ? {}
-        : { firstName: draft.firstName, lastName: draft.lastName }),
-    });
+    const result = await updateProfile(edit);
     setIsSaving(false);
 
     if (!result.success) {

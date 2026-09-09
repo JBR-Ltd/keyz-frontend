@@ -3,6 +3,7 @@
 import type { ReactElement, ReactNode } from "react";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
+import IncomingCallWatcher from "@/components/chat/IncomingCallWatcher";
 import MessagesDropdown from "@/components/chat/MessagesDropdown";
 import AgentHeader from "@/components/dashboard/AgentHeader";
 import LandlordHeader from "@/components/dashboard/LandlordHeader";
@@ -166,6 +167,8 @@ export default function DashboardShell({
       >
         {children}
       </div>
+
+      <IncomingCallWatcher />
     </div>
   );
 }

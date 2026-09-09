@@ -1,217 +1,196 @@
 "use client";
 
-import { CreditCard, Plus } from "lucide-react";
+import { Landmark, Loader2, ReceiptText } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState, type ReactElement } from "react";
 import PropertyPrice from "@/components/property/PropertyPrice";
-import { useToast } from "@/components/ui/toast";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { getMyEscrow, type EscrowEntry, type EscrowStatus } from "@/lib/escrow";
+import {
+  getBankName,
+  maskAccountNumber,
+  useHostVerification,
+} from "@/lib/hostVerification";
 
-const PAYMENT_METHODS = [
-  {
-    brand: "Visa",
-    number: "•••• 4821",
-    expiry: "08 / 28",
-    tone: "bg-primary/5 text-primary shadow-sm",
-  },
-  {
-    brand: "Mastercard",
-    number: "•••• 1094",
-    expiry: "03 / 27",
-    tone: "bg-accent/10 text-primary shadow-sm",
-  },
-];
+const STATUS_LABELS: Record<EscrowStatus, string> = {
+  AWAITING_PAYMENT: "Awaiting payment",
+  HELD: "Held in escrow",
+  DISPUTED: "Disputed",
+  RELEASING: "On its way",
+  RELEASED: "Paid out",
+  REFUNDED: "Refunded",
+  FAILED: "Failed",
+};
 
-const BILLING_HISTORY = [
-  {
-    date: "May 18, 2026",
-    description: "Featured viewing deposit",
-    amount: "₦25,000",
-    status: "Paid",
-  },
-  {
-    date: "April 02, 2026",
-    description: "Property reservation",
-    amount: "₦150,000",
-    status: "Paid",
-  },
-  {
-    date: "March 11, 2026",
-    description: "Virtual tour access",
-    amount: "₦8,500",
-    status: "Paid",
-  },
-];
+const STATUS_TONES: Record<
+  EscrowStatus,
+  "accent" | "danger" | "neutral" | "primary"
+> = {
+  AWAITING_PAYMENT: "accent",
+  HELD: "primary",
+  DISPUTED: "danger",
+  RELEASING: "accent",
+  RELEASED: "neutral",
+  REFUNDED: "neutral",
+  FAILED: "danger",
+};
 
-const LANDLORD_PAYMENT_METHODS = [
-  {
-    brand: "GTBank",
-    number: "•••• 4821",
-    expiry: "Verified",
-    tone: "bg-primary/5 text-primary shadow-sm",
-  },
-  {
-    brand: "Access Bank",
-    number: "•••• 1094",
-    expiry: "Verified",
-    tone: "bg-accent/10 text-primary shadow-sm",
-  },
-];
+function formatDate(value: string | null): string {
+  if (!value) {
+    return "";
+  }
 
-const LANDLORD_BILLING_HISTORY = [
-  {
-    date: "July 08, 2026",
-    description: "Ikoyi Waterfront Flat payout",
-    amount: "₦1,200,000",
-    status: "Released",
-  },
-  {
-    date: "June 22, 2026",
-    description: "Lekki Garden Maisonette payout",
-    amount: "₦750,000",
-    status: "Released",
-  },
-  {
-    date: "June 04, 2026",
-    description: "Maitama Serviced Duplex payout",
-    amount: "₦950,000",
-    status: "Released",
-  },
-];
+  return new Date(value).toLocaleDateString("en-NG", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
 
-export default function PaymentsSection() {
+export default function PaymentsSection(): ReactElement {
   const pathname = usePathname();
-  const isLandlord = pathname.startsWith("/landlord");
-  const paymentMethods = isLandlord
-    ? LANDLORD_PAYMENT_METHODS
-    : PAYMENT_METHODS;
-  const billingHistory = isLandlord
-    ? LANDLORD_BILLING_HISTORY
-    : BILLING_HISTORY;
-  const { notify } = useToast();
+  const role = pathname.split("/")[1] ?? "tenant";
+  const isHost = role === "landlord" || role === "agent";
+  const { isLoading: isLoadingPayout, snapshot } = useHostVerification();
+  const [entries, setEntries] = useState<EscrowEntry[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
+  const [loadError, setLoadError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+
+    void getMyEscrow().then((result) => {
+      if (!active) {
+        return;
+      }
+
+      setEntries(result.data);
+      setLoadError(result.message ?? "");
+      setIsLoadingHistory(false);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const payout = snapshot?.payout ?? null;
+  const hasPayoutAccount = payout?.accountLast4 != null;
 
   return (
-    <section className="overflow-hidden rounded-lg bg-[var(--color-bg)] shadow-sm">
+    <section className="overflow-hidden rounded-lg border border-border bg-bg shadow-sm">
       <div className="border-b border-border bg-surface-soft p-6 sm:p-8">
         <p className="font-accent text-xs font-bold uppercase tracking-[0.3em] text-primary">
-          Money and methods
+          Money
         </p>
         <h2 className="mt-3 font-display text-3xl font-bold leading-none text-primary sm:text-4xl">
           Payments
         </h2>
         <p className="mt-4 max-w-2xl font-body text-sm leading-6 text-muted">
-          {isLandlord
-            ? "Review your payout accounts and previous property settlements."
-            : "Review your saved payment methods and previous transactions."}
+          {isHost
+            ? "Rent is held in escrow and released to one account. Rello never stores your card."
+            : "Rent is paid through the bank at checkout and held in escrow until your stay is honoured. Rello never stores your card."}
         </p>
       </div>
 
-      <div className="p-5 sm:p-7">
-        <div>
-          <div className="flex items-center justify-between gap-5 border-b border-border pb-5">
-            <div>
-              <h2 className="font-display text-3xl font-bold text-primary sm:text-4xl">
-                {isLandlord ? "Payout accounts" : "Saved methods"}
-              </h2>
-              <p className="mt-2 hidden font-body text-xs font-medium uppercase tracking-[0.14em] text-muted sm:block">
-                Scroll to explore
-              </p>
+      {isHost ? (
+        <div className="border-b border-border px-5 py-7 sm:px-7">
+          <div className="grid gap-5 sm:grid-cols-[1fr_auto] sm:items-center">
+            <div className="flex gap-4">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/5 text-primary">
+                <Landmark size={20} aria-hidden="true" />
+              </span>
+              <div>
+                <h3 className="font-body text-lg font-bold text-primary">
+                  Payout account
+                </h3>
+                {isLoadingPayout ? (
+                  <p className="mt-2 font-body text-sm text-muted">
+                    Loading...
+                  </p>
+                ) : hasPayoutAccount ? (
+                  <>
+                    <p className="mt-2 font-body text-sm text-primary">
+                      {getBankName(payout?.bankCode ?? null)} ·{" "}
+                      {maskAccountNumber(payout?.accountLast4 ?? null)}
+                    </p>
+                    <p className="mt-1 font-body text-sm text-muted">
+                      {payout?.accountName ?? "Verified account"}
+                    </p>
+                  </>
+                ) : (
+                  <p className="mt-2 max-w-xl font-body text-sm leading-6 text-muted">
+                    You have not set one yet. Escrow cannot be released to you
+                    until you do.
+                  </p>
+                )}
+              </div>
             </div>
-            {isLandlord ? (
-              <Link
-                href="/landlord/verify/payout"
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent text-primary transition-all duration-200 ease-in-out hover:scale-[1.02] hover:bg-primary hover:text-white hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                aria-label="Add payout account"
-              >
-                <Plus size={22} />
-              </Link>
-            ) : (
-              <button
-                type="button"
-                onClick={() =>
-                  notify({
-                    title: "Payment method",
-                    description:
-                      "Cards are added when you pay for a booking, not here.",
-                    variant: "success",
-                  })
-                }
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent text-primary transition-all duration-200 ease-in-out hover:scale-[1.02] hover:bg-primary hover:text-white hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                aria-label="Add payment method"
-              >
-                <Plus size={22} />
-              </button>
-            )}
+            <Link
+              href={`/${role}/verify/payout`}
+              className="inline-flex min-h-11 items-center justify-center rounded-full border border-primary/30 px-5 py-2.5 font-body text-sm font-bold text-primary transition-all duration-200 ease-in-out hover:border-primary hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            >
+              {hasPayoutAccount ? "Change account" : "Add an account"}
+            </Link>
           </div>
+          <p className="mt-4 max-w-2xl font-body text-sm leading-6 text-muted">
+            One account only. Changing it asks for the bank details again, so a
+            payout can never quietly go somewhere new.
+          </p>
+        </div>
+      ) : null}
 
-          <div className="-mx-5 flex snap-x gap-4 overflow-x-auto px-5 py-7 sm:-mx-8 sm:px-8 lg:mx-0 lg:px-0">
-            {paymentMethods.map((method) => (
-              <article
-                key={method.number}
-                className={`min-w-[17rem] snap-start rounded p-6 shadow-sm transition-all duration-200 ease-in-out hover:-translate-y-0.5 hover:shadow-md sm:min-w-[21rem] ${method.tone}`}
+      <div className="px-5 py-7 sm:px-7">
+        <h3 className="font-body text-lg font-bold text-primary">
+          {isHost ? "Money in and out" : "What you have paid"}
+        </h3>
+
+        {loadError ? (
+          <p className="mt-3 font-body text-sm text-red-700">{loadError}</p>
+        ) : null}
+
+        {isLoadingHistory ? (
+          <p className="mt-6 flex items-center gap-2 font-body text-sm text-muted">
+            <Loader2 size={15} className="animate-spin" />
+            Loading...
+          </p>
+        ) : entries.length === 0 ? (
+          <div className="mt-5 rounded-lg bg-surface-soft p-8 text-center">
+            <ReceiptText size={22} className="mx-auto text-accent-alt" />
+            <p className="mt-3 font-body text-sm leading-6 text-muted">
+              Nothing yet. Payments appear here as soon as a booking is paid
+              for.
+            </p>
+          </div>
+        ) : (
+          <ul className="mt-5 grid gap-3">
+            {entries.map((entry) => (
+              <li
+                key={entry.id}
+                className="flex flex-wrap items-center justify-between gap-4 rounded-lg bg-surface-soft px-5 py-4"
               >
-                <div className="flex items-start justify-between">
-                  <CreditCard size={28} />
-                  <p className="font-body text-xs font-medium uppercase tracking-[0.14em]">
-                    {method.brand}
+                <div className="min-w-0">
+                  <p className="truncate font-body text-sm font-bold text-primary">
+                    {entry.propertyTitle}
+                  </p>
+                  <p className="mt-1 font-body text-xs text-muted">
+                    {formatDate(entry.heldAt ?? entry.createdAt)} · booking #
+                    {entry.bookingId}
                   </p>
                 </div>
-                <p className="mt-14 font-display text-3xl font-bold">
-                  {method.number}
-                </p>
-                <p className="mt-3 font-body text-xs font-medium uppercase tracking-[0.14em]">
-                  {isLandlord ? "Status" : "Expires"} {method.expiry}
-                </p>
-              </article>
+                <div className="flex items-center gap-4">
+                  <StatusBadge tone={STATUS_TONES[entry.status]}>
+                    {STATUS_LABELS[entry.status]}
+                  </StatusBadge>
+                  <p className="font-display text-lg font-bold text-primary">
+                    <PropertyPrice value={entry.amount} />
+                  </p>
+                </div>
+              </li>
             ))}
-          </div>
-        </div>
-
-        <div className="mt-10">
-          <h2 className="font-display text-3xl font-bold text-primary sm:text-4xl">
-            {isLandlord ? "Payout history" : "Billing history"}
-          </h2>
-          <div className="mt-6 overflow-x-auto border-t border-border">
-            <table className="w-full min-w-[42rem] border-collapse text-left">
-              <thead>
-                <tr className="border-b border-border">
-                  {["Date", "Description", "Amount", "Status"].map(
-                    (heading) => (
-                      <th
-                        key={heading}
-                        className="px-3 py-4 font-body text-xs font-medium uppercase tracking-[0.14em] text-muted first:pl-0"
-                      >
-                        {heading}
-                      </th>
-                    ),
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {billingHistory.map((entry) => (
-                  <tr
-                    key={`${entry.date}-${entry.description}`}
-                    className="border-b border-border transition-all duration-200 ease-in-out hover:bg-surface-soft"
-                  >
-                    <td className="px-3 py-5 pl-0 font-body text-sm text-primary">
-                      {entry.date}
-                    </td>
-                    <td className="px-3 py-5 font-body text-sm font-bold text-primary">
-                      {entry.description}
-                    </td>
-                    <td className="px-3 py-5 font-body text-sm text-primary">
-                      <PropertyPrice value={entry.amount} />
-                    </td>
-                    <td className="px-3 py-5">
-                      <span className="inline-flex items-center rounded-full bg-accent/10 px-3 py-1.5 shadow-sm font-body text-xs font-medium text-primary">
-                        {entry.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+          </ul>
+        )}
       </div>
     </section>
   );

@@ -61,7 +61,12 @@ export default function RootLayout({
         "font-body",
       )}
     >
-      <body className="min-h-full flex flex-col">
+      {/*
+        Extensions such as Grammarly add their own attributes to body before
+        React hydrates, which React reports as a mismatch it cannot patch. The
+        markup we render is identical either way.
+      */}
+      <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <LoadingScreenGate>
           <ToastProvider>{children}</ToastProvider>
         </LoadingScreenGate>

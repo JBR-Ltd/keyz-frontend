@@ -480,14 +480,59 @@ export async function clearHostListingStorage(): Promise<void> {
   publishStorageChange();
 }
 
+export interface ListingSearch {
+  city?: string;
+  maxPrice?: number;
+  minBedrooms?: number;
+  minPrice?: number;
+  query?: string;
+  /** PRICE_ASC, PRICE_DESC, BEDROOMS, or nothing for newest first. */
+  sort?: string;
+}
+
+/** Filters the whole catalogue, not the page that happens to be loaded. */
+function searchParams(page: number, size: number, search?: ListingSearch): string {
+  const params = new URLSearchParams({
+    page: String(page),
+    size: String(size),
+  });
+
+  if (search?.query?.trim()) {
+    params.set("query", search.query.trim());
+  }
+
+  if (search?.city) {
+    params.set("city", search.city);
+  }
+
+  if (search?.minPrice !== undefined) {
+    params.set("minPrice", String(search.minPrice));
+  }
+
+  if (search?.maxPrice !== undefined) {
+    params.set("maxPrice", String(search.maxPrice));
+  }
+
+  if (search?.minBedrooms !== undefined) {
+    params.set("minBedrooms", String(search.minBedrooms));
+  }
+
+  if (search?.sort) {
+    params.set("sort", search.sort);
+  }
+
+  return params.toString();
+}
+
 export async function getPublicProperties(
   filter: "all" | "rent" | "sale" = "all",
   page = 0,
   size = 12,
+  search?: ListingSearch,
 ): Promise<PublicPropertiesResult> {
   try {
     const response = await fetch(
-      `/api/properties/${filter}?page=${page}&size=${size}`,
+      `/api/properties/${filter}?${searchParams(page, size, search)}`,
     );
     const envelope = await parseApiResponse(response);
 
@@ -827,5 +872,19 @@ export async function submitHostListing(
         error instanceof Error ? error.message : "Listing could not be saved.",
       unavailable: false,
     };
+  }
+}
+
+/** The cities that actually have something to rent, for the filter menu. */
+export async function getRentalCities(): Promise<string[]> {
+  try {
+    const response = await fetch("/api/properties/cities");
+    const envelope = await parseApiResponse(response);
+
+    return Array.isArray(envelope.data)
+      ? envelope.data.filter((value): value is string => typeof value === "string")
+      : [];
+  } catch {
+    return [];
   }
 }

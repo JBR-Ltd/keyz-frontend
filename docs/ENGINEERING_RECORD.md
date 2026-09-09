@@ -240,3 +240,69 @@ Render free spins down after 15 minutes idle, roughly 50 seconds to wake. A self
 ### Untested end to end
 
 None of the verification, escrow or payout work has run against live Dojah and Paystack sandbox credentials. The Paystack key is blank. The contracts are verified by the compiler and the suite, but the first real NIN submission and the first real payout are the actual proof.
+
+---
+
+## Admin, host operations, settings and two step sign-in
+
+### Admin queues
+
+`/admin/bookings`, `/admin/escrow` and `/admin/ratings` were "coming soon" pages, and the banner across the admin area said so. Support had no way to look up a booking somebody phoned about, because every booking and escrow query was scoped to whoever was asking.
+
+Added `GET /api/admin/bookings`, `GET /api/admin/escrow`, `GET /api/admin/reviews` and `PATCH /api/admin/reviews/{id}/status`, each filtered by status and a free text query, and the three screens that use them. Moderation hides rather than deletes: a hidden review leaves the public listing and the host rating but the text survives, so a decision can be undone and neither party can claim it said something else. Any status other than published needs a written reason, kept on `AdminReviewResponse` and never shown to either party.
+
+The preview banner is gone rather than reworded.
+
+### A whole class of 500s
+
+Writing the admin tests turned up `/api/reviews/property/{id}` answering 500 in production. `open-in-view` is off, so a row from a finder is detached the moment the repository call returns, and every response mapper that reads through to the property or the parties throws.
+
+An audit of the read surface found ten endpoints with the same defect: tenant and host booking lists, both escrow lists, all three dispute lists, the admin KYB queue, escrow detail, saved listings, and the three review reads. All now carry `@Transactional(readOnly = true)` on the method that maps.
+
+`DetachedReadTests` seeds rows and reads them back in a separate request, which is what catches it. Creating a row and reading the response in the same request does not: the entity is still the object that was just built.
+
+### Host operations
+
+Endpoints for galleries, blocked dates, viewings and repairs existed with no way to reach them. A host could publish a listing and then not change a photo.
+
+- `/{role}/listings/{id}` manages a published listing: add and remove photos, set the cover, close and reopen dates. Booked dates are shown but cannot be closed.
+- `/{role}/viewings` is the requests feed. Confirm, decline, mark done, and open the video room for a virtual viewing.
+- `/{role}/maintenance` is the repairs feed, with a status and a note the tenant reads.
+- Tenancy paperwork can now be attached from either host bookings screen.
+- The landlord bookings page had a message button wired to nothing. It opens the chat now.
+- The sidebar showed a made up name while the profile loaded.
+
+### Settings
+
+- Profile is a real screen: name, username, phone, city and a photo. A verified name is fixed, because it came off a government ID and both the tenancy and the payout are in it. The username is what stays editable.
+- Notification and privacy switches persist per account. The whole set is written on every change, so a switch turned off stays off on the next device.
+- Payments showed two invented cards and three invented charges. It now shows the one payout account and real escrow history.
+- The "download your data" button slept for 900ms and claimed a simulated archive. Removed.
+
+### Two step sign-in
+
+A code emailed to the address on the account, not an authenticator app: every account here already has a verified address, and asking a first time renter to install an app to see a flat costs more accounts than it protects.
+
+Codes are stored hashed, expire in ten minutes, work once, and allow five guesses. The attempt counter is written in its own transaction, because a wrong code answers with an error and an error would otherwise roll the count back and make the limit unreachable.
+
+Turning it off asks for the password, so a borrowed session cannot.
+
+### Also
+
+Anonymous requests answered 403. They answer 401 now, so a client can tell "log in again" from "this is not yours".
+
+### CI
+
+Both repositories were red.
+
+- The frontend typecheck failed on every image import. `next-env.d.ts` is generated rather than committed and it is what declares those modules, so a fresh checkout has no declarations until something generates them. A `next typegen` step now runs before `tsc`.
+- `gitleaks-action` needs a paid licence on an organisation repository and fails without one. Both repositories now run the gitleaks CLI, which needs no licence.
+- The backend Docker job asked for a GitHub Actions cache export without the driver that supports one. `docker/setup-buildx-action` added.
+
+The backend secret scan runs from `97d6c1d`, the commit that removed the last committed credential. **A Resend API key is in the backend history at `67be1d7`.** It is not in the working tree and Resend is no longer used, but a published key is published: it needs revoking at Resend regardless of what the scanner is pointed at.
+
+### Still not built
+
+- Calls: six endpoints, no UI. Unchanged.
+- The 3D tour: `FloorController`, `RoomController` and `PanoramaController` are complete and have no viewer or builder. The Jitsi room is a live video call, which is a different thing.
+- Neither Dojah nor Paystack has run against live sandbox credentials.

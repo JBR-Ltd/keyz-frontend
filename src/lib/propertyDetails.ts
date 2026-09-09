@@ -1,3 +1,4 @@
+import type { ListingSearch } from "@/lib/hostListings";
 import {
   getBackendPropertyById,
   getHostListingById,
@@ -196,8 +197,9 @@ export async function getProperties(
   filter: "all" | "rent" | "sale" = "all",
   page = 0,
   size = 12,
+  search?: ListingSearch,
 ): Promise<PropertyQueryResult> {
-  const result = await getPublicProperties(filter, page, size);
+  const result = await getPublicProperties(filter, page, size, search);
 
   return {
     data: result.data

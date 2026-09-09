@@ -33,6 +33,7 @@ import OverlayPortal from "@/components/ui/OverlayPortal";
 import MessageHostButton from "@/components/property/MessageHostButton";
 import BookingRequestDialog from "@/components/property/BookingRequestDialog";
 import PropertyPrice from "@/components/property/PropertyPrice";
+import PropertyTourViewer from "@/components/property/PropertyTourViewer";
 import ViewingRequestDialog from "@/components/property/ViewingRequestDialog";
 import TenantVerificationGate from "@/components/tenant/TenantVerificationGate";
 import VerifiedBadge from "@/components/ui/VerifiedBadge";
@@ -716,6 +717,13 @@ export default function PropertyPage({
                     ) : null}
                   </div>
                 </section>
+              </>
+            ) : null}
+
+            {/^\d+$/.test(property.id) ? (
+              <>
+                <div className="my-6 border-t border-border" />
+                <PropertyTourViewer propertyId={Number(property.id)} />
               </>
             ) : null}
 

@@ -20,6 +20,7 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState, type ReactElement } from "react";
+import ActivityFeed from "@/components/dashboard/ActivityFeed";
 import PropertyPrice from "@/components/property/PropertyPrice";
 import { IconTile } from "@/components/ui/icon-tile";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -919,6 +920,7 @@ export default function AgentDashboardPage(): ReactElement {
 
       <PropertiesPanel properties={dashboard.properties} />
       <BookingsPanel bookings={dashboard.bookings} />
+      <ActivityFeed role="agent" />
     </motion.main>
   );
 }

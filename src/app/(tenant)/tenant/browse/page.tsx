@@ -10,14 +10,12 @@ import {
 } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Loader2, MapPin, RotateCcw, Search, SearchX, X } from "lucide-react";
-import Image from "next/image";
-import Link from "next/link";
 import PropertyCard from "@/components/public/PropertyCard";
 import OverlayPortal from "@/components/ui/OverlayPortal";
 import { Select, type SelectOption } from "@/components/ui/select";
-import { StatusBadge } from "@/components/ui/status-badge";
 import { useToast } from "@/components/ui/toast";
-import { TENANT_ACTIVITIES, TENANT_STATUS_TONES } from "@/lib/tenantActivity";
+import ActivityFeed from "@/components/dashboard/ActivityFeed";
+import { getRentalCities, type ListingSearch } from "@/lib/hostListings";
 import { getProperties, type PropertyDetail } from "@/lib/propertyDetails";
 import {
   getSavedListings,
@@ -85,24 +83,24 @@ const SORT_OPTIONS: SelectOption[] = [
   { label: "Most bedrooms", value: "bedrooms" },
 ];
 
-const activeActivities = TENANT_ACTIVITIES.filter(
-  (activity) =>
-    activity.status === "Escrow Held" ||
-    activity.status === "Upcoming" ||
-    activity.status === "Pending",
-);
-const visibleActivities = activeActivities.slice(0, 3);
-const remainingActivityCount = activeActivities.length - visibleActivities.length;
-
 // === Helpers
 
-function matchesPrice(price: number, filter: PriceFilter): boolean {
-  if (filter === "under-100000") return price < 100000;
-  if (filter === "100000-250000") return price >= 100000 && price <= 250000;
-  if (filter === "250000-500000") return price > 250000 && price <= 500000;
-  if (filter === "over-500000") return price > 500000;
-  return true;
-}
+/** The price bands the menu offers, as the bounds the query takes. */
+const PRICE_BOUNDS: Record<PriceFilter, [number | undefined, number | undefined]> = {
+  all: [undefined, undefined],
+  "under-100000": [undefined, 100000],
+  "100000-250000": [100000, 250000],
+  "250000-500000": [250000, 500000],
+  "over-500000": [500000, undefined],
+};
+
+/** What the server calls each ordering. Recommended is its default, so it sends none. */
+const SORT_PARAMS: Record<SortOption, string | undefined> = {
+  recommended: undefined,
+  "price-low": "PRICE_ASC",
+  "price-high": "PRICE_DESC",
+  bedrooms: "BEDROOMS",
+};
 
 function getOptionLabel(options: SelectOption[], value: string): string {
   return options.find((option) => option.value === value)?.label ?? value;
@@ -134,6 +132,38 @@ export default function TenantBrowsePage(): ReactElement {
   const [isHeaderSearchVisible, setIsHeaderSearchVisible] = useState(false);
   const desktopSearchRef = useRef<HTMLFormElement>(null);
   const dialogRef = useDialogFocus<HTMLDivElement>(isSearchSheetOpen);
+  const [serverCities, setServerCities] = useState<string[]>([]);
+
+  /**
+     The filters as the server takes them. Everything except the shortlet toggle is
+     applied in the query now, so a match on page nine is still a match.
+   */
+  const search = useMemo<ListingSearch>(() => {
+    const [minPrice, maxPrice] = PRICE_BOUNDS[priceFilter];
+
+    return {
+      query: searchQuery.trim() || undefined,
+      city: city === "all" ? undefined : city,
+      minPrice,
+      maxPrice,
+      minBedrooms: bedroomFilter === "all" ? undefined : Number(bedroomFilter),
+      sort: SORT_PARAMS[sort],
+    };
+  }, [bedroomFilter, city, priceFilter, searchQuery, sort]);
+
+  useEffect(() => {
+    let active = true;
+
+    void getRentalCities().then((cities) => {
+      if (active) {
+        setServerCities(cities);
+      }
+    });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -143,7 +173,7 @@ export default function TenantBrowsePage(): ReactElement {
       setPropertyError("");
 
       const [propertyResult, savedResult] = await Promise.all([
-        getProperties("rent", 0, PAGE_SIZE),
+        getProperties("rent", 0, PAGE_SIZE, search),
         getSavedListings(),
       ]);
 
@@ -163,7 +193,7 @@ export default function TenantBrowsePage(): ReactElement {
     return () => {
       active = false;
     };
-  }, [retryKey]);
+  }, [retryKey, search]);
 
   useEffect(() => {
     if (!isSearchSheetOpen) return;
@@ -203,56 +233,43 @@ export default function TenantBrowsePage(): ReactElement {
   }, []);
 
   const cityOptions = useMemo<SelectOption[]>(() => {
-    const cities = Array.from(
-      new Set(properties.map((property) => property.location.city).filter(Boolean)),
-    ).sort((left, right) => left.localeCompare(right));
+    // From the catalogue rather than the loaded page, or filtering by a city would
+    // only ever offer the cities already on screen
+    const cities =
+      serverCities.length > 0
+        ? [...serverCities]
+        : Array.from(
+            new Set(properties.map((property) => property.location.city).filter(Boolean)),
+          ).sort((left, right) => left.localeCompare(right));
 
     return [
       { label: "Any city", value: "all" },
       ...cities.map((value) => ({ label: value, value })),
     ];
-  }, [properties]);
+  }, [properties, serverCities]);
 
-  const visibleProperties = useMemo(() => {
-    const normalizedQuery = searchQuery.trim().toLowerCase();
-    const minimumBedrooms = bedroomFilter === "all" ? 0 : Number(bedroomFilter);
-    const filtered = properties.filter((property) => {
-      const isShortlet = property.rentalMode === "SHORT_STAY";
+  /**
+     Searching, filtering and ordering all happen in the query now. What is left
+     here is the stay length toggle: a shortlet price is per night and a tenancy
+     price is per year, so the two cannot be filtered by the same number.
+   */
+  const visibleProperties = useMemo(
+    () =>
+      properties.filter((property) => {
+        const isShortlet = property.rentalMode === "SHORT_STAY";
 
-      if (stayMode === "short" && !isShortlet) {
-        return false;
-      }
+        if (stayMode === "short") {
+          return isShortlet;
+        }
 
-      if (stayMode === "long" && isShortlet) {
-        return false;
-      }
+        if (stayMode === "long") {
+          return !isShortlet;
+        }
 
-      const locationText = [
-        property.title,
-        property.description,
-        property.location.address,
-        property.location.area,
-        property.location.city,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-
-      return (
-        (!normalizedQuery || locationText.includes(normalizedQuery)) &&
-        (city === "all" || property.location.city === city) &&
-        property.bedrooms >= minimumBedrooms &&
-        matchesPrice(property.price, priceFilter)
-      );
-    });
-
-    return [...filtered].sort((left, right) => {
-      if (sort === "price-low") return left.price - right.price;
-      if (sort === "price-high") return right.price - left.price;
-      if (sort === "bedrooms") return right.bedrooms - left.bedrooms;
-      return 0;
-    });
-  }, [bedroomFilter, city, priceFilter, properties, searchQuery, sort, stayMode]);
+        return true;
+      }),
+    [properties, stayMode],
+  );
 
   const appliedFilters = useMemo<AppliedFilter[]>(() => {
     const filters: AppliedFilter[] = [];
@@ -310,7 +327,7 @@ export default function TenantBrowsePage(): ReactElement {
     const nextPage = page + 1;
     setIsLoadingMore(true);
     setPropertyError("");
-    const result = await getProperties("rent", nextPage, PAGE_SIZE);
+    const result = await getProperties("rent", nextPage, PAGE_SIZE, search);
     setIsLoadingMore(false);
 
     if (result.message) {
@@ -571,55 +588,7 @@ export default function TenantBrowsePage(): ReactElement {
         ) : null}
       </AnimatePresence>
 
-      {activeActivities.length > 0 ? (
-        <section className="mt-8" aria-labelledby="tenant-activity-heading">
-          <div className="mb-3 flex items-center justify-between gap-4">
-            <h2
-              id="tenant-activity-heading"
-              className="font-body text-xs font-bold uppercase tracking-[0.18em] text-muted"
-            >
-              Your Activity
-            </h2>
-            {remainingActivityCount > 0 ? (
-              <Link
-                href="/tenant/bookings"
-                className="font-body text-xs font-bold text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-              >
-                +{remainingActivityCount} more
-              </Link>
-            ) : null}
-          </div>
-
-          <div className="grid gap-3 lg:grid-cols-3">
-            {visibleActivities.map((activity) => (
-              <Link
-                key={`${activity.activityType}-${activity.title}`}
-                href="/tenant/bookings"
-                className="group grid min-w-0 grid-cols-[4.5rem_1fr_auto] items-center gap-3 rounded-lg bg-bg p-3 shadow-sm transition-all duration-200 ease-in-out hover:-translate-y-0.5 hover:bg-surface-soft hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-              >
-                <span className="relative h-16 overflow-hidden rounded-lg bg-surface-soft">
-                  <Image
-                    src={activity.image}
-                    alt={activity.title}
-                    fill
-                    sizes="72px"
-                    className="object-cover transition-transform duration-200 group-hover:scale-[1.03]"
-                  />
-                </span>
-                <span className="min-w-0">
-                  <span className="block truncate font-body text-sm font-bold text-primary">
-                    {activity.title}
-                  </span>
-                  <StatusBadge tone={TENANT_STATUS_TONES[activity.status]} size="sm" className="mt-2">
-                    {activity.status}
-                  </StatusBadge>
-                </span>
-                <span className="font-body text-sm font-bold text-primary">View</span>
-              </Link>
-            ))}
-          </div>
-        </section>
-      ) : null}
+      <ActivityFeed role="tenant" title="Your activity" limit={3} />
 
       <section className="mt-10" aria-labelledby="property-feed-heading">
         <div className="mb-5 flex flex-wrap items-end justify-between gap-4">

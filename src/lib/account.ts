@@ -21,6 +21,32 @@ export interface AuthenticatedUser {
   username: string | null;
 }
 
+export interface LoginSession {
+  createdAt: string;
+  /** The session making the request. It is the one you must not end by accident. */
+  current: boolean;
+  deviceName: string;
+  expiresAt: string;
+  id: number;
+  ipAddress: string | null;
+}
+
+export type DataExportStatus =
+  | "QUEUED"
+  | "PROCESSING"
+  | "READY"
+  | "FAILED"
+  | "EXPIRED";
+
+export interface DataExport {
+  downloadUrl: string | null;
+  expiresAt: string | null;
+  failureReason: string | null;
+  id: number;
+  requestedAt: string;
+  status: DataExportStatus;
+}
+
 export interface ProfileEdit {
   city?: string;
   firstName?: string;
@@ -415,5 +441,111 @@ export async function deleteAccount(): Promise<AccountActionResult> {
           ? error.message
           : "Account could not be deleted.",
     };
+  }
+}
+
+// === Devices and deactivation
+
+export async function getSessions(): Promise<LoginSession[]> {
+  try {
+    const envelope = await authenticatedRequest("/api/auth/sessions");
+
+    return Array.isArray(envelope.data) ? (envelope.data as LoginSession[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function endSession(
+  sessionId: number,
+): Promise<AccountActionResult> {
+  try {
+    const envelope = await authenticatedRequest(`/api/auth/sessions/${sessionId}`, {
+      method: "DELETE",
+    });
+
+    return { success: true, message: envelope.message };
+  } catch (error) {
+    return {
+      success: false,
+      message:
+        error instanceof Error ? error.message : "That device was not signed out.",
+    };
+  }
+}
+
+export async function endOtherSessions(): Promise<AccountActionResult> {
+  try {
+    const envelope = await authenticatedRequest(
+      "/api/auth/sessions?exceptCurrent=true",
+      { method: "DELETE" },
+    );
+
+    return { success: true, message: envelope.message };
+  } catch (error) {
+    return {
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Those devices were not signed out.",
+    };
+  }
+}
+
+/** Reversible. Signing in again brings the account and its listings back. */
+export async function deactivateAccount(): Promise<AccountActionResult> {
+  try {
+    const envelope = await authenticatedRequest("/api/auth/deactivate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ confirmation: "DEACTIVATE" }),
+    });
+
+    clearAuthenticationState();
+    return { success: true, message: envelope.message };
+  } catch (error) {
+    return {
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "The account was not deactivated.",
+    };
+  }
+}
+
+// === Data export
+
+export async function requestDataExport(): Promise<
+  AccountActionResult & { export: DataExport | null }
+> {
+  try {
+    const envelope = await authenticatedRequest("/api/users/me/data-exports", {
+      method: "POST",
+    });
+
+    return {
+      success: true,
+      message: envelope.message,
+      export: envelope.data as DataExport,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message:
+        error instanceof Error ? error.message : "That request was not accepted.",
+      export: null,
+    };
+  }
+}
+
+export async function getDataExports(): Promise<DataExport[]> {
+  try {
+    const envelope = await authenticatedRequest("/api/users/me/data-exports");
+
+    return Array.isArray(envelope.data) ? (envelope.data as DataExport[]) : [];
+  } catch {
+    return [];
   }
 }

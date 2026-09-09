@@ -1,32 +1,33 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import type { ReactElement } from "react";
+import { usePreferenceToggles } from "@/lib/preferences";
 
 const INITIAL_PREFERENCES = [
   {
     id: "property",
     label: "Property recommendations",
     description: "New homes selected from your saved searches and activity.",
-    enabled: true,
+    defaultOn: true,
   },
   {
     id: "viewing",
     label: "Viewing reminders",
     description: "Schedule updates and reminders before an upcoming viewing.",
-    enabled: true,
+    defaultOn: true,
   },
   {
     id: "offers",
     label: "Offer updates",
     description: "Immediate changes to offers you have sent or received.",
-    enabled: true,
+    defaultOn: true,
   },
   {
     id: "editorial",
     label: "Rello editorial",
     description: "Occasional market notes, neighbourhood stories, and guides.",
-    enabled: false,
+    defaultOn: false,
   },
 ];
 
@@ -35,46 +36,38 @@ const LANDLORD_PREFERENCES = [
     id: "bookings",
     label: "Booking requests",
     description: "New requests and changes across your active properties.",
-    enabled: true,
+    defaultOn: true,
   },
   {
     id: "listings",
     label: "Listing performance",
     description: "Views, saves, and activity summaries for your listings.",
-    enabled: true,
+    defaultOn: true,
   },
   {
     id: "payouts",
     label: "Payout updates",
     description: "Escrow releases and settlement updates for funded bookings.",
-    enabled: true,
+    defaultOn: true,
   },
   {
     id: "editorial",
     label: "Rello host notes",
     description:
       "Occasional market reports, hosting guidance, and product news.",
-    enabled: false,
+    defaultOn: false,
   },
 ];
 
-export default function NotificationsSection() {
+export default function NotificationsSection(): ReactElement {
   const pathname = usePathname();
-  const [preferences, setPreferences] = useState(
-    pathname.startsWith("/landlord")
-      ? LANDLORD_PREFERENCES
-      : INITIAL_PREFERENCES,
+  const preferences = pathname.startsWith("/landlord")
+    ? LANDLORD_PREFERENCES
+    : INITIAL_PREFERENCES;
+  const { error, isLoading, toggle, values } = usePreferenceToggles(
+    "notify",
+    preferences,
   );
-
-  const togglePreference = (id: string) => {
-    setPreferences((current) =>
-      current.map((preference) =>
-        preference.id === id
-          ? { ...preference, enabled: !preference.enabled }
-          : preference,
-      ),
-    );
-  };
 
   return (
     <section className="overflow-hidden rounded-lg border border-border bg-bg shadow-sm">
@@ -89,6 +82,9 @@ export default function NotificationsSection() {
           Choose which updates deserve a place in your inbox. Critical account
           notices will always be delivered.
         </p>
+        {error ? (
+          <p className="mt-3 font-body text-sm text-red-700">{error}</p>
+        ) : null}
       </div>
 
       <div className="px-5 sm:px-7">
@@ -108,16 +104,17 @@ export default function NotificationsSection() {
             <button
               type="button"
               role="switch"
-              aria-checked={preference.enabled}
+              aria-checked={values[preference.id]}
               aria-label={`Toggle ${preference.label}`}
-              onClick={() => togglePreference(preference.id)}
-              className={`relative h-7 w-12 rounded-full transition-all duration-200 ease-in-out hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
-                preference.enabled ? "bg-accent" : "bg-border"
+              disabled={isLoading}
+              onClick={() => toggle(preference.id)}
+              className={`relative h-7 w-12 rounded-full transition-all duration-200 ease-in-out hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-50 ${
+                values[preference.id] ? "bg-accent" : "bg-border"
               }`}
             >
               <span
                 className={`absolute left-1 top-1 h-5 w-5 rounded-full bg-white shadow-sm transition-all duration-200 ease-in-out ${
-                  preference.enabled ? "translate-x-5" : "translate-x-0"
+                  values[preference.id] ? "translate-x-5" : "translate-x-0"
                 }`}
               />
             </button>
