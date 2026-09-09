@@ -5,7 +5,9 @@ import {
   ArrowRight,
   CalendarDays,
   ChevronRight,
+  ImageOff,
   Inbox,
+  Loader2,
   MapPin,
   Search,
   ShieldCheck,
@@ -15,16 +17,24 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import {
+  useCallback,
   useEffect,
   useMemo,
   useState,
-  useSyncExternalStore,
   type ReactElement,
 } from "react";
+import ChatThread from "@/components/chat/ChatThread";
 import PropertyPrice from "@/components/property/PropertyPrice";
 import OverlayPortal from "@/components/ui/OverlayPortal";
 import { IconTile } from "@/components/ui/icon-tile";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { useToast } from "@/components/ui/toast";
+import {
+  getHostBookings,
+  updateBookingStatus,
+  type Booking,
+  type BookingStatus,
+} from "@/lib/bookings";
 import { useDialogFocus } from "@/lib/useDialogFocus";
 
 // === Types
@@ -34,13 +44,17 @@ type TenancyTab = "all" | TenancyStage;
 
 interface Tenancy {
   endDate: string;
+  /** The booking id. Status changes and chat scoping both key off it. */
   id: number;
-  imageUrl: string;
+  imageUrl: string | null;
   monthlyRent: number;
   propertyAddress: string;
+  propertyId: number;
   propertyTitle: string;
   stage: TenancyStage;
   startDate: string;
+  status: BookingStatus;
+  tenantId: number | null;
   tenantName: string;
   tenantVerified: boolean;
 }
@@ -51,9 +65,32 @@ interface TabItem {
 }
 
 interface TenancyDrawerProps {
+  isUpdating: boolean;
   onClose: () => void;
+  onMessage: (tenancy: Tenancy) => void;
+  onStatusChange: (tenancy: Tenancy, status: BookingStatus) => void;
   tenancy: Tenancy | null;
 }
+
+/** What an agent can do from a tenancy at each stage, and what it sends. */
+interface StageAction {
+  label: string;
+  status: BookingStatus;
+}
+
+const PRIMARY_ACTIONS: Record<TenancyStage, StageAction | null> = {
+  active: { label: "Mark completed", status: "COMPLETED" },
+  past: null,
+  request: { label: "Confirm request", status: "CONFIRMED" },
+  upcoming: null,
+};
+
+const SECONDARY_ACTIONS: Record<TenancyStage, StageAction | null> = {
+  active: null,
+  past: null,
+  request: { label: "Decline", status: "CANCELLED" },
+  upcoming: { label: "Cancel tenancy", status: "CANCELLED" },
+};
 
 // === Constants
 
@@ -63,87 +100,6 @@ const TABS: TabItem[] = [
   { id: "upcoming", label: "Upcoming" },
   { id: "active", label: "Active" },
   { id: "past", label: "Past" },
-];
-
-const TENANCIES: Tenancy[] = [
-  {
-    endDate: "7 Sep 2027",
-    id: 801,
-    imageUrl:
-      "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=640&h=480&fit=crop&auto=format&q=80",
-    monthlyRent: 950000,
-    propertyAddress: "Maitama, Abuja",
-    propertyTitle: "Maitama Park Apartment",
-    stage: "request",
-    startDate: "8 Sep 2026",
-    tenantName: "Ada Nwosu",
-    tenantVerified: true,
-  },
-  {
-    endDate: "17 Sep 2027",
-    id: 802,
-    imageUrl:
-      "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=640&h=480&fit=crop&auto=format&q=80",
-    monthlyRent: 1750000,
-    propertyAddress: "Victoria Island, Lagos",
-    propertyTitle: "Harbour View Residence",
-    stage: "request",
-    startDate: "18 Sep 2026",
-    tenantName: "Tolu Martins",
-    tenantVerified: true,
-  },
-  {
-    endDate: "23 Sep 2027",
-    id: 803,
-    imageUrl:
-      "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=640&h=480&fit=crop&auto=format&q=80",
-    monthlyRent: 1100000,
-    propertyAddress: "Wuse 2, Abuja",
-    propertyTitle: "Wuse City Apartment",
-    stage: "request",
-    startDate: "24 Sep 2026",
-    tenantName: "David Okoro",
-    tenantVerified: false,
-  },
-  {
-    endDate: "11 Sep 2027",
-    id: 804,
-    imageUrl:
-      "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=640&h=480&fit=crop&auto=format&q=80",
-    monthlyRent: 1200000,
-    propertyAddress: "Lekki Phase 1, Lagos",
-    propertyTitle: "Lekki Garden Maisonette",
-    stage: "upcoming",
-    startDate: "12 Sep 2026",
-    tenantName: "Kelechi Eze",
-    tenantVerified: true,
-  },
-  {
-    endDate: "31 Aug 2027",
-    id: 805,
-    imageUrl:
-      "https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?w=640&h=480&fit=crop&auto=format&q=80",
-    monthlyRent: 850000,
-    propertyAddress: "GRA, Port Harcourt",
-    propertyTitle: "Garden City Townhouse",
-    stage: "active",
-    startDate: "1 Sep 2026",
-    tenantName: "Amaka Obi",
-    tenantVerified: true,
-  },
-  {
-    endDate: "30 Jun 2026",
-    id: 806,
-    imageUrl:
-      "https://images.unsplash.com/photo-1600607688969-a5bfcd646154?w=640&h=480&fit=crop&auto=format&q=80",
-    monthlyRent: 780000,
-    propertyAddress: "Yaba, Lagos",
-    propertyTitle: "Yaba Courtyard Flat",
-    stage: "past",
-    startDate: "1 Jul 2025",
-    tenantName: "Zainab Bello",
-    tenantVerified: true,
-  },
 ];
 
 const STAGE_LABELS: Record<TenancyStage, string> = {
@@ -163,19 +119,65 @@ const STAGE_TONES: Record<
   upcoming: "primary",
 };
 
-const STAGE_ACTIONS: Record<TenancyStage, string> = {
-  active: "Manage tenancy",
-  past: "View details",
-  request: "Review request",
-  upcoming: "Prepare move-in",
-};
-
 // === Helpers
 
-function countForTab(tab: TenancyTab): number {
+function toDate(value: string): Date {
+  return new Date(`${value}T00:00:00`);
+}
+
+function formatDate(value: string): string {
+  return toDate(value).toLocaleDateString("en-NG", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+/**
+ * Stage is derived from status plus dates rather than stored. A confirmed booking
+ * moves from upcoming to active to past on its own as the dates pass, with no
+ * second source of truth to keep in step.
+ */
+function toStage(booking: Booking): TenancyStage {
+  if (booking.status === "PENDING") {
+    return "request";
+  }
+
+  if (booking.status === "CANCELLED" || booking.status === "COMPLETED") {
+    return "past";
+  }
+
+  const today = new Date().setHours(0, 0, 0, 0);
+
+  if (toDate(booking.startDate).getTime() > today) {
+    return "upcoming";
+  }
+
+  return toDate(booking.endDate).getTime() < today ? "past" : "active";
+}
+
+function toTenancy(booking: Booking): Tenancy {
+  return {
+    endDate: formatDate(booking.endDate),
+    id: booking.id,
+    imageUrl: booking.propertyImageUrl,
+    monthlyRent: booking.totalPrice,
+    propertyAddress: booking.propertyAddress,
+    propertyId: booking.propertyId,
+    propertyTitle: booking.propertyTitle,
+    stage: toStage(booking),
+    startDate: formatDate(booking.startDate),
+    status: booking.status,
+    tenantId: booking.tenant?.id ?? null,
+    tenantName: booking.tenant?.name ?? "Tenant",
+    tenantVerified: booking.tenant?.identityVerified ?? false,
+  };
+}
+
+function countForTab(tenancies: Tenancy[], tab: TenancyTab): number {
   return tab === "all"
-    ? TENANCIES.length
-    : TENANCIES.filter((tenancy) => tenancy.stage === tab).length;
+    ? tenancies.length
+    : tenancies.filter((tenancy) => tenancy.stage === tab).length;
 }
 
 function matchesQuery(tenancy: Tenancy, query: string): boolean {
@@ -190,18 +192,6 @@ function matchesQuery(tenancy: Tenancy, query: string): boolean {
     tenancy.propertyTitle,
     tenancy.propertyAddress,
   ].some((value) => value.toLowerCase().includes(normalizedQuery));
-}
-
-function subscribeToPreviewState(): () => void {
-  return () => undefined;
-}
-
-function getLoadingPreview(): boolean {
-  return new URLSearchParams(window.location.search).get("state") === "loading";
-}
-
-function getServerLoadingPreview(): boolean {
-  return false;
 }
 
 // === Components
@@ -267,11 +257,17 @@ function EmptyTenancies({
 }
 
 function TenancyDrawer({
+  isUpdating,
   onClose,
+  onMessage,
+  onStatusChange,
   tenancy,
 }: TenancyDrawerProps): ReactElement | null {
   const reduceMotion = useReducedMotion();
   const drawerRef = useDialogFocus<HTMLElement>(tenancy !== null);
+
+  const primaryAction = tenancy ? PRIMARY_ACTIONS[tenancy.stage] : null;
+  const secondaryAction = tenancy ? SECONDARY_ACTIONS[tenancy.stage] : null;
 
   useEffect(() => {
     if (!tenancy) {
@@ -314,13 +310,19 @@ function TenancyDrawer({
               transition={{ duration: 0.28, ease: "easeOut" }}
             >
               <div className="relative h-52">
-                <Image
-                  src={tenancy.imageUrl}
-                  alt=""
-                  fill
-                  sizes="(max-width: 512px) 100vw, 512px"
-                  className="object-cover"
-                />
+                {tenancy.imageUrl ? (
+                  <Image
+                    src={tenancy.imageUrl}
+                    alt=""
+                    fill
+                    sizes="(max-width: 512px) 100vw, 512px"
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full items-center justify-center bg-surface-soft text-muted">
+                    <ImageOff size={28} aria-hidden="true" />
+                  </div>
+                )}
                 <div className="absolute inset-0 bg-gradient-to-t from-primary/55 to-transparent" />
                 <button
                   type="button"
@@ -398,19 +400,40 @@ function TenancyDrawer({
                 </div>
 
                 <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                  {primaryAction ? (
+                    <button
+                      type="button"
+                      onClick={() => onStatusChange(tenancy, primaryAction.status)}
+                      disabled={isUpdating}
+                      className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-full bg-primary px-5 font-body text-sm font-bold text-white hover:bg-primary/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {isUpdating ? (
+                        <Loader2 size={17} className="animate-spin" />
+                      ) : null}
+                      {primaryAction.label}
+                      {isUpdating ? null : <ArrowRight size={17} />}
+                    </button>
+                  ) : null}
                   <button
                     type="button"
-                    className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-full bg-primary px-5 font-body text-sm font-bold text-white hover:bg-primary/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                  >
-                    {STAGE_ACTIONS[tenancy.stage]}
-                    <ArrowRight size={17} />
-                  </button>
-                  <button
-                    type="button"
-                    className="inline-flex min-h-12 items-center justify-center rounded-full border border-primary/15 px-5 font-body text-sm font-bold text-primary hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    onClick={() => onMessage(tenancy)}
+                    disabled={tenancy.tenantId === null}
+                    className="inline-flex min-h-12 items-center justify-center rounded-full border border-primary/15 px-5 font-body text-sm font-bold text-primary hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     Message tenant
                   </button>
+                  {secondaryAction ? (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onStatusChange(tenancy, secondaryAction.status)
+                      }
+                      disabled={isUpdating}
+                      className="inline-flex min-h-12 items-center justify-center rounded-full border border-red-700/25 px-5 font-body text-sm font-bold text-red-700 hover:bg-red-700/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {secondaryAction.label}
+                    </button>
+                  ) : null}
                 </div>
               </div>
             </motion.aside>
@@ -423,23 +446,85 @@ function TenancyDrawer({
 
 export default function AgentBookingsPage(): ReactElement {
   const reduceMotion = useReducedMotion();
+  const { notify } = useToast();
   const [activeTab, setActiveTab] = useState<TenancyTab>("all");
   const [query, setQuery] = useState("");
   const [selectedTenancy, setSelectedTenancy] = useState<Tenancy | null>(null);
-  const loading = useSyncExternalStore(
-    subscribeToPreviewState,
-    getLoadingPreview,
-    getServerLoadingPreview,
-  );
+  const [chatTenancy, setChatTenancy] = useState<Tenancy | null>(null);
+  const [tenancies, setTenancies] = useState<Tenancy[]>([]);
+  const [loadError, setLoadError] = useState("");
+  const [updatingId, setUpdatingId] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async (): Promise<void> => {
+    const result = await getHostBookings();
+
+    setTenancies(result.data.map(toTenancy));
+    setLoadError(result.message ?? "");
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    void getHostBookings().then((result) => {
+      if (!active) {
+        return;
+      }
+
+      setTenancies(result.data.map(toTenancy));
+      setLoadError(result.message ?? "");
+      setLoading(false);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const changeStatus = async (
+    tenancy: Tenancy,
+    status: BookingStatus,
+  ): Promise<void> => {
+    setUpdatingId(tenancy.id);
+
+    const result = await updateBookingStatus(tenancy.id, status);
+
+    setUpdatingId(null);
+
+    if (!result.data) {
+      notify({
+        title: "That did not save",
+        description: result.message ?? "Try again in a moment.",
+        variant: "error",
+      });
+      return;
+    }
+
+    setSelectedTenancy(null);
+    notify({
+      title:
+        status === "CONFIRMED"
+          ? "Tenancy confirmed"
+          : status === "COMPLETED"
+            ? "Tenancy completed"
+            : "Tenancy cancelled",
+      variant: "success",
+    });
+
+    // Re-read rather than patching locally: the stage depends on dates as well
+    // as status, and the server is the one that decides both
+    await load();
+  };
 
   const visibleTenancies = useMemo(
     () =>
-      TENANCIES.filter(
+      tenancies.filter(
         (tenancy) =>
           (activeTab === "all" || tenancy.stage === activeTab) &&
           matchesQuery(tenancy, query),
       ),
-    [activeTab, query],
+    [activeTab, query, tenancies],
   );
 
   if (loading) {
@@ -462,7 +547,7 @@ export default function AgentBookingsPage(): ReactElement {
           >
             {TABS.map((tab) => {
               const active = activeTab === tab.id;
-              const count = countForTab(tab.id);
+              const count = countForTab(tenancies, tab.id);
 
               return (
                 <button
@@ -548,13 +633,19 @@ export default function AgentBookingsPage(): ReactElement {
                   </div>
 
                   <div className="flex min-w-0 items-center gap-3">
-                    <Image
-                      src={tenancy.imageUrl}
-                      alt=""
-                      width={52}
-                      height={52}
-                      className="h-13 w-13 shrink-0 rounded-lg object-cover"
-                    />
+                    {tenancy.imageUrl ? (
+                      <Image
+                        src={tenancy.imageUrl}
+                        alt=""
+                        width={52}
+                        height={52}
+                        className="h-13 w-13 shrink-0 rounded-lg object-cover"
+                      />
+                    ) : (
+                      <span className="flex h-13 w-13 shrink-0 items-center justify-center rounded-lg bg-surface-soft text-muted">
+                        <ImageOff size={18} aria-hidden="true" />
+                      </span>
+                    )}
                     <div className="min-w-0">
                       <p className="truncate font-body text-sm font-bold text-primary">
                         {tenancy.propertyTitle}
@@ -587,9 +678,33 @@ export default function AgentBookingsPage(): ReactElement {
         )}
       </div>
 
+      {loadError ? (
+        <p className="mt-6 rounded-lg border border-red-500/30 bg-bg px-4 py-3 font-body text-sm font-bold text-red-700">
+          {loadError}
+        </p>
+      ) : null}
+
+      {chatTenancy && chatTenancy.tenantId !== null ? (
+        <ChatThread
+          conversationId={`booking-${chatTenancy.id}`}
+          otherUserId={chatTenancy.tenantId}
+          propertyId={chatTenancy.propertyId}
+          otherPartyName={chatTenancy.tenantName}
+          otherPartyRole="Tenant"
+          propertyName={chatTenancy.propertyTitle}
+          onClose={() => setChatTenancy(null)}
+        />
+      ) : null}
+
       <TenancyDrawer
-        tenancy={selectedTenancy}
+        isUpdating={updatingId === selectedTenancy?.id}
         onClose={() => setSelectedTenancy(null)}
+        onMessage={(tenancy) => {
+          setSelectedTenancy(null);
+          setChatTenancy(tenancy);
+        }}
+        onStatusChange={(tenancy, status) => void changeStatus(tenancy, status)}
+        tenancy={selectedTenancy}
       />
     </motion.main>
   );

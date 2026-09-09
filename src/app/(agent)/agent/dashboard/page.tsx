@@ -9,6 +9,7 @@ import {
   CircleDollarSign,
   Clock3,
   FileCheck2,
+  ImageOff,
   MapPin,
   MoreHorizontal,
   Plus,
@@ -18,17 +19,23 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useSyncExternalStore, type ReactElement } from "react";
+import { useEffect, useState, type ReactElement } from "react";
 import PropertyPrice from "@/components/property/PropertyPrice";
 import { IconTile } from "@/components/ui/icon-tile";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { utilityCardVariants } from "@/components/ui/utility-card";
+import { useAuthenticatedUser } from "@/lib/account";
+import { getHostBookings, type Booking, type BookingStatus } from "@/lib/bookings";
+import {
+  getPropertyPortfolio,
+  type BackendProperty,
+  type PropertyPortfolio,
+} from "@/lib/hostListings";
+import { useHostVerification } from "@/lib/hostVerification";
 
 // === Types
 
-type DashboardState = "empty" | "loading" | "populated";
 type ListingStatus = "Occupied" | "Pending review" | "Published";
-type BookingStatus = "Confirmed" | "New request";
 
 interface SummaryItem {
   detail: string;
@@ -51,7 +58,7 @@ interface AttentionItem {
 interface AgentProperty {
   address: string;
   id: number;
-  imageUrl: string;
+  imageUrl: string | null;
   monthlyRent: number;
   status: ListingStatus;
   tenant: string | null;
@@ -73,146 +80,15 @@ interface UpcomingActivity {
   title: string;
 }
 
+interface DashboardData {
+  attention: AttentionItem[];
+  bookings: AgentBooking[];
+  properties: AgentProperty[];
+  summary: SummaryItem[];
+  upcoming: UpcomingActivity[];
+}
+
 // === Constants
-
-const SUMMARY_ITEMS: SummaryItem[] = [
-  {
-    detail: "Published and visible",
-    icon: Building2,
-    label: "Active listings",
-    tone: "primary",
-    value: "08",
-  },
-  {
-    detail: "Waiting for your response",
-    icon: FileCheck2,
-    label: "Tenancy requests",
-    tone: "accent",
-    value: "03",
-  },
-  {
-    detail: "Across managed homes",
-    icon: UsersRound,
-    label: "Occupied homes",
-    tone: "neutral",
-    value: "05",
-  },
-  {
-    detail: "From active tenancies",
-    icon: CircleDollarSign,
-    label: "Expected monthly rent",
-    tone: "primary",
-    value: 4850000,
-  },
-];
-
-const ATTENTION_ITEMS: AttentionItem[] = [
-  {
-    actionLabel: "Review requests",
-    description: "Three tenants are waiting for a response on two homes.",
-    href: "/agent/bookings",
-    icon: FileCheck2,
-    id: "booking-requests",
-    title: "New tenancy requests",
-    tone: "accent",
-  },
-  {
-    actionLabel: "Review listing",
-    description: "Complete the property verification details before publishing.",
-    href: "/agent/saved-listings",
-    icon: ShieldCheck,
-    id: "property-verification",
-    title: "One listing needs verification",
-    tone: "danger",
-  },
-  {
-    actionLabel: "View tenancy",
-    description: "A tenant is scheduled to move in within the next seven days.",
-    href: "/agent/bookings",
-    icon: CalendarCheck2,
-    id: "move-in",
-    title: "Upcoming move-in",
-    tone: "primary",
-  },
-];
-
-const PROPERTIES: AgentProperty[] = [
-  {
-    address: "Lekki Phase 1, Lagos",
-    id: 601,
-    imageUrl:
-      "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=640&h=480&fit=crop&auto=format&q=80",
-    monthlyRent: 1200000,
-    status: "Occupied",
-    tenant: "Kelechi Eze",
-    title: "Lekki Garden Maisonette",
-  },
-  {
-    address: "Maitama, Abuja",
-    id: 602,
-    imageUrl:
-      "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=640&h=480&fit=crop&auto=format&q=80",
-    monthlyRent: 950000,
-    status: "Published",
-    tenant: null,
-    title: "Maitama Park Apartment",
-  },
-  {
-    address: "Victoria Island, Lagos",
-    id: 603,
-    imageUrl:
-      "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=640&h=480&fit=crop&auto=format&q=80",
-    monthlyRent: 1750000,
-    status: "Pending review",
-    tenant: null,
-    title: "Harbour View Residence",
-  },
-];
-
-const BOOKINGS: AgentBooking[] = [
-  {
-    date: "8 Sep 2026",
-    id: 701,
-    property: "Maitama Park Apartment",
-    status: "New request",
-    tenant: "Ada Nwosu",
-  },
-  {
-    date: "12 Sep 2026",
-    id: 702,
-    property: "Lekki Garden Maisonette",
-    status: "Confirmed",
-    tenant: "Kelechi Eze",
-  },
-  {
-    date: "18 Sep 2026",
-    id: 703,
-    property: "Harbour View Residence",
-    status: "New request",
-    tenant: "Tolu Martins",
-  },
-];
-
-const UPCOMING_ACTIVITY: UpcomingActivity[] = [
-  {
-    date: "12 Sep",
-    detail: "Lekki Garden Maisonette",
-    id: "move-in-kelechi",
-    title: "Kelechi moves in",
-  },
-  {
-    date: "16 Sep",
-    detail: "Maitama Park Apartment",
-    id: "viewing-ada",
-    title: "Virtual viewing with Ada",
-  },
-  {
-    date: "30 Sep",
-    detail: "Harbour View Residence",
-    id: "listing-review",
-    title: "Listing review due",
-  },
-];
 
 const ATTENTION_TONES: Record<AttentionItem["tone"], string> = {
   accent: "bg-accent/10 text-accent-alt",
@@ -220,33 +96,271 @@ const ATTENTION_TONES: Record<AttentionItem["tone"], string> = {
   primary: "bg-primary/5 text-primary",
 };
 
-const LISTING_TONES: Record<
-  ListingStatus,
-  "accent" | "danger" | "primary"
-> = {
+const LISTING_TONES: Record<ListingStatus, "accent" | "danger" | "primary"> = {
   Occupied: "primary",
   "Pending review": "danger",
   Published: "accent",
 };
 
+const BOOKING_LABELS: Record<BookingStatus, string> = {
+  PENDING: "New request",
+  CONFIRMED: "Confirmed",
+  CANCELLED: "Cancelled",
+  COMPLETED: "Completed",
+};
+
+const BOOKING_TONES: Record<BookingStatus, "accent" | "neutral" | "primary"> = {
+  PENDING: "accent",
+  CONFIRMED: "primary",
+  CANCELLED: "neutral",
+  COMPLETED: "neutral",
+};
+
+/** A move-in inside this window is worth surfacing on the dashboard. */
+const MOVE_IN_HORIZON_DAYS = 7;
+
+const MAX_UPCOMING = 4;
+const MAX_RECENT_BOOKINGS = 3;
+
 // === Helpers
 
-function subscribeToDashboardState(): () => void {
-  return () => undefined;
+function toDate(value: string): Date {
+  return new Date(`${value}T00:00:00`);
 }
 
-function getDashboardState(): DashboardState {
-  const requestedState = new URLSearchParams(window.location.search).get(
-    "state",
+function daysUntil(value: string): number {
+  const start = toDate(value).getTime();
+  const today = new Date().setHours(0, 0, 0, 0);
+
+  return Math.round((start - today) / 86_400_000);
+}
+
+/** A tenancy that has started and has not ended yet. */
+function isActiveTenancy(booking: Booking): boolean {
+  const today = new Date().setHours(0, 0, 0, 0);
+
+  return (
+    booking.status === "CONFIRMED" &&
+    toDate(booking.startDate).getTime() <= today &&
+    toDate(booking.endDate).getTime() >= today
+  );
+}
+
+function formatDay(value: string): string {
+  return toDate(value).toLocaleDateString("en-NG", {
+    day: "numeric",
+    month: "short",
+  });
+}
+
+function formatFullDate(value: Date): string {
+  return value.toLocaleDateString("en-NG", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+}
+
+function greetingFor(hour: number): string {
+  if (hour < 12) {
+    return "Good morning";
+  }
+
+  return hour < 17 ? "Good afternoon" : "Good evening";
+}
+
+function toListingStatus(
+  property: BackendProperty,
+  occupiedIds: Set<number>,
+): ListingStatus {
+  if (!property.verified) {
+    return "Pending review";
+  }
+
+  return occupiedIds.has(property.id) ? "Occupied" : "Published";
+}
+
+function buildSummary(
+  portfolio: PropertyPortfolio,
+  bookings: Booking[],
+  occupiedIds: Set<number>,
+): SummaryItem[] {
+  const pendingCount = bookings.filter(
+    (booking) => booking.status === "PENDING",
+  ).length;
+
+  return [
+    {
+      detail: "Published and visible",
+      icon: Building2,
+      label: "Active listings",
+      tone: "primary",
+      value: portfolio.activeListingsCount,
+    },
+    {
+      detail: "Waiting for your response",
+      icon: FileCheck2,
+      label: "Tenancy requests",
+      tone: "accent",
+      value: pendingCount,
+    },
+    {
+      detail: "Across managed homes",
+      icon: UsersRound,
+      label: "Occupied homes",
+      tone: "neutral",
+      value: occupiedIds.size,
+    },
+    {
+      detail: "From active tenancies",
+      icon: CircleDollarSign,
+      label: "Expected monthly rent",
+      tone: "primary",
+      value: portfolio.expectedMonthlyRentalIncome,
+    },
+  ];
+}
+
+/**
+ * Only surfaces items that are actually true right now. An empty list renders
+ * nothing, which is the correct state for an agent with nothing outstanding.
+ */
+function buildAttention(
+  portfolio: PropertyPortfolio,
+  bookings: Booking[],
+  identityVerified: boolean,
+): AttentionItem[] {
+  const items: AttentionItem[] = [];
+  const pending = bookings.filter((booking) => booking.status === "PENDING");
+  const unverified = portfolio.properties.filter(
+    (property) => !property.verified,
+  );
+  const imminentMoveIns = bookings.filter((booking) => {
+    const days = daysUntil(booking.startDate);
+
+    return (
+      booking.status === "CONFIRMED" && days >= 0 && days <= MOVE_IN_HORIZON_DAYS
+    );
+  });
+
+  if (!identityVerified) {
+    items.push({
+      actionLabel: "Finish verification",
+      description:
+        "Your listings stay unpublished until your identity is verified.",
+      href: "/agent/verify",
+      icon: ShieldCheck,
+      id: "identity",
+      title: "Verification incomplete",
+      tone: "danger",
+    });
+  }
+
+  if (pending.length > 0) {
+    items.push({
+      actionLabel: "Review requests",
+      description:
+        pending.length === 1
+          ? "One tenant is waiting for a response."
+          : `${pending.length} tenants are waiting for a response.`,
+      href: "/agent/bookings",
+      icon: FileCheck2,
+      id: "booking-requests",
+      title: "New tenancy requests",
+      tone: "accent",
+    });
+  }
+
+  if (unverified.length > 0) {
+    items.push({
+      actionLabel: "Review listing",
+      description:
+        "Take the property photo on site to finish verification and publish.",
+      href: "/agent/saved-listings",
+      icon: ShieldCheck,
+      id: "property-verification",
+      title:
+        unverified.length === 1
+          ? "One listing needs verification"
+          : `${unverified.length} listings need verification`,
+      tone: "danger",
+    });
+  }
+
+  if (imminentMoveIns.length > 0) {
+    items.push({
+      actionLabel: "View tenancy",
+      description: `${imminentMoveIns[0].tenant?.name ?? "A tenant"} moves into ${imminentMoveIns[0].propertyTitle} on ${formatDay(imminentMoveIns[0].startDate)}.`,
+      href: "/agent/bookings",
+      icon: CalendarCheck2,
+      id: "move-in",
+      title: "Upcoming move-in",
+      tone: "primary",
+    });
+  }
+
+  return items;
+}
+
+/** Move-ins only. Scheduled viewings arrive with the viewings API. */
+function buildUpcoming(bookings: Booking[]): UpcomingActivity[] {
+  return bookings
+    .filter(
+      (booking) =>
+        booking.status === "CONFIRMED" && daysUntil(booking.startDate) >= 0,
+    )
+    .sort((first, second) => first.startDate.localeCompare(second.startDate))
+    .slice(0, MAX_UPCOMING)
+    .map((booking) => ({
+      date: formatDay(booking.startDate),
+      detail: booking.propertyTitle,
+      id: `move-in-${booking.id}`,
+      title: `${booking.tenant?.name ?? "Tenant"} moves in`,
+    }));
+}
+
+function buildDashboard(
+  portfolio: PropertyPortfolio,
+  bookings: Booking[],
+  identityVerified: boolean,
+): DashboardData {
+  const occupiedIds = new Set(
+    bookings.filter(isActiveTenancy).map((booking) => booking.propertyId),
+  );
+  const tenantByProperty = new Map(
+    bookings
+      .filter(isActiveTenancy)
+      .map((booking) => [booking.propertyId, booking.tenant?.name ?? "Tenant"]),
   );
 
-  return requestedState === "empty" || requestedState === "loading"
-    ? requestedState
-    : "populated";
-}
-
-function getServerDashboardState(): DashboardState {
-  return "populated";
+  return {
+    attention: buildAttention(portfolio, bookings, identityVerified),
+    bookings: [...bookings]
+      .sort((first, second) =>
+        (second.createdAt ?? second.startDate).localeCompare(
+          first.createdAt ?? first.startDate,
+        ),
+      )
+      .slice(0, MAX_RECENT_BOOKINGS)
+      .map((booking) => ({
+        date: formatDay(booking.startDate),
+        id: booking.id,
+        property: booking.propertyTitle,
+        status: booking.status,
+        tenant: booking.tenant?.name ?? "Tenant",
+      })),
+    properties: portfolio.properties.map((property) => ({
+      address: property.address,
+      id: property.id,
+      imageUrl: property.imageUrl ?? null,
+      monthlyRent: property.price,
+      status: toListingStatus(property, occupiedIds),
+      tenant: tenantByProperty.get(property.id) ?? null,
+      title: property.title,
+    })),
+    summary: buildSummary(portfolio, bookings, occupiedIds),
+    upcoming: buildUpcoming(bookings),
+  };
 }
 
 // === Components
@@ -288,15 +402,12 @@ function EmptyDashboard(): ReactElement {
         >
           <Building2 size={64} />
         </IconTile>
-        <p className="mt-6 font-accent text-xs font-bold uppercase tracking-[0.25em] text-accent-alt">
-          Build your portfolio
-        </p>
-        <h1 className="mt-3 font-display text-4xl font-bold text-primary sm:text-5xl">
-          Add your first managed home.
+        <h1 className="mt-8 font-display text-3xl font-bold text-primary sm:text-4xl">
+          Your portfolio starts here.
         </h1>
-        <p className="mx-auto mt-4 max-w-md font-body text-base leading-7 text-muted">
-          Create a rental listing, verify the property, and start receiving
-          tenant requests from one place.
+        <p className="mt-4 font-body text-base leading-7 text-muted">
+          Add your first property to start receiving tenancy requests from
+          verified tenants.
         </p>
         <Link
           href="/agent/listings/create"
@@ -310,13 +421,13 @@ function EmptyDashboard(): ReactElement {
   );
 }
 
-function SummaryGrid(): ReactElement {
+function SummaryGrid({ items }: { items: SummaryItem[] }): ReactElement {
   return (
     <section
       className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
       aria-label="Portfolio summary"
     >
-      {SUMMARY_ITEMS.map(({ detail, icon: Icon, label, tone, value }) => (
+      {items.map(({ detail, icon: Icon, label, tone, value }) => (
         <article
           key={label}
           className={utilityCardVariants({
@@ -335,8 +446,8 @@ function SummaryGrid(): ReactElement {
                 {label}
               </p>
               <p className="mt-4 font-display text-3xl font-bold leading-none text-primary">
-                {typeof value === "number" ? (
-                  <PropertyPrice value={value} />
+                {label === "Expected monthly rent" ? (
+                  <PropertyPrice value={Number(value)} />
                 ) : (
                   value
                 )}
@@ -353,7 +464,7 @@ function SummaryGrid(): ReactElement {
   );
 }
 
-function AttentionPanel(): ReactElement {
+function AttentionPanel({ items }: { items: AttentionItem[] }): ReactElement {
   return (
     <section className="rounded-lg bg-bg p-5 shadow-sm sm:p-6">
       <div className="flex items-center justify-between gap-4">
@@ -365,47 +476,63 @@ function AttentionPanel(): ReactElement {
             Needs attention
           </h2>
         </div>
-        <StatusBadge tone="danger">3 actions</StatusBadge>
+        {items.length > 0 ? (
+          <StatusBadge tone="danger">
+            {items.length === 1 ? "1 action" : `${items.length} actions`}
+          </StatusBadge>
+        ) : (
+          <StatusBadge tone="primary">All clear</StatusBadge>
+        )}
       </div>
 
-      <div className="mt-5 divide-y divide-primary/10">
-        {ATTENTION_ITEMS.map((item) => {
-          const Icon = item.icon;
+      {items.length === 0 ? (
+        <p className="mt-6 font-body text-sm leading-6 text-muted">
+          Nothing needs you right now. New tenancy requests will appear here.
+        </p>
+      ) : (
+        <div className="mt-5 divide-y divide-primary/10">
+          {items.map((item) => {
+            const Icon = item.icon;
 
-          return (
-            <article
-              key={item.id}
-              className="flex flex-col gap-4 py-5 first:pt-0 last:pb-0 sm:flex-row sm:items-center"
-            >
-              <span
-                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg ${ATTENTION_TONES[item.tone]}`}
+            return (
+              <article
+                key={item.id}
+                className="flex flex-col gap-4 py-5 first:pt-0 last:pb-0 sm:flex-row sm:items-center"
               >
-                <Icon size={20} />
-              </span>
-              <div className="min-w-0 flex-1">
-                <h3 className="font-body text-sm font-bold text-primary">
-                  {item.title}
-                </h3>
-                <p className="mt-1 font-body text-sm leading-6 text-muted">
-                  {item.description}
-                </p>
-              </div>
-              <Link
-                href={item.href}
-                className="inline-flex min-h-10 shrink-0 items-center gap-2 self-start rounded-full px-1 font-body text-sm font-bold text-primary hover:text-accent-alt focus:outline-none focus-visible:ring-2 focus-visible:ring-accent sm:self-auto"
-              >
-                {item.actionLabel}
-                <ArrowRight size={16} />
-              </Link>
-            </article>
-          );
-        })}
-      </div>
+                <span
+                  className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg ${ATTENTION_TONES[item.tone]}`}
+                >
+                  <Icon size={20} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-body text-sm font-bold text-primary">
+                    {item.title}
+                  </h3>
+                  <p className="mt-1 font-body text-sm leading-6 text-muted">
+                    {item.description}
+                  </p>
+                </div>
+                <Link
+                  href={item.href}
+                  className="inline-flex min-h-10 shrink-0 items-center gap-2 self-start rounded-full px-1 font-body text-sm font-bold text-primary hover:text-accent-alt focus:outline-none focus-visible:ring-2 focus-visible:ring-accent sm:self-auto"
+                >
+                  {item.actionLabel}
+                  <ArrowRight size={16} />
+                </Link>
+              </article>
+            );
+          })}
+        </div>
+      )}
     </section>
   );
 }
 
-function UpcomingPanel(): ReactElement {
+function UpcomingPanel({
+  items,
+}: {
+  items: UpcomingActivity[];
+}): ReactElement {
   return (
     <section className="rounded-lg bg-surface-soft p-5 shadow-sm sm:p-6">
       <div className="flex items-center justify-between gap-4">
@@ -422,33 +549,43 @@ function UpcomingPanel(): ReactElement {
         </IconTile>
       </div>
 
-      <ol className="mt-6 space-y-5">
-        {UPCOMING_ACTIVITY.map((activity) => (
-          <li key={activity.id} className="flex gap-4">
-            <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-lg bg-bg text-center shadow-sm">
-              <span className="font-body text-[10px] font-bold uppercase tracking-wide text-muted">
-                {activity.date.split(" ")[1]}
-              </span>
-              <span className="font-display text-lg font-bold leading-none text-primary">
-                {activity.date.split(" ")[0]}
-              </span>
-            </div>
-            <div className="min-w-0 pt-1">
-              <p className="font-body text-sm font-bold text-primary">
-                {activity.title}
-              </p>
-              <p className="mt-1 truncate font-body text-xs text-muted">
-                {activity.detail}
-              </p>
-            </div>
-          </li>
-        ))}
-      </ol>
+      {items.length === 0 ? (
+        <p className="mt-6 font-body text-sm leading-6 text-muted">
+          No move-ins scheduled. Confirmed tenancies show up here.
+        </p>
+      ) : (
+        <ol className="mt-6 space-y-5">
+          {items.map((activity) => (
+            <li key={activity.id} className="flex gap-4">
+              <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-lg bg-bg text-center shadow-sm">
+                <span className="font-body text-[10px] font-bold uppercase tracking-wide text-muted">
+                  {activity.date.split(" ")[1]}
+                </span>
+                <span className="font-display text-lg font-bold leading-none text-primary">
+                  {activity.date.split(" ")[0]}
+                </span>
+              </div>
+              <div className="min-w-0 pt-1">
+                <p className="font-body text-sm font-bold text-primary">
+                  {activity.title}
+                </p>
+                <p className="mt-1 truncate font-body text-xs text-muted">
+                  {activity.detail}
+                </p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      )}
     </section>
   );
 }
 
-function PropertiesPanel(): ReactElement {
+function PropertiesPanel({
+  properties,
+}: {
+  properties: AgentProperty[];
+}): ReactElement {
   return (
     <section className="mt-7 overflow-hidden rounded-lg bg-bg shadow-sm">
       <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-end sm:justify-between sm:p-6">
@@ -478,19 +615,25 @@ function PropertiesPanel(): ReactElement {
       </div>
 
       <div className="divide-y divide-primary/10">
-        {PROPERTIES.map((property) => (
+        {properties.map((property) => (
           <article
             key={property.id}
             className="grid gap-4 p-5 transition-colors hover:bg-surface-soft md:grid-cols-[minmax(16rem,1.6fr)_minmax(8rem,0.7fr)_minmax(8rem,0.7fr)_minmax(9rem,0.7fr)_2rem] md:items-center md:gap-5 md:px-6"
           >
             <div className="flex min-w-0 items-center gap-4">
-              <Image
-                src={property.imageUrl}
-                alt=""
-                width={64}
-                height={64}
-                className="h-16 w-16 shrink-0 rounded-lg object-cover"
-              />
+              {property.imageUrl ? (
+                <Image
+                  src={property.imageUrl}
+                  alt=""
+                  width={64}
+                  height={64}
+                  className="h-16 w-16 shrink-0 rounded-lg object-cover"
+                />
+              ) : (
+                <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-surface-soft text-muted">
+                  <ImageOff size={20} aria-hidden="true" />
+                </span>
+              )}
               <div className="min-w-0">
                 <h3 className="truncate font-body text-sm font-bold text-primary">
                   {property.title}
@@ -536,7 +679,11 @@ function PropertiesPanel(): ReactElement {
   );
 }
 
-function BookingsPanel(): ReactElement {
+function BookingsPanel({
+  bookings,
+}: {
+  bookings: AgentBooking[];
+}): ReactElement {
   return (
     <section className="mt-7 rounded-lg bg-bg p-5 shadow-sm sm:p-6">
       <div className="flex items-center justify-between gap-4">
@@ -557,54 +704,78 @@ function BookingsPanel(): ReactElement {
         </Link>
       </div>
 
-      <div className="mt-5 grid gap-3 lg:grid-cols-3">
-        {BOOKINGS.map((booking) => (
-          <article
-            key={booking.id}
-            className="rounded-lg bg-surface-soft p-4 transition-all hover:-translate-y-0.5 hover:shadow-sm"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <IconTile
-                tone={booking.status === "New request" ? "accent" : "primary"}
-              >
-                {booking.status === "New request" ? (
-                  <Clock3 size={19} />
-                ) : (
-                  <CheckCircle2 size={19} />
-                )}
-              </IconTile>
-              <StatusBadge
-                tone={booking.status === "New request" ? "accent" : "primary"}
-                size="sm"
-              >
-                {booking.status}
-              </StatusBadge>
-            </div>
-            <h3 className="mt-4 font-body text-sm font-bold text-primary">
-              {booking.tenant}
-            </h3>
-            <p className="mt-1 truncate font-body text-sm text-muted">
-              {booking.property}
-            </p>
-            <p className="mt-4 font-body text-xs font-medium text-muted">
-              {booking.date}
-            </p>
-          </article>
-        ))}
-      </div>
+      {bookings.length === 0 ? (
+        <p className="mt-6 font-body text-sm leading-6 text-muted">
+          No tenancy requests yet. They appear here as tenants apply.
+        </p>
+      ) : (
+        <div className="mt-5 grid gap-3 lg:grid-cols-3">
+          {bookings.map((booking) => (
+            <article
+              key={booking.id}
+              className="rounded-lg bg-surface-soft p-4 transition-all hover:-translate-y-0.5 hover:shadow-sm"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <IconTile tone={BOOKING_TONES[booking.status]}>
+                  {booking.status === "PENDING" ? (
+                    <Clock3 size={19} />
+                  ) : (
+                    <CheckCircle2 size={19} />
+                  )}
+                </IconTile>
+                <StatusBadge tone={BOOKING_TONES[booking.status]} size="sm">
+                  {BOOKING_LABELS[booking.status]}
+                </StatusBadge>
+              </div>
+              <h3 className="mt-4 font-body text-sm font-bold text-primary">
+                {booking.tenant}
+              </h3>
+              <p className="mt-1 truncate font-body text-sm text-muted">
+                {booking.property}
+              </p>
+              <p className="mt-4 font-body text-xs font-medium text-muted">
+                {booking.date}
+              </p>
+            </article>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
 
 export default function AgentDashboardPage(): ReactElement {
   const reduceMotion = useReducedMotion();
-  const dashboardState = useSyncExternalStore(
-    subscribeToDashboardState,
-    getDashboardState,
-    getServerDashboardState,
-  );
+  const { user } = useAuthenticatedUser();
+  const { snapshot: verification } = useHostVerification();
+  const [portfolio, setPortfolio] = useState<PropertyPortfolio | null>(null);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loadError, setLoadError] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
 
-  if (dashboardState === "loading") {
+  useEffect(() => {
+    let active = true;
+
+    void Promise.all([getPropertyPortfolio(), getHostBookings()]).then(
+      ([portfolioResult, bookingsResult]) => {
+        if (!active) {
+          return;
+        }
+
+        setPortfolio(portfolioResult.data);
+        setBookings(bookingsResult.data);
+        // The portfolio is the page. Bookings failing alone still leaves it useful.
+        setLoadError(portfolioResult.data ? "" : (portfolioResult.message ?? ""));
+        setIsLoading(false);
+      },
+    );
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  if (isLoading) {
     return (
       <main className="min-h-screen px-5 py-12 sm:px-8 lg:px-10 lg:py-16 xl:px-14">
         <DashboardSkeleton />
@@ -612,13 +783,32 @@ export default function AgentDashboardPage(): ReactElement {
     );
   }
 
-  if (dashboardState === "empty") {
+  if (!portfolio) {
+    return (
+      <main className="grid min-h-screen place-items-center px-5 py-12 sm:px-8">
+        <div className="max-w-md text-center">
+          <p className="font-body text-sm leading-6 text-muted">
+            {loadError || "Your dashboard could not be loaded."}
+          </p>
+        </div>
+      </main>
+    );
+  }
+
+  if (portfolio.properties.length === 0 && bookings.length === 0) {
     return (
       <main className="min-h-screen px-5 py-12 sm:px-8 lg:px-10 lg:py-16 xl:px-14">
         <EmptyDashboard />
       </main>
     );
   }
+
+  const dashboard = buildDashboard(
+    portfolio,
+    bookings,
+    verification?.identity.status === "approved",
+  );
+  const now = new Date();
 
   return (
     <motion.main
@@ -630,10 +820,11 @@ export default function AgentDashboardPage(): ReactElement {
       <header className="flex flex-col gap-6 pb-9 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="font-body text-sm font-medium text-muted">
-            Tuesday, 8 September
+            {formatFullDate(now)}
           </p>
           <h1 className="mt-2 font-display text-4xl font-bold leading-[0.95] text-primary sm:text-5xl">
-            Good morning, Tomi.
+            {greetingFor(now.getHours())}
+            {user?.firstName ? `, ${user.firstName}.` : "."}
           </h1>
         </div>
         <Link
@@ -645,15 +836,15 @@ export default function AgentDashboardPage(): ReactElement {
         </Link>
       </header>
 
-      <SummaryGrid />
+      <SummaryGrid items={dashboard.summary} />
 
       <div className="mt-7 grid gap-6 xl:grid-cols-[minmax(0,1.7fr)_minmax(18rem,0.8fr)]">
-        <AttentionPanel />
-        <UpcomingPanel />
+        <AttentionPanel items={dashboard.attention} />
+        <UpcomingPanel items={dashboard.upcoming} />
       </div>
 
-      <PropertiesPanel />
-      <BookingsPanel />
+      <PropertiesPanel properties={dashboard.properties} />
+      <BookingsPanel bookings={dashboard.bookings} />
     </motion.main>
   );
 }
