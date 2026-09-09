@@ -117,6 +117,60 @@ export function getHostBookings(): Promise<BookingResult<Booking[]>> {
   return requestBookings("/api/bookings/host");
 }
 
+/** What a stay would cost, worked out by the code that charges for it. */
+export interface BookingQuote {
+  cleaningFee: number | null;
+  currency: string;
+  periodUnit: "MONTH" | "NIGHT" | "YEAR";
+  periods: number;
+  propertyId: number;
+  rentalMode: string;
+  total: number;
+  /** Set when the dates cannot be booked. A reason to show, not a price. */
+  unavailableReason: string | null;
+  unitPrice: number;
+}
+
+/**
+ * Asks the server what a stay costs.
+ *
+ * Public, and deliberately not computed on the client: the figure a guest is shown
+ * and the figure they are charged have to come from one place, or they drift.
+ */
+export async function getBookingQuote(
+  propertyId: number,
+  startDate: string,
+  endDate: string,
+): Promise<BookingResult<BookingQuote | null>> {
+  try {
+    const query = new URLSearchParams({
+      propertyId: String(propertyId),
+      startDate,
+      endDate,
+    });
+    const response = await fetch(`/api/bookings/quote?${query.toString()}`);
+    const payload: unknown = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      return {
+        data: null,
+        message: resolveApiError(payload, "That price could not be worked out."),
+      };
+    }
+
+    const data =
+      payload !== null && typeof payload === "object" && "data" in payload
+        ? payload.data
+        : null;
+
+    return data !== null && typeof data === "object"
+      ? { data: data as BookingQuote }
+      : { data: null, message: "That price could not be worked out." };
+  } catch {
+    return { data: null, message: "That price could not be worked out." };
+  }
+}
+
 /**
  * Requests a stay. The server works out the total from the listing mode, so no
  * price is sent: a client-supplied figure would be a way to underpay.

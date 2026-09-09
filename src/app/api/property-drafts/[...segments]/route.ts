@@ -1,7 +1,7 @@
 const API_BASE_URL = process.env.API_BASE_URL;
-const BOOKING_REQUEST_TIMEOUT_MS = 90000;
+const DRAFT_REQUEST_TIMEOUT_MS = 90000;
 
-type BookingMethod = "DELETE" | "GET" | "PATCH" | "POST";
+type DraftMethod = "DELETE" | "GET" | "PATCH" | "POST";
 
 interface RouteContext {
   params: Promise<{ segments: string[] }>;
@@ -10,14 +10,14 @@ interface RouteContext {
 /**
  * Forwards the body as bytes rather than text.
  *
- * Tenancy document uploads are multipart, and the shared authenticated proxy reads
- * bodies with `request.text()`, which corrupts them. This route handles its own
- * forwarding so both JSON and multipart work.
+ * The shared authenticated proxy reads bodies with `request.text()`, which corrupts
+ * a multipart upload. Draft photo uploads go through here, so this route handles
+ * its own forwarding.
  */
 async function handle(
   request: Request,
   context: RouteContext,
-  method: BookingMethod,
+  method: DraftMethod,
 ): Promise<Response> {
   if (!API_BASE_URL) {
     return Response.json(
@@ -45,13 +45,13 @@ async function handle(
   const controller = new AbortController();
   const timeout = globalThis.setTimeout(
     () => controller.abort(),
-    BOOKING_REQUEST_TIMEOUT_MS,
+    DRAFT_REQUEST_TIMEOUT_MS,
   );
 
   try {
     const contentType = request.headers.get("Content-Type");
     const response = await fetch(
-      `${API_BASE_URL.replace(/\/$/, "")}/api/bookings/${path}${search}`,
+      `${API_BASE_URL.replace(/\/$/, "")}/api/property-drafts/${path}${search}`,
       {
         method,
         headers: {
@@ -76,7 +76,7 @@ async function handle(
     return Response.json(
       {
         success: false,
-        message: "Unable to reach the booking server right now.",
+        message: "Unable to reach the property server right now.",
         data: null,
       },
       { status: 502 },

@@ -21,7 +21,14 @@ import PropertyPrice from "@/components/property/PropertyPrice";
 import { IconTile } from "@/components/ui/icon-tile";
 import { StatusBadge, type StatusBadgeProps } from "@/components/ui/status-badge";
 import { useToast } from "@/components/ui/toast";
+import MaintenanceReportDialog from "@/components/tenant/MaintenanceReportDialog";
 import { getMyBookings, type Booking, type BookingStatus } from "@/lib/bookings";
+import {
+  getMyMaintenanceRequests,
+  getTenancyDocuments,
+  type MaintenanceRequest,
+  type TenancyDocument,
+} from "@/lib/tenancy";
 import {
   type ChatPartyRole,
   getConversationId,
@@ -106,6 +113,36 @@ function getHostRole(booking: Booking): ChatPartyRole {
 
 // === Component
 
+const DOCUMENT_TYPE_LABELS: Record<TenancyDocument["type"], string> = {
+  LEASE_AGREEMENT: "Lease agreement",
+  INVENTORY_REPORT: "Inventory report",
+  MOVE_IN_REPORT: "Move-in report",
+  MOVE_OUT_REPORT: "Move-out report",
+  RECEIPT: "Receipt",
+  OTHER: "Document",
+};
+
+const REPAIR_STATUS_LABELS: Record<MaintenanceRequest["status"], string> = {
+  OPEN: "Reported",
+  ACKNOWLEDGED: "Seen by host",
+  IN_PROGRESS: "Being fixed",
+  RESOLVED: "Fixed",
+  CLOSED: "Closed",
+  CANCELLED: "Withdrawn",
+};
+
+const REPAIR_TONES: Record<
+  MaintenanceRequest["status"],
+  StatusBadgeProps["tone"]
+> = {
+  OPEN: "accent",
+  ACKNOWLEDGED: "accent",
+  IN_PROGRESS: "primary",
+  RESOLVED: "primary",
+  CLOSED: "neutral",
+  CANCELLED: "neutral",
+};
+
 export default function TenantBookingsPage(): ReactElement {
   const { notify } = useToast();
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -115,6 +152,10 @@ export default function TenantBookingsPage(): ReactElement {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [retryKey, setRetryKey] = useState(0);
+  const [documents, setDocuments] = useState<TenancyDocument[]>([]);
+  const [repairs, setRepairs] = useState<MaintenanceRequest[]>([]);
+  const [isReportOpen, setIsReportOpen] = useState(false);
+  const [tenancyRefreshKey, setTenancyRefreshKey] = useState(0);
   const currentUser = getCurrentChatUser();
 
   useEffect(() => {
@@ -155,6 +196,14 @@ export default function TenantBookingsPage(): ReactElement {
     [bookings],
   );
   const primaryBooking = sortedBookings[0] ?? null;
+  const primaryBookingId = primaryBooking?.id ?? null;
+  // Repairs still waiting on the host, which is what the tenant cares about
+  const openRepairs = repairs.filter(
+    (repair) =>
+      repair.status !== "CLOSED" &&
+      repair.status !== "CANCELLED" &&
+      repair.status !== "RESOLVED",
+  );
   const bookingHistory = primaryBooking
     ? sortedBookings.filter((booking) => booking.id !== primaryBooking.id)
     : [];
@@ -181,18 +230,43 @@ export default function TenantBookingsPage(): ReactElement {
     });
   };
 
-  const showUnavailableNotice = (feature: "documents" | "maintenance"): void => {
-    notify({
-      title:
-        feature === "documents"
-          ? "Lease documents are not available yet"
-          : "Maintenance reporting is not available yet",
-      description:
-        feature === "documents"
-          ? "Documents will appear here when lease document support is connected."
-          : "Contact your landlord or agent directly if you need help with the property.",
-      variant: "error",
+  useEffect(() => {
+    if (primaryBookingId === null) {
+      return;
+    }
+
+    let active = true;
+
+    void Promise.all([
+      getTenancyDocuments(primaryBookingId),
+      getMyMaintenanceRequests(primaryBookingId),
+    ]).then(([documentResult, repairResult]) => {
+      if (!active) {
+        return;
+      }
+
+      setDocuments(documentResult.data);
+      setRepairs(repairResult.data);
     });
+
+    return () => {
+      active = false;
+    };
+  }, [primaryBookingId, tenancyRefreshKey]);
+
+  const openLatestDocument = (): void => {
+    const latest = documents[0];
+
+    if (!latest) {
+      notify({
+        title: "No documents yet",
+        description: `${hostName} has not added any paperwork to this tenancy.`,
+        variant: "error",
+      });
+      return;
+    }
+
+    window.open(latest.downloadUrl, "_blank", "noopener,noreferrer");
   };
 
   return (
@@ -357,10 +431,10 @@ export default function TenantBookingsPage(): ReactElement {
                     </IconTile>
                     <button
                       type="button"
-                      onClick={() => showUnavailableNotice("documents")}
+                      onClick={openLatestDocument}
                       className="font-body text-xs font-bold text-primary hover:text-accent-alt focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                     >
-                      View documents
+                      {documents.length > 0 ? "Open latest" : "View documents"}
                     </button>
                   </div>
                   <h2 className="mt-6 font-display text-2xl font-bold text-primary">
@@ -369,15 +443,39 @@ export default function TenantBookingsPage(): ReactElement {
                   <p className="mt-3 font-body text-sm leading-6 text-muted">
                     {formatStayDates(primaryBooking)}
                   </p>
-                  <div className="mt-5 rounded-xl bg-surface-soft p-4">
-                    <p className="font-body text-sm font-bold text-primary">
-                      No lease document available
-                    </p>
-                    <p className="mt-1 font-body text-xs leading-5 text-muted">
-                      Uploaded agreements will appear here when document support
-                      is connected.
-                    </p>
-                  </div>
+                  {documents.length === 0 ? (
+                    <div className="mt-5 rounded-xl bg-surface-soft p-4">
+                      <p className="font-body text-sm font-bold text-primary">
+                        No documents yet
+                      </p>
+                      <p className="mt-1 font-body text-xs leading-5 text-muted">
+                        {hostName} adds the agreement and any reports here.
+                      </p>
+                    </div>
+                  ) : (
+                    <ul className="mt-5 space-y-2">
+                      {documents.slice(0, 4).map((document) => (
+                        <li key={document.id}>
+                          <a
+                            href={document.downloadUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-between gap-3 rounded-xl bg-surface-soft p-4 transition-colors hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                          >
+                            <span className="min-w-0">
+                              <span className="block truncate font-body text-sm font-bold text-primary">
+                                {document.name}
+                              </span>
+                              <span className="mt-1 block font-body text-xs text-muted">
+                                {DOCUMENT_TYPE_LABELS[document.type]}
+                              </span>
+                            </span>
+                            <FileText size={16} className="shrink-0 text-muted" />
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </article>
               </div>
             </section>
@@ -400,21 +498,49 @@ export default function TenantBookingsPage(): ReactElement {
                   </div>
                   <button
                     type="button"
-                    onClick={() => showUnavailableNotice("maintenance")}
+                    onClick={() => setIsReportOpen(true)}
                     className="min-h-10 rounded-full border border-primary/20 px-4 py-2 font-body text-sm font-bold text-primary transition-colors hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                   >
                     Report an issue
                   </button>
                 </div>
-                <div className="mt-6 rounded-xl bg-surface-soft px-5 py-6">
-                  <p className="font-body text-sm font-bold text-primary">
-                    Maintenance requests are not connected yet
-                  </p>
-                  <p className="mt-2 font-body text-sm leading-6 text-muted">
-                    Until reporting is available here, contact {hostName} for
-                    help with your home.
-                  </p>
-                </div>
+                {openRepairs.length === 0 ? (
+                  <div className="mt-6 rounded-xl bg-surface-soft px-5 py-6">
+                    <p className="font-body text-sm font-bold text-primary">
+                      Nothing outstanding
+                    </p>
+                    <p className="mt-2 font-body text-sm leading-6 text-muted">
+                      Report anything that needs fixing and {hostName} is told
+                      straight away.
+                    </p>
+                  </div>
+                ) : (
+                  <ul className="mt-6 space-y-3">
+                    {openRepairs.slice(0, 3).map((repair) => (
+                      <li
+                        key={repair.id}
+                        className="rounded-xl bg-surface-soft px-5 py-4"
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <p className="font-body text-sm font-bold text-primary">
+                            {repair.title}
+                          </p>
+                          <StatusBadge
+                            size="sm"
+                            tone={REPAIR_TONES[repair.status]}
+                          >
+                            {REPAIR_STATUS_LABELS[repair.status]}
+                          </StatusBadge>
+                        </div>
+                        {repair.hostNote ? (
+                          <p className="mt-2 font-body text-sm leading-6 text-muted">
+                            {hostName}: {repair.hostNote}
+                          </p>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </article>
 
               <article className="rounded-2xl border border-border bg-bg p-6 shadow-sm sm:p-7">
@@ -515,6 +641,16 @@ export default function TenantBookingsPage(): ReactElement {
           </>
         )}
       </div>
+
+      {primaryBookingId !== null ? (
+        <MaintenanceReportDialog
+          bookingId={primaryBookingId}
+          onClose={() => setIsReportOpen(false)}
+          onReported={() => setTenancyRefreshKey((current) => current + 1)}
+          open={isReportOpen}
+          propertyTitle={primaryBooking?.propertyTitle ?? "your home"}
+        />
+      ) : null}
 
       <ChatThread
         conversationId={activeThread?.conversationId ?? null}

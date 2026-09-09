@@ -1,7 +1,16 @@
 "use client";
 
-import { deleteDB, openDB, type DBSchema, type IDBPDatabase } from "idb";
+import { deleteDB, type DBSchema, type IDBPDatabase } from "idb";
 import { resolveApiError } from "@/lib/errors";
+import {
+  addDraftImage,
+  createDraft,
+  getDraft,
+  getDrafts,
+  publishDraft,
+  updateDraft,
+  type PropertyDraft,
+} from "@/lib/propertyDrafts";
 import type { PropertyListingStatus } from "@/lib/propertyDetails";
 
 export type HostListingRole = "landlord" | "agent";
@@ -108,6 +117,20 @@ export interface HostListingInput {
   title: string;
 }
 
+/**
+ * Drafts and published listings are both numbered by the server, and the two
+ * sequences overlap, so a bare id is ambiguous. Drafts carry a prefix.
+ */
+export const DRAFT_ID_PREFIX = "draft-";
+
+export function isDraftId(id: string): boolean {
+  return id.startsWith(DRAFT_ID_PREFIX);
+}
+
+export function toDraftNumber(id: string): number {
+  return Number(id.slice(DRAFT_ID_PREFIX.length));
+}
+
 export interface HostListingRecord extends HostListingInput {
   createdAt: string;
   id: string;
@@ -141,38 +164,9 @@ export interface PublicPropertiesResult
 }
 
 const DATABASE_NAME = "rello-host-listings";
-const DATABASE_VERSION = 1;
 const STORAGE_EVENT = "rello-host-listings-change";
 
 let databasePromise: Promise<IDBPDatabase<HostListingsDatabase>> | null = null;
-
-function getDatabase(): Promise<IDBPDatabase<HostListingsDatabase>> {
-  if (typeof window === "undefined" || !("indexedDB" in window)) {
-    return Promise.reject(new Error("IndexedDB is unavailable"));
-  }
-
-  databasePromise ??= openDB<HostListingsDatabase>(
-    DATABASE_NAME,
-    DATABASE_VERSION,
-    {
-      upgrade(database) {
-        if (!database.objectStoreNames.contains("listings")) {
-          database.createObjectStore("listings", { keyPath: "id" });
-        }
-      },
-    },
-  );
-
-  return databasePromise;
-}
-
-function createListingId(): string {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return `listing-${crypto.randomUUID()}`;
-  }
-
-  return `listing-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-}
 
 function publishStorageChange(): void {
   window.dispatchEvent(new Event(STORAGE_EVENT));
@@ -354,59 +348,44 @@ async function requestBackendProperty(
   return envelope.data;
 }
 
-async function getStoredListings(): Promise<HostListingRecord[]> {
-  const database = await getDatabase();
-  return database.getAll("listings");
-}
-
-async function persistRecord(
-  record: HostListingRecord,
-): Promise<HostListingStorageResult<HostListingRecord | null>> {
-  try {
-    const database = await getDatabase();
-    await database.put("listings", record);
-    publishStorageChange();
-
-    return { data: record, unavailable: false };
-  } catch {
-    return {
-      data: record,
-      message:
-        "The listing was saved remotely, but local metadata is unavailable.",
-      unavailable: true,
-    };
-  }
-}
-
-async function persistListing(
-  input: HostListingInput,
-  reviewStatus: HostListingReviewStatus,
-): Promise<HostListingStorageResult<HostListingRecord | null>> {
-  try {
-    const database = await getDatabase();
-    const now = new Date().toISOString();
-    const existing = input.id
-      ? await database.get("listings", input.id)
-      : undefined;
-    const record: HostListingRecord = {
-      ...input,
-      id: input.id ?? createListingId(),
-      reviewStatus,
-      createdAt: existing?.createdAt ?? now,
-      updatedAt: now,
-    };
-
-    await database.put("listings", record);
-    publishStorageChange();
-
-    return { data: record, unavailable: false };
-  } catch {
-    return {
-      data: null,
-      message: "Local listing storage is unavailable.",
-      unavailable: true,
-    };
-  }
+/**
+ * A server draft in the shape the listing screens already read.
+ *
+ * Drafts used to live in IndexedDB, so they never left the device they were
+ * started on. The local store is no longer read, but nothing deletes it either:
+ * anything still in there stays recoverable.
+ */
+function draftToRecord(
+  draft: PropertyDraft,
+  role: HostListingRole,
+): HostListingRecord {
+  return {
+    id: `${DRAFT_ID_PREFIX}${draft.id}`,
+    ownerRole: role,
+    listingType: draft.listingType ?? "FOR_RENT",
+    title: draft.title ?? "",
+    description: draft.description ?? "",
+    price: draft.price ?? 0,
+    city: draft.city ?? "",
+    area: draft.area ?? "",
+    address: draft.address ?? "",
+    bedrooms: draft.bedrooms ?? 0,
+    bathrooms: draft.bathrooms ?? 0,
+    squareFootage: draft.squareFootage ?? undefined,
+    amenities: draft.amenities,
+    rentalMode: draft.rentalMode ?? "ANNUAL",
+    minimumNights: draft.minimumNights ?? undefined,
+    cleaningFee: draft.cleaningFee ?? undefined,
+    photos: draft.imageUrls.map((url, index) => ({
+      dataUrl: url,
+      id: `${draft.id}-${index}`,
+      name: `Photo ${index + 1}`,
+      type: "image/jpeg",
+    })),
+    reviewStatus: "DRAFT",
+    createdAt: draft.createdAt,
+    updatedAt: draft.updatedAt,
+  };
 }
 
 function buildPropertyRequest(input: HostListingInput): object {
@@ -484,6 +463,12 @@ export function subscribeToHostListings(callback: () => void): () => void {
   return () => window.removeEventListener(STORAGE_EVENT, callback);
 }
 
+/**
+ * Clears the old browser-side listing store.
+ *
+ * Drafts live on the server now and nothing reads this store any more, but logging
+ * out should still leave nothing behind on a shared device.
+ */
 export async function clearHostListingStorage(): Promise<void> {
   if (databasePromise) {
     const database = await databasePromise;
@@ -599,16 +584,11 @@ export async function getPropertyPortfolio(): Promise<
 export async function getHostListings(
   role: HostListingRole,
 ): Promise<HostListingStorageResult<HostListingRecord[]>> {
-  let storedListings: HostListingRecord[] = [];
-  let storageUnavailable = false;
-
-  try {
-    storedListings = (await getStoredListings()).filter(
-      (listing) => listing.ownerRole === role,
-    );
-  } catch {
-    storageUnavailable = true;
-  }
+  const draftResult = await getDrafts();
+  const storedListings = draftResult.data.map((draft) =>
+    draftToRecord(draft, role),
+  );
+  const storageUnavailable = false;
 
   const portfolioResult = await getPropertyPortfolio();
 
@@ -651,43 +631,136 @@ export async function getHostListings(
 
 export async function getHostListingById(
   id: string,
+  role: HostListingRole = "landlord",
 ): Promise<HostListingStorageResult<HostListingRecord | null>> {
-  let storedListing: HostListingRecord | undefined;
-  let storageUnavailable = false;
+  if (isDraftId(id)) {
+    const draftResult = await getDraft(toDraftNumber(id));
 
-  try {
-    storedListing = await (await getDatabase()).get("listings", id);
-  } catch {
-    storageUnavailable = true;
+    return {
+      data: draftResult.data ? draftToRecord(draftResult.data, role) : null,
+      message: draftResult.message,
+      unavailable: false,
+    };
   }
 
   if (!/^\d+$/.test(id)) {
-    return {
-      data: storedListing ?? null,
-      unavailable: storageUnavailable,
-    };
+    return { data: null, unavailable: false };
   }
 
   const propertyResult = await getBackendPropertyById(id);
 
   if (!propertyResult.data) {
     return {
-      data: storedListing ?? null,
+      data: null,
       message: propertyResult.message,
-      unavailable: storageUnavailable,
+      unavailable: false,
     };
   }
 
   return {
-    data: mapBackendProperty(propertyResult.data, storedListing),
-    unavailable: storageUnavailable,
+    data: mapBackendProperty(propertyResult.data),
+    unavailable: false,
   };
 }
 
+/**
+ * Saves a draft on the server so it follows the host between devices.
+ *
+ * Photos are uploaded as they are added rather than at publish, which is what
+ * makes a draft opened elsewhere show its pictures instead of an empty gallery.
+ */
 export async function saveHostListingDraft(
   input: HostListingInput,
 ): Promise<HostListingStorageResult<HostListingRecord | null>> {
-  return persistListing(input, "DRAFT");
+  const payload = {
+    title: input.title,
+    description: input.description,
+    address: input.address,
+    city: input.city,
+    area: input.area,
+    price: input.price,
+    bedrooms: input.bedrooms,
+    bathrooms: input.bathrooms,
+    squareFootage: input.squareFootage,
+    listingType: input.listingType,
+    rentalMode: input.rentalMode,
+    minimumNights: input.rentalMode === "SHORT_STAY" ? input.minimumNights : null,
+    cleaningFee: input.rentalMode === "SHORT_STAY" ? input.cleaningFee : null,
+    amenities: input.amenities,
+  };
+
+  const existingId =
+    input.id && isDraftId(input.id) ? toDraftNumber(input.id) : null;
+  const result = existingId
+    ? await updateDraft(existingId, payload)
+    : await createDraft(payload);
+
+  if (!result.data) {
+    return { data: null, message: result.message, unavailable: false };
+  }
+
+  const draftId = result.data.id;
+  // Only photos not already on the server, so re-saving does not duplicate them
+  const pending = input.photos.filter((photo) =>
+    photo.dataUrl.startsWith("data:"),
+  );
+  let message: string | undefined;
+
+  for (const photo of pending) {
+    try {
+      const response = await fetch(photo.dataUrl);
+      const uploaded = await addDraftImage(
+        draftId,
+        await response.blob(),
+        photo.name,
+      );
+
+      if (!uploaded.data) {
+        message = uploaded.message;
+      }
+    } catch {
+      message = "Some photos could not be uploaded.";
+    }
+  }
+
+  const refreshed = pending.length > 0 ? await getDraft(draftId) : result;
+
+  return {
+    data: draftToRecord(refreshed.data ?? result.data, input.ownerRole),
+    message,
+    unavailable: false,
+  };
+}
+
+/**
+ * Saves any last edits to the draft, then publishes it.
+ *
+ * Publishing is where the listing rules apply, so a rejection here is the server
+ * naming the field that is still missing.
+ */
+async function publishExistingDraft(
+  input: HostListingInput,
+): Promise<HostListingStorageResult<HostListingRecord | null>> {
+  const saved = await saveHostListingDraft(input);
+
+  if (!saved.data) {
+    return saved;
+  }
+
+  const draftId = toDraftNumber(saved.data.id);
+  const published = await publishDraft(draftId);
+
+  if (published.data === null) {
+    return { data: null, message: published.message, unavailable: false };
+  }
+
+  const property = await getBackendPropertyById(String(published.data));
+
+  return {
+    data: property.data ? mapBackendProperty(property.data) : null,
+    message: "Listing published.",
+    unavailable: false,
+  };
 }
 
 export async function submitHostListing(
@@ -704,6 +777,12 @@ export async function submitHostListing(
   }
 
   try {
+    // A draft is published rather than recreated: publishing carries its photos
+    // across by reference and stamps the draft so it cannot become a second listing
+    if (input.id && isDraftId(input.id)) {
+      return publishExistingDraft(input);
+    }
+
     const isUpdate = Boolean(input.id && /^\d+$/.test(input.id));
     let property = await requestBackendProperty(
       isUpdate ? (input.id ?? "") : "create",
@@ -736,26 +815,10 @@ export async function submitHostListing(
       }
     }
 
-    const existing = input.id
-      ? await (await getDatabase()).get("listings", input.id)
-      : undefined;
-    const record = mapBackendProperty(property, {
-      ...input,
-      id: String(property.id),
-      reviewStatus: getReviewStatus(property),
-      createdAt: existing?.createdAt ?? new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    });
-
-    if (input.id && input.id !== record.id) {
-      await (await getDatabase()).delete("listings", input.id);
-    }
-
-    const persisted = await persistRecord(record);
-
     return {
-      ...persisted,
+      data: mapBackendProperty(property),
       message,
+      unavailable: false,
     };
   } catch (error) {
     return {

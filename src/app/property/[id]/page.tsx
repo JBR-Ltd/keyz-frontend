@@ -664,7 +664,6 @@ export default function PropertyPage({
             </section>
 
             <BookingRequestDialog
-              cleaningFee={property.cleaningFee}
               minimumNights={property.minimumNights}
               onClose={() => setIsBookingOpen(false)}
               open={isBookingOpen}

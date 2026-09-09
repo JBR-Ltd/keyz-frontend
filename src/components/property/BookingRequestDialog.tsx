@@ -10,14 +10,17 @@ import {
   overlapsUnavailable,
   type UnavailableRange,
 } from "@/lib/availability";
-import { createBooking } from "@/lib/bookings";
+import {
+  createBooking,
+  getBookingQuote,
+  type BookingQuote,
+} from "@/lib/bookings";
 import type { RentalMode } from "@/lib/hostListings";
 import { useDialogFocus } from "@/lib/useDialogFocus";
 
 // === Types
 
 interface BookingRequestDialogProps {
-  cleaningFee?: number | null;
   minimumNights?: number | null;
   onClose: () => void;
   open: boolean;
@@ -54,55 +57,6 @@ function toIsoDate(value: Date): string {
   return value.toISOString().slice(0, 10);
 }
 
-function nightsBetween(start: string, end: string): number {
-  return Math.round(
-    (toDate(end).getTime() - toDate(start).getTime()) / 86_400_000,
-  );
-}
-
-/**
- * Whole periods covering the stay, rounded up, mirroring the server.
- *
- * Kept in step with BookingServiceImpl deliberately: a guest who is quoted one
- * figure and charged another will not book again.
- */
-function periodsBetween(start: string, end: string, months: boolean): number {
-  const from = toDate(start);
-  const to = toDate(end);
-  let whole =
-    (to.getFullYear() - from.getFullYear()) * (months ? 12 : 1) +
-    (months ? to.getMonth() - from.getMonth() : 0);
-
-  const covered = new Date(from);
-
-  if (months) {
-    covered.setMonth(covered.getMonth() + whole);
-  } else {
-    covered.setFullYear(covered.getFullYear() + whole);
-  }
-
-  if (covered < to) {
-    whole += 1;
-  }
-
-  return Math.max(whole, 1);
-}
-
-/** For display only. The server works out what is actually charged. */
-function estimateTotal(
-  mode: RentalMode,
-  price: number,
-  cleaningFee: number,
-  start: string,
-  end: string,
-): number {
-  if (mode === "SHORT_STAY") {
-    return price * nightsBetween(start, end) + cleaningFee;
-  }
-
-  return price * periodsBetween(start, end, mode === "MONTHLY");
-}
-
 function formatNaira(value: number): string {
   return new Intl.NumberFormat("en-NG", {
     style: "currency",
@@ -122,7 +76,6 @@ function earliestStart(): string {
 // === Component
 
 export default function BookingRequestDialog({
-  cleaningFee,
   minimumNights,
   onClose,
   open,
@@ -137,6 +90,10 @@ export default function BookingRequestDialog({
   const [startDate, setStartDate] = useState(earliestStart);
   const [endDate, setEndDate] = useState("");
   const [unavailable, setUnavailable] = useState<UnavailableRange[]>([]);
+  const [quotedFor, setQuotedFor] = useState<{
+    key: string;
+    value: BookingQuote | null;
+  } | null>(null);
   const [formError, setFormError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -177,8 +134,11 @@ export default function BookingRequestDialog({
     return () => document.removeEventListener("keydown", closeOnEscape);
   }, [onClose, open]);
 
-  /** The first thing wrong with the chosen dates, or null when they are fine. */
-  const problem = useMemo((): string | null => {
+  /**
+   * The obvious problems, checked here so the calendar reacts as dates are picked.
+   * The server has the final say and its answer arrives with the quote.
+   */
+  const localProblem = useMemo((): string | null => {
     if (!startDate || !endDate) {
       return null;
     }
@@ -187,31 +147,47 @@ export default function BookingRequestDialog({
       return "The end date has to be after the start date.";
     }
 
-    if (rentalMode === "SHORT_STAY") {
-      const nights = nightsBetween(startDate, endDate);
-
-      if (nights < minimum) {
-        return minimum === 1
-          ? "Book at least one night."
-          : `This host takes bookings of ${minimum} nights or more.`;
-      }
-    }
-
-    if (rentalMode === "MONTHLY" && periodsBetween(startDate, endDate, true) < 1) {
-      return "This home is let by the month, so book at least one month.";
-    }
-
     if (overlapsUnavailable(unavailable, startDate, endDate)) {
       return "Those dates are already taken. Try different ones.";
     }
 
     return null;
-  }, [endDate, minimum, rentalMode, startDate, unavailable]);
+  }, [endDate, startDate, unavailable]);
 
-  const total =
-    startDate && endDate && !problem
-      ? estimateTotal(rentalMode, price, cleaningFee ?? 0, startDate, endDate)
-      : null;
+  const dateKey = `${startDate}:${endDate}`;
+
+  // The price and the remaining rules come from the server, which is the same code
+  // that charges for the stay
+  useEffect(() => {
+    if (!startDate || !endDate || localProblem || !Number.isFinite(numericId)) {
+      return;
+    }
+
+    let active = true;
+
+    void getBookingQuote(numericId, startDate, endDate).then((result) => {
+      if (!active) {
+        return;
+      }
+
+      setQuotedFor({ key: `${startDate}:${endDate}`, value: result.data });
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [endDate, localProblem, numericId, startDate]);
+
+  // A quote for other dates is not shown at all, rather than shown and wrong
+  const quote = quotedFor?.key === dateKey ? quotedFor.value : null;
+  // Derived rather than stored: we are waiting exactly while the quote for the
+  // chosen dates has not arrived
+  const isQuoting =
+    Boolean(startDate && endDate) &&
+    localProblem === null &&
+    quotedFor?.key !== dateKey;
+  const problem = localProblem ?? quote?.unavailableReason ?? null;
+  const total = problem === null ? (quote?.total ?? null) : null;
 
   const submit = async (): Promise<void> => {
     setFormError("");
@@ -340,26 +316,18 @@ export default function BookingRequestDialog({
               <div className="mt-5 rounded-lg bg-surface-soft p-4">
                 <div className="flex items-baseline justify-between gap-3">
                   <span className="font-body text-sm text-muted">
-                    {rentalMode === "SHORT_STAY"
-                      ? `${formatNaira(price)} × ${nightsBetween(startDate, endDate)} nights`
-                      : `${formatNaira(price)} × ${periodsBetween(startDate, endDate, rentalMode === "MONTHLY")} ${copy.unit}${
-                          periodsBetween(
-                            startDate,
-                            endDate,
-                            rentalMode === "MONTHLY",
-                          ) === 1
-                            ? ""
-                            : "s"
-                        }`}
+                    {formatNaira(quote?.unitPrice ?? price)} ×{" "}
+                    {quote?.periods ?? 0} {copy.unit}
+                    {quote?.periods === 1 ? "" : "s"}
                   </span>
                 </div>
-                {rentalMode === "SHORT_STAY" && (cleaningFee ?? 0) > 0 ? (
+                {(quote?.cleaningFee ?? 0) > 0 ? (
                   <div className="mt-2 flex items-baseline justify-between gap-3">
                     <span className="font-body text-sm text-muted">
                       Cleaning fee
                     </span>
                     <span className="font-body text-sm text-primary">
-                      {formatNaira(cleaningFee ?? 0)}
+                      {formatNaira(quote?.cleaningFee ?? 0)}
                     </span>
                   </div>
                 ) : null}
@@ -386,7 +354,7 @@ export default function BookingRequestDialog({
             <button
               type="button"
               onClick={() => void submit()}
-              disabled={isSubmitting || problem !== null || !endDate}
+              disabled={isSubmitting || isQuoting || problem !== null || total === null}
               className="mt-6 inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-full bg-accent px-6 font-body text-sm font-bold text-primary transition-all duration-200 ease-in-out hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSubmitting ? <Loader2 size={17} className="animate-spin" /> : null}

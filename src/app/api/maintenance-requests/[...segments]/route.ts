@@ -1,23 +1,17 @@
 const API_BASE_URL = process.env.API_BASE_URL;
-const BOOKING_REQUEST_TIMEOUT_MS = 90000;
+const REQUEST_TIMEOUT_MS = 90000;
 
-type BookingMethod = "DELETE" | "GET" | "PATCH" | "POST";
+type Method = "GET" | "PATCH" | "POST";
 
 interface RouteContext {
   params: Promise<{ segments: string[] }>;
 }
 
-/**
- * Forwards the body as bytes rather than text.
- *
- * Tenancy document uploads are multipart, and the shared authenticated proxy reads
- * bodies with `request.text()`, which corrupts them. This route handles its own
- * forwarding so both JSON and multipart work.
- */
+/** Attachment uploads are multipart, so the body is forwarded as bytes. */
 async function handle(
   request: Request,
   context: RouteContext,
-  method: BookingMethod,
+  method: Method,
 ): Promise<Response> {
   if (!API_BASE_URL) {
     return Response.json(
@@ -45,13 +39,13 @@ async function handle(
   const controller = new AbortController();
   const timeout = globalThis.setTimeout(
     () => controller.abort(),
-    BOOKING_REQUEST_TIMEOUT_MS,
+    REQUEST_TIMEOUT_MS,
   );
 
   try {
     const contentType = request.headers.get("Content-Type");
     const response = await fetch(
-      `${API_BASE_URL.replace(/\/$/, "")}/api/bookings/${path}${search}`,
+      `${API_BASE_URL.replace(/\/$/, "")}/api/maintenance-requests/${path}${search}`,
       {
         method,
         headers: {
@@ -76,7 +70,7 @@ async function handle(
     return Response.json(
       {
         success: false,
-        message: "Unable to reach the booking server right now.",
+        message: "Unable to reach the maintenance server right now.",
         data: null,
       },
       { status: 502 },
@@ -96,8 +90,4 @@ export async function POST(request: Request, context: RouteContext) {
 
 export async function PATCH(request: Request, context: RouteContext) {
   return handle(request, context, "PATCH");
-}
-
-export async function DELETE(request: Request, context: RouteContext) {
-  return handle(request, context, "DELETE");
 }
