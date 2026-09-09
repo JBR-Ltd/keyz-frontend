@@ -38,6 +38,14 @@ type PriceFilter =
   | "over-500000";
 type SortOption = "recommended" | "price-low" | "price-high" | "bedrooms";
 
+/**
+ * Which kind of stay the searcher is after.
+ *
+ * Someone looking for a home and someone looking for a weekend want different
+ * results from the same supply, so this filters rather than merely relabels.
+ */
+type StayMode = "all" | "long" | "short";
+
 interface AppliedFilter {
   id: string;
   label: string;
@@ -47,6 +55,12 @@ interface AppliedFilter {
 // === Constants
 
 const PAGE_SIZE = 12;
+
+const STAY_MODES: { hint: string; id: StayMode; label: string }[] = [
+  { hint: "Everything available", id: "all", label: "All stays" },
+  { hint: "Rented by the month or year", id: "long", label: "Homes to rent" },
+  { hint: "Booked by the night", id: "short", label: "Shortlets" },
+];
 
 const BEDROOM_OPTIONS: SelectOption[] = [
   { label: "Any bedrooms", value: "all" },
@@ -114,6 +128,7 @@ export default function TenantBrowsePage(): ReactElement {
   const [priceFilter, setPriceFilter] = useState<PriceFilter>("all");
   const [bedroomFilter, setBedroomFilter] = useState<BedroomFilter>("all");
   const [sort, setSort] = useState<SortOption>("recommended");
+  const [stayMode, setStayMode] = useState<StayMode>("all");
   const [savedIds, setSavedIds] = useState<Set<string>>(() => new Set());
   const [savingIds, setSavingIds] = useState<Set<string>>(() => new Set());
   const [isHeaderSearchVisible, setIsHeaderSearchVisible] = useState(false);
@@ -202,6 +217,16 @@ export default function TenantBrowsePage(): ReactElement {
     const normalizedQuery = searchQuery.trim().toLowerCase();
     const minimumBedrooms = bedroomFilter === "all" ? 0 : Number(bedroomFilter);
     const filtered = properties.filter((property) => {
+      const isShortlet = property.rentalMode === "SHORT_STAY";
+
+      if (stayMode === "short" && !isShortlet) {
+        return false;
+      }
+
+      if (stayMode === "long" && isShortlet) {
+        return false;
+      }
+
       const locationText = [
         property.title,
         property.description,
@@ -227,7 +252,7 @@ export default function TenantBrowsePage(): ReactElement {
       if (sort === "bedrooms") return right.bedrooms - left.bedrooms;
       return 0;
     });
-  }, [bedroomFilter, city, priceFilter, properties, searchQuery, sort]);
+  }, [bedroomFilter, city, priceFilter, properties, searchQuery, sort, stayMode]);
 
   const appliedFilters = useMemo<AppliedFilter[]>(() => {
     const filters: AppliedFilter[] = [];
@@ -399,6 +424,37 @@ export default function TenantBrowsePage(): ReactElement {
             </button>
           </form>
 
+          <div
+            className="mt-4 flex flex-wrap gap-1 rounded-full bg-bg p-1 shadow-sm sm:w-fit"
+            role="tablist"
+            aria-label="Kind of stay"
+          >
+            {STAY_MODES.map((mode) => {
+              const active = stayMode === mode.id;
+
+              return (
+                <button
+                  key={mode.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  title={mode.hint}
+                  onClick={() => {
+                    setStayMode(mode.id);
+                    setPage(0);
+                  }}
+                  className={`min-h-10 rounded-full px-4 font-body text-sm font-bold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                    active
+                      ? "bg-primary text-white"
+                      : "text-muted hover:bg-primary/5 hover:text-primary"
+                  }`}
+                >
+                  {mode.label}
+                </button>
+              );
+            })}
+          </div>
+
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <div className="min-w-40 rounded-full bg-bg px-4 py-2 shadow-sm">
               <Select
@@ -411,7 +467,7 @@ export default function TenantBrowsePage(): ReactElement {
             </div>
             <div className="min-w-52 rounded-full bg-bg px-4 py-2 shadow-sm">
               <Select
-                ariaLabel="Filter by monthly price"
+                ariaLabel="Filter by price"
                 value={priceFilter}
                 onValueChange={(value) => setPriceFilter(value as PriceFilter)}
                 options={PRICE_OPTIONS}
@@ -731,7 +787,7 @@ export default function TenantBrowsePage(): ReactElement {
 
                   {[
                     { label: "City", value: city, options: cityOptions, change: setCity },
-                    { label: "Monthly price", value: priceFilter, options: PRICE_OPTIONS, change: (value: string) => setPriceFilter(value as PriceFilter) },
+                    { label: "Price", value: priceFilter, options: PRICE_OPTIONS, change: (value: string) => setPriceFilter(value as PriceFilter) },
                     { label: "Bedrooms", value: bedroomFilter, options: BEDROOM_OPTIONS, change: (value: string) => setBedroomFilter(value as BedroomFilter) },
                     { label: "Sort by", value: sort, options: SORT_OPTIONS, change: (value: string) => setSort(value as SortOption) },
                   ].map((field) => (

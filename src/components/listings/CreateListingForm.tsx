@@ -32,6 +32,7 @@ import {
   type HostListingInput,
   type HostListingPhoto,
   type HostListingRole,
+  type RentalMode,
 } from "@/lib/hostListings";
 import type { PropertyListingStatus } from "@/lib/propertyDetails";
 import {
@@ -58,7 +59,24 @@ interface ListingFormValues {
   bathrooms: number;
   squareFootage: string;
   amenities: string[];
+  rentalMode: RentalMode;
+  /** Shortlets only, kept as strings so the inputs stay controlled while empty. */
+  minimumNights: string;
+  cleaningFee: string;
 }
+
+const RENTAL_MODE_OPTIONS: { label: string; value: RentalMode }[] = [
+  { label: "Per year, paid up front", value: "ANNUAL" },
+  { label: "Per month", value: "MONTHLY" },
+  { label: "Per night (shortlet)", value: "SHORT_STAY" },
+];
+
+/** The price field means something different in each mode, so it says which. */
+const PRICE_LABELS: Record<RentalMode, string> = {
+  ANNUAL: "Rent per year",
+  MONTHLY: "Rent per month",
+  SHORT_STAY: "Price per night",
+};
 
 interface ListingFormErrors {
   title?: string;
@@ -139,6 +157,11 @@ const INITIAL_VALUES: ListingFormValues = {
   bathrooms: 0,
   squareFootage: "",
   amenities: [],
+  // Annual up front is the Nigerian default, so a host who ignores this still
+  // gets the right pricing rather than a nightly rate
+  rentalMode: "ANNUAL",
+  minimumNights: "2",
+  cleaningFee: "",
 };
 
 const INPUT_CLASS_NAME =
@@ -327,7 +350,8 @@ export default function CreateListingForm({
     role === "agent"
       ? "You are listing this rental on the owner's behalf."
       : "Your account is set up for rental listings.";
-  const priceLabel = "Listing price";
+  const priceLabel = PRICE_LABELS[values.rentalMode];
+  const isShortStay = values.rentalMode === "SHORT_STAY";
   const canSubmit = !hasErrors(validateForm(values, photos));
   const listingStepIndex = LISTING_STEPS.findIndex(
     (step) => step.id === listingStep,
@@ -382,6 +406,17 @@ export default function CreateListingForm({
           ? String(result.data.squareFootage)
           : "",
         amenities: result.data.amenities,
+        rentalMode: result.data.rentalMode ?? "ANNUAL",
+        minimumNights:
+          result.data.minimumNights === undefined ||
+          result.data.minimumNights === null
+            ? "2"
+            : String(result.data.minimumNights),
+        cleaningFee:
+          result.data.cleaningFee === undefined ||
+          result.data.cleaningFee === null
+            ? ""
+            : String(result.data.cleaningFee),
       });
       setPhotos(
         result.data.photos.map((photo) => ({ ...photo, uploading: false })),
@@ -404,6 +439,81 @@ export default function CreateListingForm({
     setErrors((current) => ({ ...current, [key]: undefined }));
   };
 
+  /**
+   * How the listing is priced, plus the two fields that only apply to a shortlet.
+   *
+   * Rendered in both the guided flow and the single-page layout from one place, so
+   * the two cannot fall out of step.
+   */
+  const renderRentalModeFields = (): ReactElement => (
+    <>
+      <label className="sm:col-span-2">
+        <span className="font-body text-sm font-bold text-primary">
+          How is this let?
+        </span>
+        <Select
+          value={values.rentalMode}
+          onValueChange={(mode) => updateValue("rentalMode", mode as RentalMode)}
+          className={INPUT_CLASS_NAME}
+          ariaLabel="How is this let"
+          options={RENTAL_MODE_OPTIONS}
+        />
+        <span className="mt-2 block font-body text-xs leading-5 text-muted">
+          {isShortStay
+            ? "Guests book by the night and pay for the whole stay up front."
+            : "Tenants pay for the full period up front, held in escrow until they move in."}
+        </span>
+      </label>
+
+      {isShortStay ? (
+        <>
+          <label>
+            <span className="font-body text-sm font-bold text-primary">
+              Minimum nights
+            </span>
+            <input
+              type="number"
+              min="1"
+              value={values.minimumNights}
+              onChange={(event) =>
+                updateValue("minimumNights", event.target.value)
+              }
+              className={INPUT_CLASS_NAME}
+              placeholder="2"
+            />
+            <span className="mt-2 block font-body text-xs leading-5 text-muted">
+              The shortest stay you will take.
+            </span>
+          </label>
+
+          <label>
+            <span className="font-body text-sm font-bold text-primary">
+              Cleaning fee
+            </span>
+            <span className="mt-2 flex min-h-12 items-center rounded-lg border border-border bg-bg focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/30">
+              <span className="border-r border-border px-4 font-body text-base font-bold text-primary">
+                ₦
+              </span>
+              <input
+                type="number"
+                min="0"
+                value={values.cleaningFee}
+                onChange={(event) =>
+                  updateValue("cleaningFee", event.target.value)
+                }
+                className="min-h-12 min-w-0 flex-1 bg-bg px-4 font-body text-base text-primary outline-none placeholder:text-muted"
+                placeholder="0"
+              />
+            </span>
+            <span className="mt-2 block font-body text-xs leading-5 text-muted">
+              Added once to the stay, not per night.
+            </span>
+          </label>
+        </>
+      ) : null}
+    </>
+  );
+
   const buildListingInput = (): HostListingInput => ({
     id: draftId ?? undefined,
     ownerRole: role,
@@ -420,6 +530,15 @@ export default function CreateListingForm({
       ? Number(values.squareFootage)
       : undefined,
     amenities: values.amenities,
+    rentalMode: values.rentalMode,
+    minimumNights:
+      values.rentalMode === "SHORT_STAY"
+        ? Math.max(Number(values.minimumNights) || 1, 1)
+        : undefined,
+    cleaningFee:
+      values.rentalMode === "SHORT_STAY"
+        ? Math.max(Number(values.cleaningFee) || 0, 0)
+        : undefined,
     photos: photos.map((photo) => ({
       id: photo.id,
       dataUrl: photo.dataUrl,
@@ -827,6 +946,8 @@ export default function CreateListingForm({
                         </span>
                       ) : null}
                     </label>
+
+                    {renderRentalModeFields()}
 
                     <label className="sm:col-span-2">
                       <span className="font-body text-sm font-bold text-primary">
@@ -1473,6 +1594,8 @@ export default function CreateListingForm({
                     </span>
                   ) : null}
                 </label>
+
+                {renderRentalModeFields()}
 
                 <label className="sm:col-span-2">
                   <span className="font-body text-sm font-bold text-primary">

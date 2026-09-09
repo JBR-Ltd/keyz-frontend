@@ -1,7 +1,7 @@
 const API_BASE_URL = process.env.API_BASE_URL;
 const PROPERTY_REQUEST_TIMEOUT_MS = 90000;
 
-type PropertyMethod = "GET" | "POST" | "PUT";
+type PropertyMethod = "DELETE" | "GET" | "PATCH" | "POST" | "PUT";
 
 interface ApiEnvelope {
   data: unknown;
@@ -41,13 +41,22 @@ function isNumericId(value: string): boolean {
 }
 
 function isAllowedRequest(method: PropertyMethod, segments: string[]): boolean {
-  if (method === "GET" && segments.length === 1) {
+  if (method === "GET") {
+    if (segments.length === 1) {
+      return (
+        segments[0] === "all" ||
+        segments[0] === "sale" ||
+        segments[0] === "rent" ||
+        segments[0] === "portfolio" ||
+        isNumericId(segments[0])
+      );
+    }
+
+    // A guest needs the gallery and the calendar before they can pick dates
     return (
-      segments[0] === "all" ||
-      segments[0] === "sale" ||
-      segments[0] === "rent" ||
-      segments[0] === "portfolio" ||
-      isNumericId(segments[0])
+      segments.length === 2 &&
+      isNumericId(segments[0]) &&
+      (segments[1] === "images" || segments[1] === "availability")
     );
   }
 
@@ -56,7 +65,34 @@ function isAllowedRequest(method: PropertyMethod, segments: string[]): boolean {
       (segments.length === 1 && segments[0] === "create") ||
       (segments.length === 2 &&
         isNumericId(segments[0]) &&
-        segments[1] === "upload-image")
+        (segments[1] === "upload-image" || segments[1] === "images")) ||
+      (segments.length === 3 &&
+        isNumericId(segments[0]) &&
+        segments[1] === "availability" &&
+        segments[2] === "blocks")
+    );
+  }
+
+  if (method === "PATCH") {
+    return (
+      segments.length === 3 &&
+      isNumericId(segments[0]) &&
+      segments[1] === "images" &&
+      segments[2] === "order"
+    );
+  }
+
+  if (method === "DELETE") {
+    return (
+      (segments.length === 3 &&
+        isNumericId(segments[0]) &&
+        segments[1] === "images" &&
+        isNumericId(segments[2])) ||
+      (segments.length === 4 &&
+        isNumericId(segments[0]) &&
+        segments[1] === "availability" &&
+        segments[2] === "blocks" &&
+        isNumericId(segments[3]))
     );
   }
 
@@ -64,10 +100,20 @@ function isAllowedRequest(method: PropertyMethod, segments: string[]): boolean {
 }
 
 function isPublicRequest(method: PropertyMethod, segments: string[]): boolean {
+  if (method !== "GET") {
+    return false;
+  }
+
+  if (segments.length === 1) {
+    return (
+      segments[0] === "all" || segments[0] === "sale" || segments[0] === "rent"
+    );
+  }
+
+  // The listing page has to work logged out, gallery and calendar included
   return (
-    method === "GET" &&
-    segments.length === 1 &&
-    (segments[0] === "all" || segments[0] === "sale" || segments[0] === "rent")
+    segments.length === 2 &&
+    (segments[1] === "images" || segments[1] === "availability")
   );
 }
 
@@ -298,4 +344,18 @@ export async function PUT(
   context: RouteContext,
 ): Promise<Response> {
   return handlePropertyRequest(request, context, "PUT");
+}
+
+export async function PATCH(
+  request: Request,
+  context: RouteContext,
+): Promise<Response> {
+  return handlePropertyRequest(request, context, "PATCH");
+}
+
+export async function DELETE(
+  request: Request,
+  context: RouteContext,
+): Promise<Response> {
+  return handlePropertyRequest(request, context, "DELETE");
 }

@@ -117,6 +117,52 @@ export function getHostBookings(): Promise<BookingResult<Booking[]>> {
   return requestBookings("/api/bookings/host");
 }
 
+/**
+ * Requests a stay. The server works out the total from the listing mode, so no
+ * price is sent: a client-supplied figure would be a way to underpay.
+ */
+export async function createBooking(
+  propertyId: number,
+  startDate: string,
+  endDate: string,
+): Promise<BookingResult<Booking | null>> {
+  const token = getAccessToken();
+
+  if (!token) {
+    return { data: null, message: "Your session has expired. Log in again." };
+  }
+
+  try {
+    const response = await fetch("/api/bookings", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ propertyId, startDate, endDate }),
+    });
+    const payload: unknown = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      return {
+        data: null,
+        message: resolveApiError(payload, "That booking could not be made."),
+      };
+    }
+
+    const data =
+      payload !== null && typeof payload === "object" && "data" in payload
+        ? payload.data
+        : null;
+
+    return isBooking(data)
+      ? { data }
+      : { data: null, message: "That booking could not be made." };
+  } catch {
+    return { data: null, message: "That booking could not be made." };
+  }
+}
+
 export async function updateBookingStatus(
   bookingId: number,
   status: BookingStatus,

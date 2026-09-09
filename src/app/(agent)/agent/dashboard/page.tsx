@@ -30,8 +30,10 @@ import {
   getPropertyPortfolio,
   type BackendProperty,
   type PropertyPortfolio,
+  type RentalMode,
 } from "@/lib/hostListings";
 import { useHostVerification } from "@/lib/hostVerification";
+import { getHostViewings, type Viewing } from "@/lib/viewings";
 
 // === Types
 
@@ -59,7 +61,9 @@ interface AgentProperty {
   address: string;
   id: number;
   imageUrl: string | null;
-  monthlyRent: number;
+  price: number;
+  /** What the price is per. A listing can be let nightly, monthly or yearly. */
+  rentalMode: RentalMode;
   status: ListingStatus;
   tenant: string | null;
   title: string;
@@ -100,6 +104,13 @@ const LISTING_TONES: Record<ListingStatus, "accent" | "danger" | "primary"> = {
   Occupied: "primary",
   "Pending review": "danger",
   Published: "accent",
+};
+
+/** Said next to a price, so a nightly listing never reads as a monthly one. */
+const RENTAL_PERIOD_LABELS: Record<RentalMode, string> = {
+  ANNUAL: "per year",
+  MONTHLY: "per month",
+  SHORT_STAY: "per night",
 };
 
 const BOOKING_LABELS: Record<BookingStatus, string> = {
@@ -212,9 +223,11 @@ function buildSummary(
       value: occupiedIds.size,
     },
     {
-      detail: "From active tenancies",
+      // Listings can be let nightly, monthly or yearly, so naming a period here
+      // would be wrong for whichever modes the portfolio also holds
+      detail: "Across active tenancies",
       icon: CircleDollarSign,
-      label: "Expected monthly rent",
+      label: "Expected rental income",
       tone: "primary",
       value: portfolio.expectedMonthlyRentalIncome,
     },
@@ -228,6 +241,7 @@ function buildSummary(
 function buildAttention(
   portfolio: PropertyPortfolio,
   bookings: Booking[],
+  pendingViewings: number,
   identityVerified: boolean,
 ): AttentionItem[] {
   const items: AttentionItem[] = [];
@@ -253,6 +267,21 @@ function buildAttention(
       id: "identity",
       title: "Verification incomplete",
       tone: "danger",
+    });
+  }
+
+  if (pendingViewings > 0) {
+    items.push({
+      actionLabel: "Respond",
+      description:
+        pendingViewings === 1
+          ? "Someone is waiting to be shown a home."
+          : `${pendingViewings} people are waiting to be shown a home.`,
+      href: "/agent/bookings",
+      icon: CalendarCheck2,
+      id: "viewing-requests",
+      title: "Viewing requests",
+      tone: "accent",
     });
   }
 
@@ -302,26 +331,56 @@ function buildAttention(
   return items;
 }
 
-/** Move-ins only. Scheduled viewings arrive with the viewings API. */
-function buildUpcoming(bookings: Booking[]): UpcomingActivity[] {
-  return bookings
+/**
+ * Move-ins and confirmed viewings, interleaved by date.
+ *
+ * Both are things the agent has to turn up for, so they belong in one list rather
+ * than two competing ones.
+ */
+function buildUpcoming(
+  bookings: Booking[],
+  viewings: Viewing[],
+): UpcomingActivity[] {
+  const moveIns = bookings
     .filter(
       (booking) =>
         booking.status === "CONFIRMED" && daysUntil(booking.startDate) >= 0,
     )
-    .sort((first, second) => first.startDate.localeCompare(second.startDate))
-    .slice(0, MAX_UPCOMING)
     .map((booking) => ({
       date: formatDay(booking.startDate),
       detail: booking.propertyTitle,
       id: `move-in-${booking.id}`,
+      sortKey: booking.startDate,
       title: `${booking.tenant?.name ?? "Tenant"} moves in`,
     }));
+
+  const scheduled = viewings
+    .filter((viewing) => viewing.scheduledStartAt !== null)
+    .map((viewing) => {
+      const at = viewing.scheduledStartAt ?? viewing.proposedStartAt;
+
+      return {
+        date: formatDay(at.slice(0, 10)),
+        detail: viewing.propertyTitle,
+        id: `viewing-${viewing.id}`,
+        sortKey: at,
+        title: `${viewing.type === "VIRTUAL" ? "Video tour" : "Viewing"} with ${
+          viewing.tenant?.name ?? "a tenant"
+        }`,
+      };
+    })
+    .filter((item) => daysUntil(item.sortKey.slice(0, 10)) >= 0);
+
+  return [...moveIns, ...scheduled]
+    .sort((first, second) => first.sortKey.localeCompare(second.sortKey))
+    .slice(0, MAX_UPCOMING)
+    .map(({ date, detail, id, title }) => ({ date, detail, id, title }));
 }
 
 function buildDashboard(
   portfolio: PropertyPortfolio,
   bookings: Booking[],
+  viewings: Viewing[],
   identityVerified: boolean,
 ): DashboardData {
   const occupiedIds = new Set(
@@ -334,7 +393,12 @@ function buildDashboard(
   );
 
   return {
-    attention: buildAttention(portfolio, bookings, identityVerified),
+    attention: buildAttention(
+      portfolio,
+      bookings,
+      viewings.filter((viewing) => viewing.status === "PENDING").length,
+      identityVerified,
+    ),
     bookings: [...bookings]
       .sort((first, second) =>
         (second.createdAt ?? second.startDate).localeCompare(
@@ -353,13 +417,14 @@ function buildDashboard(
       address: property.address,
       id: property.id,
       imageUrl: property.imageUrl ?? null,
-      monthlyRent: property.price,
+      price: property.price,
+      rentalMode: property.rentalMode ?? "ANNUAL",
       status: toListingStatus(property, occupiedIds),
       tenant: tenantByProperty.get(property.id) ?? null,
       title: property.title,
     })),
     summary: buildSummary(portfolio, bookings, occupiedIds),
-    upcoming: buildUpcoming(bookings),
+    upcoming: buildUpcoming(bookings, viewings),
   };
 }
 
@@ -446,7 +511,7 @@ function SummaryGrid({ items }: { items: SummaryItem[] }): ReactElement {
                 {label}
               </p>
               <p className="mt-4 font-display text-3xl font-bold leading-none text-primary">
-                {label === "Expected monthly rent" ? (
+                {label === "Expected rental income" ? (
                   <PropertyPrice value={Number(value)} />
                 ) : (
                   value
@@ -551,7 +616,7 @@ function UpcomingPanel({
 
       {items.length === 0 ? (
         <p className="mt-6 font-body text-sm leading-6 text-muted">
-          No move-ins scheduled. Confirmed tenancies show up here.
+          Nothing scheduled. Confirmed viewings and move-ins show up here.
         </p>
       ) : (
         <ol className="mt-6 space-y-5">
@@ -608,7 +673,7 @@ function PropertiesPanel({
 
       <div className="hidden border-y border-primary/10 bg-surface-soft px-6 py-3 font-body text-[11px] font-bold uppercase tracking-[0.14em] text-muted md:grid md:grid-cols-[minmax(16rem,1.6fr)_minmax(8rem,0.7fr)_minmax(8rem,0.7fr)_minmax(9rem,0.7fr)_2rem] md:gap-5">
         <span>Property</span>
-        <span>Monthly rent</span>
+        <span>Rent</span>
         <span>Occupancy</span>
         <span>Status</span>
         <span className="sr-only">Actions</span>
@@ -646,10 +711,13 @@ function PropertiesPanel({
             </div>
             <div>
               <p className="font-body text-[11px] font-bold uppercase tracking-wide text-muted md:hidden">
-                Monthly rent
+                Rent
               </p>
               <p className="mt-1 font-body text-sm font-bold text-primary md:mt-0">
-                <PropertyPrice value={property.monthlyRent} />
+                <PropertyPrice value={property.price} />
+              </p>
+              <p className="font-body text-xs text-muted">
+                {RENTAL_PERIOD_LABELS[property.rentalMode]}
               </p>
             </div>
             <div>
@@ -750,20 +818,25 @@ export default function AgentDashboardPage(): ReactElement {
   const { snapshot: verification } = useHostVerification();
   const [portfolio, setPortfolio] = useState<PropertyPortfolio | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [viewings, setViewings] = useState<Viewing[]>([]);
   const [loadError, setLoadError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
 
-    void Promise.all([getPropertyPortfolio(), getHostBookings()]).then(
-      ([portfolioResult, bookingsResult]) => {
+    void Promise.all([
+      getPropertyPortfolio(),
+      getHostBookings(),
+      getHostViewings(),
+    ]).then(([portfolioResult, bookingsResult, viewingsResult]) => {
         if (!active) {
           return;
         }
 
         setPortfolio(portfolioResult.data);
         setBookings(bookingsResult.data);
+        setViewings(viewingsResult.data);
         // The portfolio is the page. Bookings failing alone still leaves it useful.
         setLoadError(portfolioResult.data ? "" : (portfolioResult.message ?? ""));
         setIsLoading(false);
@@ -806,6 +879,7 @@ export default function AgentDashboardPage(): ReactElement {
   const dashboard = buildDashboard(
     portfolio,
     bookings,
+    viewings,
     verification?.identity.status === "approved",
   );
   const now = new Date();

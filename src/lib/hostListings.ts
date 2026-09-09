@@ -22,8 +22,26 @@ export interface BackendPropertyHost {
 }
 
 /** Mirrors PropertySummaryResponse. The Property entity is no longer returned to clients. */
+/** How a listing is priced. Decides what `price` means and how a total is worked out. */
+export type RentalMode = "ANNUAL" | "MONTHLY" | "SHORT_STAY";
+
+export interface PropertyImage {
+  caption: string | null;
+  cover: boolean;
+  id: number;
+  position: number;
+  url: string;
+}
+
 export interface BackendProperty {
   address: string;
+  amenities?: string[];
+  area?: string | null;
+  city?: string | null;
+  cleaningFee?: number | null;
+  images?: PropertyImage[];
+  minimumNights?: number | null;
+  rentalMode?: RentalMode | null;
   bathrooms: number;
   bedrooms: number;
   description?: string | null;
@@ -75,9 +93,14 @@ export interface HostListingInput {
   bathrooms: number;
   bedrooms: number;
   city: string;
+  /** Shortlets only. Added once to the stay, not per night. */
+  cleaningFee?: number;
   description: string;
   id?: string;
   listingType: PropertyListingStatus;
+  /** Shortlets only. The shortest stay this host will take. */
+  minimumNights?: number;
+  rentalMode: RentalMode;
   ownerRole: HostListingRole;
   photos: HostListingPhoto[];
   price: number;
@@ -276,13 +299,18 @@ function mapBackendProperty(
     title: property.title,
     description: property.description ?? "",
     price: property.price,
-    city: localListing?.city ?? "",
-    area: localListing?.area ?? property.address,
+    city: property.city ?? localListing?.city ?? "",
+    area: property.area ?? localListing?.area ?? property.address,
     address: localListing?.address ?? property.address,
     bedrooms: property.bedrooms,
     bathrooms: property.bathrooms,
     squareFootage: property.squareFootage,
-    amenities: localListing?.amenities ?? [],
+    amenities: property.amenities ?? localListing?.amenities ?? [],
+    // The server is authoritative for pricing; the local copy is only a fallback
+    // for a draft that has never been published
+    rentalMode: property.rentalMode ?? localListing?.rentalMode ?? "ANNUAL",
+    minimumNights: property.minimumNights ?? localListing?.minimumNights ?? undefined,
+    cleaningFee: property.cleaningFee ?? localListing?.cleaningFee ?? undefined,
     photos: localListing?.photos.length
       ? localListing.photos
       : getRemotePhoto(property),
@@ -382,40 +410,73 @@ async function persistListing(
 }
 
 function buildPropertyRequest(input: HostListingInput): object {
+  const isShortStay = input.rentalMode === "SHORT_STAY";
+
   return {
     title: input.title,
     description: input.description,
+    // The joined address stays for display; city and area are sent separately so
+    // they can be searched on rather than parsed back out of a string
     address: [input.address, input.area, input.city].filter(Boolean).join(", "),
+    city: input.city,
+    area: input.area,
+    amenities: input.amenities,
     price: input.price,
     bedrooms: input.bedrooms,
     bathrooms: input.bathrooms,
     squareFootage: input.squareFootage ?? 0,
     status: input.listingType,
+    rentalMode: input.rentalMode,
+    // The server clears both for a listing that is not a shortlet, but sending
+    // them only when they apply keeps the request honest
+    minimumNights: isShortStay ? (input.minimumNights ?? 1) : null,
+    cleaningFee: isShortStay ? (input.cleaningFee ?? 0) : null,
   };
 }
 
-async function uploadCoverPhoto(
+/**
+ * Sends every photo to the gallery, in order. The first becomes the cover.
+ *
+ * Only the first photo used to be uploaded and the rest were dropped on the floor.
+ * Failures are collected rather than thrown, because a listing that saved with four
+ * of its five photos is still worth keeping.
+ */
+async function uploadGallery(
   propertyId: number,
-  photo: HostListingPhoto,
+  photos: HostListingPhoto[],
   token: string,
-): Promise<BackendProperty> {
-  const imageResponse = await fetch(photo.dataUrl);
+): Promise<string[]> {
+  const failures: string[] = [];
 
-  if (!imageResponse.ok) {
-    throw new Error("The cover photo could not be prepared for upload.");
+  for (const photo of photos) {
+    try {
+      const imageResponse = await fetch(photo.dataUrl);
+
+      if (!imageResponse.ok) {
+        throw new Error("could not be read");
+      }
+
+      const formData = new FormData();
+      formData.append("image", await imageResponse.blob(), photo.name);
+
+      const response = await fetch(`/api/properties/${propertyId}/images`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const payload: unknown = await response.json().catch(() => null);
+        throw new Error(resolveApiError(payload, "was rejected"));
+      }
+    } catch (error) {
+      failures.push(
+        `${photo.name}: ${error instanceof Error ? error.message : "could not be uploaded"}`,
+      );
+    }
   }
 
-  const image = await imageResponse.blob();
-  const formData = new FormData();
-  formData.append("image", image, photo.name);
-
-  return requestBackendProperty(`${propertyId}/upload-image`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    body: formData,
-  });
+  return failures;
 }
 
 export function subscribeToHostListings(callback: () => void): () => void {
@@ -656,19 +717,22 @@ export async function submitHostListing(
       },
     );
 
-    const coverPhoto = input.photos[0];
     let message = isUpdate
       ? "Listing updated successfully."
       : "Listing created successfully.";
 
-    if (coverPhoto) {
+    if (input.photos.length > 0) {
+      const failures = await uploadGallery(property.id, input.photos, token);
+
+      if (failures.length > 0) {
+        message = `${message} ${failures.length} of ${input.photos.length} photos did not upload. ${failures[0]}`;
+      }
+
+      // The cover is set server side from position zero, so re-read it
       try {
-        property = await uploadCoverPhoto(property.id, coverPhoto, token);
-      } catch (error) {
-        message =
-          error instanceof Error
-            ? `${message} ${error.message}`
-            : `${message} The cover photo could not be uploaded.`;
+        property = await requestBackendProperty(String(property.id));
+      } catch {
+        // The listing saved; only the refreshed copy is missing
       }
     }
 

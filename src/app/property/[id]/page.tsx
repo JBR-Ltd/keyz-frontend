@@ -30,10 +30,11 @@ import { useRouter } from "next/navigation";
 import { TouchEvent, use, useEffect, useState } from "react";
 import OverlayPortal from "@/components/ui/OverlayPortal";
 import MessageHostButton from "@/components/property/MessageHostButton";
+import BookingRequestDialog from "@/components/property/BookingRequestDialog";
 import PropertyPrice from "@/components/property/PropertyPrice";
+import ViewingRequestDialog from "@/components/property/ViewingRequestDialog";
 import TenantVerificationGate from "@/components/tenant/TenantVerificationGate";
 import VerifiedBadge from "@/components/ui/VerifiedBadge";
-import { useToast } from "@/components/ui/toast";
 import { getPropertyById, PropertyDetail } from "@/lib/propertyDetails";
 import { useDialogFocus } from "@/lib/useDialogFocus";
 
@@ -198,12 +199,13 @@ export default function PropertyPage({
 }: PropertyPageProps): ReactElement {
   const { id } = use(params);
   const router = useRouter();
-  const { notify } = useToast();
   const reduceMotion = useReducedMotion();
   const [loadingState, setLoadingState] = useState<LoadingState>("loading");
   const [property, setProperty] = useState<PropertyDetail | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const [isBookingOpen, setIsBookingOpen] = useState(false);
+  const [isViewingOpen, setIsViewingOpen] = useState(false);
   const lightboxRef = useDialogFocus<HTMLDivElement>(lightboxIndex !== null);
 
   useEffect(() => {
@@ -327,11 +329,7 @@ export default function PropertyPage({
   };
 
   const openPrimaryFlow = (): void => {
-    notify({
-      title: "Request ready",
-      description: "Identity verified. You can continue with this property.",
-      variant: "success",
-    });
+    setIsBookingOpen(true);
   };
 
   if (loadingState === "loading") {
@@ -354,7 +352,8 @@ export default function PropertyPage({
     property.tour.videoUrl || property.tour.matterportUrl,
   );
   const hostRole = formatHostRole(property.host.role);
-  const primaryCta = "Continue";
+  const primaryCta =
+    property?.rentalMode === "SHORT_STAY" ? "Check availability" : "Request to rent";
 
   return (
     <main className="bg-bg pt-6 text-primary">
@@ -664,6 +663,17 @@ export default function PropertyPage({
               </div>
             </section>
 
+            <BookingRequestDialog
+              cleaningFee={property.cleaningFee}
+              minimumNights={property.minimumNights}
+              onClose={() => setIsBookingOpen(false)}
+              open={isBookingOpen}
+              price={property.price}
+              propertyId={property.id}
+              propertyTitle={property.title}
+              rentalMode={property.rentalMode}
+            />
+
             {hasTour ? (
               <>
                 <div className="my-6 border-t border-border" />
@@ -755,6 +765,7 @@ export default function PropertyPage({
               <PropertyPrice
                 value={property.price}
                 listingType={property.status}
+                rentalMode={property.rentalMode}
               />
             </p>
             <div className="mt-6 flex items-center gap-3">
@@ -816,23 +827,21 @@ export default function PropertyPage({
               propertyName={property.title}
             />
 
-            {hasTour ? (
-              <button
-                type="button"
-                onClick={() => {
-                  // Placeholder until the Jitsi live tour request flow is connected.
-                  notify({
-                    title: "Live tour requested",
-                    description:
-                      "The Jitsi tour request flow will be connected in a follow-up.",
-                    variant: "success",
-                  });
-                }}
-                className="mt-4 w-full font-body text-sm font-bold text-primary transition-all duration-200 ease-in-out hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-              >
-                Request a live tour
-              </button>
-            ) : null}
+            <button
+              type="button"
+              onClick={() => setIsViewingOpen(true)}
+              className="mt-4 w-full font-body text-sm font-bold text-primary transition-all duration-200 ease-in-out hover:text-accent-alt focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            >
+              Request a viewing
+            </button>
+
+            <ViewingRequestDialog
+              allowVirtual={hasTour}
+              onClose={() => setIsViewingOpen(false)}
+              open={isViewingOpen}
+              propertyId={property.id}
+              propertyTitle={property.title}
+            />
           </aside>
         </div>
       </div>
