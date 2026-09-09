@@ -24,6 +24,7 @@ import {
   type ReactElement,
 } from "react";
 import ChatThread from "@/components/chat/ChatThread";
+import TenancyDocumentsDialog from "@/components/tenant/TenancyDocumentsDialog";
 import PropertyPrice from "@/components/property/PropertyPrice";
 import OverlayPortal from "@/components/ui/OverlayPortal";
 import { IconTile } from "@/components/ui/icon-tile";
@@ -68,6 +69,7 @@ interface TenancyDrawerProps {
   isUpdating: boolean;
   onClose: () => void;
   onMessage: (tenancy: Tenancy) => void;
+  onDocuments: (tenancy: Tenancy) => void;
   onStatusChange: (tenancy: Tenancy, status: BookingStatus) => void;
   tenancy: Tenancy | null;
 }
@@ -259,6 +261,7 @@ function EmptyTenancies({
 function TenancyDrawer({
   isUpdating,
   onClose,
+  onDocuments,
   onMessage,
   onStatusChange,
   tenancy,
@@ -422,6 +425,15 @@ function TenancyDrawer({
                   >
                     Message tenant
                   </button>
+                  {tenancy.stage === "active" || tenancy.stage === "past" ? (
+                    <button
+                      type="button"
+                      onClick={() => onDocuments(tenancy)}
+                      className="inline-flex min-h-12 items-center justify-center rounded-full border border-primary/15 px-5 font-body text-sm font-bold text-primary hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    >
+                      Paperwork
+                    </button>
+                  ) : null}
                   {secondaryAction ? (
                     <button
                       type="button"
@@ -451,6 +463,7 @@ export default function AgentBookingsPage(): ReactElement {
   const [query, setQuery] = useState("");
   const [selectedTenancy, setSelectedTenancy] = useState<Tenancy | null>(null);
   const [chatTenancy, setChatTenancy] = useState<Tenancy | null>(null);
+  const [documentsTenancy, setDocumentsTenancy] = useState<Tenancy | null>(null);
   const [tenancies, setTenancies] = useState<Tenancy[]>([]);
   const [loadError, setLoadError] = useState("");
   const [updatingId, setUpdatingId] = useState<number | null>(null);
@@ -684,6 +697,15 @@ export default function AgentBookingsPage(): ReactElement {
         </p>
       ) : null}
 
+      {documentsTenancy ? (
+        <TenancyDocumentsDialog
+          bookingId={documentsTenancy.id}
+          propertyTitle={documentsTenancy.propertyTitle}
+          open
+          onClose={() => setDocumentsTenancy(null)}
+        />
+      ) : null}
+
       {chatTenancy && chatTenancy.tenantId !== null ? (
         <ChatThread
           conversationId={`booking-${chatTenancy.id}`}
@@ -702,6 +724,10 @@ export default function AgentBookingsPage(): ReactElement {
         onMessage={(tenancy) => {
           setSelectedTenancy(null);
           setChatTenancy(tenancy);
+        }}
+        onDocuments={(tenancy) => {
+          setSelectedTenancy(null);
+          setDocumentsTenancy(tenancy);
         }}
         onStatusChange={(tenancy, status) => void changeStatus(tenancy, status)}
         tenancy={selectedTenancy}

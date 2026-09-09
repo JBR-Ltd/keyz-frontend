@@ -29,9 +29,19 @@ import PropertyPrice from "@/components/property/PropertyPrice";
 import { IconTile } from "@/components/ui/icon-tile";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { utilityCardVariants } from "@/components/ui/utility-card";
-import type { Booking, BookingStatus, PartySummary } from "@/lib/bookings";
-import type { EscrowEntry, EscrowStatus } from "@/lib/escrow";
-import type { BackendProperty, PropertyPortfolio } from "@/lib/hostListings";
+import {
+  getHostBookings,
+  type Booking,
+  type BookingStatus,
+} from "@/lib/bookings";
+import { getMyEscrow, type EscrowEntry, type EscrowStatus } from "@/lib/escrow";
+import {
+  getPropertyPortfolio,
+  type BackendProperty,
+  type PropertyPortfolio,
+} from "@/lib/hostListings";
+import { useAuthenticatedUser } from "@/lib/account";
+import { useHostVerification } from "@/lib/hostVerification";
 
 // === Types
 
@@ -81,196 +91,6 @@ interface EmptyDashboardProps {
 
 const FALLBACK_PROPERTY_IMAGE =
   "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=640&h=480&fit=crop&auto=format&q=80";
-const MOCK_NOW = new Date("2026-09-05T09:00:00.000Z").getTime();
-const MOCK_LANDLORD: PartySummary = {
-  id: 41,
-  identityVerified: false,
-  name: "Chinedu Okafor",
-  rating: 4.8,
-  role: "LANDLORD",
-};
-const MOCK_TENANTS: PartySummary[] = [
-  {
-    id: 71,
-    identityVerified: true,
-    name: "Kelechi Eze",
-    rating: 4.7,
-    role: "TENANT",
-  },
-  {
-    id: 72,
-    identityVerified: true,
-    name: "Ada Nwosu",
-    rating: 4.9,
-    role: "TENANT",
-  },
-  {
-    id: 73,
-    identityVerified: true,
-    name: "Tolu Martins",
-    rating: 4.6,
-    role: "TENANT",
-  },
-];
-const MOCK_PROPERTIES: BackendProperty[] = [
-  {
-    id: 201,
-    title: "Lekki Garden Maisonette",
-    description: "A calm three-bedroom home close to central Lekki.",
-    address: "Lekki Phase 1, Lagos",
-    bedrooms: 3,
-    bathrooms: 3,
-    price: 750000,
-    status: "FOR_RENT",
-    verified: true,
-    imageUrl:
-      "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=640&h=480&fit=crop&auto=format&q=80",
-    host: MOCK_LANDLORD,
-  },
-  {
-    id: 202,
-    title: "Ikoyi Waterfront Flat",
-    description: "A serviced waterfront apartment with reliable power.",
-    address: "Ikoyi, Lagos",
-    bedrooms: 2,
-    bathrooms: 2,
-    price: 1200000,
-    status: "FOR_RENT",
-    verified: true,
-    imageUrl:
-      "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=640&h=480&fit=crop&auto=format&q=80",
-    host: MOCK_LANDLORD,
-  },
-  {
-    id: 203,
-    title: "Banana Island Loft",
-    description: "A bright loft awaiting final media and verification.",
-    address: "Banana Island, Lagos",
-    bedrooms: 2,
-    bathrooms: 2,
-    price: 1650000,
-    status: "FOR_RENT",
-    verified: false,
-    imageUrl: null,
-    host: MOCK_LANDLORD,
-  },
-];
-const MOCK_PORTFOLIO: PropertyPortfolio = {
-  activeListingsCount: 2,
-  expectedMonthlyRentalIncome: 3600000,
-  pendingOffersCount: 2,
-  properties: MOCK_PROPERTIES,
-  totalPropertiesCount: 3,
-  totalValueForSale: 0,
-};
-const MOCK_BOOKINGS: Booking[] = [
-  {
-    id: 301,
-    createdAt: "2026-08-21T09:00:00.000Z",
-    startDate: "2026-09-01",
-    endDate: "2027-09-01",
-    host: MOCK_LANDLORD,
-    propertyAddress: MOCK_PROPERTIES[0].address,
-    propertyId: 201,
-    propertyImageUrl: MOCK_PROPERTIES[0].imageUrl ?? null,
-    propertyTitle: MOCK_PROPERTIES[0].title,
-    status: "CONFIRMED",
-    tenant: MOCK_TENANTS[0],
-    totalPrice: 750000,
-  },
-  {
-    id: 302,
-    createdAt: "2026-08-28T11:30:00.000Z",
-    startDate: "2026-09-16",
-    endDate: "2027-09-16",
-    host: MOCK_LANDLORD,
-    propertyAddress: MOCK_PROPERTIES[1].address,
-    propertyId: 202,
-    propertyImageUrl: MOCK_PROPERTIES[1].imageUrl ?? null,
-    propertyTitle: MOCK_PROPERTIES[1].title,
-    status: "CONFIRMED",
-    tenant: MOCK_TENANTS[1],
-    totalPrice: 1200000,
-  },
-  {
-    id: 303,
-    createdAt: "2026-09-03T14:00:00.000Z",
-    startDate: "2026-10-01",
-    endDate: "2027-10-01",
-    host: MOCK_LANDLORD,
-    propertyAddress: MOCK_PROPERTIES[2].address,
-    propertyId: 203,
-    propertyImageUrl: null,
-    propertyTitle: MOCK_PROPERTIES[2].title,
-    status: "PENDING",
-    tenant: MOCK_TENANTS[2],
-    totalPrice: 1650000,
-  },
-  {
-    id: 304,
-    createdAt: "2026-09-04T16:00:00.000Z",
-    startDate: "2027-10-01",
-    endDate: "2028-10-01",
-    host: MOCK_LANDLORD,
-    propertyAddress: MOCK_PROPERTIES[0].address,
-    propertyId: 201,
-    propertyImageUrl: MOCK_PROPERTIES[0].imageUrl ?? null,
-    propertyTitle: MOCK_PROPERTIES[0].title,
-    status: "PENDING",
-    tenant: MOCK_TENANTS[1],
-    totalPrice: 750000,
-  },
-];
-const MOCK_ESCROW: EscrowEntry[] = [
-  {
-    id: 401,
-    amount: 750000,
-    bookingId: 301,
-    createdAt: "2026-08-22T10:00:00.000Z",
-    heldAt: "2026-08-22T10:05:00.000Z",
-    host: MOCK_LANDLORD,
-    propertyTitle: MOCK_PROPERTIES[0].title,
-    releasedAt: null,
-    status: "HELD",
-    tenant: MOCK_TENANTS[0],
-  },
-  {
-    id: 402,
-    amount: 1200000,
-    bookingId: 302,
-    createdAt: "2026-08-29T08:00:00.000Z",
-    heldAt: "2026-08-29T08:05:00.000Z",
-    host: MOCK_LANDLORD,
-    propertyTitle: MOCK_PROPERTIES[1].title,
-    releasedAt: null,
-    status: "HELD",
-    tenant: MOCK_TENANTS[1],
-  },
-  {
-    id: 403,
-    amount: 1650000,
-    bookingId: 303,
-    createdAt: "2026-09-03T15:00:00.000Z",
-    heldAt: null,
-    host: MOCK_LANDLORD,
-    propertyTitle: MOCK_PROPERTIES[2].title,
-    releasedAt: null,
-    status: "AWAITING_PAYMENT",
-    tenant: MOCK_TENANTS[2],
-  },
-  {
-    id: 404,
-    amount: 750000,
-    bookingId: 304,
-    createdAt: "2026-09-04T16:30:00.000Z",
-    heldAt: "2026-09-04T16:35:00.000Z",
-    host: MOCK_LANDLORD,
-    propertyTitle: MOCK_PROPERTIES[0].title,
-    releasedAt: null,
-    status: "DISPUTED",
-    tenant: MOCK_TENANTS[1],
-  },
-];
 
 const ATTENTION_STYLES: Record<AttentionTone, string> = {
   urgent: "bg-red-700/10 text-red-700",
@@ -616,6 +436,10 @@ export default function LandlordDashboardPage(): ReactElement {
     getDashboardViewState,
     getServerDashboardViewState,
   );
+  const { user } = useAuthenticatedUser();
+  const { snapshot: verification } = useHostVerification();
+  // Skeletons appear only if loading outlasts a moment, so a fast response does
+  // not flash placeholder blocks at the user
   const [showSkeletons, setShowSkeletons] = useState(false);
 
   useEffect(() => {
@@ -624,14 +448,53 @@ export default function LandlordDashboardPage(): ReactElement {
     return () => window.clearTimeout(timer);
   }, []);
 
-  const verified = MOCK_LANDLORD.identityVerified;
-  const portfolio = MOCK_PORTFOLIO;
-  const portfolioProperties = MOCK_PROPERTIES;
-  const bookings = MOCK_BOOKINGS;
-  const escrow = MOCK_ESCROW;
+  const [portfolio, setPortfolio] = useState<PropertyPortfolio | null>(null);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [escrow, setEscrow] = useState<EscrowEntry[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  // Captured when the data lands rather than read during render: Date.now() in a
+  // render body is impure and makes every memo below unstable
+  const [loadedAt, setLoadedAt] = useState(() => Date.now());
+
+  useEffect(() => {
+    let active = true;
+
+    void Promise.all([
+      getPropertyPortfolio(),
+      getHostBookings(),
+      getMyEscrow(),
+    ]).then(([portfolioResult, bookingsResult, escrowResult]) => {
+      if (!active) {
+        return;
+      }
+
+      setPortfolio(portfolioResult.data);
+      setBookings(bookingsResult.data);
+      setEscrow(escrowResult.data);
+      // The portfolio is the page; the other two failing alone still leaves it useful
+      setLoadError(portfolioResult.data ? "" : (portfolioResult.message ?? ""));
+      setLoadedAt(Date.now());
+      setIsLoading(false);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const verified = verification?.identity.status === "approved";
+  const portfolioProperties = useMemo(
+    () => portfolio?.properties ?? [],
+    [portfolio],
+  );
+  const now = loadedAt;
   const summaryItems = useMemo(
-    () => getSummaryItems(portfolio, bookings, escrow, MOCK_NOW),
-    [portfolio, bookings, escrow],
+    () =>
+      portfolio
+        ? getSummaryItems(portfolio, bookings, escrow, now)
+        : [],
+    [portfolio, bookings, escrow, now],
   );
   const attentionItems = useMemo(
     () => getAttentionItems(verified, portfolioProperties, bookings, escrow),
@@ -641,12 +504,12 @@ export default function LandlordDashboardPage(): ReactElement {
     () =>
       portfolioProperties
         .slice(0, 4)
-        .map((property) => mapDashboardProperty(property, bookings, MOCK_NOW)),
-    [portfolioProperties, bookings],
+        .map((property) => mapDashboardProperty(property, bookings, now)),
+    [portfolioProperties, bookings, now],
   );
   const upcomingBookings = useMemo(
-    () => getUpcomingBookings(bookings, MOCK_NOW),
-    [bookings],
+    () => getUpcomingBookings(bookings, now),
+    [bookings, now],
   );
   const recentEscrow = useMemo(() => escrow.slice(0, 3), [escrow]);
   const fundsHeld = useMemo(
@@ -656,8 +519,8 @@ export default function LandlordDashboardPage(): ReactElement {
         .reduce((total, entry) => total + entry.amount, 0),
     [escrow],
   );
-  const forceLoading = requestedViewState === "loading";
-  const forceError = requestedViewState === "error";
+  const forceLoading = requestedViewState === "loading" || isLoading;
+  const forceError = requestedViewState === "error" || loadError !== "";
   const accountBusy = forceLoading;
   const portfolioBusy = forceLoading;
   const bookingsBusy = forceLoading;
@@ -694,7 +557,7 @@ export default function LandlordDashboardPage(): ReactElement {
             ) : null
           ) : (
             <h1 className="font-display text-4xl font-bold leading-[0.95] text-primary sm:text-5xl">
-              Welcome back, {MOCK_LANDLORD.name.split(" ")[0]}.
+              Welcome back{user?.firstName ? `, ${user.firstName}` : ""}.
             </h1>
           )}
         </div>

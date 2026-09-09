@@ -33,3 +33,16 @@ export async function POST(
     request,
   });
 }
+
+export async function PATCH(
+  request: Request,
+  context: RouteContext,
+): Promise<Response> {
+  const { segments } = await context.params;
+
+  return proxyAuthenticatedRequest({
+    backendPath: buildBackendPath(segments, new URL(request.url).search),
+    method: "PATCH",
+    request,
+  });
+}

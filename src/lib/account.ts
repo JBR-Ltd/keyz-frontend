@@ -5,15 +5,32 @@ import { resolveApiError } from "@/lib/errors";
 import { clearHostListingStorage } from "@/lib/hostListings";
 
 export interface AuthenticatedUser {
+  avatarUrl: string | null;
+  city: string | null;
   email: string;
   firstName: string;
   id: number;
   emailVerified: boolean;
   identityVerified: boolean;
   lastName: string;
+  phone: string | null;
   role: "ADMIN" | "AGENT" | "LANDLORD" | "TENANT";
   sellerRating: number;
+  twoFactorEnabled: boolean;
+  /** The part of a name a verified person can still change. */
+  username: string | null;
 }
+
+export interface ProfileEdit {
+  city?: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  username?: string;
+}
+
+/** Switches keyed by the name the screen uses, stored per account. */
+export type AccountPreferences = Record<string, boolean>;
 
 interface ApiEnvelope {
   data: unknown;
@@ -182,6 +199,163 @@ export function useAuthenticatedUser(): AuthenticatedUserState {
   }, []);
 
   return state;
+}
+
+function cacheUser(value: unknown): AuthenticatedUser {
+  if (!isAuthenticatedUser(value)) {
+    throw new Error("The account server returned invalid user details.");
+  }
+
+  cachedUser = value;
+  return value;
+}
+
+export async function updateProfile(
+  edit: ProfileEdit,
+): Promise<AccountActionResult & { user: AuthenticatedUser | null }> {
+  try {
+    const envelope = await authenticatedRequest("/api/users/me", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(edit),
+    });
+
+    return { success: true, message: envelope.message, user: cacheUser(envelope.data) };
+  } catch (error) {
+    return {
+      success: false,
+      message:
+        error instanceof Error ? error.message : "Your profile was not saved.",
+      user: null,
+    };
+  }
+}
+
+export async function uploadAvatar(
+  file: File,
+): Promise<AccountActionResult & { user: AuthenticatedUser | null }> {
+  try {
+    const body = new FormData();
+    body.append("image", file, file.name);
+
+    const envelope = await authenticatedRequest("/api/users/me/avatar", {
+      method: "POST",
+      body,
+    });
+
+    return { success: true, message: envelope.message, user: cacheUser(envelope.data) };
+  } catch (error) {
+    return {
+      success: false,
+      message:
+        error instanceof Error ? error.message : "That photo was not saved.",
+      user: null,
+    };
+  }
+}
+
+export async function getPreferences(): Promise<AccountPreferences> {
+  try {
+    const envelope = await authenticatedRequest("/api/users/me/preferences");
+
+    return envelope.data !== null && typeof envelope.data === "object"
+      ? (envelope.data as AccountPreferences)
+      : {};
+  } catch {
+    return {};
+  }
+}
+
+export async function savePreferences(
+  preferences: AccountPreferences,
+): Promise<AccountActionResult> {
+  try {
+    const envelope = await authenticatedRequest("/api/users/me/preferences", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(preferences),
+    });
+
+    return { success: true, message: envelope.message };
+  } catch (error) {
+    return {
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Those preferences were not saved.",
+    };
+  }
+}
+
+// === Two step sign-in
+
+/** Sends a code to the account email and returns the reference to send back. */
+export async function startTwoFactorSetup(): Promise<
+  AccountActionResult & { reference: string }
+> {
+  try {
+    const envelope = await authenticatedRequest("/api/auth/2fa/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    });
+
+    return {
+      success: true,
+      message: envelope.message,
+      reference: typeof envelope.data === "string" ? envelope.data : "",
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message:
+        error instanceof Error ? error.message : "That code was not sent.",
+      reference: "",
+    };
+  }
+}
+
+export async function enableTwoFactor(
+  reference: string,
+  code: string,
+): Promise<AccountActionResult> {
+  try {
+    const envelope = await authenticatedRequest("/api/auth/2fa/enable", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reference, code }),
+    });
+
+    cachedUser = null;
+    return { success: true, message: envelope.message };
+  } catch (error) {
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "That code is not right.",
+    };
+  }
+}
+
+export async function disableTwoFactor(
+  password: string,
+): Promise<AccountActionResult> {
+  try {
+    const envelope = await authenticatedRequest("/api/auth/2fa/disable", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password }),
+    });
+
+    cachedUser = null;
+    return { success: true, message: envelope.message };
+  } catch (error) {
+    return {
+      success: false,
+      message:
+        error instanceof Error ? error.message : "That was not turned off.",
+    };
+  }
 }
 
 export async function changeAccountPassword(

@@ -1,8 +1,10 @@
 "use client";
 
-import type { PartySummary } from "@/lib/bookings";
+import type { Booking, PartySummary } from "@/lib/bookings";
 import type { Dispute, DisputeStatus } from "@/lib/disputes";
 import { resolveApiError } from "@/lib/errors";
+import type { EscrowEntry } from "@/lib/escrow";
+import type { Review } from "@/lib/reviews";
 
 // === Types
 
@@ -43,6 +45,33 @@ export interface AdminResult<TValue> {
   message?: string;
 }
 
+export type ReviewModerationStatus =
+  | "PUBLISHED"
+  | "HIDDEN"
+  | "FLAGGED"
+  | "REMOVED";
+
+/** A review as a moderator sees it: the note saying why is admin-only. */
+export interface ModeratedReview extends Review {
+  moderationReason: string | null;
+  status: ReviewModerationStatus;
+}
+
+export interface AdminPage<TItem> {
+  hasNext: boolean;
+  items: TItem[];
+  page: number;
+  size: number;
+  totalItems: number;
+  totalPages: number;
+}
+
+export interface AdminSearch {
+  page?: number;
+  query?: string;
+  status?: string;
+}
+
 // === Helpers
 
 function unwrap(payload: unknown): unknown {
@@ -71,6 +100,72 @@ async function adminRequest(
   });
 
   return { ok: response.ok, payload: await response.json().catch(() => null) };
+}
+
+function emptyPage<TItem>(): AdminPage<TItem> {
+  return {
+    hasNext: false,
+    items: [],
+    page: 0,
+    size: 0,
+    totalItems: 0,
+    totalPages: 0,
+  };
+}
+
+function isAdminPage(value: unknown): value is AdminPage<unknown> {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    "items" in value &&
+    Array.isArray(value.items)
+  );
+}
+
+/** A blank filter is left off the query string so the backend treats it as no filter. */
+function searchParams(search: AdminSearch): string {
+  const params = new URLSearchParams();
+
+  if (search.query && search.query.trim()) {
+    params.set("query", search.query.trim());
+  }
+
+  if (search.status) {
+    params.set("status", search.status);
+  }
+
+  if (search.page) {
+    params.set("page", String(search.page));
+  }
+
+  const query = params.toString();
+
+  return query ? `?${query}` : "";
+}
+
+async function searchPage<TItem>(
+  path: string,
+  search: AdminSearch,
+  failure: string,
+): Promise<AdminResult<AdminPage<TItem>>> {
+  try {
+    const { ok, payload } = await adminRequest(`${path}${searchParams(search)}`);
+
+    if (!ok) {
+      return {
+        data: emptyPage<TItem>(),
+        message: resolveApiError(payload, failure),
+      };
+    }
+
+    const data = unwrap(payload);
+
+    return isAdminPage(data)
+      ? { data: data as AdminPage<TItem> }
+      : { data: emptyPage<TItem>(), message: failure };
+  } catch {
+    return { data: emptyPage<TItem>(), message: failure };
+  }
 }
 
 // === Requests
@@ -194,5 +289,66 @@ export async function decideKyb(
         };
   } catch {
     return { data: false, message: "That decision could not be saved." };
+  }
+}
+
+export async function searchBookings(
+  search: AdminSearch,
+): Promise<AdminResult<AdminPage<Booking>>> {
+  return searchPage<Booking>(
+    "/api/admin/bookings",
+    search,
+    "Bookings could not be loaded.",
+  );
+}
+
+export async function searchEscrow(
+  search: AdminSearch,
+): Promise<AdminResult<AdminPage<EscrowEntry>>> {
+  return searchPage<EscrowEntry>(
+    "/api/admin/escrow",
+    search,
+    "Escrow could not be loaded.",
+  );
+}
+
+export async function searchReviews(
+  search: AdminSearch,
+): Promise<AdminResult<AdminPage<ModeratedReview>>> {
+  return searchPage<ModeratedReview>(
+    "/api/admin/reviews",
+    search,
+    "Reviews could not be loaded.",
+  );
+}
+
+/** Anything other than publishing has to carry a reason: the decision is recorded. */
+export async function moderateReview(
+  reviewId: number,
+  status: ReviewModerationStatus,
+  reason?: string,
+): Promise<AdminResult<ModeratedReview | null>> {
+  try {
+    const params = new URLSearchParams({ status });
+
+    if (status !== "PUBLISHED" && reason) {
+      params.set("reason", reason);
+    }
+
+    const { ok, payload } = await adminRequest(
+      `/api/admin/reviews/${reviewId}/status?${params.toString()}`,
+      { method: "PATCH" },
+    );
+
+    if (!ok) {
+      return {
+        data: null,
+        message: resolveApiError(payload, "That decision could not be saved."),
+      };
+    }
+
+    return { data: unwrap(payload) as ModeratedReview };
+  } catch {
+    return { data: null, message: "That decision could not be saved." };
   }
 }

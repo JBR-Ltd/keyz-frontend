@@ -112,3 +112,82 @@ export function toBlockedDates(ranges: UnavailableRange[]): Set<string> {
 
   return blocked;
 }
+
+function getAccessToken(): string {
+  return localStorage.getItem("rello_token") ?? "";
+}
+
+/** Dates the host is holding back: their own stay, repairs, a tenancy off-platform. */
+export async function blockDates(
+  propertyId: number,
+  startDate: string,
+  endDate: string,
+  reason: string,
+): Promise<AvailabilityResult<UnavailableRange | null>> {
+  const token = getAccessToken();
+
+  if (!token) {
+    return { data: null, message: "Log in again to block dates." };
+  }
+
+  try {
+    const response = await fetch(
+      `/api/properties/${propertyId}/availability/blocks`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ startDate, endDate, reason: reason || null }),
+      },
+    );
+    const payload: unknown = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      return {
+        data: null,
+        message: resolveApiError(payload, "Those dates were not blocked."),
+      };
+    }
+
+    const data = unwrap(payload);
+
+    return isUnavailableRange(data)
+      ? { data }
+      : { data: null, message: "Those dates were not blocked." };
+  } catch {
+    return { data: null, message: "Those dates were not blocked." };
+  }
+}
+
+export async function unblockDates(
+  propertyId: number,
+  blockId: number,
+): Promise<AvailabilityResult<boolean>> {
+  const token = getAccessToken();
+
+  if (!token) {
+    return { data: false, message: "Log in again to open those dates." };
+  }
+
+  try {
+    const response = await fetch(
+      `/api/properties/${propertyId}/availability/blocks/${blockId}`,
+      { method: "DELETE", headers: { Authorization: `Bearer ${token}` } },
+    );
+
+    if (!response.ok) {
+      const payload: unknown = await response.json().catch(() => null);
+
+      return {
+        data: false,
+        message: resolveApiError(payload, "Those dates were not reopened."),
+      };
+    }
+
+    return { data: true };
+  } catch {
+    return { data: false, message: "Those dates were not reopened." };
+  }
+}

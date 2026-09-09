@@ -260,3 +260,62 @@ export async function cancelMaintenanceRequest(
     return { data: false, message: "That report could not be withdrawn." };
   }
 }
+
+/** Every repair reported against a home this host lets. */
+export async function getHostMaintenanceRequests(
+  status?: MaintenanceStatus,
+): Promise<TenancyResult<MaintenanceRequest[]>> {
+  try {
+    const query = status === undefined ? "" : `?status=${status}`;
+    const { ok, payload } = await request(`/api/maintenance-requests/host${query}`);
+
+    if (!ok) {
+      return {
+        data: [],
+        message: resolveApiError(payload, "Repair reports could not be loaded."),
+      };
+    }
+
+    const data = unwrap(payload);
+    const items =
+      data !== null && typeof data === "object" && "items" in data
+        ? data.items
+        : null;
+
+    return Array.isArray(items) && items.every(hasNumericId)
+      ? { data: items as MaintenanceRequest[] }
+      : { data: [], message: "Repair reports could not be loaded." };
+  } catch {
+    return { data: [], message: "Repair reports could not be loaded." };
+  }
+}
+
+/** Moves a report along, with a note the tenant reads. */
+export async function updateMaintenanceRequest(
+  requestId: number,
+  status: MaintenanceStatus,
+  hostNote?: string,
+): Promise<TenancyResult<MaintenanceRequest | null>> {
+  try {
+    const { ok, payload } = await request(`/api/maintenance-requests/${requestId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status, hostNote: hostNote ?? null }),
+    });
+
+    if (!ok) {
+      return {
+        data: null,
+        message: resolveApiError(payload, "That update could not be saved."),
+      };
+    }
+
+    const data = unwrap(payload);
+
+    return hasNumericId(data)
+      ? { data: data as MaintenanceRequest }
+      : { data: null, message: "That update could not be saved." };
+  } catch {
+    return { data: null, message: "That update could not be saved." };
+  }
+}

@@ -419,8 +419,8 @@ export default function TenantBookingsPage(): ReactElement {
                     <PropertyPrice value={primaryBooking.totalPrice} />
                   </p>
                   <p className="mt-3 font-body text-sm leading-6 text-muted">
-                    This is the total amount recorded for this booking. Detailed
-                    rent schedules and receipts are not available yet.
+                    Paid up front and held in escrow, so there is nothing to
+                    pay month to month.
                   </p>
                 </article>
 

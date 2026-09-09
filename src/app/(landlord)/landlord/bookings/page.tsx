@@ -5,6 +5,7 @@ import {
   Check,
   Clock3,
   FileCheck2,
+  FileText,
   KeyRound,
   Loader2,
   MapPin,
@@ -14,7 +15,9 @@ import {
   X,
 } from "lucide-react";
 import Image from "next/image";
+import ChatThread from "@/components/chat/ChatThread";
 import PropertyPrice from "@/components/property/PropertyPrice";
+import TenancyDocumentsDialog from "@/components/tenant/TenancyDocumentsDialog";
 import { IconTile } from "@/components/ui/icon-tile";
 import {
   StatusBadge,
@@ -119,6 +122,8 @@ export default function LandlordBookingsPage(): ReactElement {
   const [query, setQuery] = useState("");
   // Captured once so the "upcoming" count stays stable across re-renders
   const [now, setNow] = useState(0);
+  const [chatBooking, setChatBooking] = useState<Booking | null>(null);
+  const [documentsBooking, setDocumentsBooking] = useState<Booking | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -396,9 +401,22 @@ export default function LandlordBookingsPage(): ReactElement {
                         </button>
                       ) : null}
 
+                      {booking.status === "CONFIRMED" ||
+                      booking.status === "COMPLETED" ? (
+                        <button
+                          type="button"
+                          onClick={() => setDocumentsBooking(booking)}
+                          className="flex h-10 w-10 items-center justify-center rounded-full text-primary transition-all duration-200 ease-in-out hover:bg-primary/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                          aria-label={`Paperwork for ${booking.propertyTitle}`}
+                        >
+                          <FileText size={18} />
+                        </button>
+                      ) : null}
                       <button
                         type="button"
-                        className="flex h-10 w-10 items-center justify-center rounded-full text-primary transition-all duration-200 ease-in-out hover:bg-primary/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                        onClick={() => setChatBooking(booking)}
+                        disabled={booking.tenant === null}
+                        className="flex h-10 w-10 items-center justify-center rounded-full text-primary transition-all duration-200 ease-in-out hover:bg-primary/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-40"
                         aria-label={`Message ${tenantName}`}
                       >
                         <MessageCircle size={18} />
@@ -415,6 +433,26 @@ export default function LandlordBookingsPage(): ReactElement {
         )}
       </section>
 
+      {chatBooking && chatBooking.tenant ? (
+        <ChatThread
+          conversationId={`booking-${chatBooking.id}`}
+          otherUserId={chatBooking.tenant.id}
+          propertyId={chatBooking.propertyId}
+          otherPartyName={chatBooking.tenant.name}
+          otherPartyRole="Tenant"
+          propertyName={chatBooking.propertyTitle}
+          onClose={() => setChatBooking(null)}
+        />
+      ) : null}
+
+      {documentsBooking ? (
+        <TenancyDocumentsDialog
+          bookingId={documentsBooking.id}
+          propertyTitle={documentsBooking.propertyTitle}
+          open
+          onClose={() => setDocumentsBooking(null)}
+        />
+      ) : null}
     </main>
   );
 }

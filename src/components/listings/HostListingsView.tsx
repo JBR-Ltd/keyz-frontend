@@ -306,12 +306,18 @@ export default function HostListingsView({
                     </p>
                   </div>
                 </Link>
-                <div className="border-t border-border px-5 py-4">
+                <div className="flex flex-wrap gap-3 border-t border-border px-5 py-4">
                   <Link
                     href={`${createHref}?draft=${listing.id}`}
                     className="inline-flex min-h-10 items-center justify-center rounded-full border border-primary/20 px-4 py-2 font-body text-xs font-bold text-primary transition-colors hover:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                   >
-                    Edit listing
+                    Edit details
+                  </Link>
+                  <Link
+                    href={`/${role}/listings/${listing.id}`}
+                    className="inline-flex min-h-10 items-center justify-center rounded-full border border-primary/20 px-4 py-2 font-body text-xs font-bold text-primary transition-colors hover:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  >
+                    Photos and dates
                   </Link>
                 </div>
               </article>

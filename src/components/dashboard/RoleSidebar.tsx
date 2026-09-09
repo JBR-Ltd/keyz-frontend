@@ -3,6 +3,7 @@
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   Bookmark,
+  CalendarClock,
   CalendarDays,
   ChevronRight,
   Landmark,
@@ -14,6 +15,7 @@ import {
   Settings,
   ShieldCheck,
   Star,
+  Wrench,
   X,
 } from "lucide-react";
 import Image from "next/image";
@@ -25,17 +27,18 @@ import { logOutAccount, useAuthenticatedUser } from "@/lib/account";
 import { useDialogFocus } from "@/lib/useDialogFocus";
 import relloLogoMark from "../../../public/rello-logo-cropped.svg";
 
-const AGENT_NAV_ITEMS = [
+const HOST_NAV_ITEMS = [
   { label: "Dashboard", slug: "dashboard", icon: LayoutDashboard },
   { label: "My Listings", slug: "saved-listings", icon: Bookmark },
   { label: "Bookings", slug: "bookings", icon: CalendarDays },
+  { label: "Viewings", slug: "viewings", icon: CalendarClock },
+  { label: "Repairs", slug: "maintenance", icon: Wrench },
 ];
 
-const LANDLORD_NAV_ITEMS = [
-  { label: "Dashboard", slug: "dashboard", icon: LayoutDashboard },
-  { label: "My Listings", slug: "saved-listings", icon: Bookmark },
-  { label: "Bookings", slug: "bookings", icon: CalendarDays },
-];
+// Landlords and agents run the same day to day, so they get the same navigation
+const AGENT_NAV_ITEMS = HOST_NAV_ITEMS;
+
+const LANDLORD_NAV_ITEMS = HOST_NAV_ITEMS;
 
 const ADMIN_NAV_ITEMS = [
   { label: "Dashboard", slug: "dashboard", icon: LayoutDashboard },
@@ -46,10 +49,11 @@ const ADMIN_NAV_ITEMS = [
   { label: "Ratings", slug: "ratings", icon: Star },
 ];
 
+/** Shown only until the signed-in profile arrives, so it names nobody. */
 const ROLE_PROFILES = {
-  landlord: { name: "Chinedu Okafor", initials: "CO" },
-  agent: { name: "Tomi Adeyemi", initials: "TA" },
-  admin: { name: "Admin User", initials: "AU" },
+  landlord: { name: "Your account", initials: "" },
+  agent: { name: "Your account", initials: "" },
+  admin: { name: "Your account", initials: "" },
 };
 
 const PROFILE_MENU_WIDTH = 224;

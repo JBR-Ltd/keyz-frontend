@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   ArrowRight,
   ArrowUpRight,
+  Video,
   Bath,
   BedDouble,
   Check,
@@ -358,6 +359,16 @@ export default function PropertyPage({
   return (
     <main className="bg-bg pt-6 text-primary">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+        {hasTour ? (
+          <a
+            href="#virtual-tour"
+            className="mb-4 inline-flex min-h-10 items-center gap-2 rounded-full bg-primary px-4 font-body text-sm font-bold text-white transition-all duration-200 ease-in-out hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          >
+            <Video size={16} aria-hidden="true" />
+            Walk through this home
+          </a>
+        ) : null}
+
         <section aria-label="Property photos">
           <div
             className={`hidden gap-1 overflow-hidden rounded-2xl lg:grid ${getMosaicClass(
@@ -676,10 +687,17 @@ export default function PropertyPage({
             {hasTour ? (
               <>
                 <div className="my-6 border-t border-border" />
-                <section>
-                  <h2 className="font-display text-xl font-bold text-primary">
-                    Take a virtual tour
+                <section id="virtual-tour" className="scroll-mt-24">
+                  <p className="font-accent text-xs font-bold uppercase tracking-[0.2em] text-accent-alt">
+                    See it for yourself
+                  </p>
+                  <h2 className="mt-2 font-display text-xl font-bold text-primary">
+                    Walk through this home
                   </h2>
+                  <p className="mt-2 max-w-xl font-body text-sm leading-6 text-muted">
+                    Filmed at the property, so what you see is the home you would
+                    be renting.
+                  </p>
                   <div className="mt-4 overflow-hidden rounded-2xl bg-surface-soft shadow-sm">
                     {property.tour.videoUrl ? (
                       <video
