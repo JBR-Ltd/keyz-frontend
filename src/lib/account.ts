@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { resolveApiError } from "@/lib/errors";
 import { clearHostListingStorage } from "@/lib/hostListings";
+import { clearInternalNavigationHistory } from "@/lib/internalNavigation";
 
 export interface AuthenticatedUser {
   avatarUrl: string | null;
@@ -144,6 +145,7 @@ function clearAuthenticationState(): void {
   localStorage.removeItem("rello_tenant_verification");
   localStorage.removeItem("rello_landlord_verification");
   localStorage.removeItem("rello_agent_verification");
+  clearInternalNavigationHistory();
 }
 
 async function authenticatedRequest(
@@ -246,7 +248,11 @@ export async function updateProfile(
       body: JSON.stringify(edit),
     });
 
-    return { success: true, message: envelope.message, user: cacheUser(envelope.data) };
+    return {
+      success: true,
+      message: envelope.message,
+      user: cacheUser(envelope.data),
+    };
   } catch (error) {
     return {
       success: false,
@@ -269,7 +275,11 @@ export async function uploadAvatar(
       body,
     });
 
-    return { success: true, message: envelope.message, user: cacheUser(envelope.data) };
+    return {
+      success: true,
+      message: envelope.message,
+      user: cacheUser(envelope.data),
+    };
   } catch (error) {
     return {
       success: false,
@@ -358,7 +368,8 @@ export async function enableTwoFactor(
   } catch (error) {
     return {
       success: false,
-      message: error instanceof Error ? error.message : "That code is not right.",
+      message:
+        error instanceof Error ? error.message : "That code is not right.",
     };
   }
 }
@@ -450,7 +461,9 @@ export async function getSessions(): Promise<LoginSession[]> {
   try {
     const envelope = await authenticatedRequest("/api/auth/sessions");
 
-    return Array.isArray(envelope.data) ? (envelope.data as LoginSession[]) : [];
+    return Array.isArray(envelope.data)
+      ? (envelope.data as LoginSession[])
+      : [];
   } catch {
     return [];
   }
@@ -460,16 +473,21 @@ export async function endSession(
   sessionId: number,
 ): Promise<AccountActionResult> {
   try {
-    const envelope = await authenticatedRequest(`/api/auth/sessions/${sessionId}`, {
-      method: "DELETE",
-    });
+    const envelope = await authenticatedRequest(
+      `/api/auth/sessions/${sessionId}`,
+      {
+        method: "DELETE",
+      },
+    );
 
     return { success: true, message: envelope.message };
   } catch (error) {
     return {
       success: false,
       message:
-        error instanceof Error ? error.message : "That device was not signed out.",
+        error instanceof Error
+          ? error.message
+          : "That device was not signed out.",
     };
   }
 }
@@ -534,7 +552,9 @@ export async function requestDataExport(): Promise<
     return {
       success: false,
       message:
-        error instanceof Error ? error.message : "That request was not accepted.",
+        error instanceof Error
+          ? error.message
+          : "That request was not accepted.",
       export: null,
     };
   }

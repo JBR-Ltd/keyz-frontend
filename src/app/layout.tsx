@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { DM_Sans, Fraunces, Syne } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
+import InternalNavigationTracker from "@/components/navigation/InternalNavigationTracker";
 import { ToastProvider } from "@/components/ui/toast";
 import { LoadingScreenGate } from "@/components/LoadingScreenGate";
 import { Analytics } from "@vercel/analytics/next";
@@ -68,6 +70,9 @@ export default function RootLayout({
       */}
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <LoadingScreenGate>
+          <Suspense fallback={null}>
+            <InternalNavigationTracker />
+          </Suspense>
           <ToastProvider>{children}</ToastProvider>
         </LoadingScreenGate>
         <Analytics />
