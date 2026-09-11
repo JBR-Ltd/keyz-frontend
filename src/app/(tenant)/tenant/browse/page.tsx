@@ -9,13 +9,21 @@ import {
   type ReactElement,
 } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Loader2, MapPin, RotateCcw, Search, SearchX, X } from "lucide-react";
+import {
+  Loader2,
+  MapPin,
+  RotateCcw,
+  Search,
+  SearchX,
+  SlidersHorizontal,
+  X,
+} from "lucide-react";
 import PropertyCard from "@/components/public/PropertyCard";
 import OverlayPortal from "@/components/ui/OverlayPortal";
 import { Select, type SelectOption } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
 import ActivityFeed from "@/components/dashboard/ActivityFeed";
-import { getRentalCities, type ListingSearch } from "@/lib/hostListings";
+import type { ListingSearch } from "@/lib/hostListings";
 import { getProperties, type PropertyDetail } from "@/lib/propertyDetails";
 import {
   getSavedListings,
@@ -60,6 +68,12 @@ const STAY_MODES: { hint: string; id: StayMode; label: string }[] = [
   { hint: "Booked by the night", id: "short", label: "Shortlets" },
 ];
 
+const STICKY_STAY_MODE_OPTIONS: SelectOption[] = [
+  { label: "All stays", value: "all" },
+  { label: "Rent", value: "long" },
+  { label: "Shortlets", value: "short" },
+];
+
 const BEDROOM_OPTIONS: SelectOption[] = [
   { label: "Any bedrooms", value: "all" },
   { label: "1+ bedrooms", value: "1" },
@@ -76,6 +90,22 @@ const PRICE_OPTIONS: SelectOption[] = [
   { label: "Above ₦500,000", value: "over-500000" },
 ];
 
+const STICKY_PRICE_OPTIONS: SelectOption[] = [
+  { label: "Any price", value: "all" },
+  { label: "Under ₦100k", value: "under-100000" },
+  { label: "₦100k to ₦250k", value: "100000-250000" },
+  { label: "₦250k to ₦500k", value: "250000-500000" },
+  { label: "Above ₦500k", value: "over-500000" },
+];
+
+const STICKY_BEDROOM_OPTIONS: SelectOption[] = [
+  { label: "Any beds", value: "all" },
+  { label: "1+ beds", value: "1" },
+  { label: "2+ beds", value: "2" },
+  { label: "3+ beds", value: "3" },
+  { label: "4+ beds", value: "4" },
+];
+
 const SORT_OPTIONS: SelectOption[] = [
   { label: "Recommended", value: "recommended" },
   { label: "Lowest price", value: "price-low" },
@@ -86,7 +116,10 @@ const SORT_OPTIONS: SelectOption[] = [
 // === Helpers
 
 /** The price bands the menu offers, as the bounds the query takes. */
-const PRICE_BOUNDS: Record<PriceFilter, [number | undefined, number | undefined]> = {
+const PRICE_BOUNDS: Record<
+  PriceFilter,
+  [number | undefined, number | undefined]
+> = {
   all: [undefined, undefined],
   "under-100000": [undefined, 100000],
   "100000-250000": [100000, 250000],
@@ -122,7 +155,6 @@ export default function TenantBrowsePage(): ReactElement {
   const [retryKey, setRetryKey] = useState(0);
   const [queryInput, setQueryInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [city, setCity] = useState("all");
   const [priceFilter, setPriceFilter] = useState<PriceFilter>("all");
   const [bedroomFilter, setBedroomFilter] = useState<BedroomFilter>("all");
   const [sort, setSort] = useState<SortOption>("recommended");
@@ -132,7 +164,6 @@ export default function TenantBrowsePage(): ReactElement {
   const [isHeaderSearchVisible, setIsHeaderSearchVisible] = useState(false);
   const desktopSearchRef = useRef<HTMLFormElement>(null);
   const dialogRef = useDialogFocus<HTMLDivElement>(isSearchSheetOpen);
-  const [serverCities, setServerCities] = useState<string[]>([]);
 
   /**
      The filters as the server takes them. Everything except the shortlet toggle is
@@ -143,27 +174,12 @@ export default function TenantBrowsePage(): ReactElement {
 
     return {
       query: searchQuery.trim() || undefined,
-      city: city === "all" ? undefined : city,
       minPrice,
       maxPrice,
       minBedrooms: bedroomFilter === "all" ? undefined : Number(bedroomFilter),
       sort: SORT_PARAMS[sort],
     };
-  }, [bedroomFilter, city, priceFilter, searchQuery, sort]);
-
-  useEffect(() => {
-    let active = true;
-
-    void getRentalCities().then((cities) => {
-      if (active) {
-        setServerCities(cities);
-      }
-    });
-
-    return () => {
-      active = false;
-    };
-  }, []);
+  }, [bedroomFilter, priceFilter, searchQuery, sort]);
 
   useEffect(() => {
     let active = true;
@@ -183,7 +199,9 @@ export default function TenantBrowsePage(): ReactElement {
       setHasNext(propertyResult.hasNext);
       setTotalItems(propertyResult.totalItems);
       setPropertyError(propertyResult.message ?? "");
-      setSavedIds(new Set(savedResult.data.map((listing) => String(listing.id))));
+      setSavedIds(
+        new Set(savedResult.data.map((listing) => String(listing.id))),
+      );
       setPage(0);
       setPropertiesLoading(false);
     };
@@ -232,22 +250,6 @@ export default function TenantBrowsePage(): ReactElement {
     };
   }, []);
 
-  const cityOptions = useMemo<SelectOption[]>(() => {
-    // From the catalogue rather than the loaded page, or filtering by a city would
-    // only ever offer the cities already on screen
-    const cities =
-      serverCities.length > 0
-        ? [...serverCities]
-        : Array.from(
-            new Set(properties.map((property) => property.location.city).filter(Boolean)),
-          ).sort((left, right) => left.localeCompare(right));
-
-    return [
-      { label: "Any city", value: "all" },
-      ...cities.map((value) => ({ label: value, value })),
-    ];
-  }, [properties, serverCities]);
-
   /**
      Searching, filtering and ordering all happen in the query now. What is left
      here is the stay length toggle: a shortlet price is per night and a tenancy
@@ -285,10 +287,6 @@ export default function TenantBrowsePage(): ReactElement {
       });
     }
 
-    if (city !== "all") {
-      filters.push({ id: "city", label: city, remove: () => setCity("all") });
-    }
-
     if (priceFilter !== "all") {
       filters.push({
         id: "price",
@@ -305,16 +303,25 @@ export default function TenantBrowsePage(): ReactElement {
       });
     }
 
+    if (stayMode !== "all") {
+      filters.push({
+        id: "stay",
+        label:
+          STAY_MODES.find((mode) => mode.id === stayMode)?.label ?? stayMode,
+        remove: () => setStayMode("all"),
+      });
+    }
+
     return filters;
-  }, [bedroomFilter, city, priceFilter, searchQuery]);
+  }, [bedroomFilter, priceFilter, searchQuery, stayMode]);
 
   const clearFilters = (): void => {
     setQueryInput("");
     setSearchQuery("");
-    setCity("all");
     setPriceFilter("all");
     setBedroomFilter("all");
     setSort("recommended");
+    setStayMode("all");
   };
 
   const submitSearch = (event?: FormEvent): void => {
@@ -347,7 +354,9 @@ export default function TenantBrowsePage(): ReactElement {
     setPage(nextPage);
   };
 
-  const toggleSavedListing = async (property: PropertyDetail): Promise<void> => {
+  const toggleSavedListing = async (
+    property: PropertyDetail,
+  ): Promise<void> => {
     const propertyId = Number(property.id);
 
     if (!Number.isInteger(propertyId)) {
@@ -404,101 +413,117 @@ export default function TenantBrowsePage(): ReactElement {
   return (
     <main className="min-h-screen overflow-x-hidden px-5 pb-12 pt-8 sm:px-8 lg:px-10 lg:pb-16 lg:pt-10 xl:px-14">
       <section aria-label="Search and filter listings">
-        <div className="mx-auto hidden max-w-5xl md:block">
-          <form
-            ref={desktopSearchRef}
-            onSubmit={submitSearch}
-            className="flex h-16 w-full items-center overflow-hidden rounded-full bg-bg shadow-sm"
-          >
-            <label className="flex min-w-0 flex-1 items-center gap-3 px-6 focus-within:text-primary">
-              <MapPin className="shrink-0 text-muted" size={19} aria-hidden="true" />
-              <span className="sr-only">Search by location or property name</span>
-              <input
-                type="search"
-                value={queryInput}
-                onChange={(event) => setQueryInput(event.target.value)}
-                placeholder="Search by city, area, or property"
-                className="min-w-0 flex-1 bg-transparent font-body text-sm text-primary outline-none placeholder:text-muted"
-              />
-            </label>
-            <span className="h-8 w-px bg-border" />
-            <div className="w-48 px-5">
-              <Select
-                ariaLabel="Sort listings"
-                value={sort}
-                onValueChange={(value) => setSort(value as SortOption)}
-                options={SORT_OPTIONS}
-                className="font-body text-sm font-bold"
-              />
-            </div>
-            <span className="h-8 w-px bg-border" />
-            <button
-              type="submit"
-              className="mr-2 flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent text-primary transition-all duration-200 ease-in-out hover:scale-105 hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-              aria-label="Search listings"
+        <div className="mx-auto hidden max-w-7xl md:block">
+          <div className="overflow-visible rounded-2xl border border-border bg-bg shadow-sm">
+            <form
+              ref={desktopSearchRef}
+              onSubmit={submitSearch}
+              className="flex h-16 w-full items-center border-b border-border"
             >
-              <Search size={19} aria-hidden="true" />
-            </button>
-          </form>
+              <label className="flex min-w-0 flex-1 items-center gap-3 px-6 focus-within:text-primary">
+                <MapPin
+                  className="shrink-0 text-muted"
+                  size={19}
+                  aria-hidden="true"
+                />
+                <span className="sr-only">
+                  Search by location or property name
+                </span>
+                <input
+                  type="search"
+                  value={queryInput}
+                  onChange={(event) => setQueryInput(event.target.value)}
+                  placeholder="Search by city, area, or property"
+                  className="min-w-0 flex-1 bg-transparent font-body text-sm text-primary outline-none placeholder:text-muted"
+                />
+              </label>
+              <button
+                type="submit"
+                className="mr-2 inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-accent px-5 font-body text-sm font-bold text-primary transition-colors duration-200 ease-in-out hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                <Search size={18} aria-hidden="true" />
+                Search
+              </button>
+            </form>
 
-          <div
-            className="mt-4 flex flex-wrap gap-1 rounded-full bg-bg p-1 shadow-sm sm:w-fit"
-            role="tablist"
-            aria-label="Kind of stay"
-          >
-            {STAY_MODES.map((mode) => {
-              const active = stayMode === mode.id;
+            <div className="flex flex-wrap items-center gap-2 p-3">
+              <div
+                className="flex gap-1 rounded-xl bg-surface-soft p-1"
+                role="tablist"
+                aria-label="Kind of stay"
+              >
+                {STAY_MODES.map((mode) => {
+                  const active = stayMode === mode.id;
 
-              return (
+                  return (
+                    <button
+                      key={mode.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={active}
+                      title={mode.hint}
+                      onClick={() => {
+                        setStayMode(mode.id);
+                        setPage(0);
+                      }}
+                      className={`min-h-10 rounded-lg px-4 font-body text-sm font-bold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                        active
+                          ? "bg-primary text-white shadow-sm"
+                          : "text-muted hover:bg-primary/5 hover:text-primary"
+                      }`}
+                    >
+                      {mode.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <span className="mx-1 hidden h-8 w-px bg-border lg:block" />
+              <div className="min-w-52 rounded-xl border border-border px-4 py-2">
+                <Select
+                  ariaLabel="Filter by price"
+                  value={priceFilter}
+                  onValueChange={(value) =>
+                    setPriceFilter(value as PriceFilter)
+                  }
+                  options={PRICE_OPTIONS}
+                  className="text-sm"
+                />
+              </div>
+              <div className="min-w-44 rounded-xl border border-border px-4 py-2">
+                <Select
+                  ariaLabel="Filter by bedrooms"
+                  value={bedroomFilter}
+                  onValueChange={(value) =>
+                    setBedroomFilter(value as BedroomFilter)
+                  }
+                  options={BEDROOM_OPTIONS}
+                  className="text-sm"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsSearchSheetOpen(true)}
+                className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-border px-4 font-body text-sm font-bold text-primary transition-colors hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                <SlidersHorizontal size={17} aria-hidden="true" />
+                More filters
+                {appliedFilters.length > 0 ? (
+                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] text-white">
+                    {appliedFilters.length}
+                  </span>
+                ) : null}
+              </button>
+              {appliedFilters.length > 0 ? (
                 <button
-                  key={mode.id}
                   type="button"
-                  role="tab"
-                  aria-selected={active}
-                  title={mode.hint}
-                  onClick={() => {
-                    setStayMode(mode.id);
-                    setPage(0);
-                  }}
-                  className={`min-h-10 rounded-full px-4 font-body text-sm font-bold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
-                    active
-                      ? "bg-primary text-white"
-                      : "text-muted hover:bg-primary/5 hover:text-primary"
-                  }`}
+                  onClick={clearFilters}
+                  className="ml-auto inline-flex min-h-11 items-center gap-2 px-3 font-body text-sm font-bold text-muted hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 >
-                  {mode.label}
+                  <RotateCcw size={15} aria-hidden="true" />
+                  Clear all
                 </button>
-              );
-            })}
-          </div>
-
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <div className="min-w-40 rounded-full bg-bg px-4 py-2 shadow-sm">
-              <Select
-                ariaLabel="Filter by city"
-                value={city}
-                onValueChange={setCity}
-                options={cityOptions}
-                className="text-sm"
-              />
-            </div>
-            <div className="min-w-52 rounded-full bg-bg px-4 py-2 shadow-sm">
-              <Select
-                ariaLabel="Filter by price"
-                value={priceFilter}
-                onValueChange={(value) => setPriceFilter(value as PriceFilter)}
-                options={PRICE_OPTIONS}
-                className="text-sm"
-              />
-            </div>
-            <div className="min-w-44 rounded-full bg-bg px-4 py-2 shadow-sm">
-              <Select
-                ariaLabel="Filter by bedrooms"
-                value={bedroomFilter}
-                onValueChange={(value) => setBedroomFilter(value as BedroomFilter)}
-                options={BEDROOM_OPTIONS}
-                className="text-sm"
-              />
+              ) : null}
             </div>
           </div>
         </div>
@@ -511,17 +536,28 @@ export default function TenantBrowsePage(): ReactElement {
             aria-label="Open search filters"
           >
             <span className="flex min-w-0 items-center gap-3">
-              <MapPin size={18} className="shrink-0 text-muted" aria-hidden="true" />
+              <MapPin
+                size={18}
+                className="shrink-0 text-muted"
+                aria-hidden="true"
+              />
               <span className="truncate font-body text-sm font-bold text-primary">
                 {mobileSearchSummary}
               </span>
             </span>
-            <Search size={17} className="shrink-0 text-primary" aria-hidden="true" />
+            <Search
+              size={17}
+              className="shrink-0 text-primary"
+              aria-hidden="true"
+            />
           </button>
         </div>
 
         {appliedFilters.length > 0 ? (
-          <div className="mt-4 flex flex-wrap items-center gap-2" aria-label="Applied filters">
+          <div
+            className="mt-4 flex flex-wrap items-center gap-2"
+            aria-label="Applied filters"
+          >
             {appliedFilters.map((filter) => (
               <button
                 key={filter.id}
@@ -536,7 +572,7 @@ export default function TenantBrowsePage(): ReactElement {
             <button
               type="button"
               onClick={clearFilters}
-              className="inline-flex items-center gap-1.5 px-2 py-2 font-body text-xs font-bold text-muted hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              className="inline-flex items-center gap-1.5 px-2 py-2 font-body text-xs font-bold text-muted hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent md:hidden"
             >
               <RotateCcw size={13} aria-hidden="true" />
               Clear all
@@ -556,8 +592,8 @@ export default function TenantBrowsePage(): ReactElement {
             transition={{ duration: 0.22, ease: "easeOut" }}
           >
             <form
-                  onSubmit={submitSearch}
-              className="pointer-events-auto flex h-12 w-[min(36rem,42vw)] items-center overflow-hidden rounded-full border border-border bg-bg shadow-sm"
+              onSubmit={submitSearch}
+              className="pointer-events-auto flex h-12 w-[min(56rem,calc(100vw-28rem))] min-w-[32rem] items-center overflow-hidden rounded-full border border-border bg-bg shadow-sm"
             >
               <label className="flex min-w-0 flex-1 items-center gap-2.5 px-5 focus-within:text-primary">
                 <MapPin
@@ -576,6 +612,54 @@ export default function TenantBrowsePage(): ReactElement {
                   className="min-w-0 flex-1 bg-transparent font-body text-sm text-primary outline-none placeholder:text-muted"
                 />
               </label>
+              <div className="hidden h-8 w-px shrink-0 bg-border xl:block" />
+              <div className="hidden w-28 shrink-0 px-3 xl:block">
+                <Select
+                  ariaLabel="Filter by stay type"
+                  value={stayMode}
+                  onValueChange={(value) => {
+                    setStayMode(value as StayMode);
+                    setPage(0);
+                  }}
+                  options={STICKY_STAY_MODE_OPTIONS}
+                  className="font-body text-xs font-bold"
+                />
+              </div>
+              <div className="hidden h-8 w-px shrink-0 bg-border xl:block" />
+              <div className="hidden w-36 shrink-0 px-3 xl:block">
+                <Select
+                  ariaLabel="Filter by price"
+                  value={priceFilter}
+                  onValueChange={(value) =>
+                    setPriceFilter(value as PriceFilter)
+                  }
+                  options={STICKY_PRICE_OPTIONS}
+                  className="font-body text-xs font-bold"
+                />
+              </div>
+              <div className="hidden h-8 w-px shrink-0 bg-border xl:block" />
+              <div className="hidden w-32 shrink-0 px-3 xl:block">
+                <Select
+                  ariaLabel="Filter by bedrooms"
+                  value={bedroomFilter}
+                  onValueChange={(value) =>
+                    setBedroomFilter(value as BedroomFilter)
+                  }
+                  options={STICKY_BEDROOM_OPTIONS}
+                  className="font-body text-xs font-bold"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsSearchSheetOpen(true)}
+                className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-primary transition-colors hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                aria-label="Open listing filters"
+              >
+                <SlidersHorizontal size={17} aria-hidden="true" />
+                {appliedFilters.length > 0 ? (
+                  <span className="absolute right-0.5 top-0.5 h-2 w-2 rounded-full bg-accent" />
+                ) : null}
+              </button>
               <button
                 type="submit"
                 className="mr-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent text-primary transition-colors duration-200 ease-in-out hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
@@ -596,18 +680,34 @@ export default function TenantBrowsePage(): ReactElement {
             <p className="font-accent text-xs font-bold uppercase tracking-[0.25em] text-primary">
               Verified rental homes
             </p>
-            <h2 id="property-feed-heading" className="mt-2 font-display text-3xl font-bold text-primary">
+            <h2
+              id="property-feed-heading"
+              className="mt-2 font-display text-3xl font-bold text-primary"
+            >
               Homes available now
             </h2>
           </div>
-          <p className="font-body text-sm text-muted" aria-live="polite">
-            {resultLabel}
-          </p>
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            <p className="font-body text-sm text-muted" aria-live="polite">
+              {resultLabel}
+            </p>
+            <div className="min-w-44 rounded-xl border border-border bg-bg px-3 py-2 shadow-sm">
+              <Select
+                ariaLabel="Sort listings"
+                value={sort}
+                onValueChange={(value) => setSort(value as SortOption)}
+                options={SORT_OPTIONS}
+                className="font-body text-sm font-bold"
+              />
+            </div>
+          </div>
         </div>
 
         {propertyError ? (
           <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-red-500/30 bg-bg px-4 py-3">
-            <p className="font-body text-sm font-bold text-red-700">{propertyError}</p>
+            <p className="font-body text-sm font-bold text-red-700">
+              {propertyError}
+            </p>
             <button
               type="button"
               onClick={() => setRetryKey((current) => current + 1)}
@@ -628,22 +728,22 @@ export default function TenantBrowsePage(): ReactElement {
             {[0, 1, 2, 3, 4, 5].map((item) => (
               <article
                 key={item}
-                className="overflow-hidden rounded-xl bg-bg shadow-sm"
+                className="overflow-hidden rounded-xl border border-border bg-bg shadow-sm"
                 aria-hidden="true"
               >
-                <div className="relative aspect-video bg-primary/10">
+                <div className="relative aspect-video bg-skeleton-strong">
                   <span className="absolute left-3 top-3 h-7 w-20 rounded-full bg-bg/80" />
                   <span className="absolute right-3 top-3 h-10 w-10 rounded-full bg-bg/80" />
                 </div>
                 <div className="p-5 sm:p-6">
-                  <div className="h-7 w-3/4 rounded-full bg-surface-soft" />
-                  <div className="mt-4 h-4 w-1/2 rounded-full bg-surface-soft" />
-                  <div className="mt-5 h-6 w-2/5 rounded-full bg-primary/10" />
+                  <div className="h-7 w-3/4 rounded-full bg-skeleton" />
+                  <div className="mt-4 h-4 w-1/2 rounded-full bg-skeleton" />
+                  <div className="mt-5 h-6 w-2/5 rounded-full bg-skeleton" />
                   <div className="mt-5 flex gap-3">
-                    <div className="h-5 w-28 rounded-full bg-surface-soft" />
-                    <div className="h-5 w-28 rounded-full bg-surface-soft" />
+                    <div className="h-5 w-28 rounded-full bg-skeleton" />
+                    <div className="h-5 w-28 rounded-full bg-skeleton" />
                   </div>
-                  <div className="mt-6 h-4 w-24 rounded-full bg-primary/10" />
+                  <div className="mt-6 h-4 w-24 rounded-full bg-skeleton" />
                 </div>
               </article>
             ))}
@@ -653,9 +753,12 @@ export default function TenantBrowsePage(): ReactElement {
             <span className="flex h-14 w-14 items-center justify-center rounded-full bg-surface-soft text-primary">
               <SearchX size={24} aria-hidden="true" />
             </span>
-            <h3 className="mt-5 font-display text-2xl font-bold text-primary">No matching homes</h3>
+            <h3 className="mt-5 font-display text-2xl font-bold text-primary">
+              No matching homes
+            </h3>
             <p className="mt-2 max-w-md font-body text-sm leading-6 text-muted">
-              Try a nearby area or remove a filter to see more available rentals.
+              Try a nearby area or remove a filter to see more available
+              rentals.
             </p>
             {appliedFilters.length > 0 ? (
               <button
@@ -674,7 +777,9 @@ export default function TenantBrowsePage(): ReactElement {
                 key={property.id}
                 id={property.id}
                 name={property.title}
-                location={[property.location.area, property.location.city].filter(Boolean).join(", ")}
+                location={[property.location.area, property.location.city]
+                  .filter(Boolean)
+                  .join(", ")}
                 price={property.price}
                 listingType={property.status}
                 bedrooms={property.bedrooms}
@@ -697,7 +802,9 @@ export default function TenantBrowsePage(): ReactElement {
             disabled={isLoadingMore}
             className="mx-auto mt-10 flex items-center gap-2 rounded-full bg-primary px-6 py-3.5 font-body text-sm font-bold text-white transition-colors hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-70"
           >
-            {isLoadingMore ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : null}
+            {isLoadingMore ? (
+              <Loader2 size={16} className="animate-spin" aria-hidden="true" />
+            ) : null}
             {isLoadingMore ? "Loading homes" : "Load more homes"}
           </button>
         ) : null}
@@ -708,90 +815,152 @@ export default function TenantBrowsePage(): ReactElement {
           {isSearchSheetOpen ? (
             <>
               <motion.div
-                className="fixed inset-0 z-[100] bg-black/40 md:hidden"
+                className="fixed inset-0 z-[100] bg-black/40"
                 initial={reduceMotion ? false : { opacity: 0 }}
                 animate={reduceMotion ? undefined : { opacity: 1 }}
                 exit={reduceMotion ? undefined : { opacity: 0 }}
                 transition={{ duration: 0.3, ease: "easeOut" }}
                 onClick={() => setIsSearchSheetOpen(false)}
               />
-              <motion.div
-                ref={dialogRef}
-                role="dialog"
-                aria-modal="true"
-                aria-label="Search listings"
-                className="fixed inset-x-0 bottom-0 z-[110] flex max-h-[90vh] flex-col rounded-t-xl bg-bg shadow-xl md:hidden"
-                initial={reduceMotion ? false : { y: "100%" }}
-                animate={reduceMotion ? undefined : { y: 0 }}
-                exit={reduceMotion ? undefined : { y: "100%" }}
-                transition={{ duration: 0.3, ease: "easeOut" }}
-              >
-                <div className="mx-auto mt-3 h-1 w-10 rounded-full bg-border" />
-                <div className="flex items-center justify-between border-b border-border px-5 py-4">
-                  <h2 className="font-display text-xl font-bold text-primary">Search and filter</h2>
-                  <button
-                    type="button"
-                    onClick={() => setIsSearchSheetOpen(false)}
-                    className="flex h-9 w-9 items-center justify-center rounded-full text-muted hover:bg-primary/10 hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                    aria-label="Close search"
-                  >
-                    <X size={18} aria-hidden="true" />
-                  </button>
-                </div>
+              <div className="pointer-events-none fixed inset-0 z-[110] flex items-end md:items-center md:justify-center md:p-6">
+                <motion.div
+                  ref={dialogRef}
+                  role="dialog"
+                  aria-modal="true"
+                  aria-label="Search listings"
+                  className="pointer-events-auto flex max-h-[90vh] w-full flex-col rounded-t-xl bg-bg shadow-xl md:max-w-xl md:rounded-xl"
+                  initial={reduceMotion ? false : { opacity: 0, y: 32 }}
+                  animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+                  exit={reduceMotion ? undefined : { opacity: 0, y: 32 }}
+                  transition={{ duration: 0.25, ease: "easeOut" }}
+                >
+                  <div className="mx-auto mt-3 h-1 w-10 rounded-full bg-border md:hidden" />
+                  <div className="flex items-center justify-between border-b border-border px-5 py-4">
+                    <h2 className="font-display text-xl font-bold text-primary">
+                      Search and filter
+                    </h2>
+                    <button
+                      type="button"
+                      onClick={() => setIsSearchSheetOpen(false)}
+                      className="flex h-9 w-9 items-center justify-center rounded-full text-muted hover:bg-primary/10 hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                      aria-label="Close search"
+                    >
+                      <X size={18} aria-hidden="true" />
+                    </button>
+                  </div>
 
-                <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-5">
-                  <label className="block">
-                    <span className="mb-2 block font-body text-xs font-bold uppercase tracking-[0.14em] text-muted">Location</span>
-                    <div className="flex items-center gap-3 rounded-lg bg-surface-soft px-4 py-4 focus-within:ring-2 focus-within:ring-accent">
-                      <MapPin size={18} className="text-muted" aria-hidden="true" />
-                      <input
-                        type="search"
-                        value={queryInput}
-                        onChange={(event) => setQueryInput(event.target.value)}
-                        placeholder="City, area, or property"
-                        className="min-w-0 flex-1 bg-transparent font-body text-base text-primary outline-none placeholder:text-muted"
-                      />
-                    </div>
-                  </label>
-
-                  {[
-                    { label: "City", value: city, options: cityOptions, change: setCity },
-                    { label: "Price", value: priceFilter, options: PRICE_OPTIONS, change: (value: string) => setPriceFilter(value as PriceFilter) },
-                    { label: "Bedrooms", value: bedroomFilter, options: BEDROOM_OPTIONS, change: (value: string) => setBedroomFilter(value as BedroomFilter) },
-                    { label: "Sort by", value: sort, options: SORT_OPTIONS, change: (value: string) => setSort(value as SortOption) },
-                  ].map((field) => (
-                    <label key={field.label} className="block">
-                      <span className="mb-2 block font-body text-xs font-bold uppercase tracking-[0.14em] text-muted">{field.label}</span>
-                      <div className="rounded-lg bg-surface-soft px-4 py-4">
-                        <Select
-                          ariaLabel={field.label}
-                          value={field.value}
-                          onValueChange={field.change}
-                          options={field.options}
+                  <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-5">
+                    <label className="block">
+                      <span className="mb-2 block font-body text-xs font-bold uppercase tracking-[0.14em] text-muted">
+                        Location
+                      </span>
+                      <div className="flex items-center gap-3 rounded-lg bg-surface-soft px-4 py-4 focus-within:ring-2 focus-within:ring-accent">
+                        <MapPin
+                          size={18}
+                          className="text-muted"
+                          aria-hidden="true"
+                        />
+                        <input
+                          type="search"
+                          value={queryInput}
+                          onChange={(event) =>
+                            setQueryInput(event.target.value)
+                          }
+                          placeholder="City, area, or property"
+                          className="min-w-0 flex-1 bg-transparent font-body text-base text-primary outline-none placeholder:text-muted"
                         />
                       </div>
                     </label>
-                  ))}
-                </div>
 
-                <div className="grid grid-cols-[auto_1fr] gap-3 border-t border-border bg-bg px-5 py-4">
-                  <button
-                    type="button"
-                    onClick={clearFilters}
-                    className="rounded-full px-4 py-3 font-body text-sm font-bold text-muted hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                  >
-                    Clear
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => submitSearch()}
-                    className="flex items-center justify-center gap-2 rounded-full bg-accent px-6 py-3 font-body text-sm font-bold text-primary hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                  >
-                    <Search size={16} aria-hidden="true" />
-                    Show {visibleProperties.length} homes
-                  </button>
-                </div>
-              </motion.div>
+                    <div>
+                      <span className="mb-2 block font-body text-xs font-bold uppercase tracking-[0.14em] text-muted">
+                        Kind of stay
+                      </span>
+                      <div
+                        className="grid grid-cols-3 gap-1 rounded-xl bg-surface-soft p-1"
+                        role="tablist"
+                        aria-label="Kind of stay"
+                      >
+                        {STAY_MODES.map((mode) => {
+                          const active = stayMode === mode.id;
+
+                          return (
+                            <button
+                              key={mode.id}
+                              type="button"
+                              role="tab"
+                              aria-selected={active}
+                              onClick={() => setStayMode(mode.id)}
+                              className={`min-h-11 rounded-lg px-2 font-body text-sm font-bold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                                active
+                                  ? "bg-primary text-white shadow-sm"
+                                  : "text-muted hover:text-primary"
+                              }`}
+                            >
+                              {mode.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {[
+                      {
+                        label: "Price",
+                        value: priceFilter,
+                        options: PRICE_OPTIONS,
+                        change: (value: string) =>
+                          setPriceFilter(value as PriceFilter),
+                      },
+                      {
+                        label: "Bedrooms",
+                        value: bedroomFilter,
+                        options: BEDROOM_OPTIONS,
+                        change: (value: string) =>
+                          setBedroomFilter(value as BedroomFilter),
+                      },
+                      {
+                        label: "Sort by",
+                        value: sort,
+                        options: SORT_OPTIONS,
+                        change: (value: string) => setSort(value as SortOption),
+                      },
+                    ].map((field) => (
+                      <label key={field.label} className="block">
+                        <span className="mb-2 block font-body text-xs font-bold uppercase tracking-[0.14em] text-muted">
+                          {field.label}
+                        </span>
+                        <div className="rounded-lg bg-surface-soft px-4 py-4">
+                          <Select
+                            ariaLabel={field.label}
+                            value={field.value}
+                            onValueChange={field.change}
+                            options={field.options}
+                          />
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+
+                  <div className="grid grid-cols-[auto_1fr] gap-3 border-t border-border bg-bg px-5 py-4">
+                    <button
+                      type="button"
+                      onClick={clearFilters}
+                      className="rounded-full px-4 py-3 font-body text-sm font-bold text-muted hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    >
+                      Clear
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => submitSearch()}
+                      className="flex items-center justify-center gap-2 rounded-full bg-accent px-6 py-3 font-body text-sm font-bold text-primary hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    >
+                      <Search size={16} aria-hidden="true" />
+                      Show {visibleProperties.length} homes
+                    </button>
+                  </div>
+                </motion.div>
+              </div>
             </>
           ) : null}
         </AnimatePresence>
