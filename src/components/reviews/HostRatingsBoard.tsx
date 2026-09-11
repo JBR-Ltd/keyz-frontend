@@ -15,6 +15,7 @@ import {
   Star,
 } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
+import RatingsPageSkeleton from "@/components/reviews/RatingsPageSkeleton";
 import { getHostBookings, type Booking } from "@/lib/bookings";
 import { getReviewsAboutMe, submitReview, type Review } from "@/lib/reviews";
 
@@ -120,6 +121,10 @@ export default function HostRatingsBoard(): ReactElement {
     (booking) => booking.status === "COMPLETED",
   ).length;
 
+  if (isLoading) {
+    return <RatingsPageSkeleton />;
+  }
+
   return (
     <main className="min-h-screen overflow-x-hidden px-5 py-10 sm:px-8 lg:px-10 lg:py-14 xl:px-14">
       <section className="grid gap-6 xl:grid-cols-[25rem_1fr]">
@@ -138,7 +143,9 @@ export default function HostRatingsBoard(): ReactElement {
                     key={index}
                     size={18}
                     fill={
-                      index < Math.round(averageRating) ? "currentColor" : "none"
+                      index < Math.round(averageRating)
+                        ? "currentColor"
+                        : "none"
                     }
                   />
                 ))}
@@ -316,7 +323,10 @@ export default function HostRatingsBoard(): ReactElement {
                 {review.reviewer?.name ?? "A tenant"}
               </p>
               <p className="mt-3 flex items-start gap-2 font-body text-sm leading-6 text-muted">
-                <CheckCircle2 size={15} className="mt-1 shrink-0 text-primary" />
+                <CheckCircle2
+                  size={15}
+                  className="mt-1 shrink-0 text-primary"
+                />
                 {review.comment ?? "No comment left"}
               </p>
               <p className="mt-4 flex items-center gap-2 font-accent text-xs font-bold uppercase tracking-[0.14em] text-primary">

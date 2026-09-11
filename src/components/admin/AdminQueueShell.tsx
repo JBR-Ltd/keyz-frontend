@@ -3,6 +3,7 @@
 import type { ReactElement, ReactNode } from "react";
 import { ChevronLeft, ChevronRight, Loader2, Search } from "lucide-react";
 import { Select, type SelectOption } from "@/components/ui/select";
+import { CardListSkeleton } from "@/components/ui/skeleton";
 
 // === Types
 
@@ -112,9 +113,7 @@ export default function AdminQueueShell({
       ) : null}
 
       {isLoading ? (
-        <p className="py-16 text-center font-body text-sm text-muted">
-          Loading...
-        </p>
+        <CardListSkeleton count={4} label={`Loading ${title.toLowerCase()}`} />
       ) : isEmpty ? (
         <div className="rounded-lg bg-surface-soft p-10 text-center shadow-sm">
           <p className="font-body text-base leading-7 text-muted">

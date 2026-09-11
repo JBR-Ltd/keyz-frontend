@@ -439,19 +439,19 @@ function DashboardSkeleton(): ReactElement {
       aria-label="Loading agent dashboard"
     >
       <div className="flex items-end justify-between gap-6">
-        <div className="h-12 w-72 max-w-full rounded-lg bg-primary/10" />
-        <div className="hidden h-12 w-36 rounded-full bg-primary/10 sm:block" />
+        <div className="h-12 w-72 max-w-full rounded-lg bg-skeleton" />
+        <div className="hidden h-12 w-36 rounded-full bg-skeleton sm:block" />
       </div>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {Array.from({ length: 4 }, (_, index) => (
-          <div key={index} className="h-40 rounded-lg bg-primary/5" />
+          <div key={index} className="h-40 rounded-lg bg-skeleton" />
         ))}
       </div>
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.7fr)_minmax(18rem,0.8fr)]">
-        <div className="h-80 rounded-lg bg-primary/5" />
-        <div className="h-80 rounded-lg bg-primary/5" />
+        <div className="h-80 rounded-lg bg-skeleton" />
+        <div className="h-80 rounded-lg bg-skeleton" />
       </div>
-      <div className="h-96 rounded-lg bg-primary/5" />
+      <div className="h-96 rounded-lg bg-skeleton" />
     </div>
   );
 }

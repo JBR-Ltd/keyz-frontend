@@ -19,6 +19,7 @@ import Link from "next/link";
 import ChatThread from "@/components/chat/ChatThread";
 import PropertyPrice from "@/components/property/PropertyPrice";
 import { IconTile } from "@/components/ui/icon-tile";
+import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge, type StatusBadgeProps } from "@/components/ui/status-badge";
 import { useToast } from "@/components/ui/toast";
 import MaintenanceReportDialog from "@/components/tenant/MaintenanceReportDialog";
@@ -111,6 +112,77 @@ function getHostRole(booking: Booking): ChatPartyRole {
   return booking.host?.role === "AGENT" ? "Agent" : "Landlord";
 }
 
+// === Components
+
+function TenantHomeSkeleton(): ReactElement {
+  return (
+    <div role="status" aria-label="Loading your home" aria-busy="true">
+      <section className="grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(20rem,0.75fr)]">
+        <article className="overflow-hidden rounded-2xl border border-border bg-bg shadow-sm">
+          <Skeleton className="h-64 rounded-none bg-skeleton-strong sm:h-80" />
+          <div className="p-6 sm:p-8">
+            <div className="grid gap-4 sm:grid-cols-3">
+              {[0, 1, 2].map((item) => (
+                <div
+                  key={item}
+                  className="rounded-xl border border-border bg-surface-soft p-4"
+                >
+                  <Skeleton className="h-5 w-5 rounded-md" />
+                  <Skeleton className="mt-4 h-3 w-20" />
+                  <Skeleton className="mt-3 h-5 w-28 max-w-full" />
+                </div>
+              ))}
+            </div>
+            <div className="mt-6 flex gap-3">
+              <Skeleton className="h-11 w-36 rounded-full" />
+              <Skeleton className="h-11 w-36 rounded-full" />
+            </div>
+          </div>
+        </article>
+
+        <div className="grid content-start gap-5">
+          {[0, 1].map((item) => (
+            <article
+              key={item}
+              className="rounded-2xl border border-border bg-bg p-6 shadow-sm"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <Skeleton className="h-12 w-12 rounded-xl" />
+                <Skeleton className="h-7 w-28 rounded-full" />
+              </div>
+              <Skeleton className="mt-6 h-3 w-32" />
+              <Skeleton className="mt-4 h-8 w-40" />
+              <Skeleton className="mt-4 h-4 w-full" />
+              <Skeleton className="mt-2 h-4 w-3/4" />
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="mt-6 grid gap-6 lg:grid-cols-2">
+        {[0, 1].map((item) => (
+          <article
+            key={item}
+            className="rounded-2xl border border-border bg-bg p-6 shadow-sm sm:p-7"
+          >
+            <div className="flex items-start gap-4">
+              <Skeleton className="h-14 w-14 shrink-0 rounded-xl" />
+              <div className="min-w-0 flex-1">
+                <Skeleton className="h-3 w-28" />
+                <Skeleton className="mt-3 h-7 w-40 max-w-full" />
+              </div>
+            </div>
+            <Skeleton className="mt-6 h-4 w-full" />
+            <Skeleton className="mt-3 h-4 w-4/5" />
+            <Skeleton className="mt-6 h-11 w-36 rounded-full" />
+          </article>
+        ))}
+      </section>
+      <span className="sr-only">Loading your home</span>
+    </div>
+  );
+}
+
 // === Component
 
 const DOCUMENT_TYPE_LABELS: Record<TenancyDocument["type"], string> = {
@@ -154,6 +226,7 @@ export default function TenantBookingsPage(): ReactElement {
   const [retryKey, setRetryKey] = useState(0);
   const [documents, setDocuments] = useState<TenancyDocument[]>([]);
   const [repairs, setRepairs] = useState<MaintenanceRequest[]>([]);
+  const [loadedTenancyKey, setLoadedTenancyKey] = useState<string | null>(null);
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [tenancyRefreshKey, setTenancyRefreshKey] = useState(0);
   const currentUser = getCurrentChatUser();
@@ -197,6 +270,12 @@ export default function TenantBookingsPage(): ReactElement {
   );
   const primaryBooking = sortedBookings[0] ?? null;
   const primaryBookingId = primaryBooking?.id ?? null;
+  const tenancyLoadKey =
+    primaryBookingId === null
+      ? null
+      : `${primaryBookingId}:${tenancyRefreshKey}`;
+  const isTenancyLoading =
+    tenancyLoadKey !== null && loadedTenancyKey !== tenancyLoadKey;
   // Repairs still waiting on the host, which is what the tenant cares about
   const openRepairs = repairs.filter(
     (repair) =>
@@ -231,7 +310,7 @@ export default function TenantBookingsPage(): ReactElement {
   };
 
   useEffect(() => {
-    if (primaryBookingId === null) {
+    if (primaryBookingId === null || tenancyLoadKey === null) {
       return;
     }
 
@@ -247,12 +326,13 @@ export default function TenantBookingsPage(): ReactElement {
 
       setDocuments(documentResult.data);
       setRepairs(repairResult.data);
+      setLoadedTenancyKey(tenancyLoadKey);
     });
 
     return () => {
       active = false;
     };
-  }, [primaryBookingId, tenancyRefreshKey]);
+  }, [primaryBookingId, tenancyLoadKey]);
 
   const openLatestDocument = (): void => {
     const latest = documents[0];
@@ -272,14 +352,8 @@ export default function TenantBookingsPage(): ReactElement {
   return (
     <main className="min-h-screen overflow-x-hidden bg-surface-soft px-5 py-8 sm:px-8 lg:px-10 lg:py-10 xl:px-14">
       <div className="mx-auto max-w-[90rem]">
-        {isLoading ? (
-          <div className="grid animate-pulse gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(20rem,0.75fr)]">
-            <div className="h-[34rem] rounded-2xl bg-bg" />
-            <div className="grid gap-5">
-              <div className="h-64 rounded-2xl bg-bg" />
-              <div className="h-64 rounded-2xl bg-bg" />
-            </div>
-          </div>
+        {isLoading || isTenancyLoading ? (
+          <TenantHomeSkeleton />
         ) : loadError ? (
           <section className="flex min-h-80 flex-col items-center justify-center rounded-2xl border border-red-500/20 bg-bg px-6 py-12 text-center shadow-sm">
             <IconTile tone="neutral" size="lg" shape="circle">

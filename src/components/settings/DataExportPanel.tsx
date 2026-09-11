@@ -4,6 +4,7 @@ import { useEffect, useState, type ReactElement } from "react";
 import { Download, Loader2 } from "lucide-react";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useToast } from "@/components/ui/toast";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   getDataExports,
   requestDataExport,
@@ -106,9 +107,9 @@ export default function DataExportPanel(): ReactElement {
             Download your data
           </h2>
           <p className="mt-2 max-w-2xl font-body text-sm leading-6 text-muted">
-            A JSON file with your profile, tenancies, payments, reviews, disputes,
-            viewings and repair reports. The link lasts 48 hours, because the file
-            is your whole account in one place.
+            A JSON file with your profile, tenancies, payments, reviews,
+            disputes, viewings and repair reports. The link lasts 48 hours,
+            because the file is your whole account in one place.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -137,7 +138,24 @@ export default function DataExportPanel(): ReactElement {
         </div>
       </div>
 
-      {isLoading ? null : exports.length === 0 ? null : (
+      {isLoading ? (
+        <div className="grid gap-3" role="status" aria-label="Loading exports">
+          {Array.from({ length: 2 }, (_, index) => (
+            <div
+              key={`loading-export-${index + 1}`}
+              className="flex items-center justify-between gap-4 rounded-lg bg-surface-soft px-5 py-4"
+              aria-hidden="true"
+            >
+              <div className="flex-1">
+                <Skeleton className="h-5 w-40" />
+                <Skeleton className="mt-2 h-4 w-28" />
+              </div>
+              <Skeleton className="h-9 w-24 rounded-full" />
+            </div>
+          ))}
+          <span className="sr-only">Loading exports</span>
+        </div>
+      ) : exports.length === 0 ? null : (
         <ul className="grid gap-3">
           {exports.slice(0, 4).map((item) => (
             <li

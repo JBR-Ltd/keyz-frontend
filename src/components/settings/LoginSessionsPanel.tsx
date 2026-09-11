@@ -3,6 +3,7 @@
 import { useEffect, useState, type ReactElement } from "react";
 import { Loader2, MonitorSmartphone } from "lucide-react";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import {
   endOtherSessions,
@@ -89,8 +90,9 @@ export default function LoginSessionsPanel(): ReactElement {
             Where you are signed in
           </h2>
           <p className="mt-2 max-w-xl font-body text-sm leading-6 text-muted">
-            Signing a device out stops the session it holds working straight away.
-            Do it for anything you do not recognise, then change your password.
+            Signing a device out stops the session it holds working straight
+            away. Do it for anything you do not recognise, then change your
+            password.
           </p>
         </div>
         {others.length > 0 ? (
@@ -109,7 +111,25 @@ export default function LoginSessionsPanel(): ReactElement {
       </div>
 
       {isLoading ? (
-        <p className="font-body text-sm text-muted">Loading...</p>
+        <div className="grid gap-3" role="status" aria-label="Loading sessions">
+          {Array.from({ length: 2 }, (_, index) => (
+            <div
+              key={`loading-session-${index + 1}`}
+              className="flex items-center justify-between gap-4 rounded-lg bg-surface-soft px-5 py-4"
+              aria-hidden="true"
+            >
+              <div className="flex flex-1 items-center gap-3">
+                <Skeleton className="h-9 w-9 shrink-0 rounded-full" />
+                <div className="flex-1">
+                  <Skeleton className="h-5 w-44 max-w-full" />
+                  <Skeleton className="mt-2 h-4 w-28" />
+                </div>
+              </div>
+              <Skeleton className="h-9 w-24 rounded-full" />
+            </div>
+          ))}
+          <span className="sr-only">Loading sessions</span>
+        </div>
       ) : sessions.length === 0 ? (
         <p className="font-body text-sm text-muted">
           Nothing to show. Sessions started before this feature existed are not

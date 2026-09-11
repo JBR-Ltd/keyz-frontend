@@ -16,6 +16,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRef, useState, type ReactElement } from "react";
 import { useToast } from "@/components/ui/toast";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   updateProfile,
   uploadAvatar,
@@ -43,6 +44,46 @@ function draftFrom(user: AuthenticatedUser | null): ProfileDraft {
     phone: user?.phone ?? "",
     username: user?.username ?? "",
   };
+}
+
+function ProfileSectionSkeleton(): ReactElement {
+  return (
+    <section
+      className="overflow-hidden rounded-2xl border border-border bg-bg shadow-sm"
+      role="status"
+      aria-label="Loading profile"
+    >
+      <div className="bg-primary px-6 py-8 sm:px-8 sm:py-10">
+        <div className="flex items-center gap-5">
+          <Skeleton className="h-20 w-20 shrink-0 rounded-2xl bg-white/10 sm:h-24 sm:w-24" />
+          <div className="flex-1">
+            <Skeleton className="h-4 w-24 bg-white/10" />
+            <Skeleton className="mt-4 h-10 w-56 max-w-full bg-white/10" />
+            <Skeleton className="mt-3 h-4 w-28 bg-white/10" />
+          </div>
+        </div>
+      </div>
+      <div className="border-b border-border px-6 py-7 sm:px-8">
+        <Skeleton className="h-4 w-36" />
+        <Skeleton className="mt-4 h-8 w-44" />
+        <Skeleton className="mt-4 h-4 w-3/4" />
+      </div>
+      <div className="p-6 sm:p-8">
+        <div className="grid gap-4 sm:grid-cols-2">
+          {Array.from({ length: 6 }, (_, index) => (
+            <div
+              key={`profile-field-${index + 1}`}
+              className="rounded-xl border border-border p-5"
+            >
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="mt-4 h-5 w-3/4" />
+            </div>
+          ))}
+        </div>
+      </div>
+      <span className="sr-only">Loading profile</span>
+    </section>
+  );
 }
 
 export default function ProfileSection(): ReactElement {
@@ -204,6 +245,10 @@ export default function ProfileSection(): ReactElement {
     },
   ];
 
+  if (isLoading && !user) {
+    return <ProfileSectionSkeleton />;
+  }
+
   return (
     <section className="overflow-hidden rounded-2xl border border-border bg-bg shadow-sm">
       <div className="relative overflow-hidden bg-primary px-6 py-8 text-white sm:px-8 sm:py-10">
@@ -243,7 +288,14 @@ export default function ProfileSection(): ReactElement {
             <div className="min-w-0">
               <p className="font-body text-sm text-white/65">Your account</p>
               <h2 className="mt-1 truncate font-display text-3xl font-bold leading-tight sm:text-4xl">
-                {isLoading && !user ? "Loading..." : fullName}
+                {isLoading && !user ? (
+                  <span
+                    className="inline-block h-10 w-56 max-w-full animate-pulse rounded-lg bg-white/10 align-middle motion-reduce:animate-none"
+                    aria-label="Loading profile"
+                  />
+                ) : (
+                  fullName
+                )}
               </h2>
               <p className="mt-2 font-body text-sm capitalize text-white/70">
                 {roleLabel} account

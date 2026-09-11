@@ -1,13 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import {
-  Banknote,
-  Check,
-  Landmark,
-  Loader2,
-  Lock,
-} from "lucide-react";
+import { Banknote, Check, Landmark, Loader2, Lock } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   ChangeEvent,
@@ -23,6 +17,7 @@ import {
   type ResolvedAccount,
 } from "@/lib/payout";
 import VerifiedBadge from "@/components/ui/VerifiedBadge";
+import VerificationFlowSkeleton from "@/components/verification/VerificationFlowSkeleton";
 import {
   getHostVerification,
   HostVerificationRole,
@@ -48,13 +43,9 @@ const BANK_OPTIONS: BankOption[] = [
   { name: "Zenith Bank", code: "057" },
 ];
 
-
 function isValidAccountNumber(value: string): boolean {
   return /^\d{10}$/.test(value);
 }
-
-
-
 
 export default function HostPayoutVerificationFlow({
   role,
@@ -80,7 +71,9 @@ export default function HostPayoutVerificationFlow({
         return;
       }
 
-      setScreen(result.data?.payout.status === "approved" ? "complete" : initialMode);
+      setScreen(
+        result.data?.payout.status === "approved" ? "complete" : initialMode,
+      );
     });
 
     return () => {
@@ -154,7 +147,6 @@ export default function HostPayoutVerificationFlow({
       setIsProcessing(false);
     }
   };
-
 
   const submitStep = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
@@ -402,11 +394,7 @@ export default function HostPayoutVerificationFlow({
   }
 
   if (screen === "loading") {
-    return (
-      <main className="fixed inset-0 z-[100] flex items-center justify-center bg-primary text-white">
-        <Loader2 className="h-8 w-8 animate-spin text-accent" aria-label="Loading" />
-      </main>
-    );
+    return <VerificationFlowSkeleton />;
   }
 
   if (screen === "complete") {

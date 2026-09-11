@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import DataExportPanel from "@/components/settings/DataExportPanel";
 import type { ReactElement } from "react";
 import { usePreferenceToggles } from "@/lib/preferences";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const INITIAL_CONTROLS = [
   {
@@ -79,38 +80,52 @@ export default function PrivacySection(): ReactElement {
       </div>
 
       <div className="px-5 sm:px-7">
-        {controls.map((control) => (
-          <div
-            key={control.id}
-            className="grid gap-5 border-b border-border py-7 transition-all duration-200 ease-in-out hover:bg-surface-soft hover:shadow-sm sm:grid-cols-[1fr_auto] sm:items-center"
-          >
-            <div>
-              <h2 className="font-body text-lg font-bold text-primary">
-                {control.label}
-              </h2>
-              <p className="mt-2 max-w-2xl font-body text-sm leading-6 text-muted">
-                {control.description}
-              </p>
-            </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={values[control.id]}
-              aria-label={`Toggle ${control.label}`}
-              disabled={isLoading}
-              onClick={() => toggle(control.id)}
-              className={`relative h-7 w-12 rounded-full transition-all duration-200 ease-in-out hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-50 ${
-                values[control.id] ? "bg-accent" : "bg-border"
-              }`}
-            >
-              <span
-                className={`absolute left-1 top-1 h-5 w-5 rounded-full bg-white shadow-sm transition-all duration-200 ease-in-out ${
-                  values[control.id] ? "translate-x-5" : "translate-x-0"
-                }`}
-              />
-            </button>
-          </div>
-        ))}
+        {isLoading
+          ? controls.map((control) => (
+              <div
+                key={`loading-${control.id}`}
+                className="grid gap-5 border-b border-border py-7 sm:grid-cols-[1fr_auto] sm:items-center"
+                aria-hidden="true"
+              >
+                <div>
+                  <Skeleton className="h-5 w-40" />
+                  <Skeleton className="mt-3 h-4 w-3/4" />
+                </div>
+                <Skeleton className="h-7 w-12 rounded-full" />
+              </div>
+            ))
+          : controls.map((control) => (
+              <div
+                key={control.id}
+                className="grid gap-5 border-b border-border py-7 transition-all duration-200 ease-in-out hover:bg-surface-soft hover:shadow-sm sm:grid-cols-[1fr_auto] sm:items-center"
+              >
+                <div>
+                  <h2 className="font-body text-lg font-bold text-primary">
+                    {control.label}
+                  </h2>
+                  <p className="mt-2 max-w-2xl font-body text-sm leading-6 text-muted">
+                    {control.description}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={values[control.id]}
+                  aria-label={`Toggle ${control.label}`}
+                  disabled={isLoading}
+                  onClick={() => toggle(control.id)}
+                  className={`relative h-7 w-12 rounded-full transition-all duration-200 ease-in-out hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-50 ${
+                    values[control.id] ? "bg-accent" : "bg-border"
+                  }`}
+                >
+                  <span
+                    className={`absolute left-1 top-1 h-5 w-5 rounded-full bg-white shadow-sm transition-all duration-200 ease-in-out ${
+                      values[control.id] ? "translate-x-5" : "translate-x-0"
+                    }`}
+                  />
+                </button>
+              </div>
+            ))}
       </div>
 
       <DataExportPanel />

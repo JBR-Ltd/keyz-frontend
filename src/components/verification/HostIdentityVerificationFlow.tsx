@@ -26,6 +26,7 @@ import {
   useState,
 } from "react";
 import VerifiedBadge from "@/components/ui/VerifiedBadge";
+import VerificationFlowSkeleton from "@/components/verification/VerificationFlowSkeleton";
 import {
   submitAgentVerification,
   submitLandlordVerification,
@@ -85,8 +86,6 @@ function hasAllDocuments(documents: UploadedDocument[]): boolean {
     documents.some((document) => document.id === field.id),
   );
 }
-
-
 
 export default function HostIdentityVerificationFlow({
   role,
@@ -572,67 +571,67 @@ export default function HostIdentityVerificationFlow({
 
   const renderDocumentFields = (): ReactElement => (
     <>
-        <div className="border-t border-border pt-5">
-          <h2 className="font-body text-sm font-bold text-primary">
-            Ownership documents
-          </h2>
-          <p className="mt-1 font-body text-xs leading-5 text-muted">
-            Reviewed by a person after your identity clears.
-          </p>
-        </div>
-        {UPLOAD_FIELDS.map((field) => {
-          const uploaded = documents.find((document) => document.id === field.id);
+      <div className="border-t border-border pt-5">
+        <h2 className="font-body text-sm font-bold text-primary">
+          Ownership documents
+        </h2>
+        <p className="mt-1 font-body text-xs leading-5 text-muted">
+          Reviewed by a person after your identity clears.
+        </p>
+      </div>
+      {UPLOAD_FIELDS.map((field) => {
+        const uploaded = documents.find((document) => document.id === field.id);
 
-          return (
-            <section
-              key={field.id}
-              className="rounded-xl border border-dashed border-primary/20 bg-[var(--color-bg)] p-5 shadow-sm"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h2 className="font-body text-sm font-bold text-primary">
-                    {field.title}
-                  </h2>
-                  <p className="mt-2 font-body text-xs leading-5 text-muted">
-                    {field.description}
-                  </p>
-                </div>
-                <FileText className="h-5 w-5 shrink-0 text-accent" />
+        return (
+          <section
+            key={field.id}
+            className="rounded-xl border border-dashed border-primary/20 bg-[var(--color-bg)] p-5 shadow-sm"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="font-body text-sm font-bold text-primary">
+                  {field.title}
+                </h2>
+                <p className="mt-2 font-body text-xs leading-5 text-muted">
+                  {field.description}
+                </p>
               </div>
-              {uploaded ? (
-                <div className="mt-4 flex items-center justify-between gap-3 rounded-lg border border-primary/10 bg-surface-soft px-4 py-3">
-                  <span className="truncate font-body text-sm font-medium text-primary">
-                    {uploaded.name}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => removeDocument(field.id)}
-                    className="shrink-0 rounded-full p-1 text-muted transition-all duration-200 ease-in-out hover:bg-primary/10 hover:text-primary"
-                    aria-label={`Remove ${field.title}`}
-                  >
-                    <X size={16} />
-                  </button>
-                </div>
-              ) : (
-                <label className="mt-4 flex cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-border bg-white px-4 py-6 text-center transition-all duration-200 ease-in-out hover:border-accent hover:bg-accent/5">
-                  <Upload className="h-6 w-6 text-accent" />
-                  <span className="mt-2 font-body text-sm font-bold text-primary">
-                    Click to upload
-                  </span>
-                  <span className="mt-1 font-body text-xs text-muted">
-                    PDF, JPG, or PNG
-                  </span>
-                  <input
-                    type="file"
-                    accept="image/*,.pdf"
-                    className="sr-only"
-                    onChange={(event) => handleDocumentUpload(event, field.id)}
-                  />
-                </label>
-              )}
-            </section>
-          );
-        })}
+              <FileText className="h-5 w-5 shrink-0 text-accent" />
+            </div>
+            {uploaded ? (
+              <div className="mt-4 flex items-center justify-between gap-3 rounded-lg border border-primary/10 bg-surface-soft px-4 py-3">
+                <span className="truncate font-body text-sm font-medium text-primary">
+                  {uploaded.name}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => removeDocument(field.id)}
+                  className="shrink-0 rounded-full p-1 text-muted transition-all duration-200 ease-in-out hover:bg-primary/10 hover:text-primary"
+                  aria-label={`Remove ${field.title}`}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            ) : (
+              <label className="mt-4 flex cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-border bg-white px-4 py-6 text-center transition-all duration-200 ease-in-out hover:border-accent hover:bg-accent/5">
+                <Upload className="h-6 w-6 text-accent" />
+                <span className="mt-2 font-body text-sm font-bold text-primary">
+                  Click to upload
+                </span>
+                <span className="mt-1 font-body text-xs text-muted">
+                  PDF, JPG, or PNG
+                </span>
+                <input
+                  type="file"
+                  accept="image/*,.pdf"
+                  className="sr-only"
+                  onChange={(event) => handleDocumentUpload(event, field.id)}
+                />
+              </label>
+            )}
+          </section>
+        );
+      })}
     </>
   );
 
@@ -787,14 +786,7 @@ export default function HostIdentityVerificationFlow({
   );
 
   if (screen === "loading") {
-    return (
-      <main className="fixed inset-0 z-[100] flex items-center justify-center bg-primary text-white">
-        <Loader2
-          className="h-8 w-8 animate-spin text-accent"
-          aria-label="Loading your verification status"
-        />
-      </main>
-    );
+    return <VerificationFlowSkeleton />;
   }
 
   if (screen === "step") {

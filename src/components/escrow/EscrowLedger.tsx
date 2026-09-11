@@ -14,6 +14,8 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import PropertyPrice from "@/components/property/PropertyPrice";
+import EscrowLedgerSkeleton from "@/components/escrow/EscrowLedgerSkeleton";
+import { Skeleton } from "@/components/ui/skeleton";
 import { getMyEscrow, type EscrowEntry, type EscrowStatus } from "@/lib/escrow";
 
 const STATUS_LABELS: Record<EscrowStatus, string> = {
@@ -77,6 +79,10 @@ export default function EscrowLedger(): ReactElement {
     [entries],
   );
 
+  if (isLoading) {
+    return <EscrowLedgerSkeleton />;
+  }
+
   return (
     <main className="min-h-screen overflow-x-hidden px-5 py-10 sm:px-8 lg:px-10 lg:py-14 xl:px-14">
       <section className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
@@ -85,7 +91,15 @@ export default function EscrowLedger(): ReactElement {
             Payout command
           </p>
           <h1 className="mt-5 font-display text-5xl font-bold leading-[0.9] sm:text-6xl">
-            <PropertyPrice value={totals.held} /> secured in escrow.
+            {isLoading ? (
+              <span
+                className="inline-block h-14 w-52 animate-pulse rounded-lg bg-primary/10 align-middle motion-reduce:animate-none sm:h-16"
+                aria-label="Loading escrow total"
+              />
+            ) : (
+              <PropertyPrice value={totals.held} />
+            )}{" "}
+            secured in escrow.
           </h1>
           <p className="mt-5 max-w-xl font-body text-base leading-7 text-muted">
             Tenants pay Rello up front. The money reaches your payout account
@@ -97,18 +111,26 @@ export default function EscrowLedger(): ReactElement {
               <p className="mt-4 font-accent text-xs font-bold uppercase tracking-[0.18em] text-muted">
                 Awaiting payment
               </p>
-              <p className="mt-2 font-display text-3xl font-bold">
-                <PropertyPrice value={totals.awaiting} />
-              </p>
+              <div className="mt-2 font-display text-3xl font-bold">
+                {isLoading ? (
+                  <Skeleton className="h-9 w-28" />
+                ) : (
+                  <PropertyPrice value={totals.awaiting} />
+                )}
+              </div>
             </div>
             <div className="rounded-lg bg-primary/5 p-5 shadow-sm">
               <ArrowUpRight size={22} className="text-accent" />
               <p className="mt-4 font-accent text-xs font-bold uppercase tracking-[0.18em] text-muted">
                 Paid out to you
               </p>
-              <p className="mt-2 font-display text-3xl font-bold">
-                <PropertyPrice value={totals.released} />
-              </p>
+              <div className="mt-2 font-display text-3xl font-bold">
+                {isLoading ? (
+                  <Skeleton className="h-9 w-28" />
+                ) : (
+                  <PropertyPrice value={totals.released} />
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -171,11 +193,19 @@ export default function EscrowLedger(): ReactElement {
               </div>
             </>
           ) : (
-            <p className="mt-8 font-body text-base leading-7 text-muted">
-              {isLoading
-                ? "Loading your payouts..."
-                : "Funded bookings appear here once a tenant pays."}
-            </p>
+            <div className="mt-8">
+              {isLoading ? (
+                <div role="status" aria-label="Loading payout release status">
+                  <Skeleton className="h-5 w-3/4" />
+                  <Skeleton className="mt-3 h-5 w-1/2" />
+                  <span className="sr-only">Loading payout release status</span>
+                </div>
+              ) : (
+                <p className="font-body text-base leading-7 text-muted">
+                  Funded bookings appear here once a tenant pays.
+                </p>
+              )}
+            </div>
           )}
         </div>
       </section>
@@ -191,9 +221,26 @@ export default function EscrowLedger(): ReactElement {
           <span className="hidden sm:block">State</span>
         </div>
         {isLoading ? (
-          <p className="p-6 text-center font-body text-sm text-muted">
-            Loading...
-          </p>
+          <div role="status" aria-label="Loading funded bookings">
+            {Array.from({ length: 3 }, (_, index) => (
+              <div
+                key={`loading-payout-${index + 1}`}
+                className="grid gap-4 border-b border-primary/10 p-5 last:border-b-0 sm:grid-cols-[1fr_10rem_10rem] sm:items-center sm:p-6"
+                aria-hidden="true"
+              >
+                <div className="flex items-center gap-4">
+                  <Skeleton className="h-12 w-12 shrink-0" />
+                  <div className="flex-1">
+                    <Skeleton className="h-5 w-44 max-w-full" />
+                    <Skeleton className="mt-2 h-4 w-28" />
+                  </div>
+                </div>
+                <Skeleton className="h-7 w-24" />
+                <Skeleton className="h-8 w-24 rounded-full" />
+              </div>
+            ))}
+            <span className="sr-only">Loading funded bookings</span>
+          </div>
         ) : entries.length === 0 ? (
           <p className="p-6 text-center font-body text-sm text-muted">
             No funded bookings yet.
@@ -236,8 +283,14 @@ export default function EscrowLedger(): ReactElement {
 
       <section className="mt-8 grid gap-5 md:grid-cols-3">
         {[
-          ["Verified payout account", "Paystack confirms the name on your account"],
-          ["Dispute hold", "An open dispute freezes a payout until it is settled"],
+          [
+            "Verified payout account",
+            "Paystack confirms the name on your account",
+          ],
+          [
+            "Dispute hold",
+            "An open dispute freezes a payout until it is settled",
+          ],
           ["Audit trail", "Every movement is recorded against the booking"],
         ].map(([title, text]) => (
           <div key={title} className="rounded-lg bg-surface-soft p-5 shadow-sm">
@@ -245,7 +298,9 @@ export default function EscrowLedger(): ReactElement {
             <p className="mt-4 font-body text-base font-bold text-primary">
               {title}
             </p>
-            <p className="mt-2 font-body text-sm leading-6 text-muted">{text}</p>
+            <p className="mt-2 font-body text-sm leading-6 text-muted">
+              {text}
+            </p>
           </div>
         ))}
       </section>

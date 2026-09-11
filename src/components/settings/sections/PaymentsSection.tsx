@@ -1,11 +1,12 @@
 "use client";
 
-import { Landmark, Loader2, ReceiptText } from "lucide-react";
+import { Landmark, ReceiptText } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactElement } from "react";
 import PropertyPrice from "@/components/property/PropertyPrice";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { getMyEscrow, type EscrowEntry, type EscrowStatus } from "@/lib/escrow";
 import {
   getBankName,
@@ -106,9 +107,11 @@ export default function PaymentsSection(): ReactElement {
                   Payout account
                 </h3>
                 {isLoadingPayout ? (
-                  <p className="mt-2 font-body text-sm text-muted">
-                    Loading...
-                  </p>
+                  <div role="status" aria-label="Loading payout account">
+                    <Skeleton className="mt-3 h-4 w-40" />
+                    <Skeleton className="mt-2 h-4 w-28" />
+                    <span className="sr-only">Loading payout account</span>
+                  </div>
                 ) : hasPayoutAccount ? (
                   <>
                     <p className="mt-2 font-body text-sm text-primary">
@@ -151,10 +154,27 @@ export default function PaymentsSection(): ReactElement {
         ) : null}
 
         {isLoadingHistory ? (
-          <p className="mt-6 flex items-center gap-2 font-body text-sm text-muted">
-            <Loader2 size={15} className="animate-spin" />
-            Loading...
-          </p>
+          <div
+            className="mt-5 grid gap-3"
+            role="status"
+            aria-label="Loading payment history"
+          >
+            {Array.from({ length: 3 }, (_, index) => (
+              <div
+                key={`loading-payment-${index + 1}`}
+                className="flex items-center justify-between gap-4 rounded-lg bg-surface-soft px-5 py-4"
+                aria-hidden="true"
+              >
+                <div className="flex-1">
+                  <Skeleton className="h-5 w-44 max-w-full" />
+                  <Skeleton className="mt-2 h-4 w-32" />
+                </div>
+                <Skeleton className="h-8 w-24 rounded-full" />
+                <Skeleton className="h-6 w-20" />
+              </div>
+            ))}
+            <span className="sr-only">Loading payment history</span>
+          </div>
         ) : entries.length === 0 ? (
           <div className="mt-5 rounded-lg bg-surface-soft p-8 text-center">
             <ReceiptText size={22} className="mx-auto text-accent-alt" />

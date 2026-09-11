@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import type { ReactElement } from "react";
 import { usePreferenceToggles } from "@/lib/preferences";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const INITIAL_PREFERENCES = [
   {
@@ -88,38 +89,52 @@ export default function NotificationsSection(): ReactElement {
       </div>
 
       <div className="px-5 sm:px-7">
-        {preferences.map((preference) => (
-          <div
-            key={preference.id}
-            className="grid gap-5 border-b border-border py-7 transition-all duration-200 ease-in-out hover:bg-surface-soft hover:shadow-sm sm:grid-cols-[1fr_auto] sm:items-center"
-          >
-            <div>
-              <h2 className="font-body text-lg font-bold text-primary">
-                {preference.label}
-              </h2>
-              <p className="mt-2 max-w-2xl font-body text-sm leading-6 text-muted">
-                {preference.description}
-              </p>
-            </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={values[preference.id]}
-              aria-label={`Toggle ${preference.label}`}
-              disabled={isLoading}
-              onClick={() => toggle(preference.id)}
-              className={`relative h-7 w-12 rounded-full transition-all duration-200 ease-in-out hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-50 ${
-                values[preference.id] ? "bg-accent" : "bg-border"
-              }`}
-            >
-              <span
-                className={`absolute left-1 top-1 h-5 w-5 rounded-full bg-white shadow-sm transition-all duration-200 ease-in-out ${
-                  values[preference.id] ? "translate-x-5" : "translate-x-0"
-                }`}
-              />
-            </button>
-          </div>
-        ))}
+        {isLoading
+          ? preferences.map((preference) => (
+              <div
+                key={`loading-${preference.id}`}
+                className="grid gap-5 border-b border-border py-7 sm:grid-cols-[1fr_auto] sm:items-center"
+                aria-hidden="true"
+              >
+                <div>
+                  <Skeleton className="h-5 w-40" />
+                  <Skeleton className="mt-3 h-4 w-3/4" />
+                </div>
+                <Skeleton className="h-7 w-12 rounded-full" />
+              </div>
+            ))
+          : preferences.map((preference) => (
+              <div
+                key={preference.id}
+                className="grid gap-5 border-b border-border py-7 transition-all duration-200 ease-in-out hover:bg-surface-soft hover:shadow-sm sm:grid-cols-[1fr_auto] sm:items-center"
+              >
+                <div>
+                  <h2 className="font-body text-lg font-bold text-primary">
+                    {preference.label}
+                  </h2>
+                  <p className="mt-2 max-w-2xl font-body text-sm leading-6 text-muted">
+                    {preference.description}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={values[preference.id]}
+                  aria-label={`Toggle ${preference.label}`}
+                  disabled={isLoading}
+                  onClick={() => toggle(preference.id)}
+                  className={`relative h-7 w-12 rounded-full transition-all duration-200 ease-in-out hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-50 ${
+                    values[preference.id] ? "bg-accent" : "bg-border"
+                  }`}
+                >
+                  <span
+                    className={`absolute left-1 top-1 h-5 w-5 rounded-full bg-white shadow-sm transition-all duration-200 ease-in-out ${
+                      values[preference.id] ? "translate-x-5" : "translate-x-0"
+                    }`}
+                  />
+                </button>
+              </div>
+            ))}
       </div>
     </section>
   );

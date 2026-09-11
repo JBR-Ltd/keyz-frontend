@@ -5,6 +5,7 @@ import { FileText, Loader2, Upload, X } from "lucide-react";
 import { useEffect, useRef, useState, type ReactElement } from "react";
 import OverlayPortal from "@/components/ui/OverlayPortal";
 import { Select } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import { useDialogFocus } from "@/lib/useDialogFocus";
 import {
@@ -30,9 +31,9 @@ const TYPE_LABELS: Record<TenancyDocumentType, string> = {
   OTHER: "Document",
 };
 
-const TYPE_OPTIONS = (
-  Object.keys(TYPE_LABELS) as TenancyDocumentType[]
-).map((value) => ({ label: TYPE_LABELS[value], value }));
+const TYPE_OPTIONS = (Object.keys(TYPE_LABELS) as TenancyDocumentType[]).map(
+  (value) => ({ label: TYPE_LABELS[value], value }),
+);
 
 export default function TenancyDocumentsDialog({
   bookingId,
@@ -208,9 +209,26 @@ export default function TenancyDocumentsDialog({
 
             <div className="mt-6 max-h-64 overflow-y-auto">
               {isLoading ? (
-                <p className="py-8 text-center font-body text-sm text-muted">
-                  Loading...
-                </p>
+                <div
+                  className="grid gap-3 py-2"
+                  role="status"
+                  aria-label="Loading tenancy documents"
+                >
+                  {Array.from({ length: 3 }, (_, index) => (
+                    <div
+                      key={`loading-document-${index + 1}`}
+                      className="flex items-center gap-3 rounded-lg bg-surface-soft px-4 py-3"
+                      aria-hidden="true"
+                    >
+                      <Skeleton className="h-9 w-9 shrink-0" />
+                      <div className="flex-1">
+                        <Skeleton className="h-4 w-3/5" />
+                        <Skeleton className="mt-2 h-3 w-2/5" />
+                      </div>
+                    </div>
+                  ))}
+                  <span className="sr-only">Loading tenancy documents</span>
+                </div>
               ) : documents.length === 0 ? (
                 <p className="rounded-lg bg-surface-soft p-6 text-center font-body text-sm text-muted">
                   Nothing here yet. The signed agreement is the one document

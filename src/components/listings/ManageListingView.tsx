@@ -17,7 +17,9 @@ import {
   Star,
   Trash2,
 } from "lucide-react";
+import BackButton from "@/components/navigation/BackButton";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import {
   blockDates,
@@ -25,7 +27,10 @@ import {
   unblockDates,
   type UnavailableRange,
 } from "@/lib/availability";
-import { getBackendPropertyById, type BackendProperty } from "@/lib/hostListings";
+import {
+  getBackendPropertyById,
+  type BackendProperty,
+} from "@/lib/hostListings";
 import {
   addGalleryImage,
   deleteGalleryImage,
@@ -158,7 +163,10 @@ export default function ManageListingView({
   /** The cover is what every search result shows, so it is worth a single click. */
   const makeCover = async (photo: GalleryImage): Promise<void> => {
     setBusyPhotoId(photo.id);
-    const order = [photo.id, ...photos.filter((item) => item.id !== photo.id).map((item) => item.id)];
+    const order = [
+      photo.id,
+      ...photos.filter((item) => item.id !== photo.id).map((item) => item.id),
+    ];
     const result = await reorderGallery(numericId, order);
     setBusyPhotoId(null);
 
@@ -223,13 +231,13 @@ export default function ManageListingView({
 
   return (
     <main className="min-h-screen overflow-x-hidden px-5 py-12 sm:px-8 lg:px-10 lg:py-16 xl:px-14">
-      <Link
-        href={`/${role}/saved-listings`}
+      <BackButton
+        fallbackHref={`/${role}/saved-listings`}
         className="inline-flex items-center gap-2 font-body text-sm font-medium text-muted transition-all duration-200 ease-in-out hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
       >
         <ArrowLeft size={15} aria-hidden="true" />
         All listings
-      </Link>
+      </BackButton>
 
       <header className="pb-10 pt-6">
         <p className="font-accent text-xs font-bold uppercase tracking-[0.3em] text-primary">
@@ -239,8 +247,8 @@ export default function ManageListingView({
           {property?.title ?? "This listing"}
         </h1>
         <p className="mt-4 max-w-2xl font-body text-base leading-7 text-muted">
-          Photos and dates, after the listing has gone live. Changes here show on
-          the public page straight away.
+          Photos and dates, after the listing has gone live. Changes here show
+          on the public page straight away.
         </p>
         {property ? (
           <Link
@@ -257,9 +265,31 @@ export default function ManageListingView({
       ) : null}
 
       {isLoading ? (
-        <p className="py-16 text-center font-body text-sm text-muted">
-          Loading...
-        </p>
+        <div className="grid gap-12" role="status" aria-label="Loading listing">
+          <section aria-hidden="true">
+            <div className="flex items-end justify-between gap-4">
+              <div className="flex-1">
+                <Skeleton className="h-8 w-32" />
+                <Skeleton className="mt-3 h-4 w-48" />
+              </div>
+              <Skeleton className="h-11 w-32" />
+            </div>
+            <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {Array.from({ length: 3 }, (_, index) => (
+                <Skeleton
+                  key={`loading-photo-${index + 1}`}
+                  className="aspect-[4/3] w-full"
+                />
+              ))}
+            </div>
+          </section>
+          <section aria-hidden="true">
+            <Skeleton className="h-8 w-44" />
+            <Skeleton className="mt-3 h-4 w-72 max-w-full" />
+            <Skeleton className="mt-6 h-64 w-full" />
+          </section>
+          <span className="sr-only">Loading listing</span>
+        </div>
       ) : (
         <div className="grid gap-12">
           <section>

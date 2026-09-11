@@ -6,13 +6,13 @@ import {
   Clock,
   FileText,
   Home,
-  Loader2,
   Lock,
   ShieldCheck,
 } from "lucide-react";
 import Link from "next/link";
 import { ReactElement, useCallback, useEffect, useState } from "react";
 import VerifiedBadge from "@/components/ui/VerifiedBadge";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   getBankName,
   getHostVerification,
@@ -164,11 +164,32 @@ export default function HostVerificationCenter({
 
   if (isLoading) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-surface-soft">
-        <Loader2
-          className="h-8 w-8 animate-spin text-primary"
-          aria-label="Loading your verification status"
-        />
+      <main
+        className="min-h-screen bg-surface-soft px-5 py-12 sm:px-8 lg:px-10 lg:py-16 xl:px-14"
+        role="status"
+        aria-label="Loading your verification status"
+      >
+        <div className="mx-auto max-w-6xl">
+          <Skeleton className="h-4 w-36" />
+          <Skeleton className="mt-6 h-12 w-3/5 max-w-lg" />
+          <Skeleton className="mt-4 h-5 w-4/5 max-w-2xl" />
+          <div className="mt-10 grid gap-5 lg:grid-cols-3">
+            {Array.from({ length: 3 }, (_, index) => (
+              <div
+                key={`verification-card-${index + 1}`}
+                className="rounded-2xl bg-[var(--color-bg)] p-6 shadow-sm"
+                aria-hidden="true"
+              >
+                <Skeleton className="h-12 w-12 rounded-full" />
+                <Skeleton className="mt-6 h-7 w-2/3" />
+                <Skeleton className="mt-4 h-4 w-full" />
+                <Skeleton className="mt-2 h-4 w-4/5" />
+                <Skeleton className="mt-7 h-11 w-32 rounded-full" />
+              </div>
+            ))}
+          </div>
+        </div>
+        <span className="sr-only">Loading your verification status</span>
       </main>
     );
   }
@@ -359,7 +380,9 @@ export default function HostVerificationCenter({
           </StatusCard>
 
           <StatusCard
-            actionHref={payoutActionLabel ? `/${role}/verify/payout` : undefined}
+            actionHref={
+              payoutActionLabel ? `/${role}/verify/payout` : undefined
+            }
             actionLabel={payoutActionLabel}
             icon={Banknote}
             title="Payout Setup"

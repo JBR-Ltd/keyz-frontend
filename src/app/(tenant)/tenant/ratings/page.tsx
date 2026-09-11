@@ -12,12 +12,9 @@ import {
   Star,
 } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
+import RatingsPageSkeleton from "@/components/reviews/RatingsPageSkeleton";
 import { getMyBookings, type Booking } from "@/lib/bookings";
-import {
-  getReviewsIWrote,
-  submitReview,
-  type Review,
-} from "@/lib/reviews";
+import { getReviewsIWrote, submitReview, type Review } from "@/lib/reviews";
 
 const PROMPTS = [
   "Was the listing accurate?",
@@ -126,6 +123,10 @@ export default function TenantRatingsPage(): ReactElement {
       ).length,
     [bookings, reviews],
   );
+
+  if (isLoading) {
+    return <RatingsPageSkeleton />;
+  }
 
   return (
     <main className="min-h-screen overflow-x-hidden px-5 py-10 sm:px-8 lg:px-10 lg:py-14 xl:px-14">

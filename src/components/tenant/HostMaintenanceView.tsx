@@ -3,6 +3,7 @@
 import { useEffect, useState, type ReactElement } from "react";
 import { Loader2, Wrench } from "lucide-react";
 import { Select } from "@/components/ui/select";
+import { CardListSkeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useToast } from "@/components/ui/toast";
 import {
@@ -132,9 +133,7 @@ export default function HostMaintenanceView(): ReactElement {
       ) : null}
 
       {isLoading ? (
-        <p className="py-16 text-center font-body text-sm text-muted">
-          Loading...
-        </p>
+        <CardListSkeleton count={3} label="Loading repair requests" />
       ) : requests.length === 0 ? (
         <div className="rounded-lg bg-surface-soft p-10 text-center shadow-sm">
           <Wrench size={26} className="mx-auto text-accent-alt" />

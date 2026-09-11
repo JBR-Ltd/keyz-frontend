@@ -27,8 +27,8 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { TouchEvent, use, useEffect, useState } from "react";
+import BackButton from "@/components/navigation/BackButton";
 import OverlayPortal from "@/components/ui/OverlayPortal";
 import MessageHostButton from "@/components/property/MessageHostButton";
 import BookingRequestDialog from "@/components/property/BookingRequestDialog";
@@ -156,15 +156,15 @@ function PropertyDetailSkeleton(): ReactElement {
   return (
     <main className="bg-bg pt-6 text-primary">
       <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-        <div className="h-[min(58vw,38rem)] animate-pulse rounded-2xl bg-primary/10" />
+        <div className="h-[min(58vw,38rem)] animate-pulse rounded-2xl bg-skeleton-strong" />
         <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,1fr)_24rem]">
           <div className="space-y-6">
-            <div className="h-10 w-2/3 animate-pulse rounded-lg bg-primary/10" />
-            <div className="h-5 w-1/3 animate-pulse rounded-lg bg-primary/10" />
-            <div className="h-24 animate-pulse rounded-lg bg-primary/10" />
-            <div className="h-52 animate-pulse rounded-lg bg-primary/10" />
+            <div className="h-10 w-2/3 animate-pulse rounded-lg bg-skeleton" />
+            <div className="h-5 w-1/3 animate-pulse rounded-lg bg-skeleton" />
+            <div className="h-24 animate-pulse rounded-lg bg-skeleton" />
+            <div className="h-52 animate-pulse rounded-lg bg-skeleton" />
           </div>
-          <div className="h-80 animate-pulse rounded-2xl bg-primary/10 shadow-sm" />
+          <div className="h-80 animate-pulse rounded-2xl bg-skeleton shadow-sm" />
         </div>
       </div>
     </main>
@@ -200,7 +200,6 @@ export default function PropertyPage({
   params,
 }: PropertyPageProps): ReactElement {
   const { id } = use(params);
-  const router = useRouter();
   const reduceMotion = useReducedMotion();
   const [loadingState, setLoadingState] = useState<LoadingState>("loading");
   const [property, setProperty] = useState<PropertyDetail | null>(null);
@@ -271,15 +270,6 @@ export default function PropertyPage({
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [lightboxIndex, property]);
-
-  const handleBack = (): void => {
-    if (window.history.length <= 1) {
-      router.push("/tenant/browse");
-      return;
-    }
-
-    router.back();
-  };
 
   const closeLightbox = (): void => {
     setLightboxIndex(null);
@@ -355,7 +345,9 @@ export default function PropertyPage({
   );
   const hostRole = formatHostRole(property.host.role);
   const primaryCta =
-    property?.rentalMode === "SHORT_STAY" ? "Check availability" : "Request to rent";
+    property?.rentalMode === "SHORT_STAY"
+      ? "Check availability"
+      : "Request to rent";
 
   return (
     <main className="bg-bg pt-6 text-primary">
@@ -400,14 +392,17 @@ export default function PropertyPage({
                     style={{ objectFit: "cover" }}
                   />
                 </button>
-                <button
-                  type="button"
-                  onClick={handleBack}
+                <BackButton
+                  fallbackHref="/tenant/browse"
+                  roleFallbacks={{
+                    AGENT: "/agent/saved-listings",
+                    LANDLORD: "/landlord/saved-listings",
+                  }}
                   aria-label="Go back"
                   className="absolute left-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-primary text-white transition-all duration-200 ease-in-out hover:bg-black/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 >
                   <ArrowLeft size={19} aria-hidden="true" />
-                </button>
+                </BackButton>
                 {property.verified ? (
                   <span className="absolute right-4 top-4">
                     <VerifiedBadge />
@@ -459,9 +454,7 @@ export default function PropertyPage({
           </div>
 
           <div className="lg:hidden">
-            <div
-              className="group relative aspect-video w-full overflow-hidden rounded-2xl bg-surface-soft shadow-sm"
-            >
+            <div className="group relative aspect-video w-full overflow-hidden rounded-2xl bg-surface-soft shadow-sm">
               <button
                 type="button"
                 onClick={() => openLightbox(0)}
@@ -478,14 +471,17 @@ export default function PropertyPage({
                   style={{ objectFit: "cover" }}
                 />
               </button>
-              <button
-                type="button"
-                onClick={handleBack}
+              <BackButton
+                fallbackHref="/tenant/browse"
+                roleFallbacks={{
+                  AGENT: "/agent/saved-listings",
+                  LANDLORD: "/landlord/saved-listings",
+                }}
                 aria-label="Go back"
                 className="absolute left-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-primary text-white transition-all duration-200 ease-in-out hover:bg-black/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               >
                 <ArrowLeft size={19} aria-hidden="true" />
-              </button>
+              </BackButton>
               {property.verified ? (
                 <span className="absolute right-4 top-4">
                   <VerifiedBadge size="sm" />
@@ -696,8 +692,8 @@ export default function PropertyPage({
                     Walk through this home
                   </h2>
                   <p className="mt-2 max-w-xl font-body text-sm leading-6 text-muted">
-                    Filmed at the property, so what you see is the home you would
-                    be renting.
+                    Filmed at the property, so what you see is the home you
+                    would be renting.
                   </p>
                   <div className="mt-4 overflow-hidden rounded-2xl bg-surface-soft shadow-sm">
                     {property.tour.videoUrl ? (

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type ReactElement } from "react";
 import { Check, FileText, Loader2, ShieldCheck, X } from "lucide-react";
+import { CardListSkeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useToast } from "@/components/ui/toast";
 import { decideKyb, getKybQueue, type KybSubmission } from "@/lib/admin";
@@ -80,9 +81,7 @@ export default function AdminVerificationsPage(): ReactElement {
       ) : null}
 
       {isLoading ? (
-        <p className="py-16 text-center font-body text-sm text-muted">
-          Loading the queue...
-        </p>
+        <CardListSkeleton count={4} label="Loading verification queue" />
       ) : queue.length === 0 ? (
         <div className="rounded-lg bg-surface-soft p-10 text-center shadow-sm">
           <ShieldCheck size={26} className="mx-auto text-accent-alt" />
@@ -113,8 +112,14 @@ export default function AdminVerificationsPage(): ReactElement {
                 </p>
                 <div className="mt-4 flex flex-wrap gap-4">
                   {[
-                    { label: "Business registration", url: submission.documentUrl },
-                    { label: "Proof of address", url: submission.addressDocumentUrl },
+                    {
+                      label: "Business registration",
+                      url: submission.documentUrl,
+                    },
+                    {
+                      label: "Proof of address",
+                      url: submission.addressDocumentUrl,
+                    },
                   ].map((document) =>
                     document.url ? (
                       <a
@@ -182,12 +187,15 @@ export default function AdminVerificationsPage(): ReactElement {
                   }}
                   disabled={
                     busyId === submission.id ||
-                    (rejectingId === submission.id && reason.trim().length === 0)
+                    (rejectingId === submission.id &&
+                      reason.trim().length === 0)
                   }
                   className="flex items-center gap-2 rounded px-5 py-3 font-accent text-xs font-bold uppercase tracking-[0.16em] text-primary shadow-sm transition-all duration-200 ease-in-out hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   <X size={15} />
-                  {rejectingId === submission.id ? "Confirm rejection" : "Reject"}
+                  {rejectingId === submission.id
+                    ? "Confirm rejection"
+                    : "Reject"}
                 </button>
               </div>
             </article>

@@ -23,7 +23,9 @@ import {
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import BackButton from "@/components/navigation/BackButton";
 import { Select, toSelectOptions } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import {
   getHostListingById,
@@ -453,7 +455,9 @@ export default function CreateListingForm({
         </span>
         <Select
           value={values.rentalMode}
-          onValueChange={(mode) => updateValue("rentalMode", mode as RentalMode)}
+          onValueChange={(mode) =>
+            updateValue("rentalMode", mode as RentalMode)
+          }
           className={INPUT_CLASS_NAME}
           ariaLabel="How is this let"
           options={RENTAL_MODE_OPTIONS}
@@ -793,11 +797,36 @@ export default function CreateListingForm({
 
   if (isLoadingDraft) {
     return (
-      <main className="flex min-h-screen items-center justify-center px-5">
-        <div className="flex items-center gap-3 font-body text-sm text-muted">
-          <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
-          Opening draft...
+      <main
+        className="min-h-screen px-5 py-12 sm:px-8 lg:px-10 lg:py-16 xl:px-14"
+        role="status"
+        aria-label="Opening listing draft"
+      >
+        <div className="mx-auto max-w-5xl">
+          <Skeleton className="h-5 w-36" />
+          <div className="mt-8 flex items-end justify-between gap-5">
+            <div className="flex-1">
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="mt-4 h-10 w-3/5" />
+              <Skeleton className="mt-4 h-5 w-4/5" />
+            </div>
+            <Skeleton className="h-5 w-24" />
+          </div>
+          <section className="mt-10 rounded-2xl border border-border bg-[var(--color-bg)] p-6 shadow-sm sm:p-8">
+            <Skeleton className="h-8 w-44" />
+            <Skeleton className="mt-4 h-5 w-3/4" />
+            <div className="mt-8 grid gap-5 sm:grid-cols-2">
+              <Skeleton className="h-14" />
+              <Skeleton className="h-14" />
+              <Skeleton className="h-14 sm:col-span-2" />
+              <Skeleton className="h-32 sm:col-span-2" />
+            </div>
+          </section>
+          <div className="mt-8 flex justify-end">
+            <Skeleton className="h-12 w-32 rounded-full" />
+          </div>
         </div>
+        <span className="sr-only">Opening listing draft</span>
       </main>
     );
   }
@@ -807,21 +836,24 @@ export default function CreateListingForm({
       <main className="min-h-screen overflow-x-hidden px-5 pb-0 pt-12 sm:px-8 lg:px-10 lg:pt-16 xl:px-14">
         <div className="mx-auto max-w-5xl">
           <header className="pb-8">
-            <button
-              type="button"
-              onClick={() => {
-                if (listingStepIndex > 0) {
-                  handleBack();
-                  return;
-                }
-
-                router.push(`/${role}/saved-listings`);
-              }}
-              className="inline-flex items-center gap-2 font-body text-sm font-medium text-muted transition-colors hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            >
-              <ArrowLeft size={17} aria-hidden="true" />
-              {listingStepIndex > 0 ? "Back" : "Back to listings"}
-            </button>
+            {listingStepIndex > 0 ? (
+              <button
+                type="button"
+                onClick={handleBack}
+                className="inline-flex items-center gap-2 font-body text-sm font-medium text-muted transition-colors hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                <ArrowLeft size={17} aria-hidden="true" />
+                Back
+              </button>
+            ) : (
+              <BackButton
+                fallbackHref={`/${role}/saved-listings`}
+                className="inline-flex items-center gap-2 font-body text-sm font-medium text-muted transition-colors hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                <ArrowLeft size={17} aria-hidden="true" />
+                Back to listings
+              </BackButton>
+            )}
 
             <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div>
@@ -1642,14 +1674,14 @@ export default function CreateListingForm({
                     City
                   </span>
                   <Select
-                        value={values.city}
-                        onValueChange={(city) => updateValue("city", city)}
-                        className={INPUT_CLASS_NAME}
-                        invalid={Boolean(errors.city)}
-                        ariaLabel="City"
-                        placeholder="Select a city"
-                        options={toSelectOptions(CITIES)}
-                      />
+                    value={values.city}
+                    onValueChange={(city) => updateValue("city", city)}
+                    className={INPUT_CLASS_NAME}
+                    invalid={Boolean(errors.city)}
+                    ariaLabel="City"
+                    placeholder="Select a city"
+                    options={toSelectOptions(CITIES)}
+                  />
                   {errors.city ? (
                     <span className="mt-2 block font-body text-sm font-medium text-red-700">
                       {errors.city}

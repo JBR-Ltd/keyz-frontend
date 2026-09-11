@@ -553,7 +553,7 @@ export default function LandlordDashboardPage(): ReactElement {
         <div className="min-h-12" aria-busy={accountBusy}>
           {accountBusy ? (
             showSkeletons ? (
-              <div className="h-12 w-72 max-w-full animate-pulse rounded-lg bg-primary/10 motion-reduce:animate-none" />
+              <div className="h-12 w-72 max-w-full animate-pulse rounded-lg bg-skeleton motion-reduce:animate-none" />
             ) : null
           ) : (
             <h1 className="font-display text-4xl font-bold leading-[0.95] text-primary sm:text-5xl">
@@ -593,17 +593,17 @@ export default function LandlordDashboardPage(): ReactElement {
               return (
                 <article
                   key={label}
-                  className="min-h-40 rounded-lg bg-primary/5 p-5 shadow-sm"
+                  className="min-h-40 rounded-lg border border-border bg-bg p-5 shadow-sm"
                   aria-busy="true"
                 >
                   {showSkeletons ? (
                     <div className="animate-pulse motion-reduce:animate-none">
                       <div className="flex items-start justify-between">
-                        <div className="h-3 w-24 rounded-full bg-primary/10" />
-                        <div className="h-11 w-11 rounded-lg bg-primary/10" />
+                        <div className="h-3 w-24 rounded-full bg-skeleton" />
+                        <div className="h-11 w-11 rounded-lg bg-skeleton" />
                       </div>
-                      <div className="mt-5 h-8 w-20 rounded-lg bg-primary/10" />
-                      <div className="mt-5 h-3 w-28 rounded-full bg-primary/10" />
+                      <div className="mt-5 h-8 w-20 rounded-lg bg-skeleton" />
+                      <div className="mt-5 h-3 w-28 rounded-full bg-skeleton" />
                     </div>
                   ) : null}
                 </article>
@@ -680,12 +680,12 @@ export default function LandlordDashboardPage(): ReactElement {
                     key={index}
                     className="flex h-24 items-center gap-4 px-5 sm:px-6"
                   >
-                    <div className="h-11 w-11 shrink-0 rounded-full bg-primary/10" />
+                    <div className="h-11 w-11 shrink-0 rounded-full bg-skeleton" />
                     <div className="flex-1">
-                      <div className="h-4 w-48 max-w-[70%] rounded-full bg-primary/10" />
-                      <div className="mt-3 h-3 w-72 max-w-[90%] rounded-full bg-primary/5" />
+                      <div className="h-4 w-48 max-w-[70%] rounded-full bg-skeleton" />
+                      <div className="mt-3 h-3 w-72 max-w-[90%] rounded-full bg-skeleton" />
                     </div>
-                    <div className="h-4 w-24 rounded-full bg-primary/10" />
+                    <div className="h-4 w-24 rounded-full bg-skeleton" />
                   </div>
                 ))}
               </div>
@@ -771,14 +771,14 @@ export default function LandlordDashboardPage(): ReactElement {
                   key={index}
                   className="grid min-h-32 gap-5 p-5 sm:grid-cols-[8rem_1fr] sm:items-center sm:px-6 lg:grid-cols-[9rem_minmax(12rem,1.2fr)_minmax(9rem,0.75fr)_minmax(9rem,0.75fr)_auto]"
                 >
-                  <div className="h-24 rounded-lg bg-primary/10" />
+                  <div className="h-24 rounded-lg bg-skeleton-strong" />
                   <div>
-                    <div className="h-4 w-44 rounded-full bg-primary/10" />
-                    <div className="mt-3 h-3 w-32 rounded-full bg-primary/5" />
+                    <div className="h-4 w-44 rounded-full bg-skeleton" />
+                    <div className="mt-3 h-3 w-32 rounded-full bg-skeleton" />
                   </div>
-                  <div className="h-5 w-24 rounded-full bg-primary/10" />
-                  <div className="h-6 w-20 rounded-full bg-primary/10" />
-                  <div className="h-4 w-24 rounded-full bg-primary/10" />
+                  <div className="h-5 w-24 rounded-full bg-skeleton" />
+                  <div className="h-6 w-20 rounded-full bg-skeleton" />
+                  <div className="h-4 w-24 rounded-full bg-skeleton" />
                 </div>
               ))}
             </div>
@@ -914,10 +914,10 @@ export default function LandlordDashboardPage(): ReactElement {
                     className="flex h-24 items-center justify-between gap-4 px-5 sm:px-6"
                   >
                     <div className="flex-1">
-                      <div className="h-4 w-44 rounded-full bg-primary/10" />
-                      <div className="mt-3 h-3 w-36 rounded-full bg-primary/5" />
+                      <div className="h-4 w-44 rounded-full bg-skeleton" />
+                      <div className="mt-3 h-3 w-36 rounded-full bg-skeleton" />
                     </div>
-                    <div className="h-5 w-24 rounded-full bg-primary/10" />
+                    <div className="h-5 w-24 rounded-full bg-skeleton" />
                   </div>
                 ))}
               </div>

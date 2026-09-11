@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import PropertyPrice from "@/components/property/PropertyPrice";
 import { IconTile } from "@/components/ui/icon-tile";
+import { Skeleton } from "@/components/ui/skeleton";
 import { utilityCardVariants } from "@/components/ui/utility-card";
 import { getAdminMetrics, type AdminMetrics } from "@/lib/admin";
 
@@ -83,7 +84,10 @@ export default function AdminDashboardPage(): ReactElement {
             { label: "Tenants", value: metrics.tenants },
             { label: "Landlords", value: metrics.landlords },
             { label: "Agents", value: metrics.agents },
-            { label: "Identity verified", value: metrics.identityVerifiedUsers },
+            {
+              label: "Identity verified",
+              value: metrics.identityVerifiedUsers,
+            },
           ],
         },
         {
@@ -145,9 +149,27 @@ export default function AdminDashboardPage(): ReactElement {
       ) : null}
 
       {isLoading ? (
-        <p className="py-16 text-center font-body text-sm text-muted">
-          Loading metrics...
-        </p>
+        <div role="status" aria-label="Loading dashboard metrics">
+          <section className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+            {Array.from({ length: 4 }, (_, index) => (
+              <article
+                key={`loading-metric-${index + 1}`}
+                className={utilityCardVariants({ tone: "soft" })}
+                aria-hidden="true"
+              >
+                <Skeleton className="h-11 w-11 rounded-full" />
+                <Skeleton className="mt-7 h-4 w-28" />
+                <Skeleton className="mt-3 h-10 w-24" />
+                <Skeleton className="mt-4 h-4 w-36" />
+              </article>
+            ))}
+          </section>
+          <section className="mt-8 grid gap-5 lg:grid-cols-2">
+            <Skeleton className="h-72 w-full" />
+            <Skeleton className="h-72 w-full" />
+          </section>
+          <span className="sr-only">Loading dashboard metrics</span>
+        </div>
       ) : !metrics ? (
         <p className="py-16 text-center font-body text-sm text-muted">
           Metrics are unavailable.

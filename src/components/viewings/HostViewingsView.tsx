@@ -11,6 +11,7 @@ import {
   X,
 } from "lucide-react";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { CardListSkeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import {
   decideViewing,
@@ -149,9 +150,7 @@ export default function HostViewingsView(): ReactElement {
       ) : null}
 
       {isLoading ? (
-        <p className="py-16 text-center font-body text-sm text-muted">
-          Loading...
-        </p>
+        <CardListSkeleton count={3} label="Loading viewings" />
       ) : viewings.length === 0 ? (
         <div className="rounded-lg bg-surface-soft p-10 text-center shadow-sm">
           <CalendarClock size={26} className="mx-auto text-accent-alt" />
@@ -206,7 +205,8 @@ export default function HostViewingsView(): ReactElement {
                           <p className="mt-1 font-body text-sm text-muted">
                             {viewing.tenant?.name ?? "A tenant"} ·{" "}
                             {formatMoment(
-                              viewing.scheduledStartAt ?? viewing.proposedStartAt,
+                              viewing.scheduledStartAt ??
+                                viewing.proposedStartAt,
                             )}
                           </p>
                           {viewing.note ? (

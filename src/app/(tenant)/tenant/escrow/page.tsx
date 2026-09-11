@@ -12,6 +12,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import PropertyPrice from "@/components/property/PropertyPrice";
+import EscrowLedgerSkeleton from "@/components/escrow/EscrowLedgerSkeleton";
 import { useToast } from "@/components/ui/toast";
 import {
   getMyEscrow,
@@ -103,6 +104,10 @@ export default function TenantEscrowPage(): ReactElement {
     );
     notify({ title: "Funds released to the host", variant: "success" });
   };
+
+  if (isLoading) {
+    return <EscrowLedgerSkeleton />;
+  }
 
   return (
     <main className="min-h-screen overflow-x-hidden px-5 py-10 sm:px-8 lg:px-10 lg:py-14 xl:px-14">
@@ -200,8 +205,8 @@ export default function TenantEscrowPage(): ReactElement {
 
               {nextRelease.status === "DISPUTED" ? (
                 <p className="mt-4 font-body text-sm leading-6 text-red-700">
-                  A dispute is open on this booking, so nothing can move until it
-                  is settled.
+                  A dispute is open on this booking, so nothing can move until
+                  it is settled.
                 </p>
               ) : null}
             </>
@@ -280,7 +285,9 @@ export default function TenantEscrowPage(): ReactElement {
             <p className="mt-4 font-body text-base font-bold text-primary">
               {title}
             </p>
-            <p className="mt-2 font-body text-sm leading-6 text-muted">{text}</p>
+            <p className="mt-2 font-body text-sm leading-6 text-muted">
+              {text}
+            </p>
           </div>
         ))}
       </section>

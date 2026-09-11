@@ -264,11 +264,11 @@ export default function LandlordBookingsPage(): ReactElement {
                 key={item}
                 className="grid h-36 gap-4 p-5 sm:grid-cols-[8rem_1fr] sm:p-6"
               >
-                <div className="rounded-lg bg-primary/10" />
+                <div className="rounded-lg bg-skeleton-strong" />
                 <div className="space-y-4 py-2">
-                  <div className="h-4 w-2/5 rounded-full bg-primary/10" />
-                  <div className="h-3 w-3/5 rounded-full bg-primary/5" />
-                  <div className="h-3 w-1/3 rounded-full bg-primary/5" />
+                  <div className="h-4 w-2/5 rounded-full bg-skeleton" />
+                  <div className="h-3 w-3/5 rounded-full bg-skeleton" />
+                  <div className="h-3 w-1/3 rounded-full bg-skeleton" />
                 </div>
               </div>
             ))}

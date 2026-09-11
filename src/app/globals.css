@@ -17,6 +17,8 @@
   --color-text: #111827;
   --color-text-muted: #6b7280;
   --color-border: #e5e7eb;
+  --color-skeleton: #dce1e2;
+  --color-skeleton-strong: #cbd3d6;
 }
 
 @layer base {
@@ -75,6 +77,14 @@
 
   .bg-border {
     background-color: var(--color-border);
+  }
+
+  .bg-skeleton {
+    background-color: var(--color-skeleton);
+  }
+
+  .bg-skeleton-strong {
+    background-color: var(--color-skeleton-strong);
   }
 
   .bg-primary {

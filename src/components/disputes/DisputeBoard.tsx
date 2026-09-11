@@ -10,6 +10,7 @@ import {
   ShieldAlert,
 } from "lucide-react";
 import { Select } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import {
   escalateDispute,
@@ -19,11 +20,7 @@ import {
   type Dispute,
   type DisputeStatus,
 } from "@/lib/disputes";
-import {
-  getHostBookings,
-  getMyBookings,
-  type Booking,
-} from "@/lib/bookings";
+import { getHostBookings, getMyBookings, type Booking } from "@/lib/bookings";
 
 interface DisputeBoardProps {
   /** Whose bookings to offer when opening a case. */
@@ -99,7 +96,9 @@ export default function DisputeBoard({
       CLOSED: [],
     };
 
-    disputes.forEach((dispute) => grouped[laneFor(dispute.status)].push(dispute));
+    disputes.forEach((dispute) =>
+      grouped[laneFor(dispute.status)].push(dispute),
+    );
 
     return grouped;
   }, [disputes]);
@@ -211,8 +210,8 @@ export default function DisputeBoard({
             Disputes
           </h1>
           <p className="mt-4 max-w-2xl font-body text-base leading-7 text-muted">
-            Opening a case freezes the money on that booking until it is settled.
-            Rello decides any case both sides cannot close themselves.
+            Opening a case freezes the money on that booking until it is
+            settled. Rello decides any case both sides cannot close themselves.
           </p>
         </div>
         {needsAction > 0 ? (
@@ -246,7 +245,18 @@ export default function DisputeBoard({
               </div>
               <div className="mt-5 space-y-4">
                 {isLoading ? (
-                  <p className="font-body text-sm text-muted">Loading...</p>
+                  Array.from({ length: 2 }, (_, index) => (
+                    <div
+                      key={`loading-${lane}-${index + 1}`}
+                      className="rounded-lg bg-[var(--color-bg)] p-5 shadow-sm"
+                      aria-hidden="true"
+                    >
+                      <Skeleton className="h-4 w-20" />
+                      <Skeleton className="mt-4 h-5 w-4/5" />
+                      <Skeleton className="mt-3 h-4 w-full" />
+                      <Skeleton className="mt-6 h-8 w-full" />
+                    </div>
+                  ))
                 ) : lanes[lane].length === 0 ? (
                   <p className="font-body text-sm text-muted">Nothing here.</p>
                 ) : (
@@ -360,11 +370,17 @@ export default function DisputeBoard({
             </p>
 
             {disputableBookings.length === 0 ? (
-              <p className="mt-3 font-body text-sm leading-6 text-muted">
-                {isLoading
-                  ? "Loading your bookings..."
-                  : "No bookings are eligible for a dispute right now."}
-              </p>
+              isLoading ? (
+                <div role="status" aria-label="Loading eligible bookings">
+                  <Skeleton className="mt-4 h-12 w-full" />
+                  <Skeleton className="mt-3 h-12 w-full" />
+                  <span className="sr-only">Loading eligible bookings</span>
+                </div>
+              ) : (
+                <p className="mt-3 font-body text-sm leading-6 text-muted">
+                  No bookings are eligible for a dispute right now.
+                </p>
+              )
             ) : (
               <div className="mt-4 grid gap-4">
                 <Select
