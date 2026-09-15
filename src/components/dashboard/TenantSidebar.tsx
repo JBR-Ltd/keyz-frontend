@@ -261,12 +261,13 @@ export default function TenantSidebar({
   return (
     <>
       <header className="sticky top-0 z-50 border-b border-border bg-bg">
-        <div className="mx-auto flex h-20 w-full max-w-[96rem] items-center gap-4 px-4 sm:px-6 lg:px-8">
+        <div className="relative mx-auto flex h-20 w-full max-w-[96rem] items-center gap-4 px-4 sm:px-6 lg:px-8">
           <TenantLogo />
 
-          <div className="relative hidden h-20 min-w-0 flex-1 items-center justify-center lg:flex">
+          <div className="hidden min-w-0 flex-1 lg:block" />
+          <div className="absolute left-1/2 top-0 hidden h-20 -translate-x-1/2 lg:block">
             <motion.div
-              className={`absolute inset-y-0 flex items-stretch justify-center ${
+              className={`flex h-full items-stretch justify-center ${
                 isHeaderSearchVisible ? "pointer-events-none" : ""
               }`}
               animate={{

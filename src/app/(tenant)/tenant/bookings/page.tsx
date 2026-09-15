@@ -20,10 +20,17 @@ import ChatThread from "@/components/chat/ChatThread";
 import PropertyPrice from "@/components/property/PropertyPrice";
 import { IconTile } from "@/components/ui/icon-tile";
 import { Skeleton } from "@/components/ui/skeleton";
-import { StatusBadge, type StatusBadgeProps } from "@/components/ui/status-badge";
+import {
+  StatusBadge,
+  type StatusBadgeProps,
+} from "@/components/ui/status-badge";
 import { useToast } from "@/components/ui/toast";
 import MaintenanceReportDialog from "@/components/tenant/MaintenanceReportDialog";
-import { getMyBookings, type Booking, type BookingStatus } from "@/lib/bookings";
+import {
+  getMyBookings,
+  type Booking,
+  type BookingStatus,
+} from "@/lib/bookings";
 import {
   getMyMaintenanceRequests,
   getTenancyDocuments,
@@ -84,7 +91,15 @@ function formatDate(value: string): string {
 }
 
 function formatStayDates(booking: Booking): string {
-  return `${formatDate(booking.startDate)} to ${formatDate(booking.endDate)}`;
+  if (booking.bookingKind === "RENTAL_REQUEST" || !booking.endDate) {
+    return booking.preferredMoveInDate
+      ? `Preferred move-in ${formatDate(booking.preferredMoveInDate)}`
+      : "Move-in date is flexible";
+  }
+
+  return booking.startDate
+    ? `${formatDate(booking.startDate)} to ${formatDate(booking.endDate)}`
+    : "Move-in date is flexible";
 }
 
 function formatRelativeTime(value: string | null): string {
@@ -262,8 +277,8 @@ export default function TenantBookingsPage(): ReactElement {
         if (priorityDifference !== 0) return priorityDifference;
 
         return (
-          new Date(right.createdAt ?? right.startDate).getTime() -
-          new Date(left.createdAt ?? left.startDate).getTime()
+          new Date(right.createdAt ?? right.startDate ?? 0).getTime() -
+          new Date(left.createdAt ?? left.startDate ?? 0).getTime()
         );
       }),
     [bookings],
@@ -432,7 +447,11 @@ export default function TenantBookingsPage(): ReactElement {
                         Starts
                       </p>
                       <p className="mt-2 font-body text-sm font-bold text-primary">
-                        {formatDate(primaryBooking.startDate)}
+                        {primaryBooking.startDate
+                          ? formatDate(primaryBooking.startDate)
+                          : primaryBooking.preferredMoveInDate
+                            ? formatDate(primaryBooking.preferredMoveInDate)
+                            : "Flexible"}
                       </p>
                     </div>
                     <div className="rounded-xl bg-surface-soft p-4">
@@ -441,7 +460,9 @@ export default function TenantBookingsPage(): ReactElement {
                         Ends
                       </p>
                       <p className="mt-2 font-body text-sm font-bold text-primary">
-                        {formatDate(primaryBooking.endDate)}
+                        {primaryBooking.endDate
+                          ? formatDate(primaryBooking.endDate)
+                          : "No fixed end date"}
                       </p>
                     </div>
                     <div className="rounded-xl bg-surface-soft p-4">
@@ -493,8 +514,8 @@ export default function TenantBookingsPage(): ReactElement {
                     <PropertyPrice value={primaryBooking.totalPrice} />
                   </p>
                   <p className="mt-3 font-body text-sm leading-6 text-muted">
-                    Paid up front and held in escrow, so there is nothing to
-                    pay month to month.
+                    Paid up front and held in escrow, so there is nothing to pay
+                    month to month.
                   </p>
                 </article>
 
@@ -544,7 +565,10 @@ export default function TenantBookingsPage(): ReactElement {
                                 {DOCUMENT_TYPE_LABELS[document.type]}
                               </span>
                             </span>
-                            <FileText size={16} className="shrink-0 text-muted" />
+                            <FileText
+                              size={16}
+                              className="shrink-0 text-muted"
+                            />
                           </a>
                         </li>
                       ))}
@@ -655,7 +679,8 @@ export default function TenantBookingsPage(): ReactElement {
                   className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-accent px-5 py-2.5 font-body text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <MessageCircle size={16} aria-hidden="true" />
-                  Message {primaryBooking.host ? hostName.split(" ")[0] : "host"}
+                  Message{" "}
+                  {primaryBooking.host ? hostName.split(" ")[0] : "host"}
                 </button>
               </article>
             </section>

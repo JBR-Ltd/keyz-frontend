@@ -6,16 +6,18 @@ import {
   ArrowLeft,
   ArrowRight,
   ArrowUpRight,
-  Video,
   Bath,
   BedDouble,
   Check,
   ChefHat,
   CircleParking,
   Dumbbell,
+  Heart,
   Home,
+  Loader2,
   MapPin,
   Ruler,
+  Share2,
   ShieldCheck,
   Snowflake,
   Star,
@@ -38,7 +40,13 @@ import ViewingRequestDialog from "@/components/property/ViewingRequestDialog";
 import TenantVerificationGate from "@/components/tenant/TenantVerificationGate";
 import VerifiedBadge from "@/components/ui/VerifiedBadge";
 import { getPropertyById, PropertyDetail } from "@/lib/propertyDetails";
+import {
+  getSavedListings,
+  removeSavedListing,
+  saveListing,
+} from "@/lib/savedListings";
 import { useDialogFocus } from "@/lib/useDialogFocus";
+import { useToast } from "@/components/ui/toast";
 
 interface PropertyPageProps {
   params: Promise<{ id: string }>;
@@ -201,12 +209,15 @@ export default function PropertyPage({
 }: PropertyPageProps): ReactElement {
   const { id } = use(params);
   const reduceMotion = useReducedMotion();
+  const { notify } = useToast();
   const [loadingState, setLoadingState] = useState<LoadingState>("loading");
   const [property, setProperty] = useState<PropertyDetail | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [isViewingOpen, setIsViewingOpen] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const lightboxRef = useDialogFocus<HTMLDivElement>(lightboxIndex !== null);
 
   useEffect(() => {
@@ -225,6 +236,28 @@ export default function PropertyPage({
     }
 
     void loadProperty();
+
+    return () => {
+      active = false;
+    };
+  }, [id]);
+
+  useEffect(() => {
+    if (!/^\d+$/.test(id)) {
+      return;
+    }
+
+    let active = true;
+
+    async function loadSavedState(): Promise<void> {
+      const result = await getSavedListings();
+
+      if (active) {
+        setIsSaved(result.data.some((listing) => listing.id === Number(id)));
+      }
+    }
+
+    void loadSavedState();
 
     return () => {
       active = false;
@@ -324,6 +357,58 @@ export default function PropertyPage({
     setIsBookingOpen(true);
   };
 
+  const handleShare = async (): Promise<void> => {
+    const shareData = {
+      title: property?.title ?? "Rello property",
+      text: property
+        ? `Take a look at ${property.title} on Rello.`
+        : "Take a look at this property on Rello.",
+      url: window.location.href,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+        return;
+      }
+
+      await navigator.clipboard.writeText(shareData.url);
+      notify({ title: "Link copied", variant: "success" });
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return;
+      }
+
+      notify({ title: "This listing could not be shared", variant: "error" });
+    }
+  };
+
+  const handleSaveToggle = async (): Promise<void> => {
+    if (!property || !/^\d+$/.test(property.id) || isSaving) {
+      return;
+    }
+
+    setIsSaving(true);
+    const result = isSaved
+      ? await removeSavedListing(Number(property.id))
+      : await saveListing(Number(property.id));
+    setIsSaving(false);
+
+    if (!result.data) {
+      notify({
+        title: result.message ?? "This listing could not be updated",
+        variant: "error",
+      });
+      return;
+    }
+
+    setIsSaved((current) => !current);
+    notify({
+      title: isSaved ? "Removed from saved homes" : "Saved to your homes",
+      variant: "success",
+    });
+  };
+
   if (loadingState === "loading") {
     return <PropertyDetailSkeleton />;
   }
@@ -352,15 +437,59 @@ export default function PropertyPage({
   return (
     <main className="bg-bg pt-6 text-primary">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
-        {hasTour ? (
-          <a
-            href="#virtual-tour"
-            className="mb-4 inline-flex min-h-10 items-center gap-2 rounded-full bg-primary px-4 font-body text-sm font-bold text-white transition-all duration-200 ease-in-out hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-          >
-            <Video size={16} aria-hidden="true" />
-            Walk through this home
-          </a>
-        ) : null}
+        <div className="mb-6 hidden items-end justify-between gap-8 lg:flex">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="font-display text-4xl font-bold leading-tight text-primary">
+                {property.title}
+              </h1>
+              {property.verified ? <VerifiedBadge size="sm" /> : null}
+            </div>
+            <p className="mt-2 flex items-center gap-2 font-body text-sm text-muted">
+              <MapPin
+                size={16}
+                className="text-accent-alt"
+                aria-hidden="true"
+              />
+              {property.location.area}, {property.location.city}
+            </p>
+          </div>
+
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={() => void handleShare()}
+              className="inline-flex min-h-10 items-center gap-2 rounded-full border border-border bg-bg px-4 font-body text-sm font-bold text-primary transition-all duration-200 ease-in-out hover:border-primary/30 hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            >
+              <Share2 size={16} aria-hidden="true" />
+              Share
+            </button>
+            {/^\d+$/.test(property.id) ? (
+              <button
+                type="button"
+                onClick={() => void handleSaveToggle()}
+                disabled={isSaving}
+                aria-pressed={isSaved}
+                className="inline-flex min-h-10 items-center gap-2 rounded-full border border-border bg-bg px-4 font-body text-sm font-bold text-primary transition-all duration-200 ease-in-out hover:border-primary/30 hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-70"
+              >
+                {isSaving ? (
+                  <Loader2
+                    size={16}
+                    className="animate-spin"
+                    aria-hidden="true"
+                  />
+                ) : (
+                  <Heart
+                    size={16}
+                    fill={isSaved ? "currentColor" : "none"}
+                    aria-hidden="true"
+                  />
+                )}
+                {isSaved ? "Saved" : "Save"}
+              </button>
+            ) : null}
+          </div>
+        </div>
 
         <section aria-label="Property photos">
           <div
@@ -586,21 +715,23 @@ export default function PropertyPage({
           </AnimatePresence>
         </OverlayPortal>
 
-        <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-start">
+        <div className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1fr)_23rem] lg:items-start lg:gap-14">
           <section className="min-w-0">
-            <h1 className="font-display text-3xl font-bold leading-tight text-primary">
-              {property.title}
-            </h1>
-            <p className="mt-1 flex items-center gap-2 font-body text-sm text-muted">
-              <MapPin
-                size={16}
-                className="text-accent-alt"
-                aria-hidden="true"
-              />
-              {property.location.area}, {property.location.city}
-            </p>
+            <div className="lg:hidden">
+              <h1 className="font-display text-3xl font-bold leading-tight text-primary">
+                {property.title}
+              </h1>
+              <p className="mt-1 flex items-center gap-2 font-body text-sm text-muted">
+                <MapPin
+                  size={16}
+                  className="text-accent-alt"
+                  aria-hidden="true"
+                />
+                {property.location.area}, {property.location.city}
+              </p>
+            </div>
 
-            <div className="mt-4 flex flex-wrap items-center gap-4 font-body text-sm text-muted">
+            <div className="mt-4 flex flex-wrap items-center gap-4 rounded-xl border border-border/70 bg-surface-soft/50 px-5 py-4 font-body text-sm text-muted lg:mt-0">
               <span className="inline-flex items-center gap-2">
                 <BedDouble
                   size={17}
@@ -650,28 +781,36 @@ export default function PropertyPage({
               <h2 className="font-display text-xl font-bold text-primary">
                 What this place offers
               </h2>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                {property.amenities.map((amenity) => {
-                  const Icon = getAmenityIcon(amenity);
+              {property.amenities.length > 0 ? (
+                <div className="mt-4 grid gap-x-8 gap-y-2 sm:grid-cols-2 xl:grid-cols-3">
+                  {property.amenities.map((amenity) => {
+                    const Icon = getAmenityIcon(amenity);
 
-                  return (
-                    <div
-                      key={amenity}
-                      className="flex items-center gap-3 rounded-lg p-3 font-body text-sm text-primary shadow-sm"
-                    >
-                      <Icon
-                        size={18}
-                        className="text-accent-alt"
-                        aria-hidden="true"
-                      />
-                      {amenity}
-                    </div>
-                  );
-                })}
-              </div>
+                    return (
+                      <div
+                        key={amenity}
+                        className="flex min-h-11 items-center gap-3 font-body text-sm text-primary"
+                      >
+                        <Icon
+                          size={18}
+                          className="text-accent-alt"
+                          aria-hidden="true"
+                        />
+                        {amenity}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="mt-3 font-body text-sm text-muted">
+                  Amenities have not been added to this listing yet.
+                </p>
+              )}
             </section>
 
             <BookingRequestDialog
+              hostName={property.host.name}
+              hostRole={hostRole}
               minimumNights={property.minimumNights}
               onClose={() => setIsBookingOpen(false)}
               open={isBookingOpen}
@@ -716,7 +855,7 @@ export default function PropertyPage({
               </>
             ) : null}
 
-            {/^\d+$/.test(property.id) ? (
+            {!hasTour && /^\d+$/.test(property.id) ? (
               <>
                 <div className="my-6 border-t border-border" />
                 <PropertyTourViewer propertyId={Number(property.id)} />
@@ -781,15 +920,54 @@ export default function PropertyPage({
             </section>
           </section>
 
-          <aside className="rounded-xl bg-[var(--color-bg)] p-6 shadow-sm lg:sticky lg:top-24">
-            <p className="font-display text-3xl font-bold text-primary">
+          <aside className="rounded-2xl border border-border/80 bg-[var(--color-bg)] p-6 shadow-[0_18px_55px_-34px_rgba(1,57,81,0.45)] lg:sticky lg:top-24">
+            <p className="font-body text-xs font-bold uppercase tracking-[0.16em] text-muted">
+              {property.rentalMode === "SHORT_STAY"
+                ? "Price per night"
+                : property.rentalMode === "MONTHLY"
+                  ? "Monthly rent"
+                  : "Annual rent"}
+            </p>
+            <p className="mt-2 font-display text-3xl font-bold text-primary">
               <PropertyPrice
                 value={property.price}
                 listingType={property.status}
                 rentalMode={property.rentalMode}
               />
             </p>
-            <div className="mt-6 flex items-center gap-3">
+            <TenantVerificationGate
+              intent={property.status === "FOR_RENT" ? "booking" : "offer"}
+              onVerifiedAction={openPrimaryFlow}
+            >
+              {(requestAction) => (
+                <button
+                  type="button"
+                  onClick={requestAction}
+                  className="mt-6 inline-flex min-h-14 w-full items-center justify-center rounded-full bg-accent px-6 py-4 font-body text-sm font-bold text-primary transition-all duration-200 ease-in-out hover:bg-primary hover:text-white hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                >
+                  {primaryCta}
+                </button>
+              )}
+            </TenantVerificationGate>
+
+            <button
+              type="button"
+              onClick={() => setIsViewingOpen(true)}
+              className="mt-3 inline-flex min-h-12 w-full items-center justify-center rounded-full border border-border bg-bg px-5 font-body text-sm font-bold text-primary transition-all duration-200 ease-in-out hover:border-primary/30 hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            >
+              Request a viewing
+            </button>
+
+            <p className="mt-4 text-center font-body text-xs text-muted">
+              You will not be charged yet.
+            </p>
+
+            <div className="my-6 border-t border-border" />
+
+            <p className="font-body text-xs font-bold uppercase tracking-[0.16em] text-muted">
+              Listed by
+            </p>
+            <div className="mt-3 flex items-center gap-3">
               {property.host.avatarUrl ? (
                 <Image
                   src={property.host.avatarUrl}
@@ -823,23 +1001,6 @@ export default function PropertyPage({
               <ArrowUpRight size={15} />
             </Link>
 
-            <div className="my-6 border-t border-border" />
-
-            <TenantVerificationGate
-              intent={property.status === "FOR_RENT" ? "booking" : "offer"}
-              onVerifiedAction={openPrimaryFlow}
-            >
-              {(requestAction) => (
-                <button
-                  type="button"
-                  onClick={requestAction}
-                  className="inline-flex min-h-14 w-full items-center justify-center rounded-full bg-accent px-6 py-4 font-body text-sm font-bold text-primary transition-all duration-200 ease-in-out hover:bg-primary hover:text-white hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                >
-                  {primaryCta}
-                </button>
-              )}
-            </TenantVerificationGate>
-
             <MessageHostButton
               hostId={property.host.id}
               hostName={property.host.name}
@@ -847,14 +1008,6 @@ export default function PropertyPage({
               propertyId={property.id}
               propertyName={property.title}
             />
-
-            <button
-              type="button"
-              onClick={() => setIsViewingOpen(true)}
-              className="mt-4 w-full font-body text-sm font-bold text-primary transition-all duration-200 ease-in-out hover:text-accent-alt focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            >
-              Request a viewing
-            </button>
 
             <ViewingRequestDialog
               allowVirtual={hasTour}

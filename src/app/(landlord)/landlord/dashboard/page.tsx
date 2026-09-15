@@ -178,6 +178,12 @@ function formatStayDates(booking: Booking): string {
       month: "short",
     });
 
+  if (!booking.startDate || !booking.endDate) {
+    return booking.preferredMoveInDate
+      ? `Move in ${formatDate(booking.preferredMoveInDate)}`
+      : "Flexible move-in";
+  }
+
   return `${formatDate(booking.startDate)} to ${formatDate(booking.endDate)}`;
 }
 
@@ -190,18 +196,25 @@ function getTenancyStatus(
     (booking) =>
       booking.propertyId === propertyId && booking.status === "CONFIRMED",
   );
-  const hasActiveStay = confirmed.some(
-    (booking) =>
+  const hasActiveStay = confirmed.some((booking) => {
+    if (booking.bookingKind === "RENTAL_REQUEST" || !booking.endDate) {
+      return true;
+    }
+
+    return (
+      booking.startDate !== null &&
       new Date(booking.startDate).getTime() <= now &&
-      new Date(booking.endDate).getTime() >= now,
-  );
+      new Date(booking.endDate).getTime() >= now
+    );
+  });
 
   if (hasActiveStay) {
     return "Occupied";
   }
 
   return confirmed.some(
-    (booking) => new Date(booking.startDate).getTime() > now,
+    (booking) =>
+      booking.startDate && new Date(booking.startDate).getTime() > now,
   )
     ? "Move-in scheduled"
     : "Available";
@@ -323,6 +336,7 @@ function getSummaryItems(
   const upcomingStays = bookings.filter(
     (booking) =>
       booking.status === "CONFIRMED" &&
+      booking.startDate !== null &&
       new Date(booking.startDate).getTime() > now,
   ).length;
   const fundsHeld = escrow
@@ -370,12 +384,12 @@ function getUpcomingBookings(bookings: Booking[], now: number): Booking[] {
     .filter(
       (booking) =>
         (booking.status === "PENDING" || booking.status === "CONFIRMED") &&
-        new Date(booking.endDate).getTime() >= now,
+        (!booking.endDate || new Date(booking.endDate).getTime() >= now),
     )
     .sort(
       (left, right) =>
-        new Date(left.startDate).getTime() -
-        new Date(right.startDate).getTime(),
+        new Date(left.startDate ?? left.preferredMoveInDate ?? 0).getTime() -
+        new Date(right.startDate ?? right.preferredMoveInDate ?? 0).getTime(),
     )
     .slice(0, 3);
 }
@@ -436,8 +450,9 @@ export default function LandlordDashboardPage(): ReactElement {
     getDashboardViewState,
     getServerDashboardViewState,
   );
-  const { user } = useAuthenticatedUser();
-  const { snapshot: verification } = useHostVerification();
+  const { isLoading: isAccountLoading, user } = useAuthenticatedUser();
+  const { isLoading: isVerificationLoading, snapshot: verification } =
+    useHostVerification();
   // Skeletons appear only if loading outlasts a moment, so a fast response does
   // not flash placeholder blocks at the user
   const [showSkeletons, setShowSkeletons] = useState(false);
@@ -451,31 +466,47 @@ export default function LandlordDashboardPage(): ReactElement {
   const [portfolio, setPortfolio] = useState<PropertyPortfolio | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [escrow, setEscrow] = useState<EscrowEntry[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState("");
+  const [isPortfolioLoading, setIsPortfolioLoading] = useState(true);
+  const [isBookingsLoading, setIsBookingsLoading] = useState(true);
+  const [isEscrowLoading, setIsEscrowLoading] = useState(true);
+  const [portfolioError, setPortfolioError] = useState("");
+  const [bookingsError, setBookingsError] = useState("");
+  const [escrowError, setEscrowError] = useState("");
   // Captured when the data lands rather than read during render: Date.now() in a
   // render body is impure and makes every memo below unstable
-  const [loadedAt, setLoadedAt] = useState(() => Date.now());
+  const [loadedAt] = useState(() => Date.now());
 
   useEffect(() => {
     let active = true;
 
-    void Promise.all([
-      getPropertyPortfolio(),
-      getHostBookings(),
-      getMyEscrow(),
-    ]).then(([portfolioResult, bookingsResult, escrowResult]) => {
+    void getPropertyPortfolio().then((result) => {
       if (!active) {
         return;
       }
 
-      setPortfolio(portfolioResult.data);
-      setBookings(bookingsResult.data);
-      setEscrow(escrowResult.data);
-      // The portfolio is the page; the other two failing alone still leaves it useful
-      setLoadError(portfolioResult.data ? "" : (portfolioResult.message ?? ""));
-      setLoadedAt(Date.now());
-      setIsLoading(false);
+      setPortfolio(result.data);
+      setPortfolioError(result.data ? "" : (result.message ?? ""));
+      setIsPortfolioLoading(false);
+    });
+
+    void getHostBookings().then((result) => {
+      if (!active) {
+        return;
+      }
+
+      setBookings(result.data);
+      setBookingsError(result.message ?? "");
+      setIsBookingsLoading(false);
+    });
+
+    void getMyEscrow().then((result) => {
+      if (!active) {
+        return;
+      }
+
+      setEscrow(result.data);
+      setEscrowError(result.message ?? "");
+      setIsEscrowLoading(false);
     });
 
     return () => {
@@ -490,10 +521,7 @@ export default function LandlordDashboardPage(): ReactElement {
   );
   const now = loadedAt;
   const summaryItems = useMemo(
-    () =>
-      portfolio
-        ? getSummaryItems(portfolio, bookings, escrow, now)
-        : [],
+    () => getSummaryItems(portfolio, bookings, escrow, now),
     [portfolio, bookings, escrow, now],
   );
   const attentionItems = useMemo(
@@ -519,21 +547,30 @@ export default function LandlordDashboardPage(): ReactElement {
         .reduce((total, entry) => total + entry.amount, 0),
     [escrow],
   );
-  const forceLoading = requestedViewState === "loading" || isLoading;
-  const forceError = requestedViewState === "error" || loadError !== "";
-  const accountBusy = forceLoading;
-  const portfolioBusy = forceLoading;
-  const bookingsBusy = forceLoading;
-  const escrowBusy = forceLoading;
-  const attentionBusy = forceLoading;
+  const forceLoading = requestedViewState === "loading";
+  const forceError = requestedViewState === "error";
+  const accountBusy = forceLoading || isAccountLoading;
+  const portfolioBusy = forceLoading || isPortfolioLoading;
+  const bookingsBusy = forceLoading || isBookingsLoading;
+  const escrowBusy = forceLoading || isEscrowLoading;
+  const attentionBusy =
+    forceLoading ||
+    isVerificationLoading ||
+    isPortfolioLoading ||
+    isBookingsLoading ||
+    isEscrowLoading;
   const resolvedPortfolioError = forceError
     ? "Properties could not be loaded."
-    : "";
+    : portfolioError;
   const resolvedBookingsError = forceError
     ? "Tenancies could not be loaded."
-    : "";
-  const resolvedEscrowError = forceError ? "Payments could not be loaded." : "";
-  const attentionError = forceError ? "Action items could not be loaded." : "";
+    : bookingsError;
+  const resolvedEscrowError = forceError
+    ? "Payments could not be loaded."
+    : escrowError;
+  const attentionError = forceError
+    ? "Action items could not be loaded."
+    : ([portfolioError, bookingsError, escrowError].find(Boolean) ?? "");
   const showEmpty = requestedViewState === "empty";
   if (showEmpty) {
     return (
@@ -552,11 +589,11 @@ export default function LandlordDashboardPage(): ReactElement {
       <header className="flex flex-col gap-6 pb-9 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-h-12" aria-busy={accountBusy}>
           {accountBusy ? (
-            showSkeletons ? (
-              <div className="h-12 w-72 max-w-full animate-pulse rounded-lg bg-skeleton motion-reduce:animate-none" />
-            ) : null
+            <div
+              className={`h-16 w-72 max-w-full rounded-lg bg-skeleton sm:h-12 ${showSkeletons ? "animate-pulse motion-reduce:animate-none" : ""}`}
+            />
           ) : (
-            <h1 className="font-display text-4xl font-bold leading-[0.95] text-primary sm:text-5xl">
+            <h1 className="font-display text-3xl font-bold leading-tight text-primary sm:text-4xl">
               Welcome back{user?.firstName ? `, ${user.firstName}` : ""}.
             </h1>
           )}
@@ -571,11 +608,11 @@ export default function LandlordDashboardPage(): ReactElement {
       </header>
 
       <section
-        className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+        className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4"
         aria-label="Portfolio summary"
       >
         {summaryItems.map(
-          ({ detail, icon: Icon, label, source, tone, value }) => {
+          ({ detail, icon: Icon, label, source, tone, value }, index) => {
             const sourceLoading =
               source === "portfolio"
                 ? portfolioBusy
@@ -593,19 +630,25 @@ export default function LandlordDashboardPage(): ReactElement {
               return (
                 <article
                   key={label}
-                  className="min-h-40 rounded-lg border border-border bg-bg p-5 shadow-sm"
+                  className="min-h-40 rounded-lg border border-border bg-bg p-4 shadow-sm sm:p-5"
                   aria-busy="true"
                 >
-                  {showSkeletons ? (
-                    <div className="animate-pulse motion-reduce:animate-none">
-                      <div className="flex items-start justify-between">
-                        <div className="h-3 w-24 rounded-full bg-skeleton" />
-                        <div className="h-11 w-11 rounded-lg bg-skeleton" />
-                      </div>
-                      <div className="mt-5 h-8 w-20 rounded-lg bg-skeleton" />
-                      <div className="mt-5 h-3 w-28 rounded-full bg-skeleton" />
+                  <div
+                    className={
+                      showSkeletons
+                        ? "animate-pulse motion-reduce:animate-none"
+                        : ""
+                    }
+                  >
+                    <div className="flex items-start justify-between gap-2 sm:gap-4">
+                      <div className="h-3 w-20 max-w-[60%] rounded-full bg-skeleton sm:w-24" />
+                      <div className="h-9 w-9 shrink-0 rounded-lg bg-skeleton sm:h-11 sm:w-11" />
                     </div>
-                  ) : null}
+                    <div
+                      className={`mt-5 h-8 max-w-full rounded-lg bg-skeleton ${index === 3 ? "w-32 sm:w-40" : "w-14 sm:w-16"}`}
+                    />
+                    <div className="mt-5 h-3 w-24 max-w-full rounded-full bg-skeleton sm:w-28" />
+                  </div>
                 </article>
               );
             }
@@ -613,36 +656,38 @@ export default function LandlordDashboardPage(): ReactElement {
             return (
               <article
                 key={label}
-                className={utilityCardVariants({
+                className={`${utilityCardVariants({
                   tone:
                     tone === "accent"
                       ? "accentTint"
                       : tone === "primary"
                         ? "primaryTint"
                         : "soft",
+                  padding: "compact",
                   interactive: !sourceError,
-                })}
+                })} min-h-40 sm:p-5`}
               >
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="font-body text-xs font-medium uppercase tracking-[0.14em] text-muted">
-                      {label}
-                    </p>
-                    <p className="mt-4 font-display text-3xl font-bold leading-none text-primary">
-                      {sourceError ? (
-                        "Unavailable"
-                      ) : typeof value === "number" ? (
-                        <PropertyPrice value={value} />
-                      ) : (
-                        value
-                      )}
-                    </p>
-                  </div>
-                  <IconTile tone={tone}>
-                    <Icon size={21} />
+                <div className="flex items-start justify-between gap-2 sm:gap-4">
+                  <p className="min-w-0 font-body text-[0.6875rem] font-medium uppercase tracking-[0.12em] text-muted sm:text-xs sm:tracking-[0.14em]">
+                    {label}
+                  </p>
+                  <IconTile
+                    tone={tone}
+                    className="h-9 w-9 shrink-0 sm:h-11 sm:w-11"
+                  >
+                    <Icon size={19} />
                   </IconTile>
                 </div>
-                <p className="mt-5 font-body text-xs font-bold text-primary/70">
+                <p className="mt-4 break-words font-display text-xl font-bold leading-none text-primary min-[430px]:text-2xl sm:text-3xl">
+                  {sourceError ? (
+                    "Unavailable"
+                  ) : typeof value === "number" ? (
+                    <PropertyPrice value={value} />
+                  ) : (
+                    value
+                  )}
+                </p>
+                <p className="mt-5 font-body text-xs font-bold leading-5 text-primary/70">
                   {sourceError ? "Try again shortly" : detail}
                 </p>
               </article>
@@ -665,7 +710,12 @@ export default function LandlordDashboardPage(): ReactElement {
                 Needs attention
               </h2>
             </div>
-            {!attentionBusy && attentionItems.length ? (
+            {attentionBusy ? (
+              <span
+                className={`h-8 w-24 rounded-full bg-skeleton ${showSkeletons ? "animate-pulse motion-reduce:animate-none" : ""}`}
+                aria-hidden="true"
+              />
+            ) : attentionItems.length ? (
               <StatusBadge tone="accent">
                 {attentionItems.length} open task
                 {attentionItems.length === 1 ? "" : "s"}
@@ -673,25 +723,23 @@ export default function LandlordDashboardPage(): ReactElement {
             ) : null}
           </div>
           {attentionBusy ? (
-            showSkeletons ? (
-              <div className="divide-y divide-primary/10 animate-pulse motion-reduce:animate-none">
-                {Array.from({ length: 3 }, (_, index) => (
-                  <div
-                    key={index}
-                    className="flex h-24 items-center gap-4 px-5 sm:px-6"
-                  >
-                    <div className="h-11 w-11 shrink-0 rounded-full bg-skeleton" />
-                    <div className="flex-1">
-                      <div className="h-4 w-48 max-w-[70%] rounded-full bg-skeleton" />
-                      <div className="mt-3 h-3 w-72 max-w-[90%] rounded-full bg-skeleton" />
-                    </div>
-                    <div className="h-4 w-24 rounded-full bg-skeleton" />
+            <div
+              className={`divide-y divide-primary/10 ${showSkeletons ? "animate-pulse motion-reduce:animate-none" : ""}`}
+            >
+              {Array.from({ length: 3 }, (_, index) => (
+                <div
+                  key={index}
+                  className="grid min-h-24 grid-cols-[2.75rem_minmax(0,1fr)] items-center gap-4 px-5 py-4 sm:grid-cols-[2.75rem_minmax(0,42rem)_auto] sm:justify-start sm:px-6"
+                >
+                  <div className="h-11 w-11 shrink-0 rounded-full bg-skeleton" />
+                  <div className="min-w-0">
+                    <div className="h-4 w-48 max-w-[70%] rounded-full bg-skeleton" />
+                    <div className="mt-3 h-3 w-72 max-w-[90%] rounded-full bg-skeleton" />
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="h-72" />
-            )
+                  <div className="col-start-2 h-4 w-24 rounded-full bg-skeleton sm:col-start-auto" />
+                </div>
+              ))}
+            </div>
           ) : attentionItems.length ? (
             <div className="divide-y divide-primary/10">
               {attentionItems.map(
@@ -706,7 +754,7 @@ export default function LandlordDashboardPage(): ReactElement {
                 }) => (
                   <article
                     key={id}
-                    className="flex flex-col gap-4 px-5 py-5 transition-colors hover:bg-surface-soft sm:flex-row sm:items-center sm:px-6"
+                    className="grid grid-cols-[2.75rem_minmax(0,1fr)] gap-4 px-5 py-5 transition-colors hover:bg-surface-soft sm:grid-cols-[2.75rem_minmax(0,42rem)_auto] sm:items-center sm:justify-start sm:px-6"
                   >
                     <span
                       className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${ATTENTION_STYLES[tone]}`}
@@ -717,13 +765,13 @@ export default function LandlordDashboardPage(): ReactElement {
                       <h3 className="font-body text-sm font-bold text-primary">
                         {title}
                       </h3>
-                      <p className="mt-1 font-body text-sm leading-6 text-muted">
+                      <p className="mt-1 max-w-2xl font-body text-sm leading-6 text-muted">
                         {description}
                       </p>
                     </div>
                     <Link
                       href={href}
-                      className="inline-flex min-h-10 shrink-0 items-center gap-2 self-start font-body text-sm font-bold text-primary hover:text-accent-alt focus:outline-none focus-visible:ring-2 focus-visible:ring-accent sm:self-auto"
+                      className="col-start-2 inline-flex min-h-10 shrink-0 items-center gap-2 justify-self-start font-body text-sm font-bold text-primary hover:text-accent-alt focus:outline-none focus-visible:ring-2 focus-visible:ring-accent sm:col-start-auto"
                     >
                       {actionLabel}
                       <ArrowRight size={16} />
@@ -761,30 +809,35 @@ export default function LandlordDashboardPage(): ReactElement {
           </h2>
         </div>
         {portfolioBusy ? (
-          showSkeletons ? (
-            <div
-              className="divide-y divide-primary/10 animate-pulse motion-reduce:animate-none"
-              aria-hidden="true"
-            >
-              {Array.from({ length: 3 }, (_, index) => (
-                <div
-                  key={index}
-                  className="grid min-h-32 gap-5 p-5 sm:grid-cols-[8rem_1fr] sm:items-center sm:px-6 lg:grid-cols-[9rem_minmax(12rem,1.2fr)_minmax(9rem,0.75fr)_minmax(9rem,0.75fr)_auto]"
-                >
-                  <div className="h-24 rounded-lg bg-skeleton-strong" />
-                  <div>
-                    <div className="h-4 w-44 rounded-full bg-skeleton" />
-                    <div className="mt-3 h-3 w-32 rounded-full bg-skeleton" />
+          <div
+            className={`divide-y divide-primary/10 ${showSkeletons ? "animate-pulse motion-reduce:animate-none" : ""}`}
+            aria-hidden="true"
+          >
+            {Array.from({ length: 3 }, (_, index) => (
+              <div
+                key={index}
+                className="grid min-h-32 gap-5 p-5 sm:grid-cols-[8rem_1fr] sm:items-center sm:px-6 lg:grid-cols-[9rem_minmax(12rem,1.2fr)_minmax(9rem,0.75fr)_minmax(9rem,0.75fr)_auto]"
+              >
+                <div className="h-28 rounded-lg bg-skeleton-strong sm:h-24" />
+                <div>
+                  <div className="flex items-center gap-2">
+                    <div className="h-4 w-36 rounded-full bg-skeleton" />
+                    <div className="h-6 w-14 rounded-full bg-skeleton" />
                   </div>
-                  <div className="h-5 w-24 rounded-full bg-skeleton" />
-                  <div className="h-6 w-20 rounded-full bg-skeleton" />
-                  <div className="h-4 w-24 rounded-full bg-skeleton" />
+                  <div className="mt-3 h-3 w-32 rounded-full bg-skeleton" />
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="h-96" />
-          )
+                <div>
+                  <div className="h-3 w-20 rounded-full bg-skeleton" />
+                  <div className="mt-3 h-6 w-28 rounded-full bg-skeleton" />
+                </div>
+                <div>
+                  <div className="h-6 w-20 rounded-full bg-skeleton" />
+                  <div className="mt-3 h-3 w-24 rounded-full bg-skeleton" />
+                </div>
+                <div className="h-4 w-24 rounded-full bg-skeleton" />
+              </div>
+            ))}
+          </div>
         ) : resolvedPortfolioError ? (
           <div className="px-5 py-12 text-center sm:px-6">
             <AlertCircle size={28} className="mx-auto text-red-700" />
@@ -903,27 +956,26 @@ export default function LandlordDashboardPage(): ReactElement {
             </Link>
           </div>
           {bookingsBusy ? (
-            showSkeletons ? (
-              <div
-                className="divide-y divide-primary/10 animate-pulse motion-reduce:animate-none"
-                aria-hidden="true"
-              >
-                {Array.from({ length: 3 }, (_, index) => (
-                  <div
-                    key={index}
-                    className="flex h-24 items-center justify-between gap-4 px-5 sm:px-6"
-                  >
-                    <div className="flex-1">
-                      <div className="h-4 w-44 rounded-full bg-skeleton" />
-                      <div className="mt-3 h-3 w-36 rounded-full bg-skeleton" />
+            <div
+              className={`divide-y divide-primary/10 ${showSkeletons ? "animate-pulse motion-reduce:animate-none" : ""}`}
+              aria-hidden="true"
+            >
+              {Array.from({ length: 3 }, (_, index) => (
+                <div
+                  key={index}
+                  className="flex h-24 items-center justify-between gap-4 px-5 sm:px-6"
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <div className="h-4 w-36 rounded-full bg-skeleton" />
+                      <div className="h-6 w-20 rounded-full bg-skeleton" />
                     </div>
-                    <div className="h-5 w-24 rounded-full bg-skeleton" />
+                    <div className="mt-3 h-3 w-36 rounded-full bg-skeleton" />
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="h-72" />
-            )
+                  <div className="h-6 w-24 rounded-full bg-skeleton" />
+                </div>
+              ))}
+            </div>
           ) : resolvedBookingsError ? (
             <div className="px-5 py-12 text-center sm:px-6">
               <AlertCircle size={28} className="mx-auto text-red-700" />
@@ -1003,9 +1055,9 @@ export default function LandlordDashboardPage(): ReactElement {
             </p>
             <p className="mt-2 font-display text-4xl font-bold">
               {escrowBusy ? (
-                showSkeletons ? (
-                  <span className="inline-block h-10 w-40 animate-pulse rounded-lg bg-white/10 align-middle motion-reduce:animate-none" />
-                ) : null
+                <span
+                  className={`inline-block h-10 w-40 rounded-lg bg-white/20 align-middle ${showSkeletons ? "animate-pulse motion-reduce:animate-none" : ""}`}
+                />
               ) : resolvedEscrowError ? (
                 "Unavailable"
               ) : (
@@ -1014,27 +1066,23 @@ export default function LandlordDashboardPage(): ReactElement {
             </p>
           </div>
           {escrowBusy ? (
-            showSkeletons ? (
-              <div
-                className="divide-y divide-white/10 animate-pulse motion-reduce:animate-none"
-                aria-hidden="true"
-              >
-                {Array.from({ length: 3 }, (_, index) => (
-                  <div
-                    key={index}
-                    className="flex h-20 items-center justify-between gap-4 px-5 sm:px-6"
-                  >
-                    <div className="flex-1">
-                      <div className="h-4 w-40 rounded-full bg-white/10" />
-                      <div className="mt-3 h-3 w-24 rounded-full bg-white/10" />
-                    </div>
-                    <div className="h-5 w-24 rounded-full bg-white/10" />
+            <div
+              className={`divide-y divide-white/10 ${showSkeletons ? "animate-pulse motion-reduce:animate-none" : ""}`}
+              aria-hidden="true"
+            >
+              {Array.from({ length: 3 }, (_, index) => (
+                <div
+                  key={index}
+                  className="flex h-20 items-center justify-between gap-4 px-5 sm:px-6"
+                >
+                  <div className="flex-1">
+                    <div className="h-4 w-40 rounded-full bg-white/20" />
+                    <div className="mt-3 h-3 w-24 rounded-full bg-white/15" />
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="h-60" />
-            )
+                  <div className="h-5 w-24 rounded-full bg-white/20" />
+                </div>
+              ))}
+            </div>
           ) : resolvedEscrowError ? (
             <div className="px-5 py-12 text-center sm:px-6">
               <AlertCircle size={28} className="mx-auto text-accent" />

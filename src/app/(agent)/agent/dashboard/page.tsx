@@ -26,7 +26,11 @@ import { IconTile } from "@/components/ui/icon-tile";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { utilityCardVariants } from "@/components/ui/utility-card";
 import { useAuthenticatedUser } from "@/lib/account";
-import { getHostBookings, type Booking, type BookingStatus } from "@/lib/bookings";
+import {
+  getHostBookings,
+  type Booking,
+  type BookingStatus,
+} from "@/lib/bookings";
 import {
   getPropertyPortfolio,
   type BackendProperty,
@@ -151,8 +155,13 @@ function daysUntil(value: string): number {
 function isActiveTenancy(booking: Booking): boolean {
   const today = new Date().setHours(0, 0, 0, 0);
 
+  if (booking.bookingKind === "RENTAL_REQUEST" || !booking.endDate) {
+    return booking.status === "CONFIRMED";
+  }
+
   return (
     booking.status === "CONFIRMED" &&
+    booking.startDate !== null &&
     toDate(booking.startDate).getTime() <= today &&
     toDate(booking.endDate).getTime() >= today
   );
@@ -251,10 +260,13 @@ function buildAttention(
     (property) => !property.verified,
   );
   const imminentMoveIns = bookings.filter((booking) => {
+    if (!booking.startDate) return false;
     const days = daysUntil(booking.startDate);
 
     return (
-      booking.status === "CONFIRMED" && days >= 0 && days <= MOVE_IN_HORIZON_DAYS
+      booking.status === "CONFIRMED" &&
+      days >= 0 &&
+      days <= MOVE_IN_HORIZON_DAYS
     );
   });
 
@@ -320,7 +332,7 @@ function buildAttention(
   if (imminentMoveIns.length > 0) {
     items.push({
       actionLabel: "View tenancy",
-      description: `${imminentMoveIns[0].tenant?.name ?? "A tenant"} moves into ${imminentMoveIns[0].propertyTitle} on ${formatDay(imminentMoveIns[0].startDate)}.`,
+      description: `${imminentMoveIns[0].tenant?.name ?? "A tenant"} moves into ${imminentMoveIns[0].propertyTitle} on ${formatDay(imminentMoveIns[0].startDate ?? imminentMoveIns[0].preferredMoveInDate ?? new Date().toISOString().slice(0, 10))}.`,
       href: "/agent/bookings",
       icon: CalendarCheck2,
       id: "move-in",
@@ -345,13 +357,15 @@ function buildUpcoming(
   const moveIns = bookings
     .filter(
       (booking) =>
-        booking.status === "CONFIRMED" && daysUntil(booking.startDate) >= 0,
+        booking.status === "CONFIRMED" &&
+        booking.startDate !== null &&
+        daysUntil(booking.startDate) >= 0,
     )
     .map((booking) => ({
-      date: formatDay(booking.startDate),
+      date: formatDay(booking.startDate ?? booking.preferredMoveInDate ?? ""),
       detail: booking.propertyTitle,
       id: `move-in-${booking.id}`,
-      sortKey: booking.startDate,
+      sortKey: booking.startDate ?? booking.preferredMoveInDate ?? "",
       title: `${booking.tenant?.name ?? "Tenant"} moves in`,
     }));
 
@@ -402,13 +416,15 @@ function buildDashboard(
     ),
     bookings: [...bookings]
       .sort((first, second) =>
-        (second.createdAt ?? second.startDate).localeCompare(
-          first.createdAt ?? first.startDate,
+        (second.createdAt ?? second.startDate ?? "").localeCompare(
+          first.createdAt ?? first.startDate ?? "",
         ),
       )
       .slice(0, MAX_RECENT_BOOKINGS)
       .map((booking) => ({
-        date: formatDay(booking.startDate),
+        date: booking.startDate
+          ? formatDay(booking.startDate)
+          : "Flexible move-in",
         id: booking.id,
         property: booking.propertyTitle,
         status: booking.status,
@@ -594,11 +610,7 @@ function AttentionPanel({ items }: { items: AttentionItem[] }): ReactElement {
   );
 }
 
-function UpcomingPanel({
-  items,
-}: {
-  items: UpcomingActivity[];
-}): ReactElement {
+function UpcomingPanel({ items }: { items: UpcomingActivity[] }): ReactElement {
   return (
     <section className="rounded-lg bg-surface-soft p-5 shadow-sm sm:p-6">
       <div className="flex items-center justify-between gap-4">
@@ -831,18 +843,17 @@ export default function AgentDashboardPage(): ReactElement {
       getHostBookings(),
       getHostViewings(),
     ]).then(([portfolioResult, bookingsResult, viewingsResult]) => {
-        if (!active) {
-          return;
-        }
+      if (!active) {
+        return;
+      }
 
-        setPortfolio(portfolioResult.data);
-        setBookings(bookingsResult.data);
-        setViewings(viewingsResult.data);
-        // The portfolio is the page. Bookings failing alone still leaves it useful.
-        setLoadError(portfolioResult.data ? "" : (portfolioResult.message ?? ""));
-        setIsLoading(false);
-      },
-    );
+      setPortfolio(portfolioResult.data);
+      setBookings(bookingsResult.data);
+      setViewings(viewingsResult.data);
+      // The portfolio is the page. Bookings failing alone still leaves it useful.
+      setLoadError(portfolioResult.data ? "" : (portfolioResult.message ?? ""));
+      setIsLoading(false);
+    });
 
     return () => {
       active = false;

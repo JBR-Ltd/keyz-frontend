@@ -5,6 +5,12 @@ import { resolveApiError } from "@/lib/errors";
 // === Types
 
 export type BookingStatus = "PENDING" | "CONFIRMED" | "CANCELLED" | "COMPLETED";
+export type BookingKind = "RENTAL_REQUEST" | "SHORT_STAY";
+export type MoveInPreference =
+  | "ASAP"
+  | "WITHIN_30_DAYS"
+  | "EXACT_DATE"
+  | "FLEXIBLE";
 
 export interface PartySummary {
   id: number;
@@ -16,14 +22,18 @@ export interface PartySummary {
 
 export interface Booking {
   createdAt: string | null;
-  endDate: string;
+  bookingKind?: BookingKind;
+  endDate: string | null;
   host: PartySummary | null;
   id: number;
   propertyAddress: string;
   propertyId: number;
   propertyImageUrl: string | null;
   propertyTitle: string;
-  startDate: string;
+  moveInPreference?: MoveInPreference | null;
+  preferredMoveInDate?: string | null;
+  rentalMode?: "ANNUAL" | "MONTHLY" | "SHORT_STAY";
+  startDate: string | null;
   status: BookingStatus;
   tenant: PartySummary | null;
   totalPrice: number;
@@ -55,10 +65,12 @@ function isBooking(value: unknown): value is Booking {
     typeof value.id === "number" &&
     "propertyId" in value &&
     typeof value.propertyId === "number" &&
-    "startDate" in value &&
-    typeof value.startDate === "string" &&
-    "endDate" in value &&
-    typeof value.endDate === "string" &&
+    (!("startDate" in value) ||
+      value.startDate === null ||
+      typeof value.startDate === "string") &&
+    (!("endDate" in value) ||
+      value.endDate === null ||
+      typeof value.endDate === "string") &&
     "status" in value &&
     typeof value.status === "string" &&
     (!("host" in value) || value.host === null || isPartySummary(value.host)) &&
@@ -74,7 +86,9 @@ function getAccessToken(): string {
   return localStorage.getItem("rello_token") ?? "";
 }
 
-async function requestBookings(path: string): Promise<BookingResult<Booking[]>> {
+async function requestBookings(
+  path: string,
+): Promise<BookingResult<Booking[]>> {
   const token = getAccessToken();
 
   if (!token) {
@@ -154,7 +168,10 @@ export async function getBookingQuote(
     if (!response.ok) {
       return {
         data: null,
-        message: resolveApiError(payload, "That price could not be worked out."),
+        message: resolveApiError(
+          payload,
+          "That price could not be worked out.",
+        ),
       };
     }
 
@@ -215,6 +232,64 @@ export async function createBooking(
   } catch {
     return { data: null, message: "That booking could not be made." };
   }
+}
+
+export interface RentalRequestInput {
+  message?: string;
+  moveInPreference: MoveInPreference;
+  preferredMoveInDate?: string;
+  propertyId: number;
+}
+
+export async function createRentalRequest(
+  input: RentalRequestInput,
+): Promise<BookingResult<Booking | null>> {
+  const token = getAccessToken();
+
+  if (!token) {
+    return { data: null, message: "Your session has expired. Log in again." };
+  }
+
+  try {
+    const response = await fetch("/api/bookings/rental-requests", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    });
+    const payload: unknown = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      return {
+        data: null,
+        message: resolveApiError(
+          payload,
+          "That rental request could not be sent.",
+        ),
+      };
+    }
+
+    const data =
+      payload !== null && typeof payload === "object" && "data" in payload
+        ? payload.data
+        : null;
+
+    return isBooking(data)
+      ? { data }
+      : { data: null, message: "That rental request could not be sent." };
+  } catch {
+    return { data: null, message: "That rental request could not be sent." };
+  }
+}
+
+export function createShortletBooking(
+  propertyId: number,
+  checkInDate: string,
+  checkOutDate: string,
+): Promise<BookingResult<Booking | null>> {
+  return createBooking(propertyId, checkInDate, checkOutDate);
 }
 
 export async function updateBookingStatus(

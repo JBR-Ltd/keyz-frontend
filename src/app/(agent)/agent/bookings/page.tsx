@@ -111,10 +111,7 @@ const STAGE_LABELS: Record<TenancyStage, string> = {
   upcoming: "Upcoming",
 };
 
-const STAGE_TONES: Record<
-  TenancyStage,
-  "accent" | "neutral" | "primary"
-> = {
+const STAGE_TONES: Record<TenancyStage, "accent" | "neutral" | "primary"> = {
   active: "primary",
   past: "neutral",
   request: "accent",
@@ -149,9 +146,13 @@ function toStage(booking: Booking): TenancyStage {
     return "past";
   }
 
+  if (booking.bookingKind === "RENTAL_REQUEST" || !booking.endDate) {
+    return "active";
+  }
+
   const today = new Date().setHours(0, 0, 0, 0);
 
-  if (toDate(booking.startDate).getTime() > today) {
+  if (booking.startDate && toDate(booking.startDate).getTime() > today) {
     return "upcoming";
   }
 
@@ -160,7 +161,9 @@ function toStage(booking: Booking): TenancyStage {
 
 function toTenancy(booking: Booking): Tenancy {
   return {
-    endDate: formatDate(booking.endDate),
+    endDate: booking.endDate
+      ? formatDate(booking.endDate)
+      : "No fixed end date",
     id: booking.id,
     imageUrl: booking.propertyImageUrl,
     monthlyRent: booking.totalPrice,
@@ -168,7 +171,11 @@ function toTenancy(booking: Booking): Tenancy {
     propertyId: booking.propertyId,
     propertyTitle: booking.propertyTitle,
     stage: toStage(booking),
-    startDate: formatDate(booking.startDate),
+    startDate: booking.startDate
+      ? formatDate(booking.startDate)
+      : booking.preferredMoveInDate
+        ? formatDate(booking.preferredMoveInDate)
+        : "Flexible move-in",
     status: booking.status,
     tenantId: booking.tenant?.id ?? null,
     tenantName: booking.tenant?.name ?? "Tenant",
@@ -201,20 +208,73 @@ function matchesQuery(tenancy: Tenancy, query: string): boolean {
 function TenanciesSkeleton(): ReactElement {
   return (
     <main
-      className="min-h-screen animate-pulse px-5 py-12 motion-reduce:animate-none sm:px-8 lg:px-10 lg:py-16 xl:px-14"
+      className="min-h-screen animate-pulse overflow-x-hidden px-5 py-12 motion-reduce:animate-none sm:px-8 lg:px-10 lg:py-16 xl:px-14"
       aria-busy="true"
       aria-label="Loading tenancies"
     >
-      <div className="h-12 rounded-lg bg-primary/5" />
-      <div className="mt-7 overflow-hidden rounded-lg bg-bg shadow-sm">
-        <div className="h-14 border-b border-primary/10 bg-surface-soft" />
-        {[0, 1, 2, 3].map((item) => (
-          <div
-            key={item}
-            className="h-28 border-b border-primary/10 last:border-0"
-          />
-        ))}
+      <div className="flex flex-col gap-4 rounded-lg bg-bg p-4 shadow-sm lg:flex-row lg:items-center lg:justify-between">
+        <div className="overflow-hidden">
+          <div className="flex min-w-max gap-2">
+            {["w-20", "w-28", "w-28", "w-24", "w-20"].map((width, index) => (
+              <div
+                key={index}
+                className={`h-11 shrink-0 rounded-full bg-skeleton ${width}`}
+              />
+            ))}
+          </div>
+        </div>
+        <div className="h-12 w-full rounded-full bg-skeleton lg:max-w-xs" />
       </div>
+
+      <div className="mt-7 overflow-hidden rounded-lg border border-border/70 bg-bg shadow-sm">
+        <div className="hidden border-b border-primary/10 bg-surface-soft px-6 py-3 lg:grid lg:grid-cols-[minmax(15rem,1.1fr)_minmax(16rem,1.2fr)_minmax(10rem,0.8fr)_minmax(8rem,0.6fr)_2rem] lg:gap-5">
+          <div className="h-3 w-16 rounded-full bg-skeleton" />
+          <div className="h-3 w-20 rounded-full bg-skeleton" />
+          <div className="h-3 w-28 rounded-full bg-skeleton" />
+          <div className="h-3 w-14 rounded-full bg-skeleton" />
+        </div>
+
+        <div className="divide-y divide-primary/10">
+          {[0, 1, 2].map((item) => (
+            <div
+              key={item}
+              className="relative grid gap-5 p-5 lg:grid-cols-[minmax(15rem,1.1fr)_minmax(16rem,1.2fr)_minmax(10rem,0.8fr)_minmax(8rem,0.6fr)_2rem] lg:items-center lg:px-6"
+            >
+              <div className="flex min-w-0 items-center gap-3 pr-9 lg:pr-0">
+                <div className="h-11 w-11 shrink-0 rounded-full bg-skeleton-strong" />
+                <div className="min-w-0 flex-1">
+                  <div className="h-4 w-32 max-w-full rounded-full bg-skeleton" />
+                  <div className="mt-2 h-3 w-20 rounded-full bg-skeleton" />
+                </div>
+              </div>
+
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="h-13 w-13 shrink-0 rounded-lg bg-skeleton-strong" />
+                <div className="min-w-0 flex-1">
+                  <div className="h-4 w-40 max-w-full rounded-full bg-skeleton" />
+                  <div className="mt-2 h-3 w-48 max-w-full rounded-full bg-skeleton" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 rounded-lg bg-surface-soft p-3 lg:contents">
+                <div>
+                  <div className="h-3 w-20 rounded-full bg-skeleton lg:hidden" />
+                  <div className="mt-2 h-4 w-24 rounded-full bg-skeleton lg:mt-0" />
+                  <div className="mt-2 h-3 w-28 rounded-full bg-skeleton" />
+                  <div className="mt-2 h-3 w-24 rounded-full bg-skeleton" />
+                </div>
+                <div>
+                  <div className="h-3 w-12 rounded-full bg-skeleton lg:hidden" />
+                  <div className="mt-2 h-7 w-24 rounded-full bg-skeleton lg:mt-0" />
+                </div>
+              </div>
+
+              <div className="absolute right-5 top-7 h-5 w-5 rounded-full bg-skeleton lg:static" />
+            </div>
+          ))}
+        </div>
+      </div>
+      <span className="sr-only">Loading tenancies</span>
     </main>
   );
 }
@@ -390,7 +450,10 @@ function TenancyDrawer({
 
                 <div className="mt-6 rounded-lg border border-primary/10 p-5">
                   <div className="flex items-start gap-3">
-                    <CalendarDays size={19} className="mt-0.5 text-accent-alt" />
+                    <CalendarDays
+                      size={19}
+                      className="mt-0.5 text-accent-alt"
+                    />
                     <div>
                       <p className="font-body text-xs font-medium text-muted">
                         Proposed tenancy period
@@ -406,7 +469,9 @@ function TenancyDrawer({
                   {primaryAction ? (
                     <button
                       type="button"
-                      onClick={() => onStatusChange(tenancy, primaryAction.status)}
+                      onClick={() =>
+                        onStatusChange(tenancy, primaryAction.status)
+                      }
                       disabled={isUpdating}
                       className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-full bg-primary px-5 font-body text-sm font-bold text-white hover:bg-primary/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-60"
                     >
@@ -463,7 +528,9 @@ export default function AgentBookingsPage(): ReactElement {
   const [query, setQuery] = useState("");
   const [selectedTenancy, setSelectedTenancy] = useState<Tenancy | null>(null);
   const [chatTenancy, setChatTenancy] = useState<Tenancy | null>(null);
-  const [documentsTenancy, setDocumentsTenancy] = useState<Tenancy | null>(null);
+  const [documentsTenancy, setDocumentsTenancy] = useState<Tenancy | null>(
+    null,
+  );
   const [tenancies, setTenancies] = useState<Tenancy[]>([]);
   const [loadError, setLoadError] = useState("");
   const [updatingId, setUpdatingId] = useState<number | null>(null);
@@ -610,8 +677,8 @@ export default function AgentBookingsPage(): ReactElement {
         {visibleTenancies.length === 0 ? (
           <EmptyTenancies query={query} tab={activeTab} />
         ) : (
-          <section className="overflow-hidden rounded-lg bg-bg shadow-sm">
-            <div className="hidden border-b border-primary/10 bg-surface-soft px-6 py-3 font-body text-[11px] font-bold uppercase tracking-[0.14em] text-muted md:grid md:grid-cols-[minmax(15rem,1.1fr)_minmax(16rem,1.2fr)_minmax(10rem,0.8fr)_minmax(8rem,0.6fr)_2rem] md:gap-5">
+          <section className="overflow-hidden rounded-lg border border-border/70 bg-bg shadow-sm">
+            <div className="hidden border-b border-primary/10 bg-surface-soft px-6 py-3 font-body text-[11px] font-bold uppercase tracking-[0.14em] text-muted lg:grid lg:grid-cols-[minmax(15rem,1.1fr)_minmax(16rem,1.2fr)_minmax(10rem,0.8fr)_minmax(8rem,0.6fr)_2rem] lg:gap-5">
               <span>Tenant</span>
               <span>Property</span>
               <span>Tenancy period</span>
@@ -625,9 +692,9 @@ export default function AgentBookingsPage(): ReactElement {
                   key={tenancy.id}
                   type="button"
                   onClick={() => setSelectedTenancy(tenancy)}
-                  className="grid w-full gap-5 p-5 text-left transition-colors hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent md:grid-cols-[minmax(15rem,1.1fr)_minmax(16rem,1.2fr)_minmax(10rem,0.8fr)_minmax(8rem,0.6fr)_2rem] md:items-center md:px-6"
+                  className="relative grid w-full gap-5 p-5 text-left transition-colors hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent lg:grid-cols-[minmax(15rem,1.1fr)_minmax(16rem,1.2fr)_minmax(10rem,0.8fr)_minmax(8rem,0.6fr)_2rem] lg:items-center lg:px-6"
                 >
-                  <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex min-w-0 items-center gap-3 pr-9 lg:pr-0">
                     <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/5 font-display text-sm font-bold text-primary">
                       {tenancy.tenantName
                         .split(" ")
@@ -670,20 +737,39 @@ export default function AgentBookingsPage(): ReactElement {
                     </div>
                   </div>
 
-                  <div>
-                    <p className="font-body text-sm font-bold text-primary">
-                      {tenancy.startDate}
-                    </p>
-                    <p className="mt-1 font-body text-xs text-muted">
-                      <PropertyPrice value={tenancy.monthlyRent} /> monthly
-                    </p>
+                  <div className="grid grid-cols-2 gap-3 rounded-lg bg-surface-soft p-3 lg:contents">
+                    <div>
+                      <p className="font-body text-[10px] font-bold uppercase tracking-[0.12em] text-muted lg:hidden">
+                        Tenancy period
+                      </p>
+                      <p className="mt-1 font-body text-sm font-bold text-primary lg:mt-0">
+                        {tenancy.startDate}
+                      </p>
+                      <p className="mt-1 font-body text-xs text-muted">
+                        to {tenancy.endDate}
+                      </p>
+                      <p className="mt-1 font-body text-xs text-muted">
+                        <PropertyPrice value={tenancy.monthlyRent} /> monthly
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="font-body text-[10px] font-bold uppercase tracking-[0.12em] text-muted lg:hidden">
+                        Status
+                      </p>
+                      <StatusBadge
+                        tone={STAGE_TONES[tenancy.stage]}
+                        className="mt-1 lg:mt-0"
+                      >
+                        {STAGE_LABELS[tenancy.stage]}
+                      </StatusBadge>
+                    </div>
                   </div>
 
-                  <StatusBadge tone={STAGE_TONES[tenancy.stage]}>
-                    {STAGE_LABELS[tenancy.stage]}
-                  </StatusBadge>
-
-                  <ChevronRight size={19} className="text-muted" />
+                  <ChevronRight
+                    size={19}
+                    className="absolute right-5 top-7 text-muted lg:static"
+                  />
                 </button>
               ))}
             </div>

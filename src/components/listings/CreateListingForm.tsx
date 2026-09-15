@@ -9,8 +9,12 @@ import type {
 } from "react";
 import {
   ArrowLeft,
+  ArrowRight,
   Camera,
   Check,
+  ChevronLeft,
+  ChevronRight,
+  CircleCheck,
   Home,
   ImagePlus,
   Loader2,
@@ -80,12 +84,19 @@ const PRICE_LABELS: Record<RentalMode, string> = {
   SHORT_STAY: "Price per night",
 };
 
+const PRICE_PERIOD_LABELS: Record<RentalMode, string> = {
+  ANNUAL: "year",
+  MONTHLY: "month",
+  SHORT_STAY: "night",
+};
+
 interface ListingFormErrors {
   title?: string;
   description?: string;
   price?: string;
   city?: string;
   area?: string;
+  address?: string;
   bedrooms?: string;
   bathrooms?: string;
   photos?: string;
@@ -119,7 +130,8 @@ type ListingFormExperience = "classic" | "guided";
 type ListingStep =
   | "basics"
   | "location"
-  | "amenities"
+  | "details"
+  | "pricing"
   | "photos"
   | "verify"
   | "review";
@@ -141,10 +153,11 @@ const CITIES = ["Lagos", "Abuja", "Port Harcourt", "Other"];
 
 const LISTING_STEPS: ListingStepOption[] = [
   { id: "basics", label: "Basics" },
-  { id: "location", label: "Property" },
-  { id: "amenities", label: "Amenities" },
+  { id: "location", label: "Location" },
+  { id: "details", label: "Details" },
+  { id: "pricing", label: "Pricing" },
   { id: "photos", label: "Photos" },
-  { id: "verify", label: "Proof" },
+  { id: "verify", label: "Verification" },
   { id: "review", label: "Review" },
 ];
 
@@ -201,6 +214,7 @@ function validateForm(
   }
   if (!values.city) errors.city = "Select a city.";
   if (!values.area.trim()) errors.area = "Enter an area or neighborhood.";
+  if (!values.address.trim()) errors.address = "Enter the property address.";
   if (values.bedrooms < 1) errors.bedrooms = "Add at least one bedroom.";
   if (values.bathrooms < 1) errors.bathrooms = "Add at least one bathroom.";
   if (photos.length === 0)
@@ -227,7 +241,6 @@ function validateListingStep(
     return {
       title: errors.title,
       description: errors.description,
-      price: errors.price,
     };
   }
 
@@ -235,10 +248,18 @@ function validateListingStep(
     return {
       city: errors.city,
       area: errors.area,
+      address: errors.address,
+    };
+  }
+
+  if (step === "details") {
+    return {
       bedrooms: errors.bedrooms,
       bathrooms: errors.bathrooms,
     };
   }
+
+  if (step === "pricing") return { price: errors.price };
 
   if (step === "photos") {
     return { photos: errors.photos };
@@ -247,12 +268,24 @@ function validateListingStep(
   return {};
 }
 
-function formatPreviewPrice(value: string): string {
+function formatPreviewPrice(value: string, rentalMode: RentalMode): string {
   const amount = Number(value);
 
+  const suffix: Record<RentalMode, string> = {
+    ANNUAL: "/yr",
+    MONTHLY: "/month",
+    SHORT_STAY: "/night",
+  };
+
   return amount > 0
-    ? `₦${amount.toLocaleString("en-NG")}/month`
-    : "Monthly rent not set";
+    ? `₦${amount.toLocaleString("en-NG")}${suffix[rentalMode]}`
+    : "Price not set";
+}
+
+function formatCurrencyInput(value: string): string {
+  const amount = Number(value);
+
+  return value && Number.isFinite(amount) ? amount.toLocaleString("en-NG") : "";
 }
 
 function FormSectionHeading({
@@ -343,6 +376,8 @@ export default function CreateListingForm({
   );
   const [storageUnavailable, setStorageUnavailable] = useState(false);
   const [listingStep, setListingStep] = useState<ListingStep>("basics");
+  const [furthestStepIndex, setFurthestStepIndex] = useState(0);
+  const [isDirty, setIsDirty] = useState(false);
   const [proofCapture, setProofCapture] = useState<ProofCapture | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
   // Rentals only for now, for landlords and agents alike. Sale reopens with the backend flag.
@@ -367,6 +402,17 @@ export default function CreateListingForm({
       timers.forEach((timer) => window.clearTimeout(timer));
     };
   }, []);
+
+  useEffect(() => {
+    const warnBeforeLeaving = (event: BeforeUnloadEvent): void => {
+      if (!isDirty || isSubmitting) return;
+
+      event.preventDefault();
+    };
+
+    window.addEventListener("beforeunload", warnBeforeLeaving);
+    return () => window.removeEventListener("beforeunload", warnBeforeLeaving);
+  }, [isDirty, isSubmitting]);
 
   useEffect(() => {
     if (!initialListingId) {
@@ -423,6 +469,7 @@ export default function CreateListingForm({
       setPhotos(
         result.data.photos.map((photo) => ({ ...photo, uploading: false })),
       );
+      setIsDirty(false);
       setIsLoadingDraft(false);
     };
 
@@ -439,6 +486,7 @@ export default function CreateListingForm({
   ): void => {
     setValues((current) => ({ ...current, [key]: value }));
     setErrors((current) => ({ ...current, [key]: undefined }));
+    setIsDirty(true);
   };
 
   /**
@@ -552,14 +600,30 @@ export default function CreateListingForm({
   });
 
   const addFiles = async (files: File[]): Promise<void> => {
-    const imageFiles = files.filter((file) => file.type.startsWith("image/"));
+    const remainingSlots = Math.max(20 - photos.length, 0);
+    const imageFiles = files
+      .filter(
+        (file) => file.type.startsWith("image/") && file.size <= 10_000_000,
+      )
+      .slice(0, remainingSlots);
 
     if (imageFiles.length === 0) {
       setErrors((current) => ({
         ...current,
-        photos: "Choose JPG, PNG, WEBP, or another image format.",
+        photos:
+          remainingSlots === 0
+            ? "You can add up to 20 photos."
+            : "Choose an image smaller than 10 MB.",
       }));
       return;
+    }
+
+    if (imageFiles.length < files.length) {
+      notify({
+        title: "Some photos were not added",
+        description: "Use image files under 10 MB, with no more than 20 total.",
+        variant: "error",
+      });
     }
 
     try {
@@ -576,6 +640,7 @@ export default function CreateListingForm({
       );
 
       setPhotos((current) => [...current, ...nextPhotos]);
+      setIsDirty(true);
       setErrors((current) => ({ ...current, photos: undefined }));
 
       nextPhotos.forEach((photo, index) => {
@@ -630,6 +695,7 @@ export default function CreateListingForm({
         name: file.name || "proof.jpg",
         type: file.type || "image/jpeg",
       });
+      setIsDirty(true);
 
       if (!fix) {
         notify({
@@ -673,6 +739,7 @@ export default function CreateListingForm({
 
   const removePhoto = (photoId: string): void => {
     setPhotos((current) => current.filter((photo) => photo.id !== photoId));
+    setIsDirty(true);
   };
 
   const makeCover = (photoId: string): void => {
@@ -682,6 +749,26 @@ export default function CreateListingForm({
         ? [selected, ...current.filter((photo) => photo.id !== photoId)]
         : current;
     });
+    setIsDirty(true);
+  };
+
+  const movePhoto = (photoId: string, offset: -1 | 1): void => {
+    setPhotos((current) => {
+      const index = current.findIndex((photo) => photo.id === photoId);
+      const nextIndex = index + offset;
+
+      if (index < 0 || nextIndex < 0 || nextIndex >= current.length) {
+        return current;
+      }
+
+      const reordered = [...current];
+      [reordered[index], reordered[nextIndex]] = [
+        reordered[nextIndex],
+        reordered[index],
+      ];
+      return reordered;
+    });
+    setIsDirty(true);
   };
 
   const moveToListingStep = (step: ListingStep): void => {
@@ -706,6 +793,9 @@ export default function CreateListingForm({
     const nextStep = LISTING_STEPS[listingStepIndex + 1];
 
     if (nextStep) {
+      setFurthestStepIndex((current) =>
+        Math.max(current, listingStepIndex + 1),
+      );
       moveToListingStep(nextStep.id);
     }
   };
@@ -734,6 +824,7 @@ export default function CreateListingForm({
     }
 
     setDraftId(result.data.id);
+    setIsDirty(false);
     notify({ title: "Draft saved", variant: "success" });
   };
 
@@ -766,6 +857,8 @@ export default function CreateListingForm({
       });
       return;
     }
+
+    setIsDirty(false);
 
     // The proof needs the listing's real id, so it can only go up once the listing exists
     const propertyId = Number(result.data.id);
@@ -834,7 +927,7 @@ export default function CreateListingForm({
   if (experience === "guided") {
     return (
       <main className="min-h-screen overflow-x-hidden px-5 pb-0 pt-12 sm:px-8 lg:px-10 lg:pt-16 xl:px-14">
-        <div className="mx-auto max-w-5xl">
+        <div className="mx-auto max-w-7xl">
           <header className="pb-8">
             {listingStepIndex > 0 ? (
               <button
@@ -867,14 +960,19 @@ export default function CreateListingForm({
                   Build a complete rental listing one focused step at a time.
                 </p>
               </div>
-              <p className="font-body text-sm font-medium text-muted">
-                Step {listingStepIndex + 1} of {LISTING_STEPS.length}
-              </p>
+              <div className="text-right">
+                <p className="font-body text-sm font-bold text-primary">
+                  {LISTING_STEPS[listingStepIndex]?.label}
+                </p>
+                <p className="mt-1 font-body text-xs text-muted">
+                  Step {listingStepIndex + 1} of {LISTING_STEPS.length}
+                </p>
+              </div>
             </div>
           </header>
 
           <div
-            className="h-2 w-full overflow-hidden rounded-full border border-primary/15 bg-transparent"
+            className="h-1.5 w-full overflow-hidden rounded-full bg-surface-soft lg:hidden"
             role="progressbar"
             aria-label={`Listing creation step ${listingStepIndex + 1} of ${LISTING_STEPS.length}`}
             aria-valuemin={1}
@@ -895,648 +993,958 @@ export default function CreateListingForm({
             </p>
           ) : null}
 
-          <form
-            className="mt-7"
-            noValidate
-            onSubmit={(event) => {
-              if (listingStep !== "review") {
-                event.preventDefault();
-                handleContinue();
-                return;
-              }
+          <div className="mt-8 grid items-start gap-8 lg:grid-cols-[13rem_minmax(0,1fr)] xl:grid-cols-[13rem_minmax(0,44rem)_15rem]">
+            <aside
+              className="sticky top-24 hidden lg:block"
+              aria-label="Listing steps"
+            >
+              <ol className="space-y-1">
+                {LISTING_STEPS.map((step, index) => {
+                  const current = index === listingStepIndex;
+                  const complete =
+                    index < listingStepIndex || index < furthestStepIndex;
+                  const available = index <= furthestStepIndex;
 
-              void handleSubmit(event);
-            }}
-          >
-            <div className="rounded-xl border border-border bg-bg p-5 shadow-sm sm:p-8">
-              {listingStep === "basics" ? (
-                <section aria-labelledby="guided-listing-basics">
-                  <p className="font-body text-xs font-medium uppercase tracking-wide text-muted">
-                    Property basics
-                  </p>
-                  <h2
-                    id="guided-listing-basics"
-                    className="mt-2 font-display text-2xl font-bold text-primary"
-                  >
-                    Start with the essentials
-                  </h2>
-                  <p className="mt-2 font-body text-sm leading-6 text-muted">
-                    Give renters a clear first impression of the home.
-                  </p>
+                  return (
+                    <li key={step.id}>
+                      <button
+                        type="button"
+                        onClick={() => available && moveToListingStep(step.id)}
+                        disabled={!available}
+                        className={cn(
+                          "flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left font-body text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+                          current
+                            ? "bg-primary text-white"
+                            : available
+                              ? "text-primary hover:bg-surface-soft"
+                              : "cursor-not-allowed text-muted/60",
+                        )}
+                        aria-current={current ? "step" : undefined}
+                      >
+                        <span
+                          className={cn(
+                            "flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-xs font-bold",
+                            current
+                              ? "border-accent bg-accent text-primary"
+                              : complete
+                                ? "border-accent text-accent-alt"
+                                : "border-current/25",
+                          )}
+                        >
+                          {complete && !current ? (
+                            <Check size={14} aria-hidden="true" />
+                          ) : (
+                            index + 1
+                          )}
+                        </span>
+                        {step.label}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ol>
+            </aside>
 
-                  <div className="mt-6 grid gap-5 sm:grid-cols-2">
-                    <div className="sm:col-span-2">
-                      <p className="font-body text-sm font-bold text-primary">
-                        Listing Type
-                      </p>
-                      <div className="mt-2 flex flex-wrap items-center gap-3 rounded-lg border border-border px-4 py-3">
-                        <span className="rounded-full border border-accent/40 px-3 py-1.5 font-body text-xs font-bold text-primary">
-                          {typeLabel}
-                        </span>
-                        <span className="font-body text-sm text-muted">
-                          {typeHelper}
-                        </span>
+            <form
+              className="min-w-0"
+              noValidate
+              onSubmit={(event) => {
+                if (listingStep !== "review") {
+                  event.preventDefault();
+                  handleContinue();
+                  return;
+                }
+
+                void handleSubmit(event);
+              }}
+            >
+              <div
+                key={listingStep}
+                className="animate-in fade-in-0 slide-in-from-bottom-2 rounded-2xl border border-border bg-bg p-5 shadow-sm duration-300 motion-reduce:animate-none sm:p-8 lg:p-10"
+              >
+                {listingStep === "basics" ? (
+                  <section aria-labelledby="guided-listing-basics">
+                    <p className="font-body text-xs font-medium uppercase tracking-wide text-muted">
+                      Property basics
+                    </p>
+                    <h2
+                      id="guided-listing-basics"
+                      className="mt-2 font-display text-2xl font-bold text-primary"
+                    >
+                      Start with the essentials
+                    </h2>
+                    <p className="mt-2 font-body text-sm leading-6 text-muted">
+                      Give renters a clear first impression of the home.
+                    </p>
+
+                    <div className="mt-6 grid gap-5 sm:grid-cols-2">
+                      <div className="sm:col-span-2">
+                        <p className="font-body text-sm font-bold text-primary">
+                          Listing Type
+                        </p>
+                        <div className="mt-2 flex flex-wrap items-center gap-3 rounded-lg border border-border px-4 py-3">
+                          <span className="rounded-full border border-accent/40 px-3 py-1.5 font-body text-xs font-bold text-primary">
+                            {typeLabel}
+                          </span>
+                          <span className="font-body text-sm text-muted">
+                            {typeHelper}
+                          </span>
+                        </div>
                       </div>
+
+                      <label className="sm:col-span-2">
+                        <span className="font-body text-sm font-bold text-primary">
+                          Title{" "}
+                          <span className="font-normal text-muted">
+                            (required)
+                          </span>
+                        </span>
+                        <input
+                          value={values.title}
+                          onChange={(event) =>
+                            updateValue("title", event.target.value)
+                          }
+                          className={INPUT_CLASS_NAME}
+                          placeholder="e.g. GRA Family Duplex"
+                          aria-invalid={Boolean(errors.title)}
+                        />
+                        {errors.title ? (
+                          <span className="mt-2 block font-body text-sm font-medium text-red-700">
+                            {errors.title}
+                          </span>
+                        ) : null}
+                      </label>
+
+                      <label className="sm:col-span-2">
+                        <span className="font-body text-sm font-bold text-primary">
+                          Description{" "}
+                          <span className="font-normal text-muted">
+                            (required)
+                          </span>
+                        </span>
+                        <textarea
+                          value={values.description}
+                          onChange={(event) =>
+                            updateValue("description", event.target.value)
+                          }
+                          className={`${INPUT_CLASS_NAME} min-h-36 resize-y`}
+                          placeholder="Describe what makes this property stand out."
+                          aria-invalid={Boolean(errors.description)}
+                        />
+                        {errors.description ? (
+                          <span className="mt-2 block font-body text-sm font-medium text-red-700">
+                            {errors.description}
+                          </span>
+                        ) : null}
+                      </label>
                     </div>
+                  </section>
+                ) : null}
 
-                    <label className="sm:col-span-2">
-                      <span className="font-body text-sm font-bold text-primary">
-                        Title
-                      </span>
-                      <input
-                        value={values.title}
-                        onChange={(event) =>
-                          updateValue("title", event.target.value)
-                        }
-                        className={INPUT_CLASS_NAME}
-                        placeholder="e.g. GRA Family Duplex"
-                        aria-invalid={Boolean(errors.title)}
-                      />
-                      {errors.title ? (
-                        <span className="mt-2 block font-body text-sm font-medium text-red-700">
-                          {errors.title}
+                {listingStep === "location" ? (
+                  <section aria-labelledby="guided-listing-property">
+                    <p className="font-body text-xs font-medium uppercase tracking-wide text-muted">
+                      Property location
+                    </p>
+                    <h2
+                      id="guided-listing-property"
+                      className="mt-2 font-display text-2xl font-bold text-primary"
+                    >
+                      Where is the property?
+                    </h2>
+                    <p className="mt-2 font-body text-sm leading-6 text-muted">
+                      Add the location renters will use to understand the area.
+                    </p>
+
+                    <div className="mt-6 grid gap-5 sm:grid-cols-2">
+                      <label>
+                        <span className="font-body text-sm font-bold text-primary">
+                          City{" "}
+                          <span className="font-normal text-muted">
+                            (required)
+                          </span>
                         </span>
-                      ) : null}
-                    </label>
+                        <Select
+                          value={values.city}
+                          onValueChange={(city) => updateValue("city", city)}
+                          className={INPUT_CLASS_NAME}
+                          invalid={Boolean(errors.city)}
+                          ariaLabel="City"
+                          placeholder="Select a city"
+                          options={toSelectOptions(CITIES)}
+                        />
+                        {errors.city ? (
+                          <span className="mt-2 block font-body text-sm font-medium text-red-700">
+                            {errors.city}
+                          </span>
+                        ) : null}
+                      </label>
 
-                    <label className="sm:col-span-2">
-                      <span className="font-body text-sm font-bold text-primary">
-                        Description
-                      </span>
-                      <textarea
-                        value={values.description}
-                        onChange={(event) =>
-                          updateValue("description", event.target.value)
-                        }
-                        className={`${INPUT_CLASS_NAME} min-h-36 resize-y`}
-                        placeholder="Describe what makes this property stand out."
-                        aria-invalid={Boolean(errors.description)}
-                      />
-                      {errors.description ? (
-                        <span className="mt-2 block font-body text-sm font-medium text-red-700">
-                          {errors.description}
+                      <label>
+                        <span className="font-body text-sm font-bold text-primary">
+                          Area or neighborhood{" "}
+                          <span className="font-normal text-muted">
+                            (required)
+                          </span>
                         </span>
-                      ) : null}
-                    </label>
+                        <input
+                          value={values.area}
+                          onChange={(event) =>
+                            updateValue("area", event.target.value)
+                          }
+                          className={INPUT_CLASS_NAME}
+                          placeholder="e.g. Lekki Phase 1"
+                          aria-invalid={Boolean(errors.area)}
+                        />
+                        {errors.area ? (
+                          <span className="mt-2 block font-body text-sm font-medium text-red-700">
+                            {errors.area}
+                          </span>
+                        ) : null}
+                      </label>
 
-                    {renderRentalModeFields()}
+                      <label className="sm:col-span-2">
+                        <span className="font-body text-sm font-bold text-primary">
+                          Full address{" "}
+                          <span className="font-normal text-muted">
+                            (required)
+                          </span>
+                        </span>
+                        <input
+                          value={values.address}
+                          onChange={(event) =>
+                            updateValue("address", event.target.value)
+                          }
+                          className={INPUT_CLASS_NAME}
+                          placeholder="Street and property number"
+                          aria-invalid={Boolean(errors.address)}
+                        />
+                        {errors.address ? (
+                          <span className="mt-2 block font-body text-sm font-medium text-red-700">
+                            {errors.address}
+                          </span>
+                        ) : null}
+                        <span className="mt-2 block font-body text-xs leading-5 text-muted">
+                          Only shown to verified interested parties.
+                        </span>
+                      </label>
+                    </div>
+                  </section>
+                ) : null}
 
-                    <label className="sm:col-span-2">
-                      <span className="font-body text-sm font-bold text-primary">
-                        {priceLabel}
-                      </span>
-                      <span className="mt-2 flex min-h-12 items-center rounded-lg border border-border bg-bg focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/30">
-                        <span className="border-r border-border px-4 font-body text-base font-bold text-primary">
-                          ₦
+                {listingStep === "details" ? (
+                  <section aria-labelledby="guided-listing-amenities">
+                    <p className="font-body text-xs font-medium uppercase tracking-wide text-muted">
+                      Property details
+                    </p>
+                    <h2
+                      id="guided-listing-amenities"
+                      className="mt-2 font-display text-2xl font-bold text-primary"
+                    >
+                      Help renters compare the home
+                    </h2>
+                    <p className="mt-2 font-body text-sm leading-6 text-muted">
+                      Add the room count, size, and features included.
+                    </p>
+
+                    <div className="mt-6 grid gap-5 sm:grid-cols-2">
+                      <NumberStepper
+                        label="Bedrooms"
+                        value={values.bedrooms}
+                        onChange={(value) => updateValue("bedrooms", value)}
+                        error={errors.bedrooms}
+                      />
+                      <NumberStepper
+                        label="Bathrooms"
+                        value={values.bathrooms}
+                        onChange={(value) => updateValue("bathrooms", value)}
+                        error={errors.bathrooms}
+                      />
+                      <label className="sm:col-span-2">
+                        <span className="font-body text-sm font-bold text-primary">
+                          Square footage{" "}
+                          <span className="font-normal text-muted">
+                            (optional)
+                          </span>
                         </span>
                         <input
                           type="number"
                           min="0"
-                          value={values.price}
+                          value={values.squareFootage}
                           onChange={(event) =>
-                            updateValue("price", event.target.value)
+                            updateValue("squareFootage", event.target.value)
                           }
-                          className="min-h-12 min-w-0 flex-1 bg-bg px-4 font-body text-base text-primary outline-none placeholder:text-muted"
-                          placeholder="0"
-                          aria-invalid={Boolean(errors.price)}
+                          className={INPUT_CLASS_NAME}
+                          placeholder="e.g. 1,800"
                         />
-                      </span>
-                      {errors.price ? (
-                        <span className="mt-2 block font-body text-sm font-medium text-red-700">
-                          {errors.price}
-                        </span>
-                      ) : null}
-                    </label>
-                  </div>
-                </section>
-              ) : null}
+                      </label>
+                    </div>
 
-              {listingStep === "location" ? (
-                <section aria-labelledby="guided-listing-property">
-                  <p className="font-body text-xs font-medium uppercase tracking-wide text-muted">
-                    Location and dimensions
-                  </p>
-                  <h2
-                    id="guided-listing-property"
-                    className="mt-2 font-display text-2xl font-bold text-primary"
-                  >
-                    Describe the property
-                  </h2>
-                  <p className="mt-2 font-body text-sm leading-6 text-muted">
-                    Add the practical details renters use when comparing homes.
-                  </p>
-
-                  <div className="mt-6 grid gap-5 sm:grid-cols-2">
-                    <label>
-                      <span className="font-body text-sm font-bold text-primary">
-                        City
-                      </span>
-                      <Select
-                        value={values.city}
-                        onValueChange={(city) => updateValue("city", city)}
-                        className={INPUT_CLASS_NAME}
-                        invalid={Boolean(errors.city)}
-                        ariaLabel="City"
-                        placeholder="Select a city"
-                        options={toSelectOptions(CITIES)}
-                      />
-                      {errors.city ? (
-                        <span className="mt-2 block font-body text-sm font-medium text-red-700">
-                          {errors.city}
-                        </span>
-                      ) : null}
-                    </label>
-
-                    <label>
-                      <span className="font-body text-sm font-bold text-primary">
-                        Area/Neighborhood
-                      </span>
-                      <input
-                        value={values.area}
-                        onChange={(event) =>
-                          updateValue("area", event.target.value)
-                        }
-                        className={INPUT_CLASS_NAME}
-                        placeholder="e.g. Lekki Phase 1"
-                        aria-invalid={Boolean(errors.area)}
-                      />
-                      {errors.area ? (
-                        <span className="mt-2 block font-body text-sm font-medium text-red-700">
-                          {errors.area}
-                        </span>
-                      ) : null}
-                    </label>
-
-                    <label className="sm:col-span-2">
-                      <span className="font-body text-sm font-bold text-primary">
-                        Full Address
-                      </span>
-                      <input
-                        value={values.address}
-                        onChange={(event) =>
-                          updateValue("address", event.target.value)
-                        }
-                        className={INPUT_CLASS_NAME}
-                        placeholder="Street and property number"
-                      />
-                      <span className="mt-2 block font-body text-xs leading-5 text-muted">
-                        Only shown to verified interested parties.
-                      </span>
-                    </label>
-
-                    <NumberStepper
-                      label="Bedrooms"
-                      value={values.bedrooms}
-                      onChange={(value) => updateValue("bedrooms", value)}
-                      error={errors.bedrooms}
-                    />
-                    <NumberStepper
-                      label="Bathrooms"
-                      value={values.bathrooms}
-                      onChange={(value) => updateValue("bathrooms", value)}
-                      error={errors.bathrooms}
-                    />
-                    <label className="sm:col-span-2">
-                      <span className="font-body text-sm font-bold text-primary">
-                        Square Footage
-                      </span>
-                      <input
-                        type="number"
-                        min="0"
-                        value={values.squareFootage}
-                        onChange={(event) =>
-                          updateValue("squareFootage", event.target.value)
-                        }
-                        className={INPUT_CLASS_NAME}
-                        placeholder="Optional"
-                      />
-                    </label>
-                  </div>
-                </section>
-              ) : null}
-
-              {listingStep === "amenities" ? (
-                <section aria-labelledby="guided-listing-amenities">
-                  <p className="font-body text-xs font-medium uppercase tracking-wide text-muted">
-                    Included features
-                  </p>
-                  <h2
-                    id="guided-listing-amenities"
-                    className="mt-2 font-display text-2xl font-bold text-primary"
-                  >
-                    What does the home offer?
-                  </h2>
-                  <p className="mt-2 font-body text-sm leading-6 text-muted">
-                    Select every practical feature included with the property.
-                  </p>
-
-                  <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    {AMENITIES.map((amenity) => {
-                      const selected = values.amenities.includes(amenity);
-
-                      return (
-                        <button
-                          key={amenity}
-                          type="button"
-                          onClick={() => toggleAmenity(amenity)}
-                          className={cn(
-                            "flex min-h-12 items-center justify-between rounded-xl border bg-transparent px-4 py-3 text-left font-body text-sm font-medium text-primary transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent",
-                            selected
-                              ? "border-accent shadow-sm"
-                              : "border-primary/15 hover:border-accent/70",
-                          )}
-                          aria-pressed={selected}
-                        >
-                          {amenity}
-                          {selected ? (
-                            <Check
-                              className="h-4 w-4 text-accent"
-                              aria-hidden="true"
-                            />
-                          ) : null}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </section>
-              ) : null}
-
-              {listingStep === "photos" ? (
-                <section aria-labelledby="guided-listing-photos">
-                  <p className="font-body text-xs font-medium uppercase tracking-wide text-muted">
-                    Property photography
-                  </p>
-                  <h2
-                    id="guided-listing-photos"
-                    className="mt-2 font-display text-2xl font-bold text-primary"
-                  >
-                    Show renters around
-                  </h2>
-                  <p className="mt-2 font-body text-sm leading-6 text-muted">
-                    Add clear photos and choose the image renters see first.
-                  </p>
-
-                  <label
-                    className="mt-6 flex min-h-32 cursor-pointer items-center justify-center gap-4 rounded-xl border border-dashed border-primary/25 bg-transparent px-5 py-6 text-left transition-all duration-200 hover:border-accent hover:shadow-sm focus-within:ring-2 focus-within:ring-accent"
-                    onDragOver={(event) => event.preventDefault()}
-                    onDrop={handleDrop}
-                    onKeyDown={handleDropKeyDown}
-                    tabIndex={0}
-                  >
-                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-primary/15 text-primary">
-                      <Upload size={20} aria-hidden="true" />
-                    </span>
-                    <span>
-                      <span className="block font-body text-sm font-bold text-primary">
-                        Drop photos here or click to upload
-                      </span>
-                      <span className="mt-1 block font-body text-xs text-muted">
-                        Select multiple JPG, PNG, or WEBP images
-                      </span>
-                    </span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      className="sr-only"
-                      onChange={handleFileInput}
-                    />
-                  </label>
-
-                  {errors.photos ? (
-                    <p className="mt-3 font-body text-sm font-medium text-red-700">
-                      {errors.photos}
+                    <p className="mt-8 font-body text-sm font-bold text-primary">
+                      Amenities{" "}
+                      <span className="font-normal text-muted">(optional)</span>
                     </p>
-                  ) : null}
 
-                  {coverPhoto ? (
-                    <div className="mt-6">
-                      <div className="flex items-center justify-between gap-4">
-                        <p className="font-body text-sm font-bold text-primary">
-                          Cover photo
-                        </p>
-                        <p className="font-body text-xs text-muted">
-                          {photos.length} photo{photos.length === 1 ? "" : "s"}
-                        </p>
-                      </div>
-                      <div className="relative mt-3 aspect-video overflow-hidden rounded-xl border border-border bg-surface-soft">
-                        <Image
-                          src={coverPhoto.dataUrl}
-                          alt={coverPhoto.name}
-                          fill
-                          unoptimized
-                          sizes="(min-width: 1024px) 60vw, 100vw"
-                          className="object-cover"
-                        />
-                        {coverPhoto.uploading ? (
-                          <span className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 text-white">
-                            <Loader2
-                              className="h-6 w-6 animate-spin"
-                              aria-hidden="true"
-                            />
-                            <span className="mt-2 font-body text-xs font-bold">
-                              Uploading
-                            </span>
+                    <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                      {AMENITIES.map((amenity) => {
+                        const selected = values.amenities.includes(amenity);
+
+                        return (
+                          <button
+                            key={amenity}
+                            type="button"
+                            onClick={() => toggleAmenity(amenity)}
+                            className={cn(
+                              "flex min-h-12 items-center justify-between rounded-xl border bg-transparent px-4 py-3 text-left font-body text-sm font-medium text-primary transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+                              selected
+                                ? "border-accent shadow-sm"
+                                : "border-primary/15 hover:border-accent/70",
+                            )}
+                            aria-pressed={selected}
+                          >
+                            {amenity}
+                            {selected ? (
+                              <Check
+                                className="h-4 w-4 text-accent"
+                                aria-hidden="true"
+                              />
+                            ) : null}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </section>
+                ) : null}
+
+                {listingStep === "pricing" ? (
+                  <section aria-labelledby="guided-listing-pricing">
+                    <p className="font-body text-xs font-medium uppercase tracking-wide text-muted">
+                      Rental terms
+                    </p>
+                    <h2
+                      id="guided-listing-pricing"
+                      className="mt-2 font-display text-2xl font-bold text-primary"
+                    >
+                      Set the price
+                    </h2>
+                    <p className="mt-2 font-body text-sm leading-6 text-muted">
+                      Choose how the home is let and enter the amount renters
+                      will see.
+                    </p>
+                    <div className="mt-6 grid gap-5 sm:grid-cols-2">
+                      {renderRentalModeFields()}
+                      <label className="sm:col-span-2">
+                        <span className="flex items-center justify-between gap-4">
+                          <span className="font-body text-sm font-bold text-primary">
+                            {priceLabel}
+                          </span>
+                          <span className="font-body text-xs text-muted">
+                            Enter the exact amount
+                          </span>
+                        </span>
+                        <span
+                          className={cn(
+                            "mt-2 flex min-h-20 items-center overflow-hidden rounded-xl border bg-surface-soft/40 transition-all focus-within:border-accent focus-within:bg-bg focus-within:ring-2 focus-within:ring-accent/30",
+                            errors.price ? "border-red-500" : "border-border",
+                          )}
+                        >
+                          <span className="pl-5 font-display text-3xl font-bold text-primary sm:pl-6">
+                            ₦
+                          </span>
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            value={formatCurrencyInput(values.price)}
+                            onChange={(event) => {
+                              const digits = event.target.value
+                                .replace(/\D/g, "")
+                                .replace(/^0+(?=\d)/, "");
+                              updateValue("price", digits.slice(0, 15));
+                            }}
+                            className="min-h-20 min-w-0 flex-1 bg-transparent px-2 font-display text-3xl font-bold text-primary outline-none placeholder:text-muted/60 sm:px-3"
+                            placeholder="1,500,000"
+                            aria-invalid={Boolean(errors.price)}
+                            aria-describedby={
+                              errors.price
+                                ? "guided-price-error guided-price-help"
+                                : "guided-price-help"
+                            }
+                          />
+                          <span className="mr-5 shrink-0 border-l border-border pl-4 font-body text-sm font-bold text-muted sm:mr-6">
+                            / {PRICE_PERIOD_LABELS[values.rentalMode]}
+                          </span>
+                        </span>
+                        {errors.price ? (
+                          <span
+                            id="guided-price-error"
+                            className="mt-2 block font-body text-sm font-medium text-red-700"
+                          >
+                            {errors.price}
                           </span>
                         ) : null}
-                      </div>
-
-                      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                        {photos.map((photo, index) => (
-                          <div
-                            key={photo.id}
-                            className="group relative aspect-[4/3] overflow-hidden rounded-lg border border-border bg-surface-soft"
-                          >
-                            <Image
-                              src={photo.dataUrl}
-                              alt={photo.name}
-                              fill
-                              unoptimized
-                              sizes="(min-width: 1024px) 16vw, 50vw"
-                              className="object-cover"
-                            />
-                            {index === 0 ? (
-                              <span className="absolute left-2 top-2 rounded-full border border-accent bg-bg px-2.5 py-1 font-body text-[11px] font-bold text-primary">
-                                Cover
-                              </span>
-                            ) : null}
-                            <button
-                              type="button"
-                              onClick={() => removePhoto(photo.id)}
-                              className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full border border-white/30 bg-black/50 text-white shadow-sm transition-colors hover:bg-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                              aria-label={`Remove ${photo.name}`}
-                            >
-                              <X size={15} aria-hidden="true" />
-                            </button>
-                            {photo.uploading ? (
-                              <span className="absolute inset-0 flex items-center justify-center bg-black/50 text-white">
-                                <Loader2
-                                  className="h-5 w-5 animate-spin"
-                                  aria-hidden="true"
-                                />
-                              </span>
-                            ) : index > 0 ? (
-                              <button
-                                type="button"
-                                onClick={() => makeCover(photo.id)}
-                                className="absolute bottom-2 left-2 rounded-full border border-primary/15 bg-bg px-3 py-1.5 font-body text-xs font-bold text-primary shadow-sm transition-colors hover:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                              >
-                                Make Cover
-                              </button>
-                            ) : null}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="mt-5 flex items-center gap-3 rounded-lg border border-border px-4 py-3 text-muted">
-                      <ImagePlus size={19} aria-hidden="true" />
-                      <span className="font-body text-sm">
-                        No photos selected yet.
-                      </span>
-                    </div>
-                  )}
-                </section>
-              ) : null}
-
-              {listingStep === "verify" ? (
-                <section aria-labelledby="guided-listing-verify">
-                  <p className="font-body text-xs font-medium uppercase tracking-wide text-muted">
-                    Proof of property
-                  </p>
-                  <h2
-                    id="guided-listing-verify"
-                    className="mt-2 font-display text-2xl font-bold text-primary"
-                  >
-                    Take one photo at the property
-                  </h2>
-                  <p className="mt-2 font-body text-sm leading-6 text-muted">
-                    Stand at the property and take this photo now. Rello checks
-                    where it was taken, and the listing goes live once it
-                    matches the address.
-                  </p>
-
-                  <label className="mt-6 flex min-h-32 cursor-pointer items-center justify-center gap-4 rounded-xl border border-dashed border-primary/25 bg-transparent px-5 py-6 text-left transition-all duration-200 hover:border-accent hover:shadow-sm focus-within:ring-2 focus-within:ring-accent">
-                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-primary/15 text-primary">
-                      {isCapturing ? (
-                        <Loader2
-                          className="h-5 w-5 animate-spin"
-                          aria-hidden="true"
-                        />
-                      ) : (
-                        <Camera size={20} aria-hidden="true" />
-                      )}
-                    </span>
-                    <span>
-                      <span className="block font-body text-sm font-bold text-primary">
-                        {proofCapture
-                          ? "Take the photo again"
-                          : "Open camera and take the photo"}
-                      </span>
-                      <span className="mt-1 block font-body text-xs text-muted">
-                        {isCapturing
-                          ? "Reading your location..."
-                          : "Your camera opens directly, so the photo cannot be picked from your gallery"}
-                      </span>
-                    </span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      capture="environment"
-                      className="sr-only"
-                      onChange={(event) => void handleProofCapture(event)}
-                    />
-                  </label>
-
-                  {proofCapture ? (
-                    <div className="mt-6">
-                      <div className="relative aspect-video overflow-hidden rounded-xl border border-border bg-surface-soft">
-                        <Image
-                          src={proofCapture.dataUrl}
-                          alt="Photo taken at the property"
-                          fill
-                          sizes="(min-width: 1024px) 640px, 100vw"
-                          className="object-cover"
-                          unoptimized
-                        />
-                      </div>
-                      <div className="mt-3 flex items-center gap-3 rounded-lg border border-border px-4 py-3">
-                        <MapPin
-                          size={18}
-                          aria-hidden="true"
-                          className={
-                            proofCapture.fix ? "text-accent-alt" : "text-muted"
-                          }
-                        />
-                        <span className="font-body text-sm text-primary">
-                          {proofCapture.fix
-                            ? `Location captured, accurate to about ${Math.round(proofCapture.fix.accuracy)} metres.`
-                            : "No location captured. Turn on location access and take the photo again."}
+                        <span
+                          id="guided-price-help"
+                          className="mt-3 flex flex-wrap items-center justify-between gap-2 font-body text-xs text-muted"
+                        >
+                          <span>
+                            This is the amount renters will see on your listing.
+                          </span>
+                          {values.price ? (
+                            <span className="font-bold text-primary">
+                              ₦{Number(values.price).toLocaleString("en-NG")}{" "}
+                              per {PRICE_PERIOD_LABELS[values.rentalMode]}
+                            </span>
+                          ) : null}
                         </span>
-                      </div>
+                      </label>
                     </div>
-                  ) : (
-                    <div className="mt-5 flex items-center gap-3 rounded-lg border border-border px-4 py-3 text-muted">
-                      <MapPin size={19} aria-hidden="true" />
-                      <span className="font-body text-sm">
-                        You can skip this and verify later from your listings.
+                  </section>
+                ) : null}
+
+                {listingStep === "photos" ? (
+                  <section aria-labelledby="guided-listing-photos">
+                    <p className="font-body text-xs font-medium uppercase tracking-wide text-muted">
+                      Property photography
+                    </p>
+                    <h2
+                      id="guided-listing-photos"
+                      className="mt-2 font-display text-2xl font-bold text-primary"
+                    >
+                      Show renters around
+                    </h2>
+                    <p className="mt-2 font-body text-sm leading-6 text-muted">
+                      Add clear photos and choose the image renters see first.
+                    </p>
+
+                    <label
+                      className="mt-6 flex min-h-32 cursor-pointer items-center justify-center gap-4 rounded-xl border border-dashed border-primary/25 bg-transparent px-5 py-6 text-left transition-all duration-200 hover:border-accent hover:shadow-sm focus-within:ring-2 focus-within:ring-accent"
+                      onDragOver={(event) => event.preventDefault()}
+                      onDrop={handleDrop}
+                      onKeyDown={handleDropKeyDown}
+                      tabIndex={0}
+                    >
+                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-primary/15 text-primary">
+                        <Upload size={20} aria-hidden="true" />
                       </span>
-                    </div>
-                  )}
-                </section>
-              ) : null}
-
-              {listingStep === "review" ? (
-                <section aria-labelledby="guided-listing-review">
-                  <p className="font-body text-xs font-medium uppercase tracking-wide text-muted">
-                    Final review
-                  </p>
-                  <h2
-                    id="guided-listing-review"
-                    className="mt-2 font-display text-2xl font-bold text-primary"
-                  >
-                    Preview your listing
-                  </h2>
-                  <p className="mt-2 font-body text-sm leading-6 text-muted">
-                    This is how the key information will appear to renters.
-                  </p>
-
-                  <article className="mt-6 overflow-hidden rounded-xl border border-border bg-bg shadow-sm">
-                    <div className="relative aspect-video bg-surface-soft">
-                      {coverPhoto ? (
-                        <Image
-                          src={coverPhoto.dataUrl}
-                          alt={values.title || "Property cover"}
-                          fill
-                          unoptimized
-                          sizes="(min-width: 1024px) 60vw, 100vw"
-                          className="object-cover"
-                        />
-                      ) : (
-                        <span className="flex h-full items-center justify-center text-muted">
-                          <Home size={32} aria-hidden="true" />
+                      <span>
+                        <span className="block font-body text-sm font-bold text-primary">
+                          Drop photos here or click to upload
                         </span>
-                      )}
-                    </div>
-                    <div className="p-5 sm:p-6">
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                        <div className="min-w-0">
-                          <h3 className="font-display text-2xl font-bold text-primary">
-                            {values.title || "Untitled property"}
-                          </h3>
-                          <p className="mt-2 font-body text-sm text-muted">
-                            {[values.area, values.city]
-                              .filter(Boolean)
-                              .join(", ") || "Location not set"}
+                        <span className="mt-1 block font-body text-xs text-muted">
+                          JPG, PNG, or WEBP. Up to 20 photos, 10 MB each.
+                        </span>
+                      </span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="sr-only"
+                        onChange={handleFileInput}
+                      />
+                    </label>
+
+                    {errors.photos ? (
+                      <p className="mt-3 font-body text-sm font-medium text-red-700">
+                        {errors.photos}
+                      </p>
+                    ) : null}
+
+                    {coverPhoto ? (
+                      <div className="mt-6">
+                        <div className="flex items-center justify-between gap-4">
+                          <p className="font-body text-sm font-bold text-primary">
+                            Cover photo
+                          </p>
+                          <p className="font-body text-xs text-muted">
+                            {photos.length} photo
+                            {photos.length === 1 ? "" : "s"}
                           </p>
                         </div>
-                        <p className="shrink-0 font-display text-xl font-bold text-primary">
-                          {formatPreviewPrice(values.price)}
-                        </p>
-                      </div>
-
-                      <div className="mt-5 flex flex-wrap gap-4 border-y border-border py-4 font-body text-sm text-primary">
-                        <span>{values.bedrooms} bedrooms</span>
-                        <span>{values.bathrooms} bathrooms</span>
-                        {values.squareFootage ? (
-                          <span>{values.squareFootage} sq ft</span>
-                        ) : null}
-                      </div>
-
-                      <p className="mt-5 font-body text-sm leading-6 text-muted">
-                        {values.description}
-                      </p>
-
-                      {values.amenities.length > 0 ? (
-                        <div className="mt-5 flex flex-wrap gap-2">
-                          {values.amenities.map((amenity) => (
-                            <span
-                              key={amenity}
-                              className="rounded-full border border-primary/15 px-3 py-1.5 font-body text-xs font-medium text-primary"
-                            >
-                              {amenity}
+                        <div className="relative mt-3 aspect-video overflow-hidden rounded-xl border border-border bg-surface-soft">
+                          <Image
+                            src={coverPhoto.dataUrl}
+                            alt={coverPhoto.name}
+                            fill
+                            unoptimized
+                            sizes="(min-width: 1024px) 60vw, 100vw"
+                            className="object-cover"
+                          />
+                          {coverPhoto.uploading ? (
+                            <span className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 text-white">
+                              <Loader2
+                                className="h-6 w-6 animate-spin"
+                                aria-hidden="true"
+                              />
+                              <span className="mt-2 font-body text-xs font-bold">
+                                Preparing
+                              </span>
                             </span>
+                          ) : null}
+                        </div>
+
+                        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                          {photos.map((photo, index) => (
+                            <div
+                              key={photo.id}
+                              className="group relative aspect-[4/3] overflow-hidden rounded-lg border border-border bg-surface-soft"
+                            >
+                              <Image
+                                src={photo.dataUrl}
+                                alt={photo.name}
+                                fill
+                                unoptimized
+                                sizes="(min-width: 1024px) 16vw, 50vw"
+                                className="object-cover"
+                              />
+                              {index === 0 ? (
+                                <span className="absolute left-2 top-2 rounded-full border border-accent bg-bg px-2.5 py-1 font-body text-[11px] font-bold text-primary">
+                                  Cover
+                                </span>
+                              ) : null}
+                              <button
+                                type="button"
+                                onClick={() => removePhoto(photo.id)}
+                                className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full border border-white/30 bg-black/50 text-white shadow-sm transition-colors hover:bg-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                                aria-label={`Remove ${photo.name}`}
+                              >
+                                <X size={15} aria-hidden="true" />
+                              </button>
+                              {photo.uploading ? (
+                                <span className="absolute inset-0 flex items-center justify-center bg-black/50 text-white">
+                                  <Loader2
+                                    className="h-5 w-5 animate-spin"
+                                    aria-hidden="true"
+                                  />
+                                </span>
+                              ) : index > 0 ? (
+                                <button
+                                  type="button"
+                                  onClick={() => makeCover(photo.id)}
+                                  className="absolute bottom-2 left-2 rounded-full border border-primary/15 bg-bg px-3 py-1.5 font-body text-xs font-bold text-primary shadow-sm transition-colors hover:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                                >
+                                  Make Cover
+                                </button>
+                              ) : null}
+                              {!photo.uploading ? (
+                                <span className="absolute bottom-2 right-2 flex overflow-hidden rounded-full border border-white/40 bg-bg shadow-sm">
+                                  <button
+                                    type="button"
+                                    onClick={() => movePhoto(photo.id, -1)}
+                                    disabled={index === 0}
+                                    className="flex h-8 w-8 items-center justify-center text-primary hover:bg-surface-soft disabled:cursor-not-allowed disabled:opacity-30"
+                                    aria-label={`Move ${photo.name} earlier`}
+                                  >
+                                    <ChevronLeft size={15} aria-hidden="true" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => movePhoto(photo.id, 1)}
+                                    disabled={index === photos.length - 1}
+                                    className="flex h-8 w-8 items-center justify-center border-l border-border text-primary hover:bg-surface-soft disabled:cursor-not-allowed disabled:opacity-30"
+                                    aria-label={`Move ${photo.name} later`}
+                                  >
+                                    <ChevronRight
+                                      size={15}
+                                      aria-hidden="true"
+                                    />
+                                  </button>
+                                </span>
+                              ) : null}
+                            </div>
                           ))}
                         </div>
-                      ) : null}
-                    </div>
-                  </article>
+                      </div>
+                    ) : (
+                      <div className="mt-5 flex items-center gap-3 rounded-lg border border-border px-4 py-3 text-muted">
+                        <ImagePlus size={19} aria-hidden="true" />
+                        <span className="font-body text-sm">
+                          No photos selected yet.
+                        </span>
+                      </div>
+                    )}
+                  </section>
+                ) : null}
 
-                  <div className="mt-5 flex items-start gap-3 rounded-lg border border-accent/40 px-4 py-3">
-                    <Home
-                      className="mt-0.5 shrink-0 text-accent"
-                      size={18}
-                      aria-hidden="true"
-                    />
-                    <p className="font-body text-sm leading-6 text-primary">
-                      Submitted listings remain private and show as Pending
-                      Verification until the property verification process is
-                      complete.
+                {listingStep === "verify" ? (
+                  <section aria-labelledby="guided-listing-verify">
+                    <p className="font-body text-xs font-medium uppercase tracking-wide text-muted">
+                      Proof of property
                     </p>
-                  </div>
-                </section>
-              ) : null}
-            </div>
+                    <h2
+                      id="guided-listing-verify"
+                      className="mt-2 font-display text-2xl font-bold text-primary"
+                    >
+                      Take one photo at the property
+                    </h2>
+                    <p className="mt-2 font-body text-sm leading-6 text-muted">
+                      Stand at the property and take this photo now. Rello
+                      checks where it was taken, and the listing goes live once
+                      it matches the address.
+                    </p>
 
-            <footer className="sticky bottom-0 z-20 mt-6 border-t border-border bg-bg py-4 shadow-xl">
-              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <button
-                  type="button"
-                  onClick={() => void handleSaveDraft()}
-                  disabled={isSavingDraft || isSubmitting}
-                  className="inline-flex min-h-12 items-center justify-center rounded-full border border-primary/20 bg-transparent px-6 py-3 font-body text-sm font-bold text-primary transition-all duration-200 hover:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {isSavingDraft ? (
-                    <span className="inline-flex items-center gap-2">
-                      <Loader2
-                        className="h-4 w-4 animate-spin"
-                        aria-hidden="true"
+                    <label className="mt-6 flex min-h-32 cursor-pointer items-center justify-center gap-4 rounded-xl border border-dashed border-primary/25 bg-transparent px-5 py-6 text-left transition-all duration-200 hover:border-accent hover:shadow-sm focus-within:ring-2 focus-within:ring-accent">
+                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-primary/15 text-primary">
+                        {isCapturing ? (
+                          <Loader2
+                            className="h-5 w-5 animate-spin"
+                            aria-hidden="true"
+                          />
+                        ) : (
+                          <Camera size={20} aria-hidden="true" />
+                        )}
+                      </span>
+                      <span>
+                        <span className="block font-body text-sm font-bold text-primary">
+                          {proofCapture
+                            ? "Take the photo again"
+                            : "Open camera and take the photo"}
+                        </span>
+                        <span className="mt-1 block font-body text-xs text-muted">
+                          {isCapturing
+                            ? "Reading your location..."
+                            : "Your camera opens directly, so the photo cannot be picked from your gallery"}
+                        </span>
+                      </span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        className="sr-only"
+                        onChange={(event) => void handleProofCapture(event)}
                       />
-                      Saving...
-                    </span>
-                  ) : draftId ? (
-                    "Update Draft"
-                  ) : (
-                    "Save as Draft"
-                  )}
-                </button>
+                    </label>
+
+                    {proofCapture ? (
+                      <div className="mt-6">
+                        <div className="relative aspect-video overflow-hidden rounded-xl border border-border bg-surface-soft">
+                          <Image
+                            src={proofCapture.dataUrl}
+                            alt="Photo taken at the property"
+                            fill
+                            sizes="(min-width: 1024px) 640px, 100vw"
+                            className="object-cover"
+                            unoptimized
+                          />
+                        </div>
+                        <div className="mt-3 flex items-center gap-3 rounded-lg border border-border px-4 py-3">
+                          <MapPin
+                            size={18}
+                            aria-hidden="true"
+                            className={
+                              proofCapture.fix
+                                ? "text-accent-alt"
+                                : "text-muted"
+                            }
+                          />
+                          <span className="font-body text-sm text-primary">
+                            {proofCapture.fix
+                              ? `Location captured, accurate to about ${Math.round(proofCapture.fix.accuracy)} metres.`
+                              : "No location captured. Turn on location access and take the photo again."}
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mt-5 flex items-center gap-3 rounded-lg border border-border px-4 py-3 text-muted">
+                        <MapPin size={19} aria-hidden="true" />
+                        <span className="font-body text-sm">
+                          You can skip this and verify later from your listings.
+                        </span>
+                      </div>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (proofCapture) setIsDirty(true);
+                        setProofCapture(null);
+                        handleContinue();
+                      }}
+                      className="mt-5 inline-flex min-h-11 items-center justify-center rounded-full border border-primary/20 px-5 font-body text-sm font-bold text-primary transition-colors hover:border-accent"
+                    >
+                      Verify later
+                    </button>
+                  </section>
+                ) : null}
 
                 {listingStep === "review" ? (
+                  <section aria-labelledby="guided-listing-review">
+                    <p className="font-body text-xs font-medium uppercase tracking-wide text-muted">
+                      Final review
+                    </p>
+                    <h2
+                      id="guided-listing-review"
+                      className="mt-2 font-display text-2xl font-bold text-primary"
+                    >
+                      Preview your listing
+                    </h2>
+                    <p className="mt-2 font-body text-sm leading-6 text-muted">
+                      This is how the key information will appear to renters.
+                    </p>
+
+                    <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                      {[
+                        {
+                          label: "Listing basics",
+                          step: "basics" as const,
+                          value: values.title,
+                        },
+                        {
+                          label: "Location",
+                          step: "location" as const,
+                          value: [values.area, values.city]
+                            .filter(Boolean)
+                            .join(", "),
+                        },
+                        {
+                          label: "Property details",
+                          step: "details" as const,
+                          value: `${values.bedrooms} bedrooms, ${values.bathrooms} bathrooms`,
+                        },
+                        {
+                          label: "Pricing",
+                          step: "pricing" as const,
+                          value: formatPreviewPrice(
+                            values.price,
+                            values.rentalMode,
+                          ),
+                        },
+                        {
+                          label: "Photos",
+                          step: "photos" as const,
+                          value: `${photos.length} added`,
+                        },
+                        {
+                          label: "Verification",
+                          step: "verify" as const,
+                          value: proofCapture
+                            ? "Ready to submit"
+                            : "Complete later",
+                        },
+                      ].map((item) => (
+                        <div
+                          key={item.step}
+                          className="flex items-center gap-3 rounded-xl border border-border p-4"
+                        >
+                          <CircleCheck
+                            className="shrink-0 text-accent-alt"
+                            size={18}
+                            aria-hidden="true"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <p className="font-body text-xs font-bold text-primary">
+                              {item.label}
+                            </p>
+                            <p className="mt-1 truncate font-body text-xs text-muted">
+                              {item.value || "Not added"}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => moveToListingStep(item.step)}
+                            className="font-body text-xs font-bold text-primary underline decoration-accent underline-offset-4"
+                          >
+                            Edit
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+
+                    <article className="mt-6 overflow-hidden rounded-xl border border-border bg-bg shadow-sm">
+                      <div className="relative aspect-video bg-surface-soft">
+                        {coverPhoto ? (
+                          <Image
+                            src={coverPhoto.dataUrl}
+                            alt={values.title || "Property cover"}
+                            fill
+                            unoptimized
+                            sizes="(min-width: 1024px) 60vw, 100vw"
+                            className="object-cover"
+                          />
+                        ) : (
+                          <span className="flex h-full items-center justify-center text-muted">
+                            <Home size={32} aria-hidden="true" />
+                          </span>
+                        )}
+                      </div>
+                      <div className="p-5 sm:p-6">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="min-w-0">
+                            <h3 className="font-display text-2xl font-bold text-primary">
+                              {values.title || "Untitled property"}
+                            </h3>
+                            <p className="mt-2 font-body text-sm text-muted">
+                              {[values.area, values.city]
+                                .filter(Boolean)
+                                .join(", ") || "Location not set"}
+                            </p>
+                          </div>
+                          <p className="shrink-0 font-display text-xl font-bold text-primary">
+                            {formatPreviewPrice(
+                              values.price,
+                              values.rentalMode,
+                            )}
+                          </p>
+                        </div>
+
+                        <div className="mt-5 flex flex-wrap gap-4 border-y border-border py-4 font-body text-sm text-primary">
+                          <span>{values.bedrooms} bedrooms</span>
+                          <span>{values.bathrooms} bathrooms</span>
+                          {values.squareFootage ? (
+                            <span>{values.squareFootage} sq ft</span>
+                          ) : null}
+                        </div>
+
+                        <p className="mt-5 font-body text-sm leading-6 text-muted">
+                          {values.description}
+                        </p>
+
+                        {values.amenities.length > 0 ? (
+                          <div className="mt-5 flex flex-wrap gap-2">
+                            {values.amenities.map((amenity) => (
+                              <span
+                                key={amenity}
+                                className="rounded-full border border-primary/15 px-3 py-1.5 font-body text-xs font-medium text-primary"
+                              >
+                                {amenity}
+                              </span>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
+                    </article>
+
+                    <div className="mt-5 flex items-start gap-3 rounded-lg border border-accent/40 px-4 py-3">
+                      <Home
+                        className="mt-0.5 shrink-0 text-accent"
+                        size={18}
+                        aria-hidden="true"
+                      />
+                      <p className="font-body text-sm leading-6 text-primary">
+                        Submitted listings remain private and show as Pending
+                        Verification until the property verification process is
+                        complete.
+                      </p>
+                    </div>
+                  </section>
+                ) : null}
+              </div>
+
+              <footer className="sticky bottom-0 z-20 mt-6 rounded-t-2xl border border-border bg-bg/95 p-4 shadow-[0_-12px_32px_rgba(3,58,78,0.08)] backdrop-blur-sm">
+                <div className="flex items-center gap-3">
                   <button
-                    type="submit"
-                    aria-disabled={!canSubmit || isSubmitting}
-                    disabled={isSubmitting}
-                    className={cn(
-                      "inline-flex min-h-12 w-full items-center justify-center rounded-full px-7 py-3 font-body text-sm font-bold transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto",
-                      canSubmit
-                        ? "bg-accent text-primary hover:bg-primary hover:text-white"
-                        : "bg-border text-muted",
-                    )}
+                    type="button"
+                    onClick={handleBack}
+                    disabled={listingStepIndex === 0}
+                    className="hidden min-h-12 items-center justify-center gap-2 rounded-full px-4 font-body text-sm font-bold text-primary transition-colors hover:bg-surface-soft disabled:invisible sm:inline-flex"
                   >
-                    {isSubmitting ? (
+                    <ArrowLeft size={17} aria-hidden="true" />
+                    Back
+                  </button>
+
+                  <p className="mr-auto hidden text-center font-body text-xs text-muted lg:block">
+                    {isSavingDraft
+                      ? "Saving draft..."
+                      : isDirty
+                        ? "Unsaved changes"
+                        : draftId
+                          ? "Draft saved"
+                          : "Not saved yet"}
+                  </p>
+
+                  <button
+                    type="button"
+                    onClick={() => void handleSaveDraft()}
+                    disabled={isSavingDraft || isSubmitting}
+                    className="inline-flex min-h-12 flex-1 items-center justify-center rounded-full border border-primary/20 bg-transparent px-4 py-3 font-body text-sm font-bold text-primary transition-all duration-200 hover:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none sm:px-6"
+                  >
+                    {isSavingDraft ? (
                       <span className="inline-flex items-center gap-2">
                         <Loader2
                           className="h-4 w-4 animate-spin"
                           aria-hidden="true"
                         />
-                        Creating listing...
+                        Saving...
                       </span>
+                    ) : draftId ? (
+                      "Update Draft"
                     ) : (
-                      "Submit Listing"
+                      "Save as Draft"
                     )}
                   </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleContinue}
-                    className="inline-flex min-h-12 w-full items-center justify-center rounded-full bg-accent px-7 py-3 font-body text-sm font-bold text-primary transition-all duration-200 hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent sm:w-auto"
-                  >
-                    Continue
-                  </button>
-                )}
+
+                  {listingStep === "review" ? (
+                    <button
+                      type="submit"
+                      aria-disabled={!canSubmit || isSubmitting}
+                      disabled={isSubmitting}
+                      className={cn(
+                        "inline-flex min-h-12 flex-1 items-center justify-center rounded-full px-5 py-3 font-body text-sm font-bold transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none sm:px-7",
+                        canSubmit
+                          ? "bg-accent text-primary hover:bg-primary hover:text-white"
+                          : "bg-border text-muted",
+                      )}
+                    >
+                      {isSubmitting ? (
+                        <span className="inline-flex items-center gap-2">
+                          <Loader2
+                            className="h-4 w-4 animate-spin"
+                            aria-hidden="true"
+                          />
+                          Creating listing...
+                        </span>
+                      ) : (
+                        "Submit Listing"
+                      )}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleContinue}
+                      className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-full bg-accent px-5 py-3 font-body text-sm font-bold text-primary transition-all duration-200 hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent sm:flex-none sm:px-7"
+                    >
+                      Continue
+                      <ArrowRight size={17} aria-hidden="true" />
+                    </button>
+                  )}
+                </div>
+              </footer>
+            </form>
+
+            <aside className="sticky top-24 hidden rounded-2xl border border-border bg-bg p-5 xl:block">
+              <p className="font-body text-xs font-bold uppercase tracking-[0.16em] text-muted">
+                Listing summary
+              </p>
+              <h2 className="mt-3 line-clamp-2 font-display text-lg font-bold text-primary">
+                {values.title || "Untitled rental"}
+              </h2>
+              <p className="mt-2 font-body text-sm text-muted">
+                {[values.area, values.city].filter(Boolean).join(", ") ||
+                  "Location not added"}
+              </p>
+              <p className="mt-4 font-display text-lg font-bold text-primary">
+                {formatPreviewPrice(values.price, values.rentalMode)}
+              </p>
+              <div className="mt-5 border-t border-border pt-5">
+                <p className="font-body text-xs text-muted">
+                  {photos.length} photo{photos.length === 1 ? "" : "s"} added
+                </p>
+                <p className="mt-2 font-body text-xs text-muted">
+                  {values.amenities.length} amenit
+                  {values.amenities.length === 1 ? "y" : "ies"} selected
+                </p>
+                <p className="mt-2 flex items-center gap-2 font-body text-xs text-muted">
+                  <CircleCheck
+                    size={14}
+                    className="text-accent-alt"
+                    aria-hidden="true"
+                  />
+                  {proofCapture
+                    ? "Verification photo ready"
+                    : "Verification can be completed later"}
+                </p>
               </div>
-            </footer>
-          </form>
+            </aside>
+          </div>
         </div>
       </main>
     );
@@ -1720,7 +2128,13 @@ export default function CreateListingForm({
                     }
                     className={INPUT_CLASS_NAME}
                     placeholder="Street and property number"
+                    aria-invalid={Boolean(errors.address)}
                   />
+                  {errors.address ? (
+                    <span className="mt-2 block font-body text-sm font-medium text-red-700">
+                      {errors.address}
+                    </span>
+                  ) : null}
                   <span className="mt-2 block font-body text-xs leading-5 text-muted">
                     Only shown to verified interested parties, not displayed
                     publicly.

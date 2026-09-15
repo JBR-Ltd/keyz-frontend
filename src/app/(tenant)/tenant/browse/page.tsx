@@ -593,7 +593,7 @@ export default function TenantBrowsePage(): ReactElement {
           >
             <form
               onSubmit={submitSearch}
-              className="pointer-events-auto flex h-12 w-[min(56rem,calc(100vw-28rem))] min-w-[32rem] items-center overflow-hidden rounded-full border border-border bg-bg shadow-sm"
+              className="pointer-events-auto flex h-12 w-[min(56rem,calc(100vw-28rem))] min-w-[32rem] items-center overflow-hidden rounded-full border border-primary/10 bg-bg"
             >
               <label className="flex min-w-0 flex-1 items-center gap-2.5 px-5 focus-within:text-primary">
                 <MapPin
@@ -677,12 +677,9 @@ export default function TenantBrowsePage(): ReactElement {
       <section className="mt-10" aria-labelledby="property-feed-heading">
         <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="font-accent text-xs font-bold uppercase tracking-[0.25em] text-primary">
-              Verified rental homes
-            </p>
             <h2
               id="property-feed-heading"
-              className="mt-2 font-display text-3xl font-bold text-primary"
+              className="font-display text-2xl font-bold text-primary"
             >
               Homes available now
             </h2>

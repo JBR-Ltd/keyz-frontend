@@ -128,7 +128,13 @@ export default function AdminBookingsPage(): ReactElement {
               </dt>
               <dd className="mt-1 flex items-center gap-1.5 font-body text-sm text-primary">
                 <CalendarRange size={14} aria-hidden="true" />
-                {formatDate(booking.startDate)} to {formatDate(booking.endDate)}
+                {booking.startDate
+                  ? formatDate(booking.startDate)
+                  : "Flexible"}{" "}
+                to{" "}
+                {booking.endDate
+                  ? formatDate(booking.endDate)
+                  : "No fixed end date"}
               </dd>
             </div>
           </dl>
