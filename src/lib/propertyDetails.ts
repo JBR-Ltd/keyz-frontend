@@ -3,9 +3,11 @@ import {
   getBackendPropertyById,
   getHostListingById,
   getPublicProperties,
+  interpretPublicProperties,
   type BackendProperty,
   type HostListingRecord,
   type RentalMode,
+  type SearchFilters,
 } from "@/lib/hostListings";
 export type PropertyListingStatus = "FOR_RENT" | "FOR_SALE";
 
@@ -208,6 +210,30 @@ export async function getProperties(
           property.status === "FOR_RENT" || property.status === "FOR_SALE",
       )
       .map(backendPropertyToPropertyDetail),
+    hasNext: result.hasNext,
+    message: result.message,
+    totalItems: result.totalItems,
+  };
+}
+
+export interface InterpretedPropertyQueryResult extends PropertyQueryResult {
+  fallback: boolean;
+  filters: SearchFilters | null;
+}
+
+export async function interpretProperties(
+  query: string,
+  page = 0,
+  size = 12,
+): Promise<InterpretedPropertyQueryResult> {
+  const result = await interpretPublicProperties(query, page, size);
+
+  return {
+    data: result.data
+      .filter((property) => property.status === "FOR_RENT")
+      .map(backendPropertyToPropertyDetail),
+    fallback: result.fallback,
+    filters: result.filters,
     hasNext: result.hasNext,
     message: result.message,
     totalItems: result.totalItems,

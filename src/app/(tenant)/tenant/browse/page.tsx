@@ -16,6 +16,7 @@ import {
   Search,
   SearchX,
   SlidersHorizontal,
+  Sparkles,
   X,
 } from "lucide-react";
 import PropertyCard from "@/components/public/PropertyCard";
@@ -23,8 +24,13 @@ import OverlayPortal from "@/components/ui/OverlayPortal";
 import { Select, type SelectOption } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
 import ActivityFeed from "@/components/dashboard/ActivityFeed";
-import type { ListingSearch } from "@/lib/hostListings";
-import { getProperties, type PropertyDetail } from "@/lib/propertyDetails";
+import type { ListingSearch, SearchFilters } from "@/lib/hostListings";
+import {
+  getProperties,
+  interpretProperties,
+  type InterpretedPropertyQueryResult,
+  type PropertyDetail,
+} from "@/lib/propertyDetails";
 import {
   getSavedListings,
   removeSavedListing,
@@ -52,6 +58,9 @@ type SortOption = "recommended" | "price-low" | "price-high" | "bedrooms";
  */
 type StayMode = "all" | "long" | "short";
 
+/** Keywords filter the catalogue directly; describe sends plain English to be read into filters. */
+type SearchMode = "keywords" | "describe";
+
 interface AppliedFilter {
   id: string;
   label: string;
@@ -61,6 +70,14 @@ interface AppliedFilter {
 // === Constants
 
 const PAGE_SIZE = 12;
+
+/** The backend refuses longer descriptions. */
+const DESCRIBE_QUERY_MAX_LENGTH = 300;
+
+const SEARCH_MODES: { id: SearchMode; label: string }[] = [
+  { id: "keywords", label: "Keywords" },
+  { id: "describe", label: "Describe it" },
+];
 
 const STAY_MODES: { hint: string; id: StayMode; label: string }[] = [
   { hint: "Everything available", id: "all", label: "All stays" },
@@ -139,6 +156,73 @@ function getOptionLabel(options: SelectOption[], value: string): string {
   return options.find((option) => option.value === value)?.label ?? value;
 }
 
+function formatNaira(amount: number): string {
+  return `₦${amount.toLocaleString("en-NG")}`;
+}
+
+/** Shows the reading back, so a bad reading is visible rather than just a surprising list. */
+function getInterpretationLabels(filters: SearchFilters): string[] {
+  const labels: string[] = [];
+  const place = [filters.area, filters.city].filter(Boolean).join(", ");
+  const { maxPrice, minPrice } = filters;
+
+  if (place) {
+    labels.push(place);
+  }
+
+  if (typeof minPrice === "number" && typeof maxPrice === "number") {
+    labels.push(`${formatNaira(minPrice)} to ${formatNaira(maxPrice)}`);
+  } else if (typeof maxPrice === "number") {
+    labels.push(`Under ${formatNaira(maxPrice)}`);
+  } else if (typeof minPrice === "number") {
+    labels.push(`Above ${formatNaira(minPrice)}`);
+  }
+
+  if (typeof filters.minBedrooms === "number") {
+    labels.push(`${filters.minBedrooms}+ bedrooms`);
+  }
+
+  if (typeof filters.minBathrooms === "number") {
+    labels.push(`${filters.minBathrooms}+ bathrooms`);
+  }
+
+  if (typeof filters.minSquareFootage === "number") {
+    labels.push(`${filters.minSquareFootage.toLocaleString("en-NG")}+ sqft`);
+  }
+
+  labels.push(
+    filters.rentalMode === "SHORT_STAY" ? "Shortlets" : "Homes to rent",
+  );
+  labels.push(...filters.amenities);
+
+  if (filters.keywords) {
+    labels.push(filters.keywords);
+  }
+
+  return labels;
+}
+
+/** Keyword filters stay set while describing so they come back later, but they are hidden, so they must not narrow results. */
+async function requestListings(
+  mode: SearchMode,
+  query: string,
+  search: ListingSearch,
+  page: number,
+): Promise<InterpretedPropertyQueryResult> {
+  if (mode === "describe" && query) {
+    return interpretProperties(query, page, PAGE_SIZE);
+  }
+
+  const result = await getProperties(
+    "rent",
+    page,
+    PAGE_SIZE,
+    mode === "describe" ? undefined : search,
+  );
+
+  return { ...result, fallback: false, filters: null };
+}
+
 // === Component
 
 export default function TenantBrowsePage(): ReactElement {
@@ -162,8 +246,14 @@ export default function TenantBrowsePage(): ReactElement {
   const [savedIds, setSavedIds] = useState<Set<string>>(() => new Set());
   const [savingIds, setSavingIds] = useState<Set<string>>(() => new Set());
   const [isHeaderSearchVisible, setIsHeaderSearchVisible] = useState(false);
+  const [searchMode, setSearchMode] = useState<SearchMode>("keywords");
+  const [interpretation, setInterpretation] = useState<SearchFilters | null>(
+    null,
+  );
+  const [isFallback, setIsFallback] = useState(false);
   const desktopSearchRef = useRef<HTMLFormElement>(null);
   const dialogRef = useDialogFocus<HTMLDivElement>(isSearchSheetOpen);
+  const isDescribing = searchMode === "describe";
 
   /**
      The filters as the server takes them. Everything except the shortlet toggle is
@@ -189,7 +279,7 @@ export default function TenantBrowsePage(): ReactElement {
       setPropertyError("");
 
       const [propertyResult, savedResult] = await Promise.all([
-        getProperties("rent", 0, PAGE_SIZE, search),
+        requestListings(searchMode, searchQuery, search, 0),
         getSavedListings(),
       ]);
 
@@ -199,6 +289,8 @@ export default function TenantBrowsePage(): ReactElement {
       setHasNext(propertyResult.hasNext);
       setTotalItems(propertyResult.totalItems);
       setPropertyError(propertyResult.message ?? "");
+      setInterpretation(propertyResult.filters);
+      setIsFallback(propertyResult.fallback);
       setSavedIds(
         new Set(savedResult.data.map((listing) => String(listing.id))),
       );
@@ -211,7 +303,7 @@ export default function TenantBrowsePage(): ReactElement {
     return () => {
       active = false;
     };
-  }, [retryKey, search]);
+  }, [retryKey, search, searchMode, searchQuery]);
 
   useEffect(() => {
     if (!isSearchSheetOpen) return;
@@ -258,6 +350,11 @@ export default function TenantBrowsePage(): ReactElement {
   const visibleProperties = useMemo(
     () =>
       properties.filter((property) => {
+        // A plain-English search already chose the stay type from what was typed
+        if (isDescribing) {
+          return true;
+        }
+
         const isShortlet = property.rentalMode === "SHORT_STAY";
 
         if (stayMode === "short") {
@@ -270,7 +367,7 @@ export default function TenantBrowsePage(): ReactElement {
 
         return true;
       }),
-    [properties, stayMode],
+    [isDescribing, properties, stayMode],
   );
 
   const appliedFilters = useMemo<AppliedFilter[]>(() => {
@@ -279,12 +376,16 @@ export default function TenantBrowsePage(): ReactElement {
     if (searchQuery) {
       filters.push({
         id: "location",
-        label: searchQuery,
+        label: isDescribing ? `"${searchQuery}"` : searchQuery,
         remove: () => {
           setQueryInput("");
           setSearchQuery("");
         },
       });
+    }
+
+    if (isDescribing) {
+      return filters;
     }
 
     if (priceFilter !== "all") {
@@ -313,11 +414,15 @@ export default function TenantBrowsePage(): ReactElement {
     }
 
     return filters;
-  }, [bedroomFilter, priceFilter, searchQuery, stayMode]);
+  }, [bedroomFilter, isDescribing, priceFilter, searchQuery, stayMode]);
 
   const clearFilters = (): void => {
     setQueryInput("");
     setSearchQuery("");
+
+    // Keyword filters are only hidden while describing, so they come back as they were
+    if (isDescribing) return;
+
     setPriceFilter("all");
     setBedroomFilter("all");
     setSort("recommended");
@@ -330,11 +435,26 @@ export default function TenantBrowsePage(): ReactElement {
     setIsSearchSheetOpen(false);
   };
 
+  const changeSearchMode = (mode: SearchMode): void => {
+    if (mode === searchMode) return;
+
+    setSearchMode(mode);
+    setSearchQuery("");
+    if (mode === "describe") {
+      setQueryInput((current) => current.slice(0, DESCRIBE_QUERY_MAX_LENGTH));
+    }
+  };
+
   const loadMore = async (): Promise<void> => {
     const nextPage = page + 1;
     setIsLoadingMore(true);
     setPropertyError("");
-    const result = await getProperties("rent", nextPage, PAGE_SIZE, search);
+    const result = await requestListings(
+      searchMode,
+      searchQuery,
+      search,
+      nextPage,
+    );
     setIsLoadingMore(false);
 
     if (result.message) {
@@ -400,10 +520,20 @@ export default function TenantBrowsePage(): ReactElement {
     });
   };
 
-  const mobileSearchSummary =
-    appliedFilters.length > 0
+  const interpretationLabels = useMemo(
+    () => (interpretation ? getInterpretationLabels(interpretation) : []),
+    [interpretation],
+  );
+
+  const mobileSearchSummary = isDescribing
+    ? searchQuery || "Describe the home you want"
+    : appliedFilters.length > 0
       ? `${appliedFilters.length} filter${appliedFilters.length === 1 ? "" : "s"} applied`
       : "Where are you looking?";
+  const searchPlaceholder = isDescribing
+    ? "Describe it, like a 3 bed in Lekki under ₦5m with a pool"
+    : "City, area, or property";
+  const SearchInputIcon = isDescribing ? Sparkles : MapPin;
   const resultLabel = propertiesLoading
     ? "Loading homes..."
     : appliedFilters.length > 0
@@ -418,22 +548,59 @@ export default function TenantBrowsePage(): ReactElement {
             <form
               ref={desktopSearchRef}
               onSubmit={submitSearch}
-              className="flex h-16 w-full items-center border-b border-border"
+              className={`flex h-16 w-full items-center ${
+                isDescribing ? "" : "border-b border-border"
+              }`}
             >
+              <div
+                className="ml-2 flex shrink-0 gap-1 rounded-xl bg-surface-soft p-1"
+                role="tablist"
+                aria-label="Search style"
+              >
+                {SEARCH_MODES.map((mode) => {
+                  const active = searchMode === mode.id;
+
+                  return (
+                    <button
+                      key={mode.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={active}
+                      onClick={() => changeSearchMode(mode.id)}
+                      className={`min-h-10 rounded-lg px-3 font-body text-sm font-bold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                        active
+                          ? "bg-primary text-white shadow-sm"
+                          : "text-muted hover:bg-primary/5 hover:text-primary"
+                      }`}
+                    >
+                      {mode.label}
+                    </button>
+                  );
+                })}
+              </div>
               <label className="flex min-w-0 flex-1 items-center gap-3 px-6 focus-within:text-primary">
-                <MapPin
+                <SearchInputIcon
                   className="shrink-0 text-muted"
                   size={19}
                   aria-hidden="true"
                 />
                 <span className="sr-only">
-                  Search by location or property name
+                  {isDescribing
+                    ? "Describe the home you want"
+                    : "Search by location or property name"}
                 </span>
                 <input
                   type="search"
                   value={queryInput}
                   onChange={(event) => setQueryInput(event.target.value)}
-                  placeholder="Search by city, area, or property"
+                  placeholder={
+                    isDescribing
+                      ? searchPlaceholder
+                      : "Search by city, area, or property"
+                  }
+                  maxLength={
+                    isDescribing ? DESCRIBE_QUERY_MAX_LENGTH : undefined
+                  }
                   className="min-w-0 flex-1 bg-transparent font-body text-sm text-primary outline-none placeholder:text-muted"
                 />
               </label>
@@ -446,7 +613,11 @@ export default function TenantBrowsePage(): ReactElement {
               </button>
             </form>
 
-            <div className="flex flex-wrap items-center gap-2 p-3">
+            <div
+              className={`flex-wrap items-center gap-2 p-3 ${
+                isDescribing ? "hidden" : "flex"
+              }`}
+            >
               <div
                 className="flex gap-1 rounded-xl bg-surface-soft p-1"
                 role="tablist"
@@ -569,15 +740,46 @@ export default function TenantBrowsePage(): ReactElement {
                 <X size={13} aria-hidden="true" />
               </button>
             ))}
-            <button
-              type="button"
-              onClick={clearFilters}
-              className="inline-flex items-center gap-1.5 px-2 py-2 font-body text-xs font-bold text-muted hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent md:hidden"
-            >
-              <RotateCcw size={13} aria-hidden="true" />
-              Clear all
-            </button>
+            {isDescribing ? null : (
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="inline-flex items-center gap-1.5 px-2 py-2 font-body text-xs font-bold text-muted hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent md:hidden"
+              >
+                <RotateCcw size={13} aria-hidden="true" />
+                Clear all
+              </button>
+            )}
           </div>
+        ) : null}
+
+        {isDescribing && searchQuery && !propertiesLoading && !propertyError ? (
+          isFallback ? (
+            <p
+              className="mt-3 rounded-lg bg-bg px-4 py-3 font-body text-sm text-muted shadow-sm"
+              role="status"
+            >
+              That description could not be read, so these are keyword matches.
+              Try naming the area, your budget, or the number of bedrooms.
+            </p>
+          ) : interpretationLabels.length > 0 ? (
+            <div
+              className="mt-3 flex flex-wrap items-center gap-2"
+              aria-label="How your search was read"
+            >
+              <span className="font-accent text-xs font-bold uppercase tracking-[0.14em] text-muted">
+                Read as
+              </span>
+              {interpretationLabels.map((label) => (
+                <span
+                  key={label}
+                  className="rounded-full bg-primary/5 px-3 py-1.5 font-body text-xs font-bold text-primary"
+                >
+                  {label}
+                </span>
+              ))}
+            </div>
+          ) : null
         ) : null}
       </section>
 
@@ -596,70 +798,79 @@ export default function TenantBrowsePage(): ReactElement {
               className="pointer-events-auto flex h-12 w-[min(56rem,calc(100vw-28rem))] min-w-[32rem] items-center overflow-hidden rounded-full border border-primary/10 bg-bg"
             >
               <label className="flex min-w-0 flex-1 items-center gap-2.5 px-5 focus-within:text-primary">
-                <MapPin
+                <SearchInputIcon
                   className="shrink-0 text-muted"
                   size={17}
                   aria-hidden="true"
                 />
                 <span className="sr-only">
-                  Search by location or property name
+                  {isDescribing
+                    ? "Describe the home you want"
+                    : "Search by location or property name"}
                 </span>
                 <input
                   type="search"
                   value={queryInput}
                   onChange={(event) => setQueryInput(event.target.value)}
-                  placeholder="City, area, or property"
+                  placeholder={searchPlaceholder}
+                  maxLength={
+                    isDescribing ? DESCRIBE_QUERY_MAX_LENGTH : undefined
+                  }
                   className="min-w-0 flex-1 bg-transparent font-body text-sm text-primary outline-none placeholder:text-muted"
                 />
               </label>
-              <div className="hidden h-8 w-px shrink-0 bg-border xl:block" />
-              <div className="hidden w-28 shrink-0 px-3 xl:block">
-                <Select
-                  ariaLabel="Filter by stay type"
-                  value={stayMode}
-                  onValueChange={(value) => {
-                    setStayMode(value as StayMode);
-                    setPage(0);
-                  }}
-                  options={STICKY_STAY_MODE_OPTIONS}
-                  className="font-body text-xs font-bold"
-                />
-              </div>
-              <div className="hidden h-8 w-px shrink-0 bg-border xl:block" />
-              <div className="hidden w-36 shrink-0 px-3 xl:block">
-                <Select
-                  ariaLabel="Filter by price"
-                  value={priceFilter}
-                  onValueChange={(value) =>
-                    setPriceFilter(value as PriceFilter)
-                  }
-                  options={STICKY_PRICE_OPTIONS}
-                  className="font-body text-xs font-bold"
-                />
-              </div>
-              <div className="hidden h-8 w-px shrink-0 bg-border xl:block" />
-              <div className="hidden w-32 shrink-0 px-3 xl:block">
-                <Select
-                  ariaLabel="Filter by bedrooms"
-                  value={bedroomFilter}
-                  onValueChange={(value) =>
-                    setBedroomFilter(value as BedroomFilter)
-                  }
-                  options={STICKY_BEDROOM_OPTIONS}
-                  className="font-body text-xs font-bold"
-                />
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsSearchSheetOpen(true)}
-                className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-primary transition-colors hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                aria-label="Open listing filters"
-              >
-                <SlidersHorizontal size={17} aria-hidden="true" />
-                {appliedFilters.length > 0 ? (
-                  <span className="absolute right-0.5 top-0.5 h-2 w-2 rounded-full bg-accent" />
-                ) : null}
-              </button>
+              {isDescribing ? null : (
+                <>
+                  <div className="hidden h-8 w-px shrink-0 bg-border xl:block" />
+                  <div className="hidden w-28 shrink-0 px-3 xl:block">
+                    <Select
+                      ariaLabel="Filter by stay type"
+                      value={stayMode}
+                      onValueChange={(value) => {
+                        setStayMode(value as StayMode);
+                        setPage(0);
+                      }}
+                      options={STICKY_STAY_MODE_OPTIONS}
+                      className="font-body text-xs font-bold"
+                    />
+                  </div>
+                  <div className="hidden h-8 w-px shrink-0 bg-border xl:block" />
+                  <div className="hidden w-36 shrink-0 px-3 xl:block">
+                    <Select
+                      ariaLabel="Filter by price"
+                      value={priceFilter}
+                      onValueChange={(value) =>
+                        setPriceFilter(value as PriceFilter)
+                      }
+                      options={STICKY_PRICE_OPTIONS}
+                      className="font-body text-xs font-bold"
+                    />
+                  </div>
+                  <div className="hidden h-8 w-px shrink-0 bg-border xl:block" />
+                  <div className="hidden w-32 shrink-0 px-3 xl:block">
+                    <Select
+                      ariaLabel="Filter by bedrooms"
+                      value={bedroomFilter}
+                      onValueChange={(value) =>
+                        setBedroomFilter(value as BedroomFilter)
+                      }
+                      options={STICKY_BEDROOM_OPTIONS}
+                      className="font-body text-xs font-bold"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsSearchSheetOpen(true)}
+                    className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-primary transition-colors hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    aria-label="Open listing filters"
+                  >
+                    <SlidersHorizontal size={17} aria-hidden="true" />
+                    {appliedFilters.length > 0 ? (
+                      <span className="absolute right-0.5 top-0.5 h-2 w-2 rounded-full bg-accent" />
+                    ) : null}
+                  </button>
+                </>
+              )}
               <button
                 type="submit"
                 className="mr-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent text-primary transition-colors duration-200 ease-in-out hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
@@ -688,15 +899,17 @@ export default function TenantBrowsePage(): ReactElement {
             <p className="font-body text-sm text-muted" aria-live="polite">
               {resultLabel}
             </p>
-            <div className="min-w-44 rounded-xl border border-border bg-bg px-3 py-2 shadow-sm">
-              <Select
-                ariaLabel="Sort listings"
-                value={sort}
-                onValueChange={(value) => setSort(value as SortOption)}
-                options={SORT_OPTIONS}
-                className="font-body text-sm font-bold"
-              />
-            </div>
+            {isDescribing ? null : (
+              <div className="min-w-44 rounded-xl border border-border bg-bg px-3 py-2 shadow-sm">
+                <Select
+                  ariaLabel="Sort listings"
+                  value={sort}
+                  onValueChange={(value) => setSort(value as SortOption)}
+                  options={SORT_OPTIONS}
+                  className="font-body text-sm font-bold"
+                />
+              </div>
+            )}
           </div>
         </div>
 
@@ -847,12 +1060,39 @@ export default function TenantBrowsePage(): ReactElement {
                   </div>
 
                   <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-5">
+                    <div
+                      className="grid grid-cols-2 gap-1 rounded-xl bg-surface-soft p-1"
+                      role="tablist"
+                      aria-label="Search style"
+                    >
+                      {SEARCH_MODES.map((mode) => {
+                        const active = searchMode === mode.id;
+
+                        return (
+                          <button
+                            key={mode.id}
+                            type="button"
+                            role="tab"
+                            aria-selected={active}
+                            onClick={() => changeSearchMode(mode.id)}
+                            className={`min-h-11 rounded-lg px-2 font-body text-sm font-bold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                              active
+                                ? "bg-primary text-white shadow-sm"
+                                : "text-muted hover:text-primary"
+                            }`}
+                          >
+                            {mode.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+
                     <label className="block">
                       <span className="mb-2 block font-body text-xs font-bold uppercase tracking-[0.14em] text-muted">
-                        Location
+                        {isDescribing ? "Describe the home" : "Location"}
                       </span>
                       <div className="flex items-center gap-3 rounded-lg bg-surface-soft px-4 py-4 focus-within:ring-2 focus-within:ring-accent">
-                        <MapPin
+                        <SearchInputIcon
                           size={18}
                           className="text-muted"
                           aria-hidden="true"
@@ -863,80 +1103,88 @@ export default function TenantBrowsePage(): ReactElement {
                           onChange={(event) =>
                             setQueryInput(event.target.value)
                           }
-                          placeholder="City, area, or property"
+                          placeholder={searchPlaceholder}
+                          maxLength={
+                            isDescribing ? DESCRIBE_QUERY_MAX_LENGTH : undefined
+                          }
                           className="min-w-0 flex-1 bg-transparent font-body text-base text-primary outline-none placeholder:text-muted"
                         />
                       </div>
                     </label>
 
-                    <div>
-                      <span className="mb-2 block font-body text-xs font-bold uppercase tracking-[0.14em] text-muted">
-                        Kind of stay
-                      </span>
-                      <div
-                        className="grid grid-cols-3 gap-1 rounded-xl bg-surface-soft p-1"
-                        role="tablist"
-                        aria-label="Kind of stay"
-                      >
-                        {STAY_MODES.map((mode) => {
-                          const active = stayMode === mode.id;
+                    {isDescribing ? null : (
+                      <>
+                        <div>
+                          <span className="mb-2 block font-body text-xs font-bold uppercase tracking-[0.14em] text-muted">
+                            Kind of stay
+                          </span>
+                          <div
+                            className="grid grid-cols-3 gap-1 rounded-xl bg-surface-soft p-1"
+                            role="tablist"
+                            aria-label="Kind of stay"
+                          >
+                            {STAY_MODES.map((mode) => {
+                              const active = stayMode === mode.id;
 
-                          return (
-                            <button
-                              key={mode.id}
-                              type="button"
-                              role="tab"
-                              aria-selected={active}
-                              onClick={() => setStayMode(mode.id)}
-                              className={`min-h-11 rounded-lg px-2 font-body text-sm font-bold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
-                                active
-                                  ? "bg-primary text-white shadow-sm"
-                                  : "text-muted hover:text-primary"
-                              }`}
-                            >
-                              {mode.label}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {[
-                      {
-                        label: "Price",
-                        value: priceFilter,
-                        options: PRICE_OPTIONS,
-                        change: (value: string) =>
-                          setPriceFilter(value as PriceFilter),
-                      },
-                      {
-                        label: "Bedrooms",
-                        value: bedroomFilter,
-                        options: BEDROOM_OPTIONS,
-                        change: (value: string) =>
-                          setBedroomFilter(value as BedroomFilter),
-                      },
-                      {
-                        label: "Sort by",
-                        value: sort,
-                        options: SORT_OPTIONS,
-                        change: (value: string) => setSort(value as SortOption),
-                      },
-                    ].map((field) => (
-                      <label key={field.label} className="block">
-                        <span className="mb-2 block font-body text-xs font-bold uppercase tracking-[0.14em] text-muted">
-                          {field.label}
-                        </span>
-                        <div className="rounded-lg bg-surface-soft px-4 py-4">
-                          <Select
-                            ariaLabel={field.label}
-                            value={field.value}
-                            onValueChange={field.change}
-                            options={field.options}
-                          />
+                              return (
+                                <button
+                                  key={mode.id}
+                                  type="button"
+                                  role="tab"
+                                  aria-selected={active}
+                                  onClick={() => setStayMode(mode.id)}
+                                  className={`min-h-11 rounded-lg px-2 font-body text-sm font-bold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                                    active
+                                      ? "bg-primary text-white shadow-sm"
+                                      : "text-muted hover:text-primary"
+                                  }`}
+                                >
+                                  {mode.label}
+                                </button>
+                              );
+                            })}
+                          </div>
                         </div>
-                      </label>
-                    ))}
+
+                        {[
+                          {
+                            label: "Price",
+                            value: priceFilter,
+                            options: PRICE_OPTIONS,
+                            change: (value: string) =>
+                              setPriceFilter(value as PriceFilter),
+                          },
+                          {
+                            label: "Bedrooms",
+                            value: bedroomFilter,
+                            options: BEDROOM_OPTIONS,
+                            change: (value: string) =>
+                              setBedroomFilter(value as BedroomFilter),
+                          },
+                          {
+                            label: "Sort by",
+                            value: sort,
+                            options: SORT_OPTIONS,
+                            change: (value: string) =>
+                              setSort(value as SortOption),
+                          },
+                        ].map((field) => (
+                          <label key={field.label} className="block">
+                            <span className="mb-2 block font-body text-xs font-bold uppercase tracking-[0.14em] text-muted">
+                              {field.label}
+                            </span>
+                            <div className="rounded-lg bg-surface-soft px-4 py-4">
+                              <Select
+                                ariaLabel={field.label}
+                                value={field.value}
+                                onValueChange={field.change}
+                                options={field.options}
+                              />
+                            </div>
+                          </label>
+                        ))}
+                      </>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-[auto_1fr] gap-3 border-t border-border bg-bg px-5 py-4">
@@ -953,7 +1201,9 @@ export default function TenantBrowsePage(): ReactElement {
                       className="flex items-center justify-center gap-2 rounded-full bg-accent px-6 py-3 font-body text-sm font-bold text-primary hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                     >
                       <Search size={16} aria-hidden="true" />
-                      Show {visibleProperties.length} homes
+                      {isDescribing
+                        ? "Search"
+                        : `Show ${visibleProperties.length} homes`}
                     </button>
                   </div>
                 </motion.div>

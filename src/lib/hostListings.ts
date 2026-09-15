@@ -564,6 +564,90 @@ export async function getPublicProperties(
   }
 }
 
+/** Mirrors SearchFilters: what a plain-English search was read as. Null was not asked for. */
+export interface SearchFilters {
+  amenities: string[];
+  area: string | null;
+  city: string | null;
+  keywords: string | null;
+  maxPrice: number | null;
+  minBathrooms: number | null;
+  minBedrooms: number | null;
+  minPrice: number | null;
+  minSquareFootage: number | null;
+  rentalMode: RentalMode;
+}
+
+export interface InterpretedPropertiesResult extends PublicPropertiesResult {
+  /** True when the query could not be read and these are plain keyword matches. */
+  fallback: boolean;
+  filters: SearchFilters | null;
+}
+
+function isSearchFilters(value: unknown): value is SearchFilters {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    "rentalMode" in value &&
+    typeof value.rentalMode === "string"
+  );
+}
+
+export async function interpretPublicProperties(
+  query: string,
+  page = 0,
+  size = 12,
+): Promise<InterpretedPropertiesResult> {
+  try {
+    const response = await fetch(
+      `/api/search/interpret?${searchParams(page, size)}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: query.trim() }),
+      },
+    );
+    const envelope = await parseApiResponse(response);
+
+    if (
+      !isBackendPage(envelope.data) ||
+      !envelope.data.items.every(isBackendProperty)
+    ) {
+      throw new Error("The search server returned an invalid property list.");
+    }
+
+    const fallback =
+      "fallback" in envelope.data && envelope.data.fallback === true;
+    const filters =
+      "filters" in envelope.data && isSearchFilters(envelope.data.filters)
+        ? {
+            ...envelope.data.filters,
+            amenities: envelope.data.filters.amenities ?? [],
+          }
+        : null;
+
+    return {
+      data: envelope.data.items,
+      fallback,
+      filters,
+      hasNext: envelope.data.hasNext,
+      totalItems: envelope.data.totalItems,
+      unavailable: false,
+    };
+  } catch (error) {
+    return {
+      data: [],
+      fallback: false,
+      filters: null,
+      hasNext: false,
+      message:
+        error instanceof Error ? error.message : "The search could not be run.",
+      totalItems: 0,
+      unavailable: false,
+    };
+  }
+}
+
 export async function getBackendPropertyById(
   id: string,
 ): Promise<HostListingStorageResult<BackendProperty | null>> {
