@@ -4,6 +4,8 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   Bookmark,
   CalendarClock,
+  FileSpreadsheet,
+  Flag,
   CalendarDays,
   ChevronRight,
   Landmark,
@@ -48,6 +50,8 @@ const ADMIN_NAV_ITEMS = [
   { label: "Bookings", slug: "bookings", icon: CalendarDays },
   { label: "Escrow", slug: "escrow", icon: Landmark },
   { label: "Risk", slug: "risk", icon: ShieldAlert },
+  { label: "Reports", slug: "reports", icon: Flag },
+  { label: "Compliance", slug: "compliance", icon: FileSpreadsheet },
   { label: "Ratings", slug: "ratings", icon: Star },
 ];
 

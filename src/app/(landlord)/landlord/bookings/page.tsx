@@ -25,6 +25,7 @@ import ChatThread from "@/components/chat/ChatThread";
 import OverlayPortal from "@/components/ui/OverlayPortal";
 import PropertyPrice from "@/components/property/PropertyPrice";
 import TenancyDocumentsDialog from "@/components/tenant/TenancyDocumentsDialog";
+import TenancyRecordsDialog from "@/components/tenancy/TenancyRecordsDialog";
 import { IconTile } from "@/components/ui/icon-tile";
 import {
   StatusBadge,
@@ -72,6 +73,7 @@ interface BookingDetailsDrawerProps {
   onClose: () => void;
   onDocuments: (booking: Booking) => void;
   onMessage: (booking: Booking) => void;
+  onRecords: (booking: Booking) => void;
   now: number;
   onAccept: (booking: Booking) => void;
   onCancel: (booking: Booking) => void;
@@ -229,6 +231,7 @@ function BookingDetailsDrawer({
   onClose,
   onDocuments,
   onMessage,
+  onRecords,
   now,
   onAccept,
   onCancel,
@@ -464,6 +467,18 @@ function BookingDetailsDrawer({
                       Paperwork
                     </button>
                   ) : null}
+                  {booking.status === "CONFIRMED" ||
+                  booking.status === "COMPLETED" ? (
+                    <button
+                      type="button"
+                      onClick={() => onRecords(booking)}
+                      className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-primary/15 px-5 font-body text-sm font-bold text-primary transition-colors hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    >
+                      {booking.bookingKind === "SHORT_STAY"
+                        ? "Condition reports"
+                        : "Agreement and reports"}
+                    </button>
+                  ) : null}
                   {booking.depositStatus === "HELD" &&
                   booking.status === "COMPLETED" ? (
                     <button
@@ -495,6 +510,7 @@ export default function LandlordBookingsPage(): ReactElement {
   // Captured once so the "upcoming" count stays stable across re-renders
   const [now, setNow] = useState(0);
   const [chatBooking, setChatBooking] = useState<Booking | null>(null);
+  const [recordsBooking, setRecordsBooking] = useState<Booking | null>(null);
   const [documentsBooking, setDocumentsBooking] = useState<Booking | null>(
     null,
   );
@@ -889,6 +905,10 @@ export default function LandlordBookingsPage(): ReactElement {
           setSelectedBooking(null);
           setDocumentsBooking(booking);
         }}
+        onRecords={(booking) => {
+          setSelectedBooking(null);
+          setRecordsBooking(booking);
+        }}
         onMessage={(booking) => {
           setSelectedBooking(null);
           setChatBooking(booking);
@@ -958,6 +978,14 @@ export default function LandlordBookingsPage(): ReactElement {
           onClose={() => setChatBooking(null)}
         />
       ) : null}
+
+      <TenancyRecordsDialog
+        bookingId={recordsBooking?.id ?? null}
+        onClose={() => setRecordsBooking(null)}
+        propertyTitle={recordsBooking?.propertyTitle ?? ""}
+        showAgreement={recordsBooking?.bookingKind !== "SHORT_STAY"}
+        viewer="host"
+      />
 
       {documentsBooking ? (
         <TenancyDocumentsDialog

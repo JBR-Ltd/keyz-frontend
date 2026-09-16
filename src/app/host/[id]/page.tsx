@@ -15,6 +15,7 @@ import PropertyCard from "@/components/public/PropertyCard";
 import { useRouter } from "next/navigation";
 import { canonicalSegment } from "@/lib/publicIds";
 import VerifiedBadge from "@/components/ui/VerifiedBadge";
+import ReportDialog from "@/components/reports/ReportDialog";
 import { getHostListings, getHostProfile, type HostProfile } from "@/lib/hosts";
 import type { BackendProperty } from "@/lib/hostListings";
 
@@ -90,6 +91,7 @@ export default function HostProfilePage({
   const { id } = use(params);
   const router = useRouter();
   const [profile, setProfile] = useState<HostProfile | null>(null);
+  const [isReporting, setIsReporting] = useState(false);
   const [listings, setListings] = useState<BackendProperty[]>([]);
   const [hasNext, setHasNext] = useState(false);
   const [page, setPage] = useState(0);
@@ -259,6 +261,18 @@ export default function HostProfilePage({
                     Verification not completed
                   </span>
                 )}
+                <button
+                  type="button"
+                  onClick={() => setIsReporting(true)}
+                  className="font-body text-xs font-bold text-muted underline-offset-4 hover:text-red-700 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                >
+                  Report this host
+                </button>
+                <ReportDialog
+                  open={isReporting}
+                  onClose={() => setIsReporting(false)}
+                  target={{ type: "USER", userId: profile.publicId ?? String(profile.id) }}
+                />
               </div>
             </div>
           </div>

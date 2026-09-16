@@ -172,3 +172,38 @@ export function withdrawDispute(
 ): Promise<DisputeResult<Dispute | null>> {
   return actOnDispute(disputeId, "withdraw", "This could not be withdrawn.");
 }
+
+/** Photos or a PDF for the case: up to 10 files of 10MB each, while it is still open. */
+export async function addDisputeEvidence(
+  disputeId: number,
+  file: File,
+): Promise<DisputeResult<Dispute | null>> {
+  const token = getAccessToken();
+  const failureMessage = "That file could not be added.";
+
+  if (!token) {
+    return { data: null, message: "Your session has expired. Log in again." };
+  }
+
+  const form = new FormData();
+  form.append("file", file);
+
+  try {
+    const response = await fetch(`/api/disputes/${disputeId}/evidence`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: form,
+    });
+    const payload: unknown = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      return { data: null, message: resolveApiError(payload, failureMessage) };
+    }
+
+    const data = unwrap(payload);
+
+    return isDispute(data) ? { data } : { data: null, message: failureMessage };
+  } catch {
+    return { data: null, message: failureMessage };
+  }
+}

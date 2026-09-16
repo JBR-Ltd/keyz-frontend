@@ -9,7 +9,7 @@ const INITIAL_PREFERENCES = [
   {
     id: "property",
     label: "Property recommendations",
-    description: "New homes selected from your saved searches and activity.",
+    description: "Alerts when a new home matches one of your saved searches.",
     defaultOn: true,
   },
   {
@@ -60,11 +60,31 @@ const LANDLORD_PREFERENCES = [
   },
 ];
 
+/** How the moments that matter reach a phone. Stored as notify.sms and notify.whatsapp, which the backend reads. */
+const TEXT_PREFERENCES = [
+  {
+    id: "sms",
+    label: "Text messages",
+    description:
+      "Booking decisions, payment deadlines, payouts and reminders, texted as well as emailed.",
+    defaultOn: true,
+  },
+  {
+    id: "whatsapp",
+    label: "Send texts by WhatsApp",
+    description: "Receive those messages on WhatsApp instead of SMS.",
+    defaultOn: false,
+  },
+];
+
 export default function NotificationsSection(): ReactElement {
   const pathname = usePathname();
-  const preferences = pathname.startsWith("/landlord")
-    ? LANDLORD_PREFERENCES
-    : INITIAL_PREFERENCES;
+  const preferences = [
+    ...(pathname.startsWith("/landlord") || pathname.startsWith("/agent")
+      ? LANDLORD_PREFERENCES
+      : INITIAL_PREFERENCES),
+    ...TEXT_PREFERENCES,
+  ];
   const { error, isLoading, toggle, values } = usePreferenceToggles(
     "notify",
     preferences,

@@ -35,6 +35,7 @@ import { TouchEvent, use, useEffect, useState } from "react";
 import BackButton from "@/components/navigation/BackButton";
 import OverlayPortal from "@/components/ui/OverlayPortal";
 import MessageHostButton from "@/components/property/MessageHostButton";
+import ReportDialog from "@/components/reports/ReportDialog";
 import BookingRequestDialog from "@/components/property/BookingRequestDialog";
 import PropertyPrice from "@/components/property/PropertyPrice";
 import PropertyTourViewer from "@/components/property/PropertyTourViewer";
@@ -43,6 +44,7 @@ import TenantVerificationGate from "@/components/tenant/TenantVerificationGate";
 import VerifiedBadge from "@/components/ui/VerifiedBadge";
 import { canonicalSegment, hostPath } from "@/lib/publicIds";
 import { getPropertyById, PropertyDetail } from "@/lib/propertyDetails";
+import { getPropertyReviews } from "@/lib/reviews";
 import {
   getSavedListings,
   removeSavedListing,
@@ -220,6 +222,7 @@ export default function PropertyPage({
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [isViewingOpen, setIsViewingOpen] = useState(false);
+  const [isReporting, setIsReporting] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const lightboxRef = useDialogFocus<HTMLDivElement>(lightboxIndex !== null);
@@ -236,6 +239,42 @@ export default function PropertyPage({
       }
 
       setProperty(nextProperty);
+
+      if (nextProperty) {
+        void getPropertyReviews(nextProperty.publicId ?? nextProperty.id).then(
+          (result) => {
+            const published = result.data.filter((review) => !review.pending);
+
+            if (!active || published.length === 0) {
+              return;
+            }
+
+            setProperty((current) =>
+              current === null
+                ? current
+                : {
+                    ...current,
+                    reviews: {
+                      averageRating:
+                        published.reduce(
+                          (total, review) => total + review.rating,
+                          0,
+                        ) / published.length,
+                      count: published.length,
+                      items: published.map((review) => ({
+                        id: String(review.id),
+                        reviewerName: review.reviewer?.name ?? "A tenant",
+                        rating: review.rating,
+                        comment: review.comment ?? "",
+                        createdAt: review.createdAt ?? "",
+                        reply: review.reply ?? undefined,
+                      })),
+                    },
+                  },
+            );
+          },
+        );
+      }
 
       // An old numeric link or an outdated slug moves to the canonical address, so
       // the link people copy from here is the one that survives a rename. Only a
@@ -951,6 +990,14 @@ export default function PropertyPage({
                       <p className="mt-3 font-body text-sm leading-6 text-muted">
                         {review.comment}
                       </p>
+                      {review.reply ? (
+                        <p className="mt-3 border-l-2 border-accent pl-3 font-body text-sm leading-6 text-muted">
+                          <span className="font-bold text-primary">
+                            Host reply:{" "}
+                          </span>
+                          {review.reply}
+                        </p>
+                      ) : null}
                     </article>
                   ))}
                 </div>
@@ -1049,6 +1096,19 @@ export default function PropertyPage({
               hostRole={property.host.role}
               propertyId={property.id}
               propertyName={property.title}
+            />
+
+            <button
+              type="button"
+              onClick={() => setIsReporting(true)}
+              className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full px-4 py-2 font-body text-xs font-bold text-muted underline-offset-4 hover:text-red-700 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            >
+              Report this listing
+            </button>
+            <ReportDialog
+              open={isReporting}
+              onClose={() => setIsReporting(false)}
+              target={{ type: "LISTING", listingId: property.publicId ?? property.id }}
             />
 
             <ViewingRequestDialog

@@ -30,6 +30,8 @@ const TYPE_LABELS: Record<string, string> = {
   SHARED_PAYOUT_ACCOUNT: "Shared payout account",
   RAPID_CANCELLATION: "Cancelled straight after paying",
   DUE_DILIGENCE_INCOMPLETE: "Due diligence missing",
+  REPEATED_REPORTS: "Reported by several people",
+  SANCTIONS_PEP_MATCH: "Possible sanctions or PEP match",
   MANUAL: "Raised by an admin",
 };
 

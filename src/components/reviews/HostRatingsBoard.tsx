@@ -17,7 +17,13 @@ import {
 import { useToast } from "@/components/ui/toast";
 import RatingsPageSkeleton from "@/components/reviews/RatingsPageSkeleton";
 import { getHostBookings, type Booking } from "@/lib/bookings";
-import { getReviewsAboutMe, submitReview, type Review } from "@/lib/reviews";
+import {
+  getReviewsAboutMe,
+  getReviewsIWrote,
+  replyToReview,
+  submitReview,
+  type Review,
+} from "@/lib/reviews";
 
 const TENANT_PROMPTS = [
   "Did they treat the property well?",
@@ -29,9 +35,22 @@ function formatScore(value: number): string {
   return value.toFixed(1);
 }
 
+/** Whether this person already reviewed the stay. Older reviews carry no booking, only the listing. */
+function hasReviewed(reviews: Review[], booking: Booking): boolean {
+  return reviews.some((review) =>
+    review.bookingId != null
+      ? review.bookingId === booking.id
+      : review.propertyId === booking.propertyId,
+  );
+}
+
 export default function HostRatingsBoard(): ReactElement {
   const { notify } = useToast();
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [written, setWritten] = useState<Review[]>([]);
+  const [replyingTo, setReplyingTo] = useState<number | null>(null);
+  const [replyText, setReplyText] = useState("");
+  const [isReplying, setIsReplying] = useState(false);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
@@ -42,8 +61,9 @@ export default function HostRatingsBoard(): ReactElement {
     let active = true;
 
     const load = async (): Promise<void> => {
-      const [reviewResult, bookingResult] = await Promise.all([
+      const [reviewResult, writtenResult, bookingResult] = await Promise.all([
         getReviewsAboutMe(),
+        getReviewsIWrote(),
         getHostBookings(),
       ]);
 
@@ -52,6 +72,7 @@ export default function HostRatingsBoard(): ReactElement {
       }
 
       setReviews(reviewResult.data);
+      setWritten(writtenResult.data);
       setBookings(bookingResult.data);
       setIsLoading(false);
     };
@@ -79,15 +100,40 @@ export default function HostRatingsBoard(): ReactElement {
     () =>
       bookings.find(
         (booking) =>
-          booking.status === "COMPLETED" &&
-          !reviews.some(
-            (review) =>
-              review.direction === "HOST_TO_TENANT" &&
-              review.propertyId === booking.propertyId,
-          ),
+          booking.status === "COMPLETED" && !hasReviewed(written, booking),
       ) ?? null,
-    [bookings, reviews],
+    [bookings, written],
   );
+
+  const handleReply = async (review: Review): Promise<void> => {
+    const text = replyText.trim();
+
+    if (!text) {
+      return;
+    }
+
+    setIsReplying(true);
+    const result = await replyToReview(review.id, text);
+    setIsReplying(false);
+
+    if (!result.data) {
+      notify({
+        title: "Reply not posted",
+        description: result.message ?? "Try again in a moment.",
+        variant: "error",
+      });
+      return;
+    }
+
+    const updated = result.data;
+
+    setReviews((current) =>
+      current.map((item) => (item.id === updated.id ? updated : item)),
+    );
+    setReplyingTo(null);
+    setReplyText("");
+    notify({ title: "Reply posted", variant: "success" });
+  };
 
   const handleSubmit = async (): Promise<void> => {
     if (!reviewableStay) {
@@ -96,7 +142,7 @@ export default function HostRatingsBoard(): ReactElement {
 
     setIsSending(true);
     const result = await submitReview({
-      propertyId: reviewableStay.propertyId,
+      bookingId: reviewableStay.id,
       rating: score,
       comment: comment.trim(),
     });
@@ -111,10 +157,15 @@ export default function HostRatingsBoard(): ReactElement {
       return;
     }
 
-    setReviews((current) => [result.data as Review, ...current]);
+    setWritten((current) => [result.data as Review, ...current]);
     setComment("");
     setScore(5);
-    notify({ title: "Tenant rated", variant: "success" });
+    notify({
+      title: "Tenant rated",
+      description:
+        "It stays hidden until your tenant reviews you too, or the 14-day window closes.",
+      variant: "success",
+    });
   };
 
   const completedStays = bookings.filter(
@@ -335,6 +386,58 @@ export default function HostRatingsBoard(): ReactElement {
                   ? "You wrote this"
                   : "Tenant review"}
               </p>
+              {review.reply ? (
+                <p className="mt-3 border-l-2 border-accent pl-3 font-body text-sm leading-6 text-muted">
+                  <span className="font-bold text-primary">Your reply: </span>
+                  {review.reply}
+                </p>
+              ) : review.pending ? null : replyingTo === review.id ? (
+                <div className="mt-4 grid gap-2">
+                  <label htmlFor={`reply-${review.id}`} className="sr-only">
+                    Reply to this review
+                  </label>
+                  <textarea
+                    id={`reply-${review.id}`}
+                    rows={3}
+                    maxLength={1000}
+                    value={replyText}
+                    onChange={(event) => setReplyText(event.target.value)}
+                    placeholder="Thank them, or set the record straight. You can reply once."
+                    className="w-full resize-none rounded-lg border border-border bg-bg px-3 py-2 font-body text-sm text-primary outline-none placeholder:text-muted focus:border-accent focus:ring-2 focus:ring-accent/40"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void handleReply(review)}
+                      disabled={isReplying || !replyText.trim()}
+                      className="inline-flex items-center gap-2 rounded bg-primary px-4 py-2 font-accent text-[11px] font-bold uppercase tracking-[0.14em] text-white transition-colors hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60"
+                    >
+                      {isReplying ? (
+                        <Loader2 size={13} className="animate-spin" />
+                      ) : null}
+                      Post reply
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setReplyingTo(null)}
+                      className="rounded px-3 py-2 font-body text-xs font-bold text-muted hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : review.direction === "TENANT_TO_HOST" ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReplyingTo(review.id);
+                    setReplyText("");
+                  }}
+                  className="mt-4 font-body text-sm font-bold text-accent-alt underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                >
+                  Reply publicly
+                </button>
+              ) : null}
             </article>
           ))
         )}

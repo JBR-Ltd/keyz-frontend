@@ -24,21 +24,21 @@ Changing any of these means changing the policy text in the same commit.
 
 ## What each policy covers
 
-- **Payments and escrow** — who holds the money, when the host is paid, what Rello
+- **Payments and escrow**: who holds the money, when the host is paid, what Rello
   charges, and why paying off-platform voids all of it.
-- **Deposits and caution fees** — the deposit is refundable and returns
+- **Deposits and caution fees**: the deposit is refundable and returns
   automatically; the host may claim against it with evidence; Rello decides.
-- **Cancellations and refunds** — free until the stay begins, a dispute after that,
+- **Cancellations and refunds**: free until the stay begins, a dispute after that,
   automatic release of bookings nobody pays for.
-- **Reporting a problem** — how disputes work, what they freeze, what Rello will and
+- **Reporting a problem**: how disputes work, what they freeze, what Rello will and
   will not decide.
-- **Listings and verification** — what a host proves before publishing, and what
+- **Listings and verification**: what a host proves before publishing, and what
   gets a listing removed.
-- **Identity, money laundering and records** — the checks, the threshold, and the
+- **Identity, money laundering and records**: the checks, the threshold, and the
   five-year retention. Backed by the compliance programme in the `keyz-backend` repository, `docs/COMPLIANCE_AML.md`.
-- **Privacy and your data** — what is held, NDPA rights, and why some records
+- **Privacy and your data**: what is held, NDPA rights, and why some records
   survive a deletion request.
-- **Tenancies and renewals** — move-in dates, renewal reminders, and the line
+- **Tenancies and renewals**: move-in dates, renewal reminders, and the line
   between platform rules and state tenancy law.
 
 ## Still to do

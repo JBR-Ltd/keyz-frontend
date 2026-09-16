@@ -60,6 +60,9 @@ export interface BackendProperty {
   maximumGuests?: number | null;
   /** Refundable, and returned to the tenant after the tenancy. */
   securityDeposit?: number | null;
+  /** Yearly lets only: whether rent can be paid in parts, and in how many at most. */
+  instalmentsAllowed?: boolean | null;
+  maxInstalments?: number | null;
   rentalMode?: RentalMode | null;
   bathrooms: number;
   bedrooms: number;
@@ -123,6 +126,9 @@ export interface HostListingInput {
   maximumGuests?: number;
   /** A refundable deposit against damage, returned when the tenancy ends. */
   securityDeposit?: number;
+  /** Yearly lets only. Tenants may pay the rent in up to maxInstalments parts. */
+  instalmentsAllowed?: boolean;
+  maxInstalments?: number;
   rentalMode: RentalMode;
   ownerRole: HostListingRole;
   photos: HostListingPhoto[];
@@ -321,6 +327,8 @@ function mapBackendProperty(
     maximumGuests: property.maximumGuests ?? localListing?.maximumGuests ?? undefined,
     securityDeposit:
       property.securityDeposit ?? localListing?.securityDeposit ?? undefined,
+    instalmentsAllowed: property.instalmentsAllowed ?? undefined,
+    maxInstalments: property.maxInstalments ?? undefined,
     cleaningFee: property.cleaningFee ?? localListing?.cleaningFee ?? undefined,
     photos: localListing?.photos.length
       ? localListing.photos
@@ -394,6 +402,8 @@ function draftToRecord(
     minimumNights: draft.minimumNights ?? undefined,
     maximumGuests: draft.maximumGuests ?? undefined,
     securityDeposit: draft.securityDeposit ?? undefined,
+    instalmentsAllowed: draft.instalmentsAllowed ?? undefined,
+    maxInstalments: draft.maxInstalments ?? undefined,
     cleaningFee: draft.cleaningFee ?? undefined,
     photos: draft.imageUrls.map((url, index) => ({
       dataUrl: url,
@@ -431,6 +441,12 @@ function buildPropertyRequest(input: HostListingInput): object {
     maximumGuests: isShortStay ? (input.maximumGuests ?? null) : null,
     // Any letting can ask for a deposit, not just a shortlet
     securityDeposit: input.securityDeposit ?? null,
+    instalmentsAllowed:
+      input.rentalMode === "ANNUAL" && input.instalmentsAllowed ? true : null,
+    maxInstalments:
+      input.rentalMode === "ANNUAL" && input.instalmentsAllowed
+        ? (input.maxInstalments ?? 4)
+        : null,
     cleaningFee: isShortStay ? (input.cleaningFee ?? 0) : null,
   };
 }
@@ -857,6 +873,12 @@ export async function saveHostListingDraft(
     maximumGuests:
       input.rentalMode === "SHORT_STAY" ? (input.maximumGuests ?? null) : null,
     securityDeposit: input.securityDeposit ?? null,
+    instalmentsAllowed:
+      input.rentalMode === "ANNUAL" && input.instalmentsAllowed ? true : null,
+    maxInstalments:
+      input.rentalMode === "ANNUAL" && input.instalmentsAllowed
+        ? (input.maxInstalments ?? 4)
+        : null,
     cleaningFee: input.rentalMode === "SHORT_STAY" ? input.cleaningFee : null,
     amenities: input.amenities,
   };

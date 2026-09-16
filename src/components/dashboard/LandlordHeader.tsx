@@ -12,6 +12,8 @@ import {
   Settings,
   ShieldCheck,
   UserRound,
+  ReceiptText,
+  Handshake,
   X,
 } from "lucide-react";
 import Image from "next/image";
@@ -306,6 +308,24 @@ export default function LandlordHeader({
                       verifiedStepCount={verifiedStepCount}
                     />
                     <Link
+                      href="/landlord/statement"
+                      role="menuitem"
+                      onClick={() => setIsProfileOpen(false)}
+                      className="flex items-center gap-3 rounded-lg px-4 py-3 font-body text-sm font-medium text-primary transition-colors hover:bg-primary/5"
+                    >
+                      <ReceiptText size={17} strokeWidth={1.9} />
+                      Statement
+                    </Link>
+                    <Link
+                      href="/landlord/mandates"
+                      role="menuitem"
+                      onClick={() => setIsProfileOpen(false)}
+                      className="flex items-center gap-3 rounded-lg px-4 py-3 font-body text-sm font-medium text-primary transition-colors hover:bg-primary/5"
+                    >
+                      <Handshake size={17} strokeWidth={1.9} />
+                      Agent mandates
+                    </Link>
+                    <Link
                       href="/landlord/profile"
                       role="menuitem"
                       onClick={() => setIsProfileOpen(false)}
@@ -421,6 +441,22 @@ export default function LandlordHeader({
                     show={showVerificationAction}
                     verifiedStepCount={verifiedStepCount}
                   />
+                  <Link
+                    href="/landlord/statement"
+                    onClick={() => setIsMobileOpen(false)}
+                    className="flex min-h-11 items-center gap-3 rounded-lg px-3 font-body text-sm font-medium text-primary transition-colors hover:bg-primary/5"
+                  >
+                    <ReceiptText size={17} />
+                    Statement
+                  </Link>
+                  <Link
+                    href="/landlord/mandates"
+                    onClick={() => setIsMobileOpen(false)}
+                    className="flex min-h-11 items-center gap-3 rounded-lg px-3 font-body text-sm font-medium text-primary transition-colors hover:bg-primary/5"
+                  >
+                    <Handshake size={17} />
+                    Agent mandates
+                  </Link>
                   <Link
                     href="/landlord/profile"
                     onClick={() => setIsMobileOpen(false)}

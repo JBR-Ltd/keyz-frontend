@@ -10,6 +10,7 @@ import Link from "next/link";
 import { useState, type ReactElement } from "react";
 import CancelBookingDialog from "@/components/bookings/CancelBookingDialog";
 import ComplianceDetailsDialog from "@/components/tenant/ComplianceDetailsDialog";
+import InstalmentPlanSection from "@/components/tenant/InstalmentPlanSection";
 import PaymentStatusBadge from "@/components/bookings/PaymentStatusBadge";
 import PropertyPrice from "@/components/property/PropertyPrice";
 import { IconTile } from "@/components/ui/icon-tile";
@@ -203,6 +204,15 @@ export default function BookingPaymentPanel({
         </dl>
       ) : null}
 
+      {booking.bookingKind !== "SHORT_STAY" &&
+      (booking.status === "CONFIRMED" || booking.status === "COMPLETED") ? (
+        <InstalmentPlanSection
+          booking={booking}
+          canChoose={stage === "due"}
+          onChanged={onChanged}
+        />
+      ) : null}
+
       <h2 className="mt-4 font-body text-base font-bold text-primary">
         {copy.heading}
       </h2>
@@ -229,11 +239,11 @@ export default function BookingPaymentPanel({
 
         {showsReceipt ? (
           <Link
-            href="/tenant/escrow"
+            href={booking.escrowId ? `/receipts/payment/${booking.escrowId}` : "/tenant/escrow"}
             className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full border border-primary/20 px-5 font-body text-sm font-bold text-primary transition-colors hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             <ReceiptText size={16} aria-hidden="true" />
-            Payments and receipts
+            {booking.escrowId ? "View receipt" : "Payments and receipts"}
           </Link>
         ) : null}
 

@@ -33,6 +33,7 @@ export default function ComplianceDetailsDialog({
   const [residentialAddress, setResidentialAddress] = useState("");
   const [occupation, setOccupation] = useState("");
   const [sourceOfFunds, setSourceOfFunds] = useState("");
+  const [dateOfBirth, setDateOfBirth] = useState("");
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
@@ -68,6 +69,7 @@ export default function ComplianceDetailsDialog({
       residentialAddress: residentialAddress.trim(),
       occupation: occupation.trim(),
       sourceOfFunds: sourceOfFunds.trim(),
+      dateOfBirth: dateOfBirth || undefined,
     });
 
     setIsSaving(false);
@@ -171,6 +173,19 @@ export default function ComplianceDetailsDialog({
                   maxLength={120}
                   className={INPUT_CLASS_NAME}
                   placeholder="Salary, business income, savings"
+                />
+              </label>
+
+              <label className="mt-4 block">
+                <span className="font-body text-sm font-bold text-primary">
+                  Date of birth (optional)
+                </span>
+                <input
+                  id="compliance-date-of-birth"
+                  type="date"
+                  value={dateOfBirth}
+                  onChange={(event) => setDateOfBirth(event.target.value)}
+                  className={INPUT_CLASS_NAME}
                 />
               </label>
 

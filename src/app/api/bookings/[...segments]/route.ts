@@ -3,7 +3,7 @@ import { listHeaders } from "@/app/api/_requestId";
 const API_BASE_URL = process.env.API_BASE_URL;
 const BOOKING_REQUEST_TIMEOUT_MS = 90000;
 
-type BookingMethod = "DELETE" | "GET" | "PATCH" | "POST";
+type BookingMethod = "DELETE" | "GET" | "PATCH" | "POST" | "PUT";
 
 interface RouteContext {
   params: Promise<{ segments: string[] }>;
@@ -99,6 +99,10 @@ export async function POST(request: Request, context: RouteContext) {
 
 export async function PATCH(request: Request, context: RouteContext) {
   return handle(request, context, "PATCH");
+}
+
+export async function PUT(request: Request, context: RouteContext) {
+  return handle(request, context, "PUT");
 }
 
 export async function DELETE(request: Request, context: RouteContext) {

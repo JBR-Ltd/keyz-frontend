@@ -3,6 +3,7 @@
 // Shared by landlords and agents. Everything here is scoped by the caller token,
 // so the screen is identical for either role.
 
+import Link from "next/link";
 import { useEffect, useMemo, useState, type ReactElement } from "react";
 import {
   ArrowDownLeft,
@@ -268,6 +269,14 @@ export default function EscrowLedger(): ReactElement {
                   <p className="mt-1 font-body text-sm text-muted">
                     {entry.tenant?.name ?? "Tenant"}
                   </p>
+                  {entry.heldAt ? (
+                    <Link
+                      href={`/receipts/payment/${entry.id}`}
+                      className="mt-1 inline-block font-body text-xs font-bold text-accent-alt underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    >
+                      Receipt
+                    </Link>
+                  ) : null}
                 </div>
               </div>
               <p className="font-display text-2xl font-bold text-primary">

@@ -28,6 +28,7 @@ import {
 import { useToast } from "@/components/ui/toast";
 import BookingPaymentPanel from "@/components/tenant/BookingPaymentPanel";
 import MaintenanceReportDialog from "@/components/tenant/MaintenanceReportDialog";
+import TenancyRecordsDialog from "@/components/tenancy/TenancyRecordsDialog";
 import {
   getMyBookings,
   type Booking,
@@ -249,6 +250,7 @@ export default function TenantBookingsPage(): ReactElement {
   const [repairs, setRepairs] = useState<MaintenanceRequest[]>([]);
   const [loadedTenancyKey, setLoadedTenancyKey] = useState<string | null>(null);
   const [isReportOpen, setIsReportOpen] = useState(false);
+  const [recordsBookingId, setRecordsBookingId] = useState<number | null>(null);
   const [tenancyRefreshKey, setTenancyRefreshKey] = useState(0);
   // Taken when the bookings arrive, so deadlines are read against one moment
   const [now, setNow] = useState(0);
@@ -525,6 +527,32 @@ export default function TenantBookingsPage(): ReactElement {
                   }
                 />
 
+                {primaryBooking.status === "CONFIRMED" ||
+                primaryBooking.status === "COMPLETED" ? (
+                  <article className="rounded-2xl border border-border bg-bg p-6 shadow-sm">
+                    <IconTile tone="accent" size="lg">
+                      <ShieldCheck size={21} />
+                    </IconTile>
+                    <h2 className="mt-6 font-display text-2xl font-bold text-primary">
+                      {primaryBooking.bookingKind === "SHORT_STAY"
+                        ? "Condition reports"
+                        : "Agreement and condition reports"}
+                    </h2>
+                    <p className="mt-3 font-body text-sm leading-6 text-muted">
+                      {primaryBooking.bookingKind === "SHORT_STAY"
+                        ? "Record the state of the place when you arrive and leave, with photos."
+                        : "Sign your tenancy agreement, and record the state of the home with photos when you move in and out. Deposit claims are decided from these."}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setRecordsBookingId(primaryBooking.id)}
+                      className="mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-primary px-5 font-body text-sm font-bold text-white transition-colors hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    >
+                      Open records
+                    </button>
+                  </article>
+                ) : null}
+
                 <article className="rounded-2xl border border-border bg-bg p-6 shadow-sm">
                   <div className="flex items-center justify-between gap-4">
                     <IconTile tone="neutral" size="lg">
@@ -750,6 +778,19 @@ export default function TenantBookingsPage(): ReactElement {
           </>
         )}
       </div>
+
+      <TenancyRecordsDialog
+        bookingId={recordsBookingId}
+        onClose={() => setRecordsBookingId(null)}
+        propertyTitle={
+          bookings.find((item) => item.id === recordsBookingId)?.propertyTitle ?? ""
+        }
+        showAgreement={
+          bookings.find((item) => item.id === recordsBookingId)?.bookingKind !==
+          "SHORT_STAY"
+        }
+        viewer="tenant"
+      />
 
       {primaryBookingId !== null ? (
         <MaintenanceReportDialog

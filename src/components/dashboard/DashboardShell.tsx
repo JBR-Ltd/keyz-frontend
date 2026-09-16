@@ -5,6 +5,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
 import IncomingCallWatcher from "@/components/chat/IncomingCallWatcher";
 import MessagesDropdown from "@/components/chat/MessagesDropdown";
+import NotificationsBell from "@/components/notifications/NotificationsBell";
 import AgentHeader from "@/components/dashboard/AgentHeader";
 import LandlordHeader from "@/components/dashboard/LandlordHeader";
 import RoleSidebar from "@/components/dashboard/RoleSidebar";
@@ -117,27 +118,32 @@ export default function DashboardShell({
   };
 
   const sidebarOffset = isCollapsed ? "lg:ml-20" : "lg:ml-72";
-  const tenantActions = <MessagesDropdown />;
+  const headerActions = (
+    <div className="flex items-center gap-1">
+      <NotificationsBell />
+      <MessagesDropdown />
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-[var(--color-bg)]">
       {rolePath === "tenant" ? (
         <TenantSidebar
-          actions={tenantActions}
+          actions={headerActions}
           showVerificationAction={showTenantVerificationAction}
           verificationHref={verificationHref}
           verifiedStepCount={verifiedTenantStepCount}
         />
       ) : rolePath === "landlord" ? (
         <LandlordHeader
-          actions={<MessagesDropdown />}
+          actions={headerActions}
           showVerificationAction={showLandlordVerificationAction}
           verificationHref="/landlord/verify"
           verifiedStepCount={verifiedLandlordStepCount}
         />
       ) : rolePath === "agent" ? (
         <AgentHeader
-          actions={<MessagesDropdown />}
+          actions={headerActions}
           showVerificationAction={showAgentVerificationAction}
           verificationHref="/agent/verify"
           verifiedStepCount={verifiedHostStepCount}
@@ -151,7 +157,7 @@ export default function DashboardShell({
             onCollapseToggle={toggleSidebar}
           />
           <div className="fixed right-5 top-24 z-40 sm:right-8 lg:right-10 lg:top-5 xl:right-14">
-            <MessagesDropdown />
+            {headerActions}
           </div>
         </>
       )}

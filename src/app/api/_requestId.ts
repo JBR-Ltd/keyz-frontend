@@ -12,15 +12,17 @@ export function requestIdHeader(response: Response): Record<string, string> {
 }
 
 /**
- * The request id plus the full count a paged list reports, which the browser needs
- * to know whether it has every row.
+ * The request id plus what a paged list reports about the rest of it: the full count
+ * for page numbers, or the next cursor for a list that grows while it is read.
  */
 export function listHeaders(response: Response): Record<string, string> {
   const total = response.headers.get("X-Total-Count");
+  const nextCursor = response.headers.get("X-Next-Cursor");
 
   return {
     ...requestIdHeader(response),
     ...(total ? { "X-Total-Count": total } : {}),
+    ...(nextCursor ? { "X-Next-Cursor": nextCursor } : {}),
   };
 }
 

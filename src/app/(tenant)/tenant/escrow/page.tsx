@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState, type ReactElement } from "react";
 import {
   ArrowDownLeft,
@@ -266,6 +267,14 @@ export default function TenantEscrowPage(): ReactElement {
                     <p className="mt-1 font-mono text-xs text-muted">
                       Ref {entry.reference}
                     </p>
+                  ) : null}
+                  {entry.heldAt ? (
+                    <Link
+                      href={`/receipts/payment/${entry.id}`}
+                      className="mt-1 inline-block font-body text-xs font-bold text-accent-alt underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    >
+                      Receipt
+                    </Link>
                   ) : null}
                   {entry.status === "REFUNDED" && entry.refundedAt ? (
                     <p className="mt-1 font-body text-xs text-muted">

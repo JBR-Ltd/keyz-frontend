@@ -38,6 +38,7 @@ import {
 } from "@/lib/savedListings";
 import { publishTenantHeaderSearch } from "@/lib/tenantHeaderSearch";
 import { useDialogFocus } from "@/lib/useDialogFocus";
+import { createSavedSearch, getSavedSearches } from "@/lib/marketplace";
 
 // === Types
 
@@ -245,6 +246,7 @@ export default function TenantBrowsePage(): ReactElement {
   const [stayMode, setStayMode] = useState<StayMode>("all");
   const [savedIds, setSavedIds] = useState<Set<string>>(() => new Set());
   const [savingIds, setSavingIds] = useState<Set<string>>(() => new Set());
+  const [isSavingSearch, setIsSavingSearch] = useState(false);
   const [isHeaderSearchVisible, setIsHeaderSearchVisible] = useState(false);
   const [searchMode, setSearchMode] = useState<SearchMode>("keywords");
   const [interpretation, setInterpretation] = useState<SearchFilters | null>(
@@ -259,6 +261,44 @@ export default function TenantBrowsePage(): ReactElement {
      The filters as the server takes them. Everything except the shortlet toggle is
      applied in the query now, so a match on page nine is still a match.
    */
+  // An alert email links to /tenant/browse?search={id}; open that search's filters
+  useEffect(() => {
+    const savedSearchId = Number(new URLSearchParams(window.location.search).get("search"));
+
+    if (!savedSearchId) {
+      return;
+    }
+
+    let active = true;
+
+    void getSavedSearches().then((result) => {
+      const saved = result.data.find((item) => item.id === savedSearchId);
+
+      if (!active || !saved) {
+        return;
+      }
+
+      const bucket = (Object.keys(PRICE_BOUNDS) as PriceFilter[]).find(
+        (key) =>
+          PRICE_BOUNDS[key][0] === (saved.minPrice ?? undefined) &&
+          PRICE_BOUNDS[key][1] === (saved.maxPrice ?? undefined),
+      );
+
+      setQueryInput(saved.query ?? "");
+      setSearchQuery(saved.query ?? "");
+      setPriceFilter(bucket ?? "all");
+      setBedroomFilter(
+        saved.minBedrooms && saved.minBedrooms >= 1 && saved.minBedrooms <= 4
+          ? (String(saved.minBedrooms) as BedroomFilter)
+          : "all",
+      );
+    });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const search = useMemo<ListingSearch>(() => {
     const [minPrice, maxPrice] = PRICE_BOUNDS[priceFilter];
 
@@ -534,6 +574,32 @@ export default function TenantBrowsePage(): ReactElement {
     ? "Describe it, like a 3 bed in Lekki under ₦5m with a pool"
     : "City, area, or property";
   const SearchInputIcon = isDescribing ? Sparkles : MapPin;
+  const saveSearch = async (): Promise<void> => {
+    setIsSavingSearch(true);
+    const result = await createSavedSearch({
+      alerts: true,
+      query: search.query,
+      minPrice: search.minPrice,
+      maxPrice: search.maxPrice,
+      minBedrooms: search.minBedrooms,
+    });
+    setIsSavingSearch(false);
+
+    notify(
+      result.data
+        ? {
+            title: "Search saved",
+            description: "We will email you when a new home matches it.",
+            variant: "success",
+          }
+        : {
+            title: "Search not saved",
+            description: result.message ?? "Try again in a moment.",
+            variant: "error",
+          },
+    );
+  };
+
   const resultLabel = propertiesLoading
     ? "Loading homes..."
     : appliedFilters.length > 0
@@ -899,6 +965,17 @@ export default function TenantBrowsePage(): ReactElement {
             <p className="font-body text-sm text-muted" aria-live="polite">
               {resultLabel}
             </p>
+            {!isDescribing && appliedFilters.length > 0 ? (
+              <button
+                type="button"
+                onClick={() => void saveSearch()}
+                disabled={isSavingSearch}
+                className="inline-flex min-h-10 items-center gap-2 rounded-full border border-primary/20 px-4 font-body text-sm font-bold text-primary hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60"
+              >
+                {isSavingSearch ? <Loader2 size={14} className="animate-spin" /> : null}
+                Save search and get alerts
+              </button>
+            ) : null}
             {isDescribing ? null : (
               <div className="min-w-44 rounded-xl border border-border bg-bg px-3 py-2 shadow-sm">
                 <Select

@@ -24,6 +24,8 @@ export interface PropertyDraft {
   minimumNights: number | null;
   maximumGuests?: number | null;
   securityDeposit?: number | null;
+  instalmentsAllowed?: boolean | null;
+  maxInstalments?: number | null;
   price: number | null;
   rentalMode: RentalMode | null;
   squareFootage: number | null;
@@ -45,6 +47,8 @@ export interface PropertyDraftInput {
   minimumNights?: number | null;
   maximumGuests?: number | null;
   securityDeposit?: number | null;
+  instalmentsAllowed?: boolean | null;
+  maxInstalments?: number | null;
   price?: number;
   rentalMode?: RentalMode;
   squareFootage?: number;

@@ -65,6 +65,11 @@ export interface Booking {
   paymentDueAt?: string | null;
   /** Null until a payment is started. */
   paymentStatus?: EscrowStatus | null;
+  /** Parts the rent is paid in. Null means all at once. */
+  instalmentCount?: number | null;
+  /** Whether the host takes the rent in parts, and in how many at most. */
+  instalmentsAllowed?: boolean | null;
+  maxInstalments?: number | null;
 }
 
 export interface BookingResult<TValue> {

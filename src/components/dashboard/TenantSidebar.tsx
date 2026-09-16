@@ -11,6 +11,8 @@ import {
   Settings,
   ShieldCheck,
   UserRound,
+  BellRing,
+  ReceiptText,
   X,
 } from "lucide-react";
 import Image from "next/image";
@@ -326,6 +328,24 @@ export default function TenantSidebar({
                       verifiedStepCount={verifiedStepCount}
                     />
                     <Link
+                      href="/tenant/saved-searches"
+                      role="menuitem"
+                      onClick={() => setIsProfileOpen(false)}
+                      className="flex items-center gap-3 rounded-lg px-4 py-3 font-body text-sm font-medium text-primary transition-colors hover:bg-primary/5"
+                    >
+                      <BellRing size={17} strokeWidth={1.9} />
+                      Saved searches
+                    </Link>
+                    <Link
+                      href="/tenant/statement"
+                      role="menuitem"
+                      onClick={() => setIsProfileOpen(false)}
+                      className="flex items-center gap-3 rounded-lg px-4 py-3 font-body text-sm font-medium text-primary transition-colors hover:bg-primary/5"
+                    >
+                      <ReceiptText size={17} strokeWidth={1.9} />
+                      Statement
+                    </Link>
+                    <Link
                       href="/tenant/profile"
                       role="menuitem"
                       onClick={() => setIsProfileOpen(false)}
@@ -441,6 +461,22 @@ export default function TenantSidebar({
                     show={showVerificationAction}
                     verifiedStepCount={verifiedStepCount}
                   />
+                  <Link
+                    href="/tenant/saved-searches"
+                    onClick={() => setIsMobileOpen(false)}
+                    className="flex min-h-11 items-center gap-3 rounded-lg px-3 font-body text-sm font-medium text-primary transition-colors hover:bg-primary/5"
+                  >
+                    <BellRing size={17} />
+                    Saved searches
+                  </Link>
+                  <Link
+                    href="/tenant/statement"
+                    onClick={() => setIsMobileOpen(false)}
+                    className="flex min-h-11 items-center gap-3 rounded-lg px-3 font-body text-sm font-medium text-primary transition-colors hover:bg-primary/5"
+                  >
+                    <ReceiptText size={17} />
+                    Statement
+                  </Link>
                   <Link
                     href="/tenant/profile"
                     onClick={() => setIsMobileOpen(false)}

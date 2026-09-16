@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState, type ReactElement } from "react";
 import PropertyPrice from "@/components/property/PropertyPrice";
 import { verifyPaymentReturn, type EscrowEntry } from "@/lib/escrow";
+import { verifyInstalmentPayment } from "@/lib/instalments";
 
 // === Types
 
@@ -84,6 +85,32 @@ function PaymentReturn(): ReactElement {
     let active = true;
     let timer: number | undefined;
 
+    const checkInstalment = async (attempt: number): Promise<void> => {
+      const result = await verifyInstalmentPayment(reference);
+
+      if (!active) {
+        return;
+      }
+
+      const status = result.data?.status;
+
+      if (!result.data) {
+        setState({
+          entry: null,
+          message: result.message ?? "We could not check that payment.",
+          phase: "failed",
+        });
+      } else if (status === "PAID" || status === "RELEASING" || status === "RELEASED") {
+        setState({ entry: null, message: "", phase: "confirmed" });
+      } else if (cancelled) {
+        setState({ entry: null, message: "", phase: "not_completed" });
+      } else if (attempt + 1 < CHECK_ATTEMPTS) {
+        timer = window.setTimeout(() => void checkInstalment(attempt + 1), CHECK_INTERVAL_MS);
+      } else {
+        setState({ entry: null, message: "", phase: "pending" });
+      }
+    };
+
     const check = async (attempt: number): Promise<void> => {
       const result = await verifyPaymentReturn(reference);
 
@@ -125,7 +152,12 @@ function PaymentReturn(): ReactElement {
       setState({ entry, message: "", phase: "pending" });
     };
 
-    void check(0);
+    // Instalments after the first are their own charges, confirmed separately
+    if (reference.startsWith("rello_inst_")) {
+      void checkInstalment(0);
+    } else {
+      void check(0);
+    }
 
     return () => {
       active = false;

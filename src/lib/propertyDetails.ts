@@ -41,6 +41,7 @@ export interface PropertyReviewItem {
   rating: number;
   comment: string;
   createdAt: string;
+  reply?: string;
 }
 
 export interface PropertyReviews {

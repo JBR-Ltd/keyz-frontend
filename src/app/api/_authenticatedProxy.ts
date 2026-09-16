@@ -4,12 +4,15 @@ const API_BASE_URL = process.env.API_BASE_URL;
 const REQUEST_TIMEOUT_MS = 90000;
 
 interface AuthenticatedProxyOptions {
+  /** Forward without a token when there is none, for reads the backend serves publicly. */
+  allowAnonymous?: boolean;
   backendPath: string;
   method: "DELETE" | "GET" | "PATCH" | "POST" | "PUT";
   request: Request;
 }
 
 export async function proxyAuthenticatedRequest({
+  allowAnonymous = false,
   backendPath,
   method,
   request,
@@ -27,7 +30,7 @@ export async function proxyAuthenticatedRequest({
 
   const authorization = request.headers.get("Authorization");
 
-  if (!authorization) {
+  if (!authorization && !allowAnonymous) {
     return Response.json(
       { success: false, message: "Authorization is required.", data: null },
       { status: 401 },
@@ -40,13 +43,14 @@ export async function proxyAuthenticatedRequest({
     REQUEST_TIMEOUT_MS,
   );
   const backendUrl = `${API_BASE_URL.replace(/\/$/, "")}${backendPath}`;
+  // Bytes, not text: reading a multipart upload as text corrupts every file in it
   const body =
     method === "POST" || method === "PATCH" || method === "PUT"
-      ? await request.text()
+      ? await request.arrayBuffer()
       : undefined;
-  const headers = new Headers({ Authorization: authorization });
+  const headers = new Headers(authorization ? { Authorization: authorization } : {});
 
-  if (body) {
+  if (body && body.byteLength > 0) {
     headers.set(
       "Content-Type",
       request.headers.get("Content-Type") ?? "application/json",
@@ -57,9 +61,24 @@ export async function proxyAuthenticatedRequest({
     const response = await fetch(backendUrl, {
       method,
       headers,
-      body,
+      body: body && body.byteLength > 0 ? body : undefined,
       signal: controller.signal,
     });
+    const contentDisposition = response.headers.get("Content-Disposition");
+
+    // A download (a CSV export) passes through as bytes with its filename
+    if (response.ok && contentDisposition) {
+      return new Response(await response.arrayBuffer(), {
+        status: response.status,
+        headers: {
+          "Content-Type":
+            response.headers.get("Content-Type") ?? "application/octet-stream",
+          "Content-Disposition": contentDisposition,
+          ...requestIdHeader(response),
+        },
+      });
+    }
+
     const responseBody = await response.text();
     const contentType =
       response.headers.get("Content-Type") ?? "application/json";

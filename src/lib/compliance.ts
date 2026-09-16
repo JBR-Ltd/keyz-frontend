@@ -11,6 +11,7 @@ import { resolveApiError } from "@/lib/errors";
  */
 export interface ComplianceProfile {
   complete: boolean;
+  dateOfBirth?: string | null;
   occupation: string | null;
   /** Payments at or above this need the details first. */
   requiredAboveAmount: number | null;
@@ -20,6 +21,8 @@ export interface ComplianceProfile {
 }
 
 export interface ComplianceInput {
+  /** Optional, as yyyy-MM-dd. Makes sanctions screening far less likely to confuse two people. */
+  dateOfBirth?: string;
   occupation: string;
   residentialAddress: string;
   sourceOfFunds: string;

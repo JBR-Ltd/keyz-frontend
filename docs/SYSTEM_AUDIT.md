@@ -39,7 +39,7 @@ out, except where something else touches them.
 | Shortlet settings: minimum nights, cleaning fee, guest limit | Built | |
 | Refundable deposit on any letting | Built | New this pass |
 | Public identifiers for shared links | Built | Numeric ids no longer expose unpublished listings |
-| Reporting a listing | Missing | No way for a tenant to report a bad listing |
+| Reporting a listing or a person | Partial | API tested; screens built but not yet clicked through in a browser. Reporter stays anonymous; three open reports raise a risk flag |
 
 ### Discovery
 
@@ -49,8 +49,8 @@ out, except where something else touches them.
 | Plain-English search | Built | |
 | Saved listings | Built | |
 | Host profiles | Built | |
-| Map view, commute filters, sorting | Missing | |
-| Saved searches and alerts | Missing | The main reason a tenant comes back |
+| Map view, commute filters | Missing | Sorting is built |
+| Saved searches and alerts | Partial | API tested; screens built but not yet clicked through in a browser. Daily digest of listings that went live since the last look |
 
 ### Bookings
 
@@ -64,7 +64,7 @@ out, except where something else touches them.
 | Deadline to pay, and automatic release if nobody does | Built | |
 | Double-booking protection | Built | Listing row locked; race tested |
 | Lifecycle stages shared by server and client | Built | |
-| Rent instalments | Missing | Nigerian rent is yearly up front; part payment is a real market need |
+| Rent instalments | Partial | API tested; screens built but not yet clicked through in a browser. 2, 4 or 12 parts on yearly lets the host allows; deposit rides on the first |
 
 ### Payments, escrow and deposits
 
@@ -78,8 +78,8 @@ out, except where something else touches them.
 | Cancellation refunds, and refusal once a stay has begun | Built | |
 | Reconciliation of stuck payouts, refunds and deposit returns | Built | |
 | Deposit held apart, returned automatically, claimable with evidence | Built | Admin decides any split |
-| Receipts and payout statements as documents | Missing | Emails exist; no PDF or downloadable statement |
-| Payout schedule visibility for hosts | Partial | Status is visible; no timetable or export |
+| Receipts and payout statements | Partial | API tested; screens built but not yet clicked through in a browser. JSON receipts and statements; printing and CSV are the frontend's job |
+| Payout schedule visibility for hosts | Partial | Status and the statement API exist; no timetable screen |
 
 ### Tenancy management
 
@@ -88,8 +88,8 @@ out, except where something else touches them.
 | Tenancy documents | Built | |
 | Maintenance requests, with host replies | Built | Emails added this pass |
 | Renewal reminders at 60, 30 and 7 days | Built | New this pass |
-| Move-in inventory and condition photos | Missing | Would make deposit claims far easier to decide |
-| Tenancy agreement signing | Missing | |
+| Move-in and move-out condition reports with photos | Partial | API tested; screens built but not yet clicked through in a browser. Frozen and hashed on submit; the other side acknowledges or contests |
+| Tenancy agreement signing | Partial | API tested; screens built but not yet clicked through in a browser. Template in the backend for legal to edit; typed-name signatures with IP and time |
 
 ### Viewings and messaging
 
@@ -99,17 +99,17 @@ out, except where something else touches them.
 | Viewing reminders | Built | New this pass |
 | Chat, with property, tour and floor plan sharing | Built | Polling, not websockets, on purpose |
 | Off-platform contact filtering | Built | |
-| In-app notification centre | Missing | Everything is email today |
-| WhatsApp or SMS | Missing | Matters in this market |
+| In-app notification centre | Partial | API tested; screens built but not yet clicked through in a browser. Every email also lands here |
+| WhatsApp or SMS | Built | Termii, for the moments that matter; turned on by setting the API key. Preference toggles have no screen yet |
 
 ### Trust, reviews and disputes
 
 | Area | Status | Notes |
 | --- | --- | --- |
 | Reviews both ways, moderation, trust score | Built | |
-| Double-blind reviews, review window, host replies | Missing | Reviews also bind to any completed booking on the listing rather than a specific one |
+| Double-blind reviews, review window, host replies | Partial | API tested; screens built but not yet clicked through in a browser. Reviews bind to a specific stay. The listing page still shows no real reviews |
 | Disputes: open, escalate, withdraw, admin resolution | Built | Freezes the money; emails added this pass |
-| Evidence upload on a dispute | Partial | The field exists on the record, nothing fills it |
+| Evidence upload on a dispute | Partial | API tested; screens built but not yet clicked through in a browser |
 
 ### Admin and compliance
 
@@ -119,20 +119,21 @@ out, except where something else touches them.
 | Unpublishing listings, booking decisions, audit trail | Built | |
 | Risk queue with clear and escalate, and a written record | Built | New this pass |
 | Deposit claim decisions | Built | New this pass |
-| Sanctions and politically exposed person screening | Missing | Dojah offers it; the hook belongs beside the payment risk checks |
-| Reporting exports for SCUML and the NFIU | Missing | Manual today |
+| Sanctions and politically exposed person screening | Built | Dojah, for people who move large sums; a possible match raises a flag and is never shown to the person. Request shape to confirm in the sandbox |
+| Reporting exports for SCUML and the NFIU | Partial | API tested; screens built but not yet clicked through in a browser. Large payments, risk flags, screenings as CSV, every export audited |
 
 ### Platform
 
 | Area | Status | Notes |
 | --- | --- | --- |
-| Database migrations, schema validated on start | Built | V1 to V7 |
+| Database migrations, schema validated on start | Built | V1 to V11; V6 onward not yet applied to Neon |
 | Request ids through every proxy | Built | |
 | Cache validators on public reads | Built | |
 | Rate limiting on `/api/**` | Built | |
 | Query-count guard against N+1 reads | Built | Caught a real regression this pass |
-| Error tracking, uptime alerts, dashboards | Missing | |
-| Load testing at production size | Partial | Query budget only |
+| Metrics: latency percentiles, pool pressure, startup time | Built | `/actuator/metrics`, admins only. See `keyz-backend/docs/PERFORMANCE.md` |
+| Error tracking, uptime alerts, dashboards | Missing | Metrics exist; nothing collects or alerts on them |
+| Load testing at production size | Partial | Browse over 2,000 listings and cursor walks over 600 bookings; no concurrent load test |
 
 ## What is left, ranked
 
@@ -152,14 +153,12 @@ out, except where something else touches them.
 
 ### Soon after
 
-1. In-app notifications, then WhatsApp or SMS for the moments that matter: a
-   request, an acceptance, a payment deadline, a repair.
-2. Dispute evidence upload, and a way to report a listing or a person.
-3. Reviews: double-blind, a window, and host replies.
-4. Rent instalments, and receipts and payout statements people can download.
-5. Move-in inventory with photographs, which is what makes a deposit claim decidable.
-6. Saved searches and alerts.
-7. Agent and landlord delegation: who may list on whose behalf, and who gets paid.
+1. Click through every screen added for the gaps above against a local database: notifications,
+   reports, reviews, instalments, receipts and statements, condition reports, agreements,
+   saved searches, mandates, and the admin reports and compliance pages.
+2. Load test at production size with concurrent users; the current tests cover query counts,
+   payload size and connection isolation, not concurrency.
+3. Error tracking and alerting on the metrics `/actuator/metrics` now exposes.
 
 ### Later
 

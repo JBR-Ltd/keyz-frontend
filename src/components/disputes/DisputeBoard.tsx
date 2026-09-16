@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactElement } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
   Clock3,
+  FileText,
   Loader2,
+  Paperclip,
   Scale,
   ShieldAlert,
 } from "lucide-react";
@@ -13,6 +15,7 @@ import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import {
+  addDisputeEvidence,
   escalateDispute,
   getMyDisputes,
   openDispute,
@@ -57,6 +60,8 @@ export default function DisputeBoard({
   const [loadError, setLoadError] = useState("");
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const evidenceInputRef = useRef<HTMLInputElement>(null);
 
   const [newBookingId, setNewBookingId] = useState("");
   const [reason, setReason] = useState("");
@@ -197,6 +202,35 @@ export default function DisputeBoard({
     });
   };
 
+  const uploadEvidence = async (dispute: Dispute, file: File | undefined): Promise<void> => {
+    if (!file) {
+      return;
+    }
+
+    setIsUploading(true);
+    const result = await addDisputeEvidence(dispute.id, file);
+    setIsUploading(false);
+
+    if (evidenceInputRef.current) {
+      evidenceInputRef.current.value = "";
+    }
+
+    if (!result.data) {
+      notify({
+        title: "File not added",
+        description: result.message ?? "Try again in a moment.",
+        variant: "error",
+      });
+      return;
+    }
+
+    const updated = result.data;
+    setDisputes((current) =>
+      current.map((item) => (item.id === updated.id ? updated : item)),
+    );
+    notify({ title: "Evidence added", variant: "success" });
+  };
+
   const needsAction = lanes.OPEN.length;
 
   return (
@@ -309,6 +343,47 @@ export default function DisputeBoard({
                   {selected.detail}
                 </p>
               ) : null}
+
+              <div className="mt-5 rounded-lg bg-surface-soft p-4 shadow-sm">
+                <p className="font-body text-sm font-bold text-primary">
+                  Evidence ({selected.evidenceUrls.length} of 10)
+                </p>
+                {selected.evidenceUrls.length > 0 ? (
+                  <ul className="mt-3 grid gap-2">
+                    {selected.evidenceUrls.map((url, index) => (
+                      <li key={url}>
+                        <a
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 font-body text-sm text-primary underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                        >
+                          <FileText size={14} aria-hidden="true" className="text-accent-alt" />
+                          File {index + 1}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="mt-2 font-body text-xs leading-5 text-muted">
+                    Photos of the problem, messages, receipts or a condition report make a case far easier to decide.
+                  </p>
+                )}
+                {selected.status === "OPEN" || selected.status === "UNDER_REVIEW" ? (
+                  <label className="mt-3 inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-full border border-primary/20 px-4 font-body text-xs font-bold text-primary hover:bg-primary/5 focus-within:ring-2 focus-within:ring-accent">
+                    {isUploading ? <Loader2 size={14} className="animate-spin" /> : <Paperclip size={14} aria-hidden="true" />}
+                    Add a photo or PDF
+                    <input
+                      ref={evidenceInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,application/pdf"
+                      disabled={isUploading || selected.evidenceUrls.length >= 10}
+                      onChange={(event) => void uploadEvidence(selected, event.target.files?.[0])}
+                      className="sr-only"
+                    />
+                  </label>
+                ) : null}
+              </div>
 
               {selected.resolutionNote ? (
                 <p className="mt-4 rounded-lg bg-accent/10 p-4 font-body text-sm leading-6 text-primary shadow-sm">

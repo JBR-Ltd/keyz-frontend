@@ -72,6 +72,9 @@ interface ListingFormValues {
   cleaningFee: string;
   /** Refundable. Nigerian lettings call it a caution fee. */
   securityDeposit: string;
+  /** Yearly lets only. */
+  instalmentsAllowed: boolean;
+  maxInstalments: string;
 }
 
 const RENTAL_MODE_OPTIONS: { label: string; value: RentalMode }[] = [
@@ -182,6 +185,8 @@ const INITIAL_VALUES: ListingFormValues = {
   maximumGuests: "",
   cleaningFee: "",
   securityDeposit: "",
+  instalmentsAllowed: false,
+  maxInstalments: "4",
 };
 
 const INPUT_CLASS_NAME =
@@ -480,6 +485,8 @@ export default function CreateListingForm({
           result.data.cleaningFee === null
             ? ""
             : String(result.data.cleaningFee),
+        instalmentsAllowed: result.data.instalmentsAllowed === true,
+        maxInstalments: String(result.data.maxInstalments ?? 4),
       });
       setPhotos(
         result.data.photos.map((photo) => ({ ...photo, uploading: false })),
@@ -557,6 +564,50 @@ export default function CreateListingForm({
           Leave it empty if you ask for none.
         </span>
       </label>
+
+      {values.rentalMode === "ANNUAL" ? (
+        <div className="sm:col-span-2 rounded-lg border border-border p-4">
+          <label className="flex items-start gap-3">
+            <input
+              id="listing-instalments-allowed"
+              type="checkbox"
+              checked={values.instalmentsAllowed}
+              onChange={(event) =>
+                updateValue("instalmentsAllowed", event.target.checked)
+              }
+              className="mt-1 h-4 w-4 accent-[var(--color-primary)]"
+            />
+            <span>
+              <span className="block font-body text-sm font-bold text-primary">
+                Let tenants pay the rent in parts
+              </span>
+              <span className="mt-1 block font-body text-xs leading-5 text-muted">
+                Many tenants cannot raise a full year up front. The deposit is paid with
+                the first part, each later part is collected through Rello, and you are
+                paid a few days after each one lands.
+              </span>
+            </span>
+          </label>
+          {values.instalmentsAllowed ? (
+            <label className="mt-4 block">
+              <span className="font-body text-sm font-bold text-primary">
+                Most parts you will accept
+              </span>
+              <Select
+                value={values.maxInstalments}
+                onValueChange={(value) => updateValue("maxInstalments", value)}
+                className={INPUT_CLASS_NAME}
+                ariaLabel="Most instalments"
+                options={[
+                  { label: "2 parts, every 6 months", value: "2" },
+                  { label: "4 parts, every quarter", value: "4" },
+                  { label: "12 parts, every month", value: "12" },
+                ]}
+              />
+            </label>
+          ) : null}
+        </div>
+      ) : null}
 
       {isShortStay ? (
         <>
@@ -655,6 +706,12 @@ export default function CreateListingForm({
     securityDeposit: values.securityDeposit
       ? Math.max(Number(values.securityDeposit) || 0, 0)
       : undefined,
+    instalmentsAllowed:
+      values.rentalMode === "ANNUAL" ? values.instalmentsAllowed : undefined,
+    maxInstalments:
+      values.rentalMode === "ANNUAL" && values.instalmentsAllowed
+        ? Number(values.maxInstalments)
+        : undefined,
     cleaningFee:
       values.rentalMode === "SHORT_STAY"
         ? Math.max(Number(values.cleaningFee) || 0, 0)
