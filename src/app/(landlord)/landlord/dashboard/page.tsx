@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { propertyPath } from "@/lib/publicIds";
 import {
   useEffect,
   useMemo,
@@ -35,6 +36,10 @@ import {
   type BookingStatus,
 } from "@/lib/bookings";
 import { getMyEscrow, type EscrowEntry, type EscrowStatus } from "@/lib/escrow";
+import {
+  getHostDashboardSummary,
+  type HostDashboardSummary,
+} from "@/lib/dashboard";
 import {
   getPropertyPortfolio,
   type BackendProperty,
@@ -128,6 +133,7 @@ const ESCROW_STATUS_LABELS: Record<EscrowStatus, string> = {
   AWAITING_PAYMENT: "Awaiting payment",
   HELD: "Held",
   RELEASING: "Releasing",
+  REFUNDING: "Refund on its way",
   DISPUTED: "Disputed",
   RELEASED: "Paid out",
   REFUNDED: "Refunded",
@@ -141,6 +147,7 @@ const ESCROW_STATUS_TONES: Record<
   AWAITING_PAYMENT: "accent",
   HELD: "primary",
   RELEASING: "primary",
+  REFUNDING: "primary",
   DISPUTED: "danger",
   RELEASED: "neutral",
   REFUNDED: "neutral",
@@ -179,6 +186,10 @@ function formatStayDates(booking: Booking): string {
     });
 
   if (!booking.startDate || !booking.endDate) {
+    if (booking.tenancyStartDate) {
+      return `Move in ${formatDate(booking.tenancyStartDate)}`;
+    }
+
     return booking.preferredMoveInDate
       ? `Move in ${formatDate(booking.preferredMoveInDate)}`
       : "Flexible move-in";
@@ -197,6 +208,11 @@ function getTenancyStatus(
       booking.propertyId === propertyId && booking.status === "CONFIRMED",
   );
   const hasActiveStay = confirmed.some((booking) => {
+    // The server knows whether an accepted rental has reached its move-in yet
+    if (booking.lifecycleStage) {
+      return booking.lifecycleStage === "ACTIVE";
+    }
+
     if (booking.bookingKind === "RENTAL_REQUEST" || !booking.endDate) {
       return true;
     }
@@ -214,7 +230,9 @@ function getTenancyStatus(
 
   return confirmed.some(
     (booking) =>
-      booking.startDate && new Date(booking.startDate).getTime() > now,
+      booking.lifecycleStage === "UPCOMING" ||
+      (booking.startDate !== null &&
+        new Date(booking.startDate).getTime() > now),
   )
     ? "Move-in scheduled"
     : "Available";
@@ -229,7 +247,7 @@ function mapDashboardProperty(
   const needsAttention = !property.verified || !property.imageUrl;
   const actionHref =
     tenancyStatus === "Available"
-      ? `/property/${property.id}`
+      ? propertyPath(property)
       : "/landlord/bookings";
 
   return {
@@ -259,17 +277,19 @@ function getAttentionItems(
   properties: BackendProperty[],
   bookings: Booking[],
   escrow: EscrowEntry[],
+  summary: HostDashboardSummary | null,
 ): AttentionItem[] {
   const items: AttentionItem[] = [];
-  const pendingBookings = bookings.filter(
-    (booking) => booking.status === "PENDING",
-  ).length;
+  const pendingBookings =
+    summary?.bookings.requests ??
+    bookings.filter((booking) => booking.status === "PENDING").length;
+  const awaitingPayment = summary?.bookings.awaitingPayment ?? 0;
   const incompleteProperties = properties.filter(
     (property) => !property.verified || !property.imageUrl,
   );
-  const disputedPayments = escrow.filter(
-    (entry) => entry.status === "DISPUTED",
-  ).length;
+  const disputedPayments =
+    summary?.openDisputes ??
+    escrow.filter((entry) => entry.status === "DISPUTED").length;
 
   if (!identityVerified) {
     items.push({
@@ -295,6 +315,19 @@ function getAttentionItems(
     });
   }
 
+  if (awaitingPayment > 0) {
+    items.push({
+      id: "awaiting-payment",
+      title: `${awaitingPayment} accepted booking${awaitingPayment === 1 ? " is" : "s are"} waiting on payment`,
+      description:
+        "Tenants have been asked to pay. Anything unpaid by its deadline is released automatically.",
+      actionLabel: "View bookings",
+      href: "/landlord/bookings",
+      icon: Landmark,
+      tone: "neutral",
+    });
+  }
+
   if (incompleteProperties.length > 0) {
     const firstProperty = incompleteProperties[0];
 
@@ -303,7 +336,7 @@ function getAttentionItems(
       title: `${incompleteProperties.length} propert${incompleteProperties.length === 1 ? "y needs" : "ies need"} attention`,
       description: "Complete missing media or property verification details.",
       actionLabel: "Review property",
-      href: `/property/${firstProperty.id}`,
+      href: propertyPath(firstProperty),
       icon: Building2,
       tone: "neutral",
     });
@@ -324,30 +357,42 @@ function getAttentionItems(
   return items;
 }
 
+/**
+ * The server's counts when they have arrived, and the loaded lists until then. The
+ * lists are paged, so only the server can count an account with more rows than a page.
+ */
 function getSummaryItems(
   portfolio: PropertyPortfolio | null,
   bookings: Booking[],
   escrow: EscrowEntry[],
   now: number,
+  summary: HostDashboardSummary | null,
 ): SummaryItem[] {
-  const pendingRequests = bookings.filter(
-    (booking) => booking.status === "PENDING",
-  ).length;
-  const upcomingStays = bookings.filter(
-    (booking) =>
-      booking.status === "CONFIRMED" &&
-      booking.startDate !== null &&
-      new Date(booking.startDate).getTime() > now,
-  ).length;
-  const fundsHeld = escrow
-    .filter((entry) => entry.status === "HELD")
-    .reduce((total, entry) => total + entry.amount, 0);
+  const pendingRequests =
+    summary?.bookings.requests ??
+    bookings.filter((booking) => booking.status === "PENDING").length;
+  const upcomingStays =
+    summary?.bookings.upcoming ??
+    bookings.filter(
+      (booking) =>
+        booking.status === "CONFIRMED" &&
+        (booking.lifecycleStage === "UPCOMING" ||
+          (booking.startDate !== null &&
+            new Date(booking.startDate).getTime() > now)),
+    ).length;
+  const fundsHeld =
+    summary?.money.held ??
+    escrow
+      .filter((entry) => entry.status === "HELD")
+      .reduce((total, entry) => total + entry.amount, 0);
 
   return [
     {
       label: "Live homes",
       source: "portfolio",
-      value: String(portfolio?.activeListingsCount ?? 0).padStart(2, "0"),
+      value: String(
+        summary?.listings.live ?? portfolio?.activeListingsCount ?? 0,
+      ).padStart(2, "0"),
       detail: "Published and visible",
       icon: Building2,
       tone: "primary",
@@ -388,8 +433,15 @@ function getUpcomingBookings(bookings: Booking[], now: number): Booking[] {
     )
     .sort(
       (left, right) =>
-        new Date(left.startDate ?? left.preferredMoveInDate ?? 0).getTime() -
-        new Date(right.startDate ?? right.preferredMoveInDate ?? 0).getTime(),
+        new Date(
+          left.tenancyStartDate ?? left.startDate ?? left.preferredMoveInDate ?? 0,
+        ).getTime() -
+        new Date(
+          right.tenancyStartDate ??
+            right.startDate ??
+            right.preferredMoveInDate ??
+            0,
+        ).getTime(),
     )
     .slice(0, 3);
 }
@@ -475,6 +527,7 @@ export default function LandlordDashboardPage(): ReactElement {
   // Captured when the data lands rather than read during render: Date.now() in a
   // render body is impure and makes every memo below unstable
   const [loadedAt] = useState(() => Date.now());
+  const [summary, setSummary] = useState<HostDashboardSummary | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -499,6 +552,12 @@ export default function LandlordDashboardPage(): ReactElement {
       setIsBookingsLoading(false);
     });
 
+    void getHostDashboardSummary().then((result) => {
+      if (active) {
+        setSummary(result.data);
+      }
+    });
+
     void getMyEscrow().then((result) => {
       if (!active) {
         return;
@@ -521,12 +580,19 @@ export default function LandlordDashboardPage(): ReactElement {
   );
   const now = loadedAt;
   const summaryItems = useMemo(
-    () => getSummaryItems(portfolio, bookings, escrow, now),
-    [portfolio, bookings, escrow, now],
+    () => getSummaryItems(portfolio, bookings, escrow, now, summary),
+    [portfolio, bookings, escrow, now, summary],
   );
   const attentionItems = useMemo(
-    () => getAttentionItems(verified, portfolioProperties, bookings, escrow),
-    [verified, portfolioProperties, bookings, escrow],
+    () =>
+      getAttentionItems(
+        verified,
+        portfolioProperties,
+        bookings,
+        escrow,
+        summary,
+      ),
+    [verified, portfolioProperties, bookings, escrow, summary],
   );
   const dashboardProperties = useMemo(
     () =>

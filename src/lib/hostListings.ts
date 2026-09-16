@@ -24,6 +24,8 @@ export type HostListingReviewStatus =
 /** Mirrors PartySummary on the backend: what a stranger may see about a person. */
 export interface BackendPropertyHost {
   id: number;
+  /** For linking to the host's public profile. */
+  publicId?: string;
   identityVerified: boolean;
   name: string;
   rating?: number | null;
@@ -44,12 +46,20 @@ export interface PropertyImage {
 
 export interface BackendProperty {
   address: string;
+  /** Immutable and opaque. What public links are built from. */
+  publicId?: string;
+  /** Readable only. Follows the title. */
+  slug?: string;
   amenities?: string[];
   area?: string | null;
   city?: string | null;
   cleaningFee?: number | null;
   images?: PropertyImage[];
   minimumNights?: number | null;
+  /** Shortlets only. Null when the host set no limit. */
+  maximumGuests?: number | null;
+  /** Refundable, and returned to the tenant after the tenancy. */
+  securityDeposit?: number | null;
   rentalMode?: RentalMode | null;
   bathrooms: number;
   bedrooms: number;
@@ -109,6 +119,10 @@ export interface HostListingInput {
   listingType: PropertyListingStatus;
   /** Shortlets only. The shortest stay this host will take. */
   minimumNights?: number;
+  /** Shortlets only. The most guests the home sleeps. */
+  maximumGuests?: number;
+  /** A refundable deposit against damage, returned when the tenancy ends. */
+  securityDeposit?: number;
   rentalMode: RentalMode;
   ownerRole: HostListingRole;
   photos: HostListingPhoto[];
@@ -304,6 +318,9 @@ function mapBackendProperty(
     // for a draft that has never been published
     rentalMode: property.rentalMode ?? localListing?.rentalMode ?? "ANNUAL",
     minimumNights: property.minimumNights ?? localListing?.minimumNights ?? undefined,
+    maximumGuests: property.maximumGuests ?? localListing?.maximumGuests ?? undefined,
+    securityDeposit:
+      property.securityDeposit ?? localListing?.securityDeposit ?? undefined,
     cleaningFee: property.cleaningFee ?? localListing?.cleaningFee ?? undefined,
     photos: localListing?.photos.length
       ? localListing.photos
@@ -375,6 +392,8 @@ function draftToRecord(
     amenities: draft.amenities,
     rentalMode: draft.rentalMode ?? "ANNUAL",
     minimumNights: draft.minimumNights ?? undefined,
+    maximumGuests: draft.maximumGuests ?? undefined,
+    securityDeposit: draft.securityDeposit ?? undefined,
     cleaningFee: draft.cleaningFee ?? undefined,
     photos: draft.imageUrls.map((url, index) => ({
       dataUrl: url,
@@ -409,6 +428,9 @@ function buildPropertyRequest(input: HostListingInput): object {
     // The server clears both for a listing that is not a shortlet, but sending
     // them only when they apply keeps the request honest
     minimumNights: isShortStay ? (input.minimumNights ?? 1) : null,
+    maximumGuests: isShortStay ? (input.maximumGuests ?? null) : null,
+    // Any letting can ask for a deposit, not just a shortlet
+    securityDeposit: input.securityDeposit ?? null,
     cleaningFee: isShortStay ? (input.cleaningFee ?? 0) : null,
   };
 }
@@ -672,6 +694,24 @@ export async function getBackendPropertyById(
   }
 }
 
+/** A published listing by its public identifier. Works logged out. */
+export async function getBackendPropertyByPublicId(
+  publicId: string,
+): Promise<HostListingStorageResult<BackendProperty | null>> {
+  try {
+    const property = await requestBackendProperty(`public/${publicId}`);
+
+    return { data: property, unavailable: false };
+  } catch (error) {
+    return {
+      data: null,
+      message:
+        error instanceof Error ? error.message : "Property could not be loaded.",
+      unavailable: false,
+    };
+  }
+}
+
 export async function getPropertyPortfolio(): Promise<
   HostListingStorageResult<PropertyPortfolio | null>
 > {
@@ -814,6 +854,9 @@ export async function saveHostListingDraft(
     listingType: input.listingType,
     rentalMode: input.rentalMode,
     minimumNights: input.rentalMode === "SHORT_STAY" ? input.minimumNights : null,
+    maximumGuests:
+      input.rentalMode === "SHORT_STAY" ? (input.maximumGuests ?? null) : null,
+    securityDeposit: input.securityDeposit ?? null,
     cleaningFee: input.rentalMode === "SHORT_STAY" ? input.cleaningFee : null,
     amenities: input.amenities,
   };

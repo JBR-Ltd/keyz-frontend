@@ -4,11 +4,15 @@ import Link from "next/link";
 import { Bath, BedDouble, Heart, Loader2, MapPin } from "lucide-react";
 import PropertyPrice from "@/components/property/PropertyPrice";
 import VerifiedBadge from "@/components/ui/VerifiedBadge";
+import { propertyPath } from "@/lib/publicIds";
 
 type ListingType = "FOR_RENT" | "FOR_SALE";
 
 interface PropertyCardProps {
   id: string;
+  /** When present the card links to the canonical address, not the numeric id. */
+  publicId?: string;
+  slug?: string;
   name: string;
   location: string;
   price: number;
@@ -25,6 +29,8 @@ interface PropertyCardProps {
 
 export default function PropertyCard({
   id,
+  publicId,
+  slug,
   name,
   location,
   price,
@@ -38,7 +44,7 @@ export default function PropertyCard({
   onSaveToggle,
   verified = false,
 }: PropertyCardProps): ReactElement {
-  const propertyHref = `/property/${id}`;
+  const propertyHref = propertyPath({ id, publicId, slug });
 
   return (
     <article className={`relative h-full ${featured ? "lg:row-span-2" : ""}`}>

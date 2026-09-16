@@ -8,6 +8,7 @@ import {
   ArrowUpRight,
   Bath,
   BedDouble,
+  Users,
   Check,
   ChefHat,
   CircleParking,
@@ -29,6 +30,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { TouchEvent, use, useEffect, useState } from "react";
 import BackButton from "@/components/navigation/BackButton";
 import OverlayPortal from "@/components/ui/OverlayPortal";
@@ -39,6 +41,7 @@ import PropertyTourViewer from "@/components/property/PropertyTourViewer";
 import ViewingRequestDialog from "@/components/property/ViewingRequestDialog";
 import TenantVerificationGate from "@/components/tenant/TenantVerificationGate";
 import VerifiedBadge from "@/components/ui/VerifiedBadge";
+import { canonicalSegment, hostPath } from "@/lib/publicIds";
 import { getPropertyById, PropertyDetail } from "@/lib/propertyDetails";
 import {
   getSavedListings,
@@ -208,6 +211,7 @@ export default function PropertyPage({
   params,
 }: PropertyPageProps): ReactElement {
   const { id } = use(params);
+  const router = useRouter();
   const reduceMotion = useReducedMotion();
   const { notify } = useToast();
   const [loadingState, setLoadingState] = useState<LoadingState>("loading");
@@ -232,6 +236,25 @@ export default function PropertyPage({
       }
 
       setProperty(nextProperty);
+
+      // An old numeric link or an outdated slug moves to the canonical address, so
+      // the link people copy from here is the one that survives a rename. Only a
+      // published listing resolves publicly, so a host previewing an unpublished
+      // one stays where they are.
+      if (nextProperty?.publicId && nextProperty.verified) {
+        const canonical = canonicalSegment({
+          id: nextProperty.id,
+          publicId: nextProperty.publicId,
+          slug: nextProperty.slug,
+        });
+
+        if (canonical !== id) {
+          router.replace(
+            `/property/${canonical}${window.location.search}${window.location.hash}`,
+            { scroll: false },
+          );
+        }
+      }
       setLoadingState(nextProperty ? "ready" : "not-found");
     }
 
@@ -240,10 +263,14 @@ export default function PropertyPage({
     return () => {
       active = false;
     };
-  }, [id]);
+  }, [id, router]);
 
   useEffect(() => {
-    if (!/^\d+$/.test(id)) {
+    // Keyed on the loaded listing: the address now carries a public identifier,
+    // not the numeric id saved listings are stored by
+    const listingId = property ? Number(property.id) : Number.NaN;
+
+    if (!Number.isFinite(listingId)) {
       return;
     }
 
@@ -253,7 +280,7 @@ export default function PropertyPage({
       const result = await getSavedListings();
 
       if (active) {
-        setIsSaved(result.data.some((listing) => listing.id === Number(id)));
+        setIsSaved(result.data.some((listing) => listing.id === listingId));
       }
     }
 
@@ -262,7 +289,7 @@ export default function PropertyPage({
     return () => {
       active = false;
     };
-  }, [id]);
+  }, [property]);
 
   useEffect(() => {
     if (lightboxIndex === null || !property) {
@@ -749,6 +776,19 @@ export default function PropertyPage({
                 />
                 {property.bathrooms} bathrooms
               </span>
+              {property.rentalMode === "SHORT_STAY" && property.maximumGuests ? (
+                <>
+                  <span className="h-4 w-px bg-border" />
+                  <span className="inline-flex items-center gap-2">
+                    <Users
+                      size={17}
+                      className="text-accent-alt"
+                      aria-hidden="true"
+                    />
+                    Sleeps {property.maximumGuests}
+                  </span>
+                </>
+              ) : null}
               {property.sqft ? (
                 <>
                   <span className="h-4 w-px bg-border" />
@@ -811,11 +851,13 @@ export default function PropertyPage({
             <BookingRequestDialog
               hostName={property.host.name}
               hostRole={hostRole}
+              maximumGuests={property.maximumGuests}
               minimumNights={property.minimumNights}
               onClose={() => setIsBookingOpen(false)}
               open={isBookingOpen}
               price={property.price}
               propertyId={property.id}
+              propertyPublicId={property.publicId}
               propertyTitle={property.title}
               rentalMode={property.rentalMode}
             />
@@ -983,7 +1025,7 @@ export default function PropertyPage({
               )}
               <div className="min-w-0 flex-1">
                 <Link
-                  href={`/host/${property.host.id}`}
+                  href={hostPath(property.host)}
                   className="block truncate font-body text-sm font-bold text-primary transition-all duration-200 ease-in-out hover:text-accent-alt focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 >
                   {property.host.name}
@@ -994,7 +1036,7 @@ export default function PropertyPage({
             </div>
 
             <Link
-              href={`/host/${property.host.id}`}
+              href={hostPath(property.host)}
               className="mt-4 inline-flex items-center gap-2 font-body text-sm font-medium text-muted transition-all duration-200 ease-in-out hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             >
               See all homes from this {hostRole.toLowerCase()}

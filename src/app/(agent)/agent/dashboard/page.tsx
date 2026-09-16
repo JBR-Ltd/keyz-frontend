@@ -38,6 +38,10 @@ import {
   type RentalMode,
 } from "@/lib/hostListings";
 import { useHostVerification } from "@/lib/hostVerification";
+import {
+  getHostDashboardSummary,
+  type HostDashboardSummary,
+} from "@/lib/dashboard";
 import { getHostViewings, type Viewing } from "@/lib/viewings";
 
 // === Types
@@ -153,6 +157,11 @@ function daysUntil(value: string): number {
 
 /** A tenancy that has started and has not ended yet. */
 function isActiveTenancy(booking: Booking): boolean {
+  // An accepted rental is not occupied until its move-in, which only the server knows
+  if (booking.lifecycleStage) {
+    return booking.lifecycleStage === "ACTIVE";
+  }
+
   const today = new Date().setHours(0, 0, 0, 0);
 
   if (booking.bookingKind === "RENTAL_REQUEST" || !booking.endDate) {
@@ -201,14 +210,19 @@ function toListingStatus(
   return occupiedIds.has(property.id) ? "Occupied" : "Published";
 }
 
+/**
+ * The server's counts once they arrive. The loaded lists are paged, so counting
+ * them alone undercounts a busy agent.
+ */
 function buildSummary(
   portfolio: PropertyPortfolio,
   bookings: Booking[],
   occupiedIds: Set<number>,
+  summary: HostDashboardSummary | null,
 ): SummaryItem[] {
-  const pendingCount = bookings.filter(
-    (booking) => booking.status === "PENDING",
-  ).length;
+  const pendingCount =
+    summary?.bookings.requests ??
+    bookings.filter((booking) => booking.status === "PENDING").length;
 
   return [
     {
@@ -216,7 +230,7 @@ function buildSummary(
       icon: Building2,
       label: "Active listings",
       tone: "primary",
-      value: portfolio.activeListingsCount,
+      value: summary?.listings.live ?? portfolio.activeListingsCount,
     },
     {
       detail: "Waiting for your response",
@@ -230,7 +244,7 @@ function buildSummary(
       icon: UsersRound,
       label: "Occupied homes",
       tone: "neutral",
-      value: occupiedIds.size,
+      value: summary?.bookings.active ?? occupiedIds.size,
     },
     {
       // Listings can be let nightly, monthly or yearly, so naming a period here
@@ -397,6 +411,7 @@ function buildDashboard(
   bookings: Booking[],
   viewings: Viewing[],
   identityVerified: boolean,
+  summary: HostDashboardSummary | null,
 ): DashboardData {
   const occupiedIds = new Set(
     bookings.filter(isActiveTenancy).map((booking) => booking.propertyId),
@@ -422,9 +437,11 @@ function buildDashboard(
       )
       .slice(0, MAX_RECENT_BOOKINGS)
       .map((booking) => ({
-        date: booking.startDate
-          ? formatDay(booking.startDate)
-          : "Flexible move-in",
+        date: booking.tenancyStartDate
+          ? formatDay(booking.tenancyStartDate)
+          : booking.startDate
+            ? formatDay(booking.startDate)
+            : "Flexible move-in",
         id: booking.id,
         property: booking.propertyTitle,
         status: booking.status,
@@ -440,7 +457,7 @@ function buildDashboard(
       tenant: tenantByProperty.get(property.id) ?? null,
       title: property.title,
     })),
-    summary: buildSummary(portfolio, bookings, occupiedIds),
+    summary: buildSummary(portfolio, bookings, occupiedIds, summary),
     upcoming: buildUpcoming(bookings, viewings),
   };
 }
@@ -832,6 +849,7 @@ export default function AgentDashboardPage(): ReactElement {
   const [portfolio, setPortfolio] = useState<PropertyPortfolio | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [viewings, setViewings] = useState<Viewing[]>([]);
+  const [summary, setSummary] = useState<HostDashboardSummary | null>(null);
   const [loadError, setLoadError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
@@ -842,18 +860,22 @@ export default function AgentDashboardPage(): ReactElement {
       getPropertyPortfolio(),
       getHostBookings(),
       getHostViewings(),
-    ]).then(([portfolioResult, bookingsResult, viewingsResult]) => {
+      getHostDashboardSummary(),
+    ]).then(
+      ([portfolioResult, bookingsResult, viewingsResult, summaryResult]) => {
       if (!active) {
         return;
       }
 
+      setSummary(summaryResult.data);
       setPortfolio(portfolioResult.data);
       setBookings(bookingsResult.data);
       setViewings(viewingsResult.data);
       // The portfolio is the page. Bookings failing alone still leaves it useful.
       setLoadError(portfolioResult.data ? "" : (portfolioResult.message ?? ""));
       setIsLoading(false);
-    });
+      },
+    );
 
     return () => {
       active = false;
@@ -893,6 +915,7 @@ export default function AgentDashboardPage(): ReactElement {
     bookings,
     viewings,
     verification?.identity.status === "approved",
+    summary,
   );
   const now = new Date();
 

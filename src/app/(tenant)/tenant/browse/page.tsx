@@ -986,6 +986,8 @@ export default function TenantBrowsePage(): ReactElement {
               <PropertyCard
                 key={property.id}
                 id={property.id}
+                publicId={property.publicId}
+                slug={property.slug}
                 name={property.title}
                 location={[property.location.area, property.location.city]
                   .filter(Boolean)

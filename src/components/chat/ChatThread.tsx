@@ -4,11 +4,16 @@ import type { ReactElement } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Loader2, MessageCircle, Phone, Send, X } from "lucide-react";
 import { FormEvent, useEffect, useRef, useState } from "react";
+import ChatAttachmentCard, {
+  isDefaultShareText,
+} from "@/components/chat/ChatAttachmentCard";
+import ChatShareMenu from "@/components/chat/ChatShareMenu";
 import OverlayPortal from "@/components/ui/OverlayPortal";
 import { useAuthenticatedUser } from "@/lib/account";
 import {
   getConversation,
   sendChatMessage,
+  type ChatAttachmentType,
   type ServerChatMessage,
 } from "@/lib/chat/chatClient";
 import type { ChatMessage, ChatPartyRole } from "@/lib/chat/chatStorage";
@@ -56,6 +61,18 @@ function getDateLabel(value: string): string {
 }
 
 /** The server speaks in numeric ids and `content`; the view speaks in strings and `body`. */
+/**
+ * How often an open thread asks for new messages.
+ *
+ * Polled rather than pushed. A socket would hold a server thread for every open
+ * chat, and the server caps its threads so fifty open chats cannot starve every
+ * other request. Four seconds is fast enough for a conversation about a viewing.
+ */
+const CONVERSATION_POLL_MS = 4000;
+
+/** A message still on its way has this id until the server gives it a real one. */
+const PENDING_ID_PREFIX = "pending-";
+
 function toDisplayMessage(message: ServerChatMessage): ChatMessage {
   return {
     id: String(message.id),
@@ -66,6 +83,7 @@ function toDisplayMessage(message: ServerChatMessage): ChatMessage {
     timestamp: message.timestamp,
     status: message.read ? "delivered" : "sent",
     read: message.read,
+    attachment: message.attachment ?? null,
   };
 }
 
@@ -121,6 +139,68 @@ export default function ChatThread({
     };
   }, [conversationId, otherUserId, propertyId]);
 
+  // Messages used to refresh only when a thread was reopened, so a reply sat
+  // unseen while the thread was on screen
+  useEffect(() => {
+    if (!conversationId || otherUserId === null) {
+      return;
+    }
+
+    let active = true;
+
+    const refresh = async (): Promise<void> => {
+      if (document.visibilityState !== "visible") {
+        return;
+      }
+
+      const result = await getConversation(otherUserId as number, propertyId);
+
+      // A failed poll keeps what is on screen rather than blanking the thread
+      if (!active || result.message) {
+        return;
+      }
+
+      const incoming = result.data.map(toDisplayMessage);
+
+      setMessages((current) => {
+        const pending = current.filter((message) =>
+          message.id.startsWith(PENDING_ID_PREFIX),
+        );
+        const unchanged =
+          pending.length === 0 &&
+          incoming.length === current.length &&
+          incoming.every(
+            (message, index) =>
+              message.id === current[index]?.id &&
+              message.read === current[index]?.read,
+          );
+
+        // Returning the same array skips the re-render, so the thread does not
+        // jump to the bottom while someone is scrolled up reading
+        return unchanged ? current : [...incoming, ...pending];
+      });
+    };
+
+    const timer = window.setInterval(
+      () => void refresh(),
+      CONVERSATION_POLL_MS,
+    );
+
+    const refreshWhenVisible = (): void => {
+      if (document.visibilityState === "visible") {
+        void refresh();
+      }
+    };
+
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+    };
+  }, [conversationId, otherUserId, propertyId]);
+
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ block: "end" });
   }, [messages, sendingIds]);
@@ -172,6 +252,39 @@ export default function ChatThread({
     }
   };
 
+  /**
+   * Shares a listing, tour or floor plan. No bubble is guessed at first: the server
+   * builds the card from the listing, so the saved message is what gets shown.
+   */
+  const handleShare = async (
+    type: ChatAttachmentType,
+    attachmentId: number,
+  ): Promise<boolean> => {
+    if (otherUserId === null) {
+      return false;
+    }
+
+    const result = await sendChatMessage(otherUserId, "", propertyId, {
+      type,
+      id: attachmentId,
+    });
+
+    if (!result.data) {
+      setLoadError(result.message ?? "That could not be shared.");
+      return false;
+    }
+
+    const saved = toDisplayMessage(result.data);
+
+    setLoadError("");
+    setMessages((current) => [
+      ...current.filter((message) => message.id !== saved.id),
+      saved,
+    ]);
+
+    return true;
+  };
+
   const handleSend = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
 
@@ -182,7 +295,7 @@ export default function ChatThread({
     }
 
     // Shown immediately, reconciled with the saved message when the server answers
-    const optimisticId = `pending-${Date.now()}`;
+    const optimisticId = `${PENDING_ID_PREFIX}${Date.now()}`;
     const optimistic: ChatMessage = {
       id: optimisticId,
       conversationId: "",
@@ -214,8 +327,12 @@ export default function ChatThread({
 
     // The stored version is what other people will see, contact details stripped
     const saved = toDisplayMessage(result.data);
+    // A poll can land between sending and this answer and bring the saved copy in
+    // first, so that copy is dropped before the pending bubble is swapped for it
     setMessages((current) =>
-      current.map((message) => (message.id === optimisticId ? saved : message)),
+      current
+        .filter((message) => message.id !== saved.id)
+        .map((message) => (message.id === optimisticId ? saved : message)),
     );
   };
 
@@ -329,9 +446,17 @@ export default function ChatThread({
                                 : "rounded-bl-md bg-primary/10 text-primary"
                             }`}
                           >
-                            <p className="break-words font-body text-sm leading-6">
-                              {message.body}
-                            </p>
+                            {message.attachment ? (
+                              <div className="mb-2 w-60 max-w-full">
+                                <ChatAttachmentCard attachment={message.attachment} />
+                              </div>
+                            ) : null}
+                            {message.attachment &&
+                            isDefaultShareText(message.body, message.attachment) ? null : (
+                              <p className="break-words font-body text-sm leading-6">
+                                {message.body}
+                              </p>
+                            )}
                             <p
                               className={`mt-2 font-body text-[11px] ${
                                 isCurrentUser ? "text-primary/70" : "text-muted"
@@ -356,6 +481,7 @@ export default function ChatThread({
               className="shrink-0 border-t border-border bg-bg px-4 py-3"
             >
               <div className="flex items-center gap-2 rounded-full border border-border bg-white px-3 py-2 shadow-sm">
+                <ChatShareMenu propertyId={propertyId} onShare={handleShare} />
                 <input
                   ref={inputRef}
                   value={draft}

@@ -1,3 +1,5 @@
+import { listHeaders, requestIdHeader } from "@/app/api/_requestId";
+
 const API_BASE_URL = process.env.API_BASE_URL;
 const REQUEST_TIMEOUT_MS = 90000;
 
@@ -86,13 +88,13 @@ export async function proxyAuthenticatedRequest({
 
       return Response.json(
         { success: false, message, data: null },
-        { status: response.status },
+        { status: response.status, headers: requestIdHeader(response) },
       );
     }
 
     return new Response(responseBody || null, {
       status: response.status,
-      headers: { "Content-Type": contentType },
+      headers: { "Content-Type": contentType, ...listHeaders(response) },
     });
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {

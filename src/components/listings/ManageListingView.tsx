@@ -9,6 +9,7 @@ import {
 } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { propertyPath } from "@/lib/publicIds";
 import {
   ArrowLeft,
   CalendarOff,
@@ -251,12 +252,27 @@ export default function ManageListingView({
           on the public page straight away.
         </p>
         {property ? (
-          <Link
-            href={`/property/${property.id}`}
-            className="mt-4 inline-flex font-body text-sm font-medium text-accent-alt transition-all duration-200 ease-in-out hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-          >
-            View the public page
-          </Link>
+          property.verified ? (
+            <Link
+              href={propertyPath(property)}
+              className="mt-4 inline-flex font-body text-sm font-medium text-accent-alt transition-all duration-200 ease-in-out hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            >
+              View the public page
+            </Link>
+          ) : (
+            <div className="mt-5 flex max-w-2xl flex-wrap items-center justify-between gap-4 rounded-lg bg-accent/10 px-5 py-4 shadow-sm">
+              <p className="font-body text-sm leading-6 text-primary">
+                <span className="font-bold">Not live yet.</span> Tenants see
+                this listing once it is verified.
+              </p>
+              <Link
+                href={`/${role}/listings/${property.id}/verify`}
+                className="inline-flex min-h-10 items-center rounded bg-primary px-4 font-accent text-xs font-bold uppercase tracking-[0.16em] text-white transition-all duration-200 ease-in-out hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                Verify with a bill
+              </Link>
+            </div>
+          )
         ) : null}
       </header>
 

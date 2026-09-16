@@ -13,6 +13,7 @@ import {
   Menu,
   Scale,
   Settings,
+  ShieldAlert,
   ShieldCheck,
   Star,
   Wrench,
@@ -46,6 +47,7 @@ const ADMIN_NAV_ITEMS = [
   { label: "Verifications", slug: "verifications", icon: ShieldCheck },
   { label: "Bookings", slug: "bookings", icon: CalendarDays },
   { label: "Escrow", slug: "escrow", icon: Landmark },
+  { label: "Risk", slug: "risk", icon: ShieldAlert },
   { label: "Ratings", slug: "ratings", icon: Star },
 ];
 

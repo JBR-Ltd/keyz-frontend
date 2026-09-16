@@ -12,25 +12,57 @@ export type EscrowStatus =
   /** Transfer sent to the bank, waiting on confirmation. */
   | "RELEASING"
   | "RELEASED"
+  /** Refund sent to the provider, waiting on confirmation. */
+  | "REFUNDING"
   | "REFUNDED"
   | "FAILED";
+
+/** Where a refundable deposit stands. It settles apart from the rent. */
+export type DepositStatus =
+  | "HELD"
+  | "CLAIMED"
+  | "RETURNING"
+  | "RETURNED"
+  | "SETTLED";
 
 export interface EscrowEntry {
   amount: number;
   bookingId: number;
+  /** Rello's fee, fixed when the money is paid out. */
+  commissionAmount?: number | null;
   createdAt: string | null;
+  /** Why the last attempt to pay, pay out or refund did not go through. */
+  failureReason?: string | null;
   heldAt: string | null;
   host: PartySummary | null;
+  /** What reached the host once paid out. */
+  hostAmount?: number | null;
   id: number;
+  /** When an accepted booking has to be paid by. */
+  paymentDueAt?: string | null;
+  propertyPublicId?: string | null;
   propertyTitle: string;
+  /** The payment reference, for a receipt. */
+  reference?: string | null;
+  /** The refundable deposit inside `amount`, and where it stands. */
+  depositAmount?: number | null;
+  depositStatus?: DepositStatus | null;
+  depositClaimAmount?: number | null;
+  depositClaimNote?: string | null;
+  depositReturnedAt?: string | null;
+  refundedAt?: string | null;
   releasedAt: string | null;
   status: EscrowStatus;
   tenant: PartySummary | null;
 }
 
 export interface EscrowResult<TValue> {
+  /** The server's error code, when there is one, so a screen can answer it. */
+  code?: string;
   data: TValue;
   message?: string;
+  /** Every matching row, when the list came back a page at a time. */
+  total?: number;
 }
 
 // === Guards
@@ -46,6 +78,15 @@ function isEscrowEntry(value: unknown): value is EscrowEntry {
     "status" in value &&
     typeof value.status === "string"
   );
+}
+
+function errorCode(payload: unknown): string | undefined {
+  return payload !== null &&
+    typeof payload === "object" &&
+    "code" in payload &&
+    typeof payload.code === "string"
+    ? payload.code
+    : undefined;
 }
 
 function unwrap(payload: unknown): unknown {
@@ -81,9 +122,10 @@ export async function getMyEscrow(): Promise<EscrowResult<EscrowEntry[]>> {
     }
 
     const data = unwrap(payload);
+    const total = Number(response.headers.get("X-Total-Count"));
 
     return Array.isArray(data) && data.every(isEscrowEntry)
-      ? { data }
+      ? { data, total: Number.isFinite(total) && total > 0 ? total : data.length }
       : { data: [], message: "Payments could not be loaded." };
   } catch {
     return { data: [], message: "Payments could not be loaded." };
@@ -110,6 +152,7 @@ export async function startBookingPayment(
     if (!response.ok) {
       return {
         data: null,
+        code: errorCode(payload),
         message: resolveApiError(payload, "Payment could not be started."),
       };
     }
@@ -128,6 +171,91 @@ export async function startBookingPayment(
       : { data: null, message: "Payment could not be started." };
   } catch {
     return { data: null, message: "Payment could not be started." };
+  }
+}
+
+/**
+ * Checks the payment a tenant has just come back from Paystack with, rather than
+ * waiting for the webhook, and returns it as it now stands.
+ */
+export async function verifyPaymentReturn(
+  reference: string,
+): Promise<EscrowResult<EscrowEntry | null>> {
+  const token = getAccessToken();
+
+  if (!token) {
+    return { data: null, message: "Your session has expired. Log in again." };
+  }
+
+  try {
+    const response = await fetch(
+      `/api/escrow/payments/${encodeURIComponent(reference)}/verify`,
+      {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    );
+    const payload: unknown = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      return {
+        data: null,
+        message: resolveApiError(payload, "We could not check that payment."),
+      };
+    }
+
+    const data = unwrap(payload);
+
+    return isEscrowEntry(data)
+      ? { data }
+      : { data: null, message: "We could not check that payment." };
+  } catch {
+    return { data: null, message: "We could not check that payment." };
+  }
+}
+
+/**
+ * A host saying the home was damaged and asking to keep part of the deposit.
+ *
+ * It does not move the money: Rello holds it and decides, because a host keeping a
+ * deposit on their own word is the habit this replaces.
+ */
+export async function claimDeposit(
+  bookingId: number,
+  amount: number,
+  note: string,
+): Promise<EscrowResult<EscrowEntry | null>> {
+  const token = getAccessToken();
+
+  if (!token) {
+    return { data: null, message: "Your session has expired. Log in again." };
+  }
+
+  try {
+    const response = await fetch(`/api/bookings/${bookingId}/deposit-claim`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ amount, note: note.trim() }),
+    });
+    const payload: unknown = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      return {
+        data: null,
+        message: resolveApiError(payload, "That claim could not be recorded."),
+      };
+    }
+
+    const data = unwrap(payload);
+
+    return isEscrowEntry(data)
+      ? { data }
+      : { data: null, message: "That claim could not be recorded." };
+  } catch {
+    return { data: null, message: "That claim could not be recorded." };
   }
 }
 

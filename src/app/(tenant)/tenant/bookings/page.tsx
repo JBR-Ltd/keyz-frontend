@@ -17,6 +17,7 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import ChatThread from "@/components/chat/ChatThread";
+import { propertyPath } from "@/lib/publicIds";
 import PropertyPrice from "@/components/property/PropertyPrice";
 import { IconTile } from "@/components/ui/icon-tile";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -25,6 +26,7 @@ import {
   type StatusBadgeProps,
 } from "@/components/ui/status-badge";
 import { useToast } from "@/components/ui/toast";
+import BookingPaymentPanel from "@/components/tenant/BookingPaymentPanel";
 import MaintenanceReportDialog from "@/components/tenant/MaintenanceReportDialog";
 import {
   getMyBookings,
@@ -67,8 +69,8 @@ const STATUS_TONES: Record<
 };
 
 const STATUS_LABELS: Record<BookingStatus, string> = {
-  PENDING: "Pending confirmation",
-  CONFIRMED: "Active tenancy",
+  PENDING: "Waiting for host",
+  CONFIRMED: "Accepted",
   COMPLETED: "Completed",
   CANCELLED: "Cancelled",
 };
@@ -92,6 +94,10 @@ function formatDate(value: string): string {
 
 function formatStayDates(booking: Booking): string {
   if (booking.bookingKind === "RENTAL_REQUEST" || !booking.endDate) {
+    if (booking.tenancyStartDate) {
+      return `Moving in ${formatDate(booking.tenancyStartDate)}`;
+    }
+
     return booking.preferredMoveInDate
       ? `Preferred move-in ${formatDate(booking.preferredMoveInDate)}`
       : "Move-in date is flexible";
@@ -244,6 +250,8 @@ export default function TenantBookingsPage(): ReactElement {
   const [loadedTenancyKey, setLoadedTenancyKey] = useState<string | null>(null);
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [tenancyRefreshKey, setTenancyRefreshKey] = useState(0);
+  // Taken when the bookings arrive, so deadlines are read against one moment
+  const [now, setNow] = useState(0);
   const currentUser = getCurrentChatUser();
 
   useEffect(() => {
@@ -256,6 +264,7 @@ export default function TenantBookingsPage(): ReactElement {
 
       if (!active) return;
 
+      setNow(Date.now());
       setBookings(result.data);
       setLoadError(result.message ?? "");
       setIsLoading(false);
@@ -447,7 +456,9 @@ export default function TenantBookingsPage(): ReactElement {
                         Starts
                       </p>
                       <p className="mt-2 font-body text-sm font-bold text-primary">
-                        {primaryBooking.startDate
+                        {primaryBooking.tenancyStartDate
+                          ? formatDate(primaryBooking.tenancyStartDate)
+                          : primaryBooking.startDate
                           ? formatDate(primaryBooking.startDate)
                           : primaryBooking.preferredMoveInDate
                             ? formatDate(primaryBooking.preferredMoveInDate)
@@ -478,7 +489,11 @@ export default function TenantBookingsPage(): ReactElement {
 
                   <div className="mt-6 flex flex-wrap gap-3">
                     <Link
-                      href={`/property/${primaryBooking.propertyId}`}
+                      href={propertyPath({
+                        id: primaryBooking.propertyId,
+                        publicId: primaryBooking.propertyPublicId,
+                        slug: primaryBooking.propertySlug,
+                      })}
                       className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-primary px-5 py-2.5 font-body text-sm font-bold text-white transition-colors hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                     >
                       View property
@@ -498,26 +513,17 @@ export default function TenantBookingsPage(): ReactElement {
               </article>
 
               <div className="grid content-start gap-5">
-                <article className="rounded-2xl border border-border bg-bg p-6 shadow-sm">
-                  <div className="flex items-start justify-between gap-4">
-                    <IconTile tone="primary" size="lg">
-                      <CircleDollarSign size={21} />
-                    </IconTile>
-                    <StatusBadge tone={STATUS_TONES[primaryBooking.status]}>
-                      {STATUS_LABELS[primaryBooking.status]}
-                    </StatusBadge>
-                  </div>
-                  <p className="mt-6 font-accent text-xs font-bold uppercase tracking-[0.22em] text-accent-alt">
-                    Payment overview
-                  </p>
-                  <p className="mt-3 font-display text-3xl font-bold text-primary">
-                    <PropertyPrice value={primaryBooking.totalPrice} />
-                  </p>
-                  <p className="mt-3 font-body text-sm leading-6 text-muted">
-                    Paid up front and held in escrow, so there is nothing to pay
-                    month to month.
-                  </p>
-                </article>
+                <BookingPaymentPanel
+                  booking={primaryBooking}
+                  now={now}
+                  onChanged={(updated) =>
+                    setBookings((current) =>
+                      current.map((item) =>
+                        item.id === updated.id ? updated : item,
+                      ),
+                    )
+                  }
+                />
 
                 <article className="rounded-2xl border border-border bg-bg p-6 shadow-sm">
                   <div className="flex items-center justify-between gap-4">
@@ -699,7 +705,11 @@ export default function TenantBookingsPage(): ReactElement {
                   {bookingHistory.map((booking, index) => (
                     <Link
                       key={booking.id}
-                      href={`/property/${booking.propertyId}`}
+                      href={propertyPath({
+                        id: booking.propertyId,
+                        publicId: booking.propertyPublicId,
+                        slug: booking.propertySlug,
+                      })}
                       className="grid gap-4 border-b border-border p-5 transition-colors last:border-b-0 hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent sm:grid-cols-[5rem_1fr_auto] sm:items-center sm:px-7"
                     >
                       <span className="relative h-20 overflow-hidden rounded-xl bg-surface-soft">

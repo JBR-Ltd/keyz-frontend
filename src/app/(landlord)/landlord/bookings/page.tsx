@@ -38,6 +38,17 @@ import {
   type BookingStatus,
 } from "@/lib/bookings";
 import { TENANT_ACTIVITY_IMAGES } from "@/lib/tenantActivity";
+import AcceptBookingDialog, {
+  type AcceptDialogMode,
+} from "@/components/bookings/AcceptBookingDialog";
+import CancelBookingDialog from "@/components/bookings/CancelBookingDialog";
+import DepositClaimDialog from "@/components/bookings/DepositClaimDialog";
+import PaymentStatusBadge from "@/components/bookings/PaymentStatusBadge";
+import {
+  describePaymentForHost,
+  moveInLocked,
+  stageFromLifecycle,
+} from "@/lib/bookingPayments";
 import { useDialogFocus } from "@/lib/useDialogFocus";
 
 // === Types
@@ -61,10 +72,23 @@ interface BookingDetailsDrawerProps {
   onClose: () => void;
   onDocuments: (booking: Booking) => void;
   onMessage: (booking: Booking) => void;
+  now: number;
+  onAccept: (booking: Booking) => void;
+  onCancel: (booking: Booking) => void;
+  onClaimDeposit: (booking: Booking) => void;
+  onChangeMoveIn: (booking: Booking) => void;
   onStatusChange: (booking: Booking, status: BookingStatus) => void;
 }
 
+interface AcceptTarget {
+  booking: Booking;
+  mode: AcceptDialogMode;
+}
+
 // === Constants
+
+/** Matches the server's default page, so "show more" asks for the next one. */
+const HOST_PAGE_SIZE = 100;
 
 const TENANCY_TABS: TenancyTabItem[] = [
   { id: "all", label: "All" },
@@ -101,6 +125,10 @@ function formatDate(value: string): string {
 
 function formatStayDates(booking: Booking): string {
   if (booking.bookingKind === "RENTAL_REQUEST" || !booking.endDate) {
+    if (booking.tenancyStartDate) {
+      return `Moving in ${formatDate(booking.tenancyStartDate)}`;
+    }
+
     return booking.preferredMoveInDate
       ? `Move in ${formatDate(booking.preferredMoveInDate)}`
       : "Flexible move-in";
@@ -122,6 +150,12 @@ function getInitials(name: string): string {
 }
 
 function getTenancyStage(booking: Booking, now: number): TenancyStage {
+  const fromServer = stageFromLifecycle(booking);
+
+  if (fromServer) {
+    return fromServer;
+  }
+
   if (booking.status === "PENDING") {
     return "request";
   }
@@ -195,6 +229,11 @@ function BookingDetailsDrawer({
   onClose,
   onDocuments,
   onMessage,
+  now,
+  onAccept,
+  onCancel,
+  onClaimDeposit,
+  onChangeMoveIn,
   onStatusChange,
 }: BookingDetailsDrawerProps): ReactElement | null {
   const reduceMotion = useReducedMotion();
@@ -321,12 +360,34 @@ function BookingDetailsDrawer({
                   </div>
                 </div>
 
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/10 p-5">
+                  <div className="min-w-0">
+                    <p className="font-body text-xs font-medium text-muted">
+                      Payment
+                    </p>
+                    <p className="mt-1 font-body text-sm font-bold text-primary">
+                      {describePaymentForHost(booking, now)}
+                    </p>
+                  </div>
+                  <PaymentStatusBadge
+                    audience="host"
+                    booking={booking}
+                    now={now}
+                  />
+                </div>
+
+                {booking.cancellationReason ? (
+                  <p className="mt-3 rounded-xl bg-surface-soft p-4 font-body text-sm leading-6 text-primary">
+                    Reason given: &ldquo;{booking.cancellationReason}&rdquo;
+                  </p>
+                ) : null}
+
                 <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                   {booking.status === "PENDING" ? (
                     <>
                       <button
                         type="button"
-                        onClick={() => onStatusChange(booking, "CONFIRMED")}
+                        onClick={() => onAccept(booking)}
                         disabled={isUpdating}
                         className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-full bg-primary px-5 font-body text-sm font-bold text-white transition-colors hover:bg-primary/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-60"
                       >
@@ -339,7 +400,7 @@ function BookingDetailsDrawer({
                       </button>
                       <button
                         type="button"
-                        onClick={() => onStatusChange(booking, "CANCELLED")}
+                        onClick={() => onCancel(booking)}
                         disabled={isUpdating}
                         className="inline-flex min-h-12 items-center justify-center rounded-full border border-red-700/25 px-5 font-body text-sm font-bold text-red-700 transition-colors hover:bg-red-700/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-60"
                       >
@@ -362,6 +423,27 @@ function BookingDetailsDrawer({
                       Mark complete
                     </button>
                   ) : null}
+                  {booking.status === "CONFIRMED" &&
+                  booking.bookingKind !== "SHORT_STAY" &&
+                  !moveInLocked(booking) ? (
+                    <button
+                      type="button"
+                      onClick={() => onChangeMoveIn(booking)}
+                      className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-primary/15 px-5 font-body text-sm font-bold text-primary transition-colors hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    >
+                      <CalendarDays size={16} aria-hidden="true" />
+                      Change move-in
+                    </button>
+                  ) : null}
+                  {booking.status === "CONFIRMED" ? (
+                    <button
+                      type="button"
+                      onClick={() => onCancel(booking)}
+                      className="inline-flex min-h-12 items-center justify-center rounded-full border border-red-700/25 px-5 font-body text-sm font-bold text-red-700 transition-colors hover:bg-red-700/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    >
+                      Cancel booking
+                    </button>
+                  ) : null}
                   <button
                     type="button"
                     onClick={() => onMessage(booking)}
@@ -380,6 +462,16 @@ function BookingDetailsDrawer({
                     >
                       <FileText size={16} aria-hidden="true" />
                       Paperwork
+                    </button>
+                  ) : null}
+                  {booking.depositStatus === "HELD" &&
+                  booking.status === "COMPLETED" ? (
+                    <button
+                      type="button"
+                      onClick={() => onClaimDeposit(booking)}
+                      className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-primary/15 px-5 font-body text-sm font-bold text-primary transition-colors hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    >
+                      Claim against deposit
                     </button>
                   ) : null}
                 </div>
@@ -407,6 +499,11 @@ export default function LandlordBookingsPage(): ReactElement {
     null,
   );
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [accepting, setAccepting] = useState<AcceptTarget | null>(null);
+  const [cancelling, setCancelling] = useState<Booking | null>(null);
+  const [claiming, setClaiming] = useState<Booking | null>(null);
+  const [total, setTotal] = useState(0);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -418,6 +515,7 @@ export default function LandlordBookingsPage(): ReactElement {
 
       setNow(Date.now());
       setBookings(result.data);
+      setTotal(result.total ?? result.data.length);
       setLoadError(result.message ?? "");
       setIsLoading(false);
     });
@@ -443,6 +541,48 @@ export default function LandlordBookingsPage(): ReactElement {
       ? bookings.length
       : bookings.filter((booking) => getTenancyStage(booking, now) === tab)
           .length;
+
+  const applyUpdate = (updated: Booking): void => {
+    setBookings((current) =>
+      current.map((item) => (item.id === updated.id ? updated : item)),
+    );
+    setSelectedBooking((current) =>
+      current?.id === updated.id ? updated : current,
+    );
+  };
+
+  // Accepting a rental closes the other requests on that home, so the list is re-read
+  const refresh = async (): Promise<void> => {
+    const result = await getHostBookings();
+
+    if (!result.message) {
+      setBookings(result.data);
+      setTotal(result.total ?? result.data.length);
+    }
+  };
+
+  const loadMore = async (): Promise<void> => {
+    setIsLoadingMore(true);
+    const result = await getHostBookings({
+      page: Math.floor(bookings.length / HOST_PAGE_SIZE),
+      size: HOST_PAGE_SIZE,
+    });
+    setIsLoadingMore(false);
+
+    if (result.message) {
+      notify({
+        title: "More tenancies could not load",
+        description: result.message,
+        variant: "error",
+      });
+      return;
+    }
+
+    setBookings((current) => {
+      const known = new Set(current.map((item) => item.id));
+      return [...current, ...result.data.filter((item) => !known.has(item.id))];
+    });
+  };
 
   const changeStatus = async (
     booking: Booking,
@@ -620,6 +760,11 @@ export default function LandlordBookingsPage(): ReactElement {
                           <span className="font-body text-[11px] font-bold text-muted">
                             REQ-{booking.id}
                           </span>
+                          <PaymentStatusBadge
+                            audience="host"
+                            booking={booking}
+                            now={now}
+                          />
                         </div>
                         <h3 className="mt-2 line-clamp-2 font-body text-sm font-bold leading-5 text-primary">
                           {booking.propertyTitle}
@@ -658,7 +803,9 @@ export default function LandlordBookingsPage(): ReactElement {
                       <p className="flex items-baseline justify-between gap-3 xl:block">
                         <span className="text-muted">Move in</span>
                         <span className="font-bold text-primary xl:mt-0.5 xl:block">
-                          {booking.startDate
+                          {booking.tenancyStartDate
+                            ? formatDate(booking.tenancyStartDate)
+                            : booking.startDate
                             ? formatDate(booking.startDate)
                             : booking.preferredMoveInDate
                               ? formatDate(booking.preferredMoveInDate)
@@ -689,7 +836,7 @@ export default function LandlordBookingsPage(): ReactElement {
                             type="button"
                             disabled={isBusy}
                             onClick={() =>
-                              void changeStatus(booking, "CONFIRMED")
+                              setAccepting({ booking, mode: "accept" })
                             }
                             className="inline-flex min-h-10 items-center gap-2 rounded-full bg-primary px-4 font-body text-xs font-bold text-white transition-colors hover:bg-primary/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-60"
                           >
@@ -717,6 +864,21 @@ export default function LandlordBookingsPage(): ReactElement {
             </div>
           </>
         )}
+        {!isLoading && bookings.length < total ? (
+          <div className="border-t border-primary/10 p-5 text-center">
+            <button
+              type="button"
+              onClick={() => void loadMore()}
+              disabled={isLoadingMore}
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-primary/15 px-5 font-body text-sm font-bold text-primary transition-colors hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-60"
+            >
+              {isLoadingMore ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : null}
+              Show more tenancies ({total - bookings.length} more)
+            </button>
+          </div>
+        ) : null}
       </section>
 
       <BookingDetailsDrawer
@@ -731,7 +893,58 @@ export default function LandlordBookingsPage(): ReactElement {
           setSelectedBooking(null);
           setChatBooking(booking);
         }}
+        now={now}
+        onAccept={(booking) => {
+          setSelectedBooking(null);
+          setAccepting({ booking, mode: "accept" });
+        }}
+        onCancel={(booking) => {
+          setSelectedBooking(null);
+          setCancelling(booking);
+        }}
+        onClaimDeposit={(booking) => {
+          setSelectedBooking(null);
+          setClaiming(booking);
+        }}
+        onChangeMoveIn={(booking) => {
+          setSelectedBooking(null);
+          setAccepting({ booking, mode: "move-in" });
+        }}
         onStatusChange={(booking, status) => void changeStatus(booking, status)}
+      />
+
+      <AcceptBookingDialog
+        key={accepting ? `${accepting.mode}-${accepting.booking.id}` : "closed"}
+        booking={accepting?.booking ?? null}
+        mode={accepting?.mode ?? "accept"}
+        onClose={() => setAccepting(null)}
+        onSaved={(updated) => {
+          setAccepting(null);
+          applyUpdate(updated);
+          void refresh();
+        }}
+      />
+
+      <DepositClaimDialog
+        key={claiming ? `claim-${claiming.id}` : "no-claim"}
+        booking={claiming}
+        onClose={() => setClaiming(null)}
+        onClaimed={() => {
+          setClaiming(null);
+          void refresh();
+        }}
+      />
+
+      <CancelBookingDialog
+        key={cancelling ? `cancel-${cancelling.id}` : "closed"}
+        actor="host"
+        booking={cancelling}
+        now={now}
+        onClose={() => setCancelling(null)}
+        onDone={(updated) => {
+          setCancelling(null);
+          applyUpdate(updated);
+        }}
       />
 
       {chatBooking && chatBooking.tenant ? (

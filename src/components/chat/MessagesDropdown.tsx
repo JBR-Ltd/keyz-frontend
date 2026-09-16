@@ -44,6 +44,13 @@ function formatRelativeTimestamp(value: string): string {
   }).format(new Date(value));
 }
 
+/**
+ * How often the unread badge and thread list refresh. A count does not need to be
+ * instant; a list someone is looking at should feel alive.
+ */
+const THREADS_POLL_MS = 30000;
+const OPEN_PANEL_POLL_MS = 10000;
+
 export default function MessagesDropdown(): ReactElement {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -72,15 +79,23 @@ export default function MessagesDropdown(): ReactElement {
       setUnreadCount(unread.data);
     }
 
+    // Runs on mount and again whenever the panel opens, so the badge is never
+    // stale on the way in. It used to fire twice on open.
     void loadThreads();
 
-    // Refresh when the panel opens, so a badge is never stale on the way in
-    if (isOpen) {
-      void loadThreads();
-    }
+    // The badge used to move only on a page reload. A hidden tab skips the request.
+    const timer = window.setInterval(
+      () => {
+        if (document.visibilityState === "visible") {
+          void loadThreads();
+        }
+      },
+      isOpen ? OPEN_PANEL_POLL_MS : THREADS_POLL_MS,
+    );
 
     return () => {
       active = false;
+      window.clearInterval(timer);
     };
   }, [isOpen]);
 

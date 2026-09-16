@@ -1,6 +1,7 @@
 "use client";
 
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
+import type { ChatAttachment } from "@/lib/chat/chatClient";
 
 export type ChatMessageStatus = "sent" | "delivered";
 
@@ -15,6 +16,7 @@ export interface ChatMessage {
   timestamp: string;
   status: ChatMessageStatus;
   read: boolean;
+  attachment?: ChatAttachment | null;
 }
 
 export interface ConversationMetadata {

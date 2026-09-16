@@ -45,7 +45,12 @@ export default function PropertyTourViewer({
 
       setFloors(result);
 
-      const firstFloor = result[0] ?? null;
+      // A floor plan shared in chat links here with ?floor=, so open on that floor
+      const requestedFloor = Number(
+        new URLSearchParams(window.location.search).get("floor"),
+      );
+      const firstFloor =
+        result.find((floor) => floor.id === requestedFloor) ?? result[0] ?? null;
       const firstRoom =
         firstFloor?.rooms.find((room) => room.panoramas.length > 0) ?? null;
 

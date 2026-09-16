@@ -1,3 +1,5 @@
+import { cacheHeaders, requestIdHeader } from "@/app/api/_requestId";
+
 const API_BASE_URL = process.env.API_BASE_URL;
 const PROPERTY_REQUEST_TIMEOUT_MS = 90000;
 
@@ -36,6 +38,11 @@ function createTimeoutSignal(): TimeoutSignal {
   };
 }
 
+/** A listing's public identifier, as the backend issues it. */
+function isPublicPropertyId(value: string): boolean {
+  return /^p_[0-9a-f]{16}$/.test(value);
+}
+
 function isNumericId(value: string): boolean {
   return /^\d+$/.test(value);
 }
@@ -52,10 +59,14 @@ function isAllowedRequest(method: PropertyMethod, segments: string[]): boolean {
       );
     }
 
+    if (segments.length === 2 && segments[0] === "public") {
+      return isPublicPropertyId(segments[1]);
+    }
+
     // A guest needs the gallery and the calendar before they can pick dates
     return (
       segments.length === 2 &&
-      isNumericId(segments[0]) &&
+      (isNumericId(segments[0]) || isPublicPropertyId(segments[0])) &&
       (segments[1] === "images" || segments[1] === "availability")
     );
   }
@@ -110,6 +121,11 @@ function isPublicRequest(method: PropertyMethod, segments: string[]): boolean {
     );
   }
 
+  // Shared links have to open for someone who has never signed in
+  if (segments.length === 2 && segments[0] === "public") {
+    return isPublicPropertyId(segments[1]);
+  }
+
   // The listing page has to work logged out, gallery and calendar included
   return (
     segments.length === 2 &&
@@ -146,6 +162,14 @@ function getAuthenticatedUserId(value: unknown): number | null {
 }
 
 async function proxyResponse(response: Response): Promise<Response> {
+  // Unchanged since the browser's copy: pass the 304 on, with no body to read
+  if (response.status === 304) {
+    return new Response(null, {
+      status: 304,
+      headers: { ...requestIdHeader(response), ...cacheHeaders(response) },
+    });
+  }
+
   const body = await response.text();
   const contentType =
     response.headers.get("Content-Type") ?? "application/json";
@@ -154,6 +178,8 @@ async function proxyResponse(response: Response): Promise<Response> {
     status: response.status,
     headers: {
       "Content-Type": contentType,
+      ...requestIdHeader(response),
+      ...cacheHeaders(response),
     },
   });
 }
@@ -284,11 +310,15 @@ async function handlePropertyRequest(
       body = await request.arrayBuffer();
     }
 
+    const ifNoneMatch =
+      method === "GET" ? request.headers.get("If-None-Match") : null;
+
     const response = await fetch(backendUrl, {
       method,
       headers: {
         ...(authorization ? { Authorization: authorization } : {}),
         ...(contentType ? { "Content-Type": contentType } : {}),
+        ...(ifNoneMatch ? { "If-None-Match": ifNoneMatch } : {}),
       },
       body,
       signal: timeout.signal,

@@ -50,7 +50,7 @@ function toDate(value: string): Date {
  * refused. Public, because the calendar has to work before anyone logs in.
  */
 export async function getPropertyAvailability(
-  propertyId: number,
+  propertyId: number | string,
 ): Promise<AvailabilityResult<UnavailableRange[]>> {
   try {
     const response = await fetch(`/api/properties/${propertyId}/availability`);

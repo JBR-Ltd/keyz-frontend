@@ -1,3 +1,5 @@
+import { listHeaders } from "@/app/api/_requestId";
+
 const API_BASE_URL = process.env.API_BASE_URL;
 const BOOKING_REQUEST_TIMEOUT_MS = 90000;
 
@@ -70,6 +72,7 @@ async function handle(
       headers: {
         "Content-Type":
           response.headers.get("Content-Type") ?? "application/json",
+        ...listHeaders(response),
       },
     });
   } catch {

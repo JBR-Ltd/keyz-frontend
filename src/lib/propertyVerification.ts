@@ -121,3 +121,70 @@ export async function submitPropertyProof(
     };
   }
 }
+
+// === Utility bill
+
+/**
+ * What the bill reader accepts. A clear phone photo of a paper bill works as well
+ * as the PDF a provider emails.
+ */
+export const UTILITY_BILL_TYPES = ["image/jpeg", "image/png", "application/pdf"];
+
+/** The OCR provider reads documents sent inline only up to this size. */
+export const UTILITY_BILL_MAX_BYTES = 5 * 1024 * 1024;
+
+/**
+ * Verifies a listing from a utility bill, for when the location check cannot work
+ * at the property.
+ *
+ * The server reads the bill and approves the listing only when both the host's
+ * verified name and the listing address appear on it.
+ */
+export async function submitUtilityBill(
+  propertyId: number,
+  bill: File,
+): Promise<ProofSubmissionResult> {
+  const token = getAccessToken();
+
+  if (!token) {
+    return {
+      success: false,
+      message: "Your session has expired. Log in again.",
+    };
+  }
+
+  try {
+    const formData = new FormData();
+    formData.append("utilityBill", bill, bill.name);
+
+    const response = await fetch(
+      `/api/verification/property/verify-bill?propertyId=${propertyId}`,
+      {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      },
+    );
+    const payload: unknown = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      return {
+        success: false,
+        message: resolveApiError(
+          payload,
+          "That bill could not verify this listing.",
+        ),
+      };
+    }
+
+    return {
+      success: true,
+      message: "Your listing is verified and now live.",
+    };
+  } catch {
+    return {
+      success: false,
+      message: "Unable to reach the verification server right now.",
+    };
+  }
+}

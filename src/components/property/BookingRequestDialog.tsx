@@ -9,10 +9,13 @@ interface BookingRequestDialogProps {
   hostName: string;
   hostRole: string;
   minimumNights?: number | null;
+  maximumGuests?: number | null;
   onClose: () => void;
   open: boolean;
   price: number;
   propertyId: string;
+  /** Read the calendar by, when the listing has one, rather than the sequential id. */
+  propertyPublicId?: string;
   propertyTitle: string;
   rentalMode: RentalMode;
 }

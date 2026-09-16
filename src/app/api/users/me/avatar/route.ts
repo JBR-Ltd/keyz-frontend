@@ -1,3 +1,5 @@
+import { requestIdHeader } from "@/app/api/_requestId";
+
 const API_BASE_URL = process.env.API_BASE_URL;
 const REQUEST_TIMEOUT_MS = 90000;
 
@@ -46,6 +48,7 @@ export async function POST(request: Request): Promise<Response> {
       headers: {
         "Content-Type":
           response.headers.get("Content-Type") ?? "application/json",
+        ...requestIdHeader(response),
       },
     });
   } catch {

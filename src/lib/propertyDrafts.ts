@@ -22,6 +22,8 @@ export interface PropertyDraft {
   imageUrls: string[];
   listingType: PropertyListingStatus | null;
   minimumNights: number | null;
+  maximumGuests?: number | null;
+  securityDeposit?: number | null;
   price: number | null;
   rentalMode: RentalMode | null;
   squareFootage: number | null;
@@ -41,6 +43,8 @@ export interface PropertyDraftInput {
   description?: string;
   listingType?: PropertyListingStatus;
   minimumNights?: number | null;
+  maximumGuests?: number | null;
+  securityDeposit?: number | null;
   price?: number;
   rentalMode?: RentalMode;
   squareFootage?: number;

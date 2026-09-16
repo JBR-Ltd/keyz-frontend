@@ -68,7 +68,10 @@ interface ListingFormValues {
   rentalMode: RentalMode;
   /** Shortlets only, kept as strings so the inputs stay controlled while empty. */
   minimumNights: string;
+  maximumGuests: string;
   cleaningFee: string;
+  /** Refundable. Nigerian lettings call it a caution fee. */
+  securityDeposit: string;
 }
 
 const RENTAL_MODE_OPTIONS: { label: string; value: RentalMode }[] = [
@@ -176,7 +179,9 @@ const INITIAL_VALUES: ListingFormValues = {
   // gets the right pricing rather than a nightly rate
   rentalMode: "ANNUAL",
   minimumNights: "2",
+  maximumGuests: "",
   cleaningFee: "",
+  securityDeposit: "",
 };
 
 const INPUT_CLASS_NAME =
@@ -460,6 +465,16 @@ export default function CreateListingForm({
           result.data.minimumNights === null
             ? "2"
             : String(result.data.minimumNights),
+        maximumGuests:
+          result.data.maximumGuests === undefined ||
+          result.data.maximumGuests === null
+            ? ""
+            : String(result.data.maximumGuests),
+        securityDeposit:
+          result.data.securityDeposit === undefined ||
+          result.data.securityDeposit === null
+            ? ""
+            : String(result.data.securityDeposit),
         cleaningFee:
           result.data.cleaningFee === undefined ||
           result.data.cleaningFee === null
@@ -517,6 +532,32 @@ export default function CreateListingForm({
         </span>
       </label>
 
+      <label>
+        <span className="font-body text-sm font-bold text-primary">
+          Refundable deposit
+        </span>
+        <span className="mt-2 flex min-h-12 items-center rounded-lg border border-border bg-bg focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/30">
+          <span className="border-r border-border px-4 font-body text-base font-bold text-primary">
+            \u20a6
+          </span>
+          <input
+            type="number"
+            min="0"
+            value={values.securityDeposit}
+            onChange={(event) =>
+              updateValue("securityDeposit", event.target.value)
+            }
+            className="min-h-12 min-w-0 flex-1 bg-bg px-4 font-body text-base text-primary outline-none placeholder:text-muted"
+            placeholder="0"
+          />
+        </span>
+        <span className="mt-2 block font-body text-xs leading-5 text-muted">
+          The caution fee, held by Rello and returned to the tenant when the
+          tenancy ends. You can claim against it for damage, with evidence.
+          Leave it empty if you ask for none.
+        </span>
+      </label>
+
       {isShortStay ? (
         <>
           <label>
@@ -535,6 +576,26 @@ export default function CreateListingForm({
             />
             <span className="mt-2 block font-body text-xs leading-5 text-muted">
               The shortest stay you will take.
+            </span>
+          </label>
+
+          <label>
+            <span className="font-body text-sm font-bold text-primary">
+              Maximum guests
+            </span>
+            <input
+              type="number"
+              min="1"
+              max="50"
+              value={values.maximumGuests}
+              onChange={(event) =>
+                updateValue("maximumGuests", event.target.value)
+              }
+              className={INPUT_CLASS_NAME}
+              placeholder="4"
+            />
+            <span className="mt-2 block font-body text-xs leading-5 text-muted">
+              How many people the home sleeps. Guests cannot book for more.
             </span>
           </label>
 
@@ -587,6 +648,13 @@ export default function CreateListingForm({
       values.rentalMode === "SHORT_STAY"
         ? Math.max(Number(values.minimumNights) || 1, 1)
         : undefined,
+    maximumGuests:
+      values.rentalMode === "SHORT_STAY" && values.maximumGuests
+        ? Math.min(Math.max(Number(values.maximumGuests) || 1, 1), 50)
+        : undefined,
+    securityDeposit: values.securityDeposit
+      ? Math.max(Number(values.securityDeposit) || 0, 0)
+      : undefined,
     cleaningFee:
       values.rentalMode === "SHORT_STAY"
         ? Math.max(Number(values.cleaningFee) || 0, 0)
@@ -870,11 +938,19 @@ export default function CreateListingForm({
         title: proofResult.success
           ? "Listing verified and live"
           : "Listing saved, not yet verified",
-        description: proofResult.message,
+        description: proofResult.success
+          ? proofResult.message
+          : `${proofResult.message} You can verify with a utility bill instead.`,
         variant: proofResult.success ? "success" : "error",
       });
 
-      router.push(`/${role}/saved-listings`);
+      // A failed location check used to leave the host at their listings with no
+      // other way to go live, so it lands on the bill route instead
+      router.push(
+        proofResult.success
+          ? `/${role}/saved-listings`
+          : `/${role}/listings/${propertyId}/verify`,
+      );
       return;
     }
 

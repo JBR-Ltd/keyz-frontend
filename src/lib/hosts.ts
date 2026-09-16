@@ -2,11 +2,14 @@
 
 import { resolveApiError } from "@/lib/errors";
 import type { BackendPage, BackendProperty } from "@/lib/hostListings";
+import { hostPublicIdFrom } from "@/lib/publicIds";
 
 // === Types
 
 export interface HostProfile {
   id: number;
+  publicId?: string;
+  slug?: string;
   identityVerified: boolean;
   listingCount: number;
   name: string;
@@ -41,6 +44,16 @@ function unwrap(payload: unknown): unknown {
     : null;
 }
 
+/**
+ * The API path for a host. A route segment ending in a public identifier goes
+ * through the public lookup; an older numeric link still works.
+ */
+function hostApiPath(hostId: string): string {
+  const publicId = hostPublicIdFrom(hostId);
+
+  return publicId ? `public/${publicId}` : encodeURIComponent(hostId);
+}
+
 // === Requests
 
 /** Public: no token needed, so a shared link works for a logged-out visitor. */
@@ -48,7 +61,7 @@ export async function getHostProfile(
   hostId: string,
 ): Promise<HostResult<HostProfile | null>> {
   try {
-    const response = await fetch(`/api/hosts/${hostId}`);
+    const response = await fetch(`/api/hosts/${hostApiPath(hostId)}`);
     const payload: unknown = await response.json().catch(() => null);
 
     if (!response.ok) {
@@ -75,7 +88,7 @@ export async function getHostListings(
 ): Promise<HostResult<BackendPage<BackendProperty> | null>> {
   try {
     const response = await fetch(
-      `/api/hosts/${hostId}/listings?page=${page}&size=${size}`,
+      `/api/hosts/${hostApiPath(hostId)}/listings?page=${page}&size=${size}`,
     );
     const payload: unknown = await response.json().catch(() => null);
 

@@ -1,6 +1,8 @@
+import { propertyPublicIdFrom } from "@/lib/publicIds";
 import type { ListingSearch } from "@/lib/hostListings";
 import {
   getBackendPropertyById,
+  getBackendPropertyByPublicId,
   getHostListingById,
   getPublicProperties,
   interpretPublicProperties,
@@ -21,6 +23,7 @@ export interface PropertyDetailLocation {
 
 export interface PropertyDetailHost {
   id: string;
+  publicId?: string;
   name: string;
   role: PropertyHostRole;
   avatarUrl?: string;
@@ -48,6 +51,8 @@ export interface PropertyReviews {
 
 export interface PropertyDetail {
   id: string;
+  publicId?: string;
+  slug?: string;
   title: string;
   description: string;
   status: PropertyListingStatus;
@@ -56,6 +61,10 @@ export interface PropertyDetail {
   rentalMode: RentalMode;
   /** Shortlets only. */
   minimumNights?: number | null;
+  /** Shortlets only. Null when the host set no limit. */
+  maximumGuests?: number | null;
+  /** Refundable, held by Rello, and returned after the tenancy. */
+  securityDeposit?: number | null;
   cleaningFee?: number | null;
   location: PropertyDetailLocation;
   bedrooms: number;
@@ -87,6 +96,8 @@ function hostListingToPropertyDetail(
     price: listing.price,
     rentalMode: listing.rentalMode ?? "ANNUAL",
     minimumNights: listing.minimumNights ?? null,
+    maximumGuests: listing.maximumGuests ?? null,
+    securityDeposit: listing.securityDeposit ?? null,
     cleaningFee: listing.cleaningFee ?? null,
     location: {
       city: listing.city || "Location pending",
@@ -142,12 +153,16 @@ function backendPropertyToPropertyDetail(
 
   return {
     id: String(property.id),
+    publicId: property.publicId,
+    slug: property.slug,
     title: property.title,
     description: property.description ?? "",
     status: property.status === "FOR_SALE" ? "FOR_SALE" : "FOR_RENT",
     price: property.price,
     rentalMode: property.rentalMode ?? "ANNUAL",
     minimumNights: property.minimumNights ?? null,
+    maximumGuests: property.maximumGuests ?? null,
+    securityDeposit: property.securityDeposit ?? null,
     cleaningFee: property.cleaningFee ?? null,
     // City and area are real fields now. Parsing them back out of the joined
     // address only remains for listings saved before they were stored.
@@ -171,6 +186,7 @@ function backendPropertyToPropertyDetail(
     verified,
     host: {
       id: String(property.host?.id ?? 0),
+      publicId: property.host?.publicId,
       name: hostName || "Property host",
       role: hostRole,
       verified: property.host?.identityVerified ?? false,
@@ -243,6 +259,17 @@ export async function interpretProperties(
 export async function getPropertyById(
   id: string,
 ): Promise<PropertyDetail | null> {
+  // A canonical link ends in the public identifier; the slug before it is ignored
+  const publicId = propertyPublicIdFrom(id);
+
+  if (publicId) {
+    const publicProperty = await getBackendPropertyByPublicId(publicId);
+
+    return publicProperty.data
+      ? backendPropertyToPropertyDetail(publicProperty.data)
+      : null;
+  }
+
   if (/^\d+$/.test(id)) {
     const backendProperty = await getBackendPropertyById(id);
 

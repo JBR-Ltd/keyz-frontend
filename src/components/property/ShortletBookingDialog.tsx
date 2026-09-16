@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { CalendarDays, Loader2, X } from "lucide-react";
+import { CalendarDays, Loader2, Minus, Plus, Users, X } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactElement } from "react";
 import ShortletDateRangeCalendar from "@/components/property/ShortletDateRangeCalendar";
 import OverlayPortal from "@/components/ui/OverlayPortal";
@@ -21,13 +21,18 @@ import { useDialogFocus } from "@/lib/useDialogFocus";
 interface ShortletBookingDialogProps {
   hostName?: string;
   hostRole?: string;
+  maximumGuests?: number | null;
   minimumNights?: number | null;
   onClose: () => void;
   open: boolean;
   price: number;
   propertyId: string;
+  propertyPublicId?: string;
   propertyTitle: string;
 }
+
+/** The picker's ceiling when a host set no limit. The server allows more. */
+const UNLIMITED_GUEST_CEILING = 16;
 
 function formatNaira(value: number): string {
   return new Intl.NumberFormat("en-NG", {
@@ -38,11 +43,13 @@ function formatNaira(value: number): string {
 }
 
 export default function ShortletBookingDialog({
+  maximumGuests,
   minimumNights,
   onClose,
   open,
   price,
   propertyId,
+  propertyPublicId,
   propertyTitle,
 }: ShortletBookingDialogProps): ReactElement | null {
   const reduceMotion = useReducedMotion();
@@ -57,9 +64,11 @@ export default function ShortletBookingDialog({
   } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [guests, setGuests] = useState(1);
   const numericId = Number(propertyId);
   const minimum = Math.max(minimumNights ?? 1, 1);
-  const dateKey = `${startDate}:${endDate}`;
+  const guestCeiling = maximumGuests ?? UNLIMITED_GUEST_CEILING;
+  const dateKey = `${startDate}:${endDate}:${guests}`;
   const quote = quotedFor?.key === dateKey ? quotedFor.value : null;
 
   const localProblem = useMemo((): string | null => {
@@ -78,23 +87,28 @@ export default function ShortletBookingDialog({
 
   useEffect(() => {
     if (!open || !Number.isFinite(numericId)) return;
-    void getPropertyAvailability(numericId).then((result) =>
+    void getPropertyAvailability(propertyPublicId ?? numericId).then((result) =>
       setUnavailable(result.data),
     );
-  }, [numericId, open]);
+  }, [numericId, open, propertyPublicId]);
 
   useEffect(() => {
     if (!startDate || !endDate || localProblem) return;
     let active = true;
-    void getBookingQuote(numericId, startDate, endDate).then((result) => {
-      if (!active) return;
-      setQuotedFor({ key: `${startDate}:${endDate}`, value: result.data });
-      setError(result.message ?? result.data?.unavailableReason ?? "");
-    });
+    void getBookingQuote(numericId, startDate, endDate, guests).then(
+      (result) => {
+        if (!active) return;
+        setQuotedFor({
+          key: `${startDate}:${endDate}:${guests}`,
+          value: result.data,
+        });
+        setError(result.message ?? result.data?.unavailableReason ?? "");
+      },
+    );
     return () => {
       active = false;
     };
-  }, [endDate, localProblem, numericId, startDate]);
+  }, [endDate, guests, localProblem, numericId, startDate]);
 
   const isQuoting =
     Boolean(startDate && endDate) &&
@@ -103,8 +117,15 @@ export default function ShortletBookingDialog({
 
   const submit = async (): Promise<void> => {
     if (!startDate || !endDate || localProblem || !quote) return;
+    if (quote.unavailableReason) return;
     setIsSubmitting(true);
-    const result = await createShortletBooking(numericId, startDate, endDate);
+    const result = await createShortletBooking(
+      numericId,
+      startDate,
+      endDate,
+      undefined,
+      guests,
+    );
     setIsSubmitting(false);
     if (!result.data) {
       setError(result.message ?? "That booking could not be made.");
@@ -189,7 +210,50 @@ export default function ShortletBookingDialog({
                   setError("");
                 }}
               />
-              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              <div className="mt-5 flex items-center justify-between gap-4 rounded-xl border border-border p-4">
+                <div className="flex items-center gap-3">
+                  <Users size={18} className="text-accent-alt" />
+                  <div>
+                    <p className="font-body text-sm font-bold text-primary">
+                      Guests
+                    </p>
+                    <p className="font-body text-xs text-muted">
+                      {maximumGuests
+                        ? `This home sleeps up to ${maximumGuests}`
+                        : "Including you"}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setGuests((count) => Math.max(count - 1, 1))}
+                    disabled={guests <= 1}
+                    aria-label="One guest fewer"
+                    className="flex h-10 w-10 items-center justify-center rounded-full border border-border text-primary hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <Minus size={16} />
+                  </button>
+                  <span
+                    className="w-6 text-center font-body text-base font-bold text-primary"
+                    aria-live="polite"
+                  >
+                    {guests}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setGuests((count) => Math.min(count + 1, guestCeiling))
+                    }
+                    disabled={guests >= guestCeiling}
+                    aria-label="One more guest"
+                    className="flex h-10 w-10 items-center justify-center rounded-full border border-border text-primary hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <Plus size={16} />
+                  </button>
+                </div>
+              </div>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
                 <div className="rounded-xl bg-surface-soft p-4">
                   <p className="font-body text-xs text-muted">Check-in</p>
                   <p className="mt-1 font-body text-sm font-bold text-primary">
@@ -232,7 +296,11 @@ export default function ShortletBookingDialog({
                 type="button"
                 onClick={() => void submit()}
                 disabled={
-                  !quote || Boolean(localProblem) || isQuoting || isSubmitting
+                  !quote ||
+                  Boolean(quote.unavailableReason) ||
+                  Boolean(localProblem) ||
+                  isQuoting ||
+                  isSubmitting
                 }
                 className="fixed inset-x-5 bottom-5 z-10 inline-flex min-h-14 items-center justify-center gap-2 rounded-full bg-accent px-6 font-body text-sm font-bold text-primary shadow-lg transition-colors hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-60 sm:static sm:mt-6 sm:w-full sm:shadow-none"
               >

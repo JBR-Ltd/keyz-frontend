@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import BackButton from "@/components/navigation/BackButton";
 import PropertyCard from "@/components/public/PropertyCard";
+import { useRouter } from "next/navigation";
+import { canonicalSegment } from "@/lib/publicIds";
 import VerifiedBadge from "@/components/ui/VerifiedBadge";
 import { getHostListings, getHostProfile, type HostProfile } from "@/lib/hosts";
 import type { BackendProperty } from "@/lib/hostListings";
@@ -86,6 +88,7 @@ export default function HostProfilePage({
   params,
 }: HostPageProps): ReactElement {
   const { id } = use(params);
+  const router = useRouter();
   const [profile, setProfile] = useState<HostProfile | null>(null);
   const [listings, setListings] = useState<BackendProperty[]>([]);
   const [hasNext, setHasNext] = useState(false);
@@ -109,6 +112,17 @@ export default function HostProfilePage({
       }
 
       setProfile(profileResult.data);
+
+      // A numeric link or an outdated name moves to the canonical profile address
+      const loaded = profileResult.data;
+
+      if (loaded?.publicId) {
+        const canonical = canonicalSegment(loaded);
+
+        if (canonical !== id) {
+          router.replace(`/host/${canonical}`, { scroll: false });
+        }
+      }
       setListings(listingResult.data?.items ?? []);
       setHasNext(listingResult.data?.hasNext ?? false);
       setLoadError(profileResult.message ?? "");
@@ -121,7 +135,7 @@ export default function HostProfilePage({
     return () => {
       active = false;
     };
-  }, [id]);
+  }, [id, router]);
 
   const loadMore = async (): Promise<void> => {
     const nextPage = page + 1;
@@ -366,6 +380,8 @@ export default function HostProfilePage({
                   <PropertyCard
                     key={listing.id}
                     id={String(listing.id)}
+                    publicId={listing.publicId}
+                    slug={listing.slug}
                     name={listing.title}
                     location={listing.address}
                     price={listing.price}
