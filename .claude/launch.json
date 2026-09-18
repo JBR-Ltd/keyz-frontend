@@ -8,6 +8,19 @@
       "port": 3000
     },
     {
+      "name": "rello-api-no-jobs",
+      "runtimeExecutable": "C:\\Users\\BEST\\Documents\\backend\\mvnw.cmd",
+      "runtimeArgs": [
+        "-f",
+        "C:\\Users\\BEST\\Documents\\backend\\pom.xml",
+        "-o",
+        "spring-boot:run",
+        "-Dspring-boot.run.profiles=local",
+        "-Dspring-boot.run.arguments=--rello.scheduling.enabled=false"
+      ],
+      "port": 8080
+    },
+    {
       "name": "rello-web-npm",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],

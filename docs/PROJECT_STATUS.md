@@ -12,7 +12,7 @@ What has been built, what changed in this round of work, what was found and fixe
 | Frontend production build | `npm run build` passes |
 | Clicked through in a browser | **Not yet** |
 | Committed | Backend and frontend up to commits `01726ff` and `f4632c7`. **Everything in this round is uncommitted.** |
-| Deployed | No. Migrations V6 to V11 are not on Neon. |
+| Database | Migrations V6 to V11 applied to the shared Neon database on 17 September (the backend then started cleanly, so the schema matches the code). Not deployed to production hosting. |
 
 Repositories:
 - Backend: `C:\Users\BEST\Documents\backend` (Spring Boot 3.5, Java 17), branch `founder1`.
@@ -87,6 +87,7 @@ Spec: `C:\Users\BEST\Downloads\BACKEND_CHANGES.md`. Everything in it was already
 | The shared frontend proxy read request bodies as text | File uploads through it were corrupted | Bodies forwarded as bytes |
 | The reviews proxy only forwarded GET, and only with a login | Replies could not be posted; listing reviews needed a login | POST added; listing reviews public |
 | The listing page never loaded real reviews | Always "No reviews yet" | Loads published reviews and host replies |
+| Older reviews have no date, and the count ignored singular | "NaN months ago" and "1 reviews" on real data | Date hidden when missing; "1 review" |
 
 ### 3.4 Frontend: screens for every gap
 
@@ -149,7 +150,8 @@ Frontend: `tsc --noEmit` and `eslint src` pass on the whole codebase.
 
 - **Backend full test suite:** 209 passing, 0 failing, with every change in this round.
 - **Frontend:** `tsc --noEmit`, `eslint src` and `npm run build` all pass.
-- **Browser check:** not done. A useful run needs a local backend, and the local backend points at the shared Neon database, which would apply migrations V6 to V11 early. It needs your go-ahead, or a local Postgres.
+- **Neon:** with your go-ahead, the backend ran against the shared database with scheduled jobs switched off (launch entry `rello-api-no-jobs` in `keyz-frontend/.claude/launch.json`), so no payouts, emails or texts went out. Migrations V6 to V11 applied. Public endpoints were checked on real data: browse with `view=card`, listing by public id, legacy reviews, the long-term availability message, and 401 on protected routes.
+- **Browser check:** public pages only. The listing page renders with "Report this listing" and shows real published reviews. Logged-in screens need a person, because Claude cannot create accounts or type passwords.
 - **Nothing is committed.** Review the diff, then commit in two logical commits per repo (backend fixes and features; frontend screens).
 
 ## 7. What is left
@@ -159,7 +161,7 @@ Frontend: `tsc --noEmit` and `eslint src` pass on the whole codebase.
 
 ### Before real money moves
 1. Rotate the Resend API key in backend git history at commit `67be1d7`.
-2. Back up Neon, then apply migrations V6 to V11 in a maintenance window.
+2. Migrations V6 to V11 are on the shared Neon database. Before production, back up the production database and apply them there in a maintenance window.
 3. Confirm the Dojah AML screening request and response in the sandbox.
 4. Point the Paystack live webhook at `/api/escrow/webhook/paystack` and test a real transfer and refund with a small amount.
 5. Get the Termii sender id approved.

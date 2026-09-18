@@ -266,7 +266,8 @@ export default function PropertyPage({
                         reviewerName: review.reviewer?.name ?? "A tenant",
                         rating: review.rating,
                         comment: review.comment ?? "",
-                        createdAt: review.createdAt ?? "",
+                        // Older reviews carry no date; the publication date stands in when there is one
+                        createdAt: review.createdAt ?? review.publishedAt ?? "",
                         reply: review.reply ?? undefined,
                       })),
                     },
@@ -958,7 +959,8 @@ export default function PropertyPage({
                       fill="currentColor"
                     />
                     {property.reviews.averageRating.toFixed(1)} ·{" "}
-                    {property.reviews.count} reviews
+                    {property.reviews.count}{" "}
+                    {property.reviews.count === 1 ? "review" : "reviews"}
                   </p>
                 ) : null}
               </div>
@@ -974,9 +976,11 @@ export default function PropertyPage({
                           <h3 className="font-body text-sm font-bold text-primary">
                             {review.reviewerName}
                           </h3>
-                          <p className="mt-1 font-body text-xs text-muted">
-                            {formatRelativeDate(review.createdAt)}
-                          </p>
+                          {review.createdAt ? (
+                            <p className="mt-1 font-body text-xs text-muted">
+                              {formatRelativeDate(review.createdAt)}
+                            </p>
+                          ) : null}
                         </div>
                         <p className="flex items-center gap-1 font-body text-sm font-bold text-primary">
                           <Star

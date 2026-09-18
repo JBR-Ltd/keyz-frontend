@@ -28,6 +28,12 @@ Written 16 September 2026. Read this whole file before touching code. It is the 
 - **Not done:** nothing has been clicked through in a browser. The local backend would need the shared Neon database, which needs the user's permission. Run every new screen against a local database before release.
 - Everything is still uncommitted.
 
+## 0a. Latest (17 September)
+
+- Migrations V6 to V11 are now applied to the shared Neon database, with the user's permission. The backend started cleanly on it.
+- To run locally without moving real money or sending messages, use the `rello-api-no-jobs` launch entry. It starts the `local` profile with `rello.scheduling.enabled=false`.
+- The Section 2 rule about not running against Neon no longer blocks migrations, but keep scheduled jobs off locally: the local profile holds real Paystack, Zoho and Dojah keys.
+
 ## 1. The project
 
 - **Product:** Rello, a rentals-first marketplace for Nigeria (Airbnb and Zillow style): long-term rental requests, shortlets, escrowed payments through Paystack, deposits, disputes, verification (Dojah), AML risk tracking.

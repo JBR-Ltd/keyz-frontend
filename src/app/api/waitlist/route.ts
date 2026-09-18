@@ -1,10 +1,15 @@
 const WAITLIST_ENDPOINT =
-  process.env.WAITLIST_ENDPOINT;
+  process.env.WAITLIST_ENDPOINT || "https://waiting-list-backend-1.onrender.com";
 
-function getWaitlistUrl(): string | null {
-  return WAITLIST_ENDPOINT
-    ? `${WAITLIST_ENDPOINT.replace(/\/$/, "")}/api/subscribe`
-    : null;
+function getWaitlistUrl(): string {
+  const normalized = WAITLIST_ENDPOINT.replace(/\/$/, "");
+  if (normalized.endsWith("/api/subscribe")) {
+    return normalized;
+  }
+  if (normalized.endsWith("/api")) {
+    return `${normalized}/subscribe`;
+  }
+  return `${normalized}/api/subscribe`;
 }
 
 type WaitlistPayload = {
@@ -60,13 +65,6 @@ async function readResponseBody(response: Response): Promise<unknown> {
 export async function POST(request: Request): Promise<Response> {
   const waitlistUrl = getWaitlistUrl();
 
-  if (!waitlistUrl) {
-    return Response.json(
-      { message: "WAITLIST_ENDPOINT is not configured." },
-      { status: 500 },
-    );
-  }
-
   let body: unknown;
 
   try {
@@ -103,13 +101,17 @@ export async function POST(request: Request): Promise<Response> {
     const data = await readResponseBody(response);
 
     if (!response.ok) {
+      let errorMessage = "Unable to join the waitlist right now.";
+      if (data && typeof data === "object") {
+        if ("error" in data && typeof data.error === "string") {
+          errorMessage = data.error;
+        } else if ("message" in data && typeof data.message === "string") {
+          errorMessage = data.message;
+        }
+      }
+
       return Response.json(
-        {
-          message:
-            data && typeof data === "object" && "message" in data
-              ? data.message
-              : "Unable to join the waitlist right now.",
-        },
+        { message: errorMessage },
         { status: response.status },
       );
     }
