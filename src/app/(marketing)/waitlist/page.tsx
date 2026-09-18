@@ -87,7 +87,7 @@ export default function WaitlistPage() {
     };
 
     try {
-      const response = await fetch("/api/waitlist", {
+      const response = await fetch("/api/subscribe", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
