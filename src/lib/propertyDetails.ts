@@ -70,6 +70,8 @@ export interface PropertyDetail {
   location: PropertyDetailLocation;
   bedrooms: number;
   bathrooms: number;
+  totalUnitCount: number;
+  availableUnitCount: number;
   sqft?: number;
   images: string[];
   verified: boolean;
@@ -107,6 +109,8 @@ function hostListingToPropertyDetail(
     },
     bedrooms: listing.bedrooms,
     bathrooms: listing.bathrooms,
+    totalUnitCount: listing.unitCount,
+    availableUnitCount: listing.unitCount,
     sqft: listing.squareFootage,
     images:
       listing.photos.length > 0
@@ -177,6 +181,8 @@ function backendPropertyToPropertyDetail(
         : getBackendPropertyLocation(property.address),
     bedrooms: property.bedrooms,
     bathrooms: property.bathrooms,
+    totalUnitCount: property.totalUnitCount ?? 1,
+    availableUnitCount: property.availableUnitCount ?? 1,
     sqft: property.squareFootage,
     // The gallery, in the order the host set. The cover is only a fallback for a
     // listing uploaded before galleries existed.

@@ -80,6 +80,8 @@ export interface BackendProperty {
   verified: boolean;
   videoWalkthroughUrl?: string | null;
   virtualTourUrl?: string | null;
+  totalUnitCount?: number;
+  availableUnitCount?: number;
 }
 
 /** Mirrors PageResponse. Public listing endpoints are paged. */
@@ -129,6 +131,11 @@ export interface HostListingInput {
   /** Yearly lets only. Tenants may pay the rent in up to maxInstalments parts. */
   instalmentsAllowed?: boolean;
   maxInstalments?: number;
+  /** Number of identical homes represented by this shared listing. */
+  unitCount: number;
+  availableUnitCount?: number;
+  /** Active landlord mandate selected by an agent. */
+  mandateId?: number;
   rentalMode: RentalMode;
   ownerRole: HostListingRole;
   photos: HostListingPhoto[];
@@ -323,13 +330,19 @@ function mapBackendProperty(
     // The server is authoritative for pricing; the local copy is only a fallback
     // for a draft that has never been published
     rentalMode: property.rentalMode ?? localListing?.rentalMode ?? "ANNUAL",
-    minimumNights: property.minimumNights ?? localListing?.minimumNights ?? undefined,
-    maximumGuests: property.maximumGuests ?? localListing?.maximumGuests ?? undefined,
+    minimumNights:
+      property.minimumNights ?? localListing?.minimumNights ?? undefined,
+    maximumGuests:
+      property.maximumGuests ?? localListing?.maximumGuests ?? undefined,
     securityDeposit:
       property.securityDeposit ?? localListing?.securityDeposit ?? undefined,
     instalmentsAllowed: property.instalmentsAllowed ?? undefined,
     maxInstalments: property.maxInstalments ?? undefined,
     cleaningFee: property.cleaningFee ?? localListing?.cleaningFee ?? undefined,
+    unitCount: property.totalUnitCount ?? localListing?.unitCount ?? 1,
+    availableUnitCount:
+      property.availableUnitCount ?? localListing?.availableUnitCount ?? 1,
+    mandateId: localListing?.mandateId,
     photos: localListing?.photos.length
       ? localListing.photos
       : getRemotePhoto(property),
@@ -405,6 +418,9 @@ function draftToRecord(
     instalmentsAllowed: draft.instalmentsAllowed ?? undefined,
     maxInstalments: draft.maxInstalments ?? undefined,
     cleaningFee: draft.cleaningFee ?? undefined,
+    unitCount: draft.unitCount ?? 1,
+    availableUnitCount: draft.unitCount ?? 1,
+    mandateId: draft.mandateId ?? undefined,
     photos: draft.imageUrls.map((url, index) => ({
       dataUrl: url,
       id: `${draft.id}-${index}`,
@@ -448,6 +464,8 @@ function buildPropertyRequest(input: HostListingInput): object {
         ? (input.maxInstalments ?? 4)
         : null,
     cleaningFee: isShortStay ? (input.cleaningFee ?? 0) : null,
+    unitCount: input.unitCount,
+    mandateId: input.mandateId ?? null,
   };
 }
 
@@ -880,6 +898,8 @@ export async function saveHostListingDraft(
         ? (input.maxInstalments ?? 4)
         : null,
     cleaningFee: input.rentalMode === "SHORT_STAY" ? input.cleaningFee : null,
+    unitCount: input.unitCount,
+    mandateId: input.mandateId ?? null,
     amenities: input.amenities,
   };
 

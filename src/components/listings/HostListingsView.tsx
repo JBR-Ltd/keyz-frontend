@@ -298,6 +298,11 @@ export default function HostListingsView({
                     <p className="mt-2 truncate font-body text-sm text-muted">
                       {listing.area}, {listing.city}
                     </p>
+                    <p className="mt-2 font-body text-xs font-medium text-muted">
+                      {(listing.availableUnitCount ?? listing.unitCount) === 1
+                        ? "1 unit available"
+                        : `${listing.availableUnitCount ?? listing.unitCount} of ${listing.unitCount} units available`}
+                    </p>
                     <p className="mt-4 font-display text-2xl font-bold text-primary">
                       <PropertyPrice
                         value={listing.price}

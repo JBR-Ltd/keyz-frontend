@@ -446,6 +446,11 @@ export default function TenantBookingsPage(): ReactElement {
                         <MapPin size={16} aria-hidden="true" />
                         {primaryBooking.propertyAddress}
                       </p>
+                      {primaryBooking.unitLabel ? (
+                        <p className="mt-2 font-body text-sm font-semibold text-white">
+                          Your home: {primaryBooking.unitLabel}
+                        </p>
+                      ) : null}
                     </div>
                   </div>
                 </div>

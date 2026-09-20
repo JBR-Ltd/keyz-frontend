@@ -33,6 +33,8 @@ export interface Booking {
   propertyAddress: string;
   propertyId: number;
   propertyImageUrl: string | null;
+  unitPublicId?: string | null;
+  unitLabel?: string | null;
   /** For linking to the listing's canonical page. */
   propertyPublicId?: string | null;
   propertySlug?: string | null;

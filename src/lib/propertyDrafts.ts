@@ -26,6 +26,8 @@ export interface PropertyDraft {
   securityDeposit?: number | null;
   instalmentsAllowed?: boolean | null;
   maxInstalments?: number | null;
+  unitCount: number;
+  mandateId?: number | null;
   price: number | null;
   rentalMode: RentalMode | null;
   squareFootage: number | null;
@@ -49,6 +51,8 @@ export interface PropertyDraftInput {
   securityDeposit?: number | null;
   instalmentsAllowed?: boolean | null;
   maxInstalments?: number | null;
+  unitCount?: number;
+  mandateId?: number | null;
   price?: number;
   rentalMode?: RentalMode;
   squareFootage?: number;

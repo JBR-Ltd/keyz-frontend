@@ -828,6 +828,14 @@ export default function PropertyPage({
                   </span>
                 </>
               ) : null}
+              {property.availableUnitCount > 1 ? (
+                <>
+                  <span className="h-4 w-px bg-border" />
+                  <span className="inline-flex items-center gap-2 font-bold text-primary">
+                    {property.availableUnitCount} units available
+                  </span>
+                </>
+              ) : null}
               {property.sqft ? (
                 <>
                   <span className="h-4 w-px bg-border" />

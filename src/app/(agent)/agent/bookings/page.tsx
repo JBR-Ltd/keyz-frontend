@@ -74,6 +74,7 @@ interface Tenancy {
   tenantId: number | null;
   tenantName: string;
   tenantVerified: boolean;
+  unitLabel: string | null;
 }
 
 interface TabItem {
@@ -214,14 +215,15 @@ function toTenancy(booking: Booking): Tenancy {
     startDate: booking.tenancyStartDate
       ? formatDate(booking.tenancyStartDate)
       : booking.startDate
-      ? formatDate(booking.startDate)
-      : booking.preferredMoveInDate
-        ? formatDate(booking.preferredMoveInDate)
-        : "Flexible move-in",
+        ? formatDate(booking.startDate)
+        : booking.preferredMoveInDate
+          ? formatDate(booking.preferredMoveInDate)
+          : "Flexible move-in",
     status: booking.status,
     tenantId: booking.tenant?.id ?? null,
     tenantName: booking.tenant?.name ?? "Tenant",
     tenantVerified: booking.tenant?.identityVerified ?? false,
+    unitLabel: booking.unitLabel ?? null,
   };
 }
 
@@ -465,6 +467,11 @@ function TenancyDrawer({
                   <MapPin size={15} />
                   {tenancy.propertyAddress}
                 </p>
+                {tenancy.unitLabel ? (
+                  <p className="mt-2 font-body text-sm font-semibold text-primary">
+                    Assigned {tenancy.unitLabel}
+                  </p>
+                ) : null}
 
                 <div className="mt-8 grid gap-3 sm:grid-cols-2">
                   <div className="rounded-lg bg-surface-soft p-4">
@@ -839,6 +846,11 @@ export default function AgentBookingsPage(): ReactElement {
                         <MapPin size={12} />
                         {tenancy.propertyAddress}
                       </p>
+                      {tenancy.unitLabel ? (
+                        <p className="mt-1 font-body text-xs font-semibold text-primary">
+                          {tenancy.unitLabel}
+                        </p>
+                      ) : null}
                     </div>
                   </div>
 

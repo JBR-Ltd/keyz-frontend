@@ -315,6 +315,11 @@ function BookingDetailsDrawer({
                   <MapPin size={15} aria-hidden="true" />
                   {booking.propertyAddress}
                 </p>
+                {booking.unitLabel ? (
+                  <p className="mt-2 font-body text-sm font-semibold text-primary">
+                    Assigned {booking.unitLabel}
+                  </p>
+                ) : null}
 
                 <div className="mt-8 grid gap-3 sm:grid-cols-2">
                   <div className="rounded-xl bg-surface-soft p-4">
@@ -795,6 +800,11 @@ export default function LandlordBookingsPage(): ReactElement {
                             {booking.propertyAddress}
                           </span>
                         </p>
+                        {booking.unitLabel ? (
+                          <p className="mt-1 font-body text-xs font-semibold text-primary">
+                            {booking.unitLabel}
+                          </p>
+                        ) : null}
                       </div>
                     </div>
 

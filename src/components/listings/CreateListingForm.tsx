@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import BackButton from "@/components/navigation/BackButton";
 import { Select, toSelectOptions } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -47,6 +47,7 @@ import {
   type ProofCapture,
 } from "@/lib/propertyVerification";
 import { cn } from "@/lib/utils";
+import { getMandates, type Mandate } from "@/lib/marketplace";
 
 interface CreateListingFormProps {
   experience?: ListingFormExperience;
@@ -75,6 +76,8 @@ interface ListingFormValues {
   /** Yearly lets only. */
   instalmentsAllowed: boolean;
   maxInstalments: string;
+  unitCount: number;
+  mandateId: string;
 }
 
 const RENTAL_MODE_OPTIONS: { label: string; value: RentalMode }[] = [
@@ -106,6 +109,8 @@ interface ListingFormErrors {
   bedrooms?: string;
   bathrooms?: string;
   photos?: string;
+  unitCount?: string;
+  mandateId?: string;
 }
 
 interface EditablePhoto extends HostListingPhoto {
@@ -187,6 +192,8 @@ const INITIAL_VALUES: ListingFormValues = {
   securityDeposit: "",
   instalmentsAllowed: false,
   maxInstalments: "4",
+  unitCount: 1,
+  mandateId: "",
 };
 
 const INPUT_CLASS_NAME =
@@ -212,6 +219,7 @@ function readFileAsDataUrl(file: File): Promise<string> {
 function validateForm(
   values: ListingFormValues,
   photos: EditablePhoto[],
+  role: HostListingRole,
 ): ListingFormErrors {
   const errors: ListingFormErrors = {};
 
@@ -232,6 +240,12 @@ function validateForm(
   if (photos.some((photo) => photo.uploading)) {
     errors.photos = "Wait for photo uploads to finish.";
   }
+  if (values.unitCount < 1 || values.unitCount > 500) {
+    errors.unitCount = "Enter between 1 and 500 identical units.";
+  }
+  if (role === "agent" && !values.mandateId) {
+    errors.mandateId = "Choose the landlord mandate for this listing.";
+  }
 
   return errors;
 }
@@ -244,13 +258,16 @@ function validateListingStep(
   values: ListingFormValues,
   photos: EditablePhoto[],
   step: ListingStep,
+  role: HostListingRole,
 ): ListingFormErrors {
-  const errors = validateForm(values, photos);
+  const errors = validateForm(values, photos, role);
 
   if (step === "basics") {
     return {
       title: errors.title,
       description: errors.description,
+      unitCount: errors.unitCount,
+      mandateId: errors.mandateId,
     };
   }
 
@@ -374,7 +391,6 @@ export default function CreateListingForm({
 }: CreateListingFormProps): ReactElement {
   const router = useRouter();
   const { notify } = useToast();
-  const uploadTimers = useRef<number[]>([]);
   const [values, setValues] = useState<ListingFormValues>(INITIAL_VALUES);
   const [photos, setPhotos] = useState<EditablePhoto[]>([]);
   const [errors, setErrors] = useState<ListingFormErrors>({});
@@ -390,6 +406,8 @@ export default function CreateListingForm({
   const [isDirty, setIsDirty] = useState(false);
   const [proofCapture, setProofCapture] = useState<ProofCapture | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
+  const [mandates, setMandates] = useState<Mandate[]>([]);
+  const [mandatesLoading, setMandatesLoading] = useState(role === "agent");
   // Rentals only for now, for landlords and agents alike. Sale reopens with the backend flag.
   const listingType: PropertyListingStatus = "FOR_RENT";
   const typeLabel = "Rental listing";
@@ -399,19 +417,29 @@ export default function CreateListingForm({
       : "Your account is set up for rental listings.";
   const priceLabel = PRICE_LABELS[values.rentalMode];
   const isShortStay = values.rentalMode === "SHORT_STAY";
-  const canSubmit = !hasErrors(validateForm(values, photos));
+  const canSubmit = !hasErrors(validateForm(values, photos, role));
   const listingStepIndex = LISTING_STEPS.findIndex(
     (step) => step.id === listingStep,
   );
   const coverPhoto = photos[0];
 
   useEffect(() => {
-    const timers = uploadTimers.current;
+    if (role !== "agent") {
+      return;
+    }
+
+    let active = true;
+
+    void getMandates().then((result) => {
+      if (!active) return;
+      setMandates(result.data.filter((mandate) => mandate.status === "ACTIVE"));
+      setMandatesLoading(false);
+    });
 
     return () => {
-      timers.forEach((timer) => window.clearTimeout(timer));
+      active = false;
     };
-  }, []);
+  }, [role]);
 
   useEffect(() => {
     const warnBeforeLeaving = (event: BeforeUnloadEvent): void => {
@@ -487,6 +515,8 @@ export default function CreateListingForm({
             : String(result.data.cleaningFee),
         instalmentsAllowed: result.data.instalmentsAllowed === true,
         maxInstalments: String(result.data.maxInstalments ?? 4),
+        unitCount: result.data.unitCount ?? 1,
+        mandateId: result.data.mandateId ? String(result.data.mandateId) : "",
       });
       setPhotos(
         result.data.photos.map((photo) => ({ ...photo, uploading: false })),
@@ -678,6 +708,70 @@ export default function CreateListingForm({
     </>
   );
 
+  const renderListingPartiesAndUnits = (): ReactElement => (
+    <>
+      {role === "agent" ? (
+        <label className="sm:col-span-2">
+          <span className="font-body text-sm font-bold text-primary">
+            Property owner
+          </span>
+          <Select
+            value={values.mandateId}
+            onValueChange={(value) => updateValue("mandateId", value)}
+            className={INPUT_CLASS_NAME}
+            ariaLabel="Property owner mandate"
+            disabled={mandatesLoading}
+            placeholder={
+              mandatesLoading ? "Loading landlords..." : "Choose a landlord"
+            }
+            options={mandates.map((mandate) => ({
+              label: `${mandate.landlordName ?? mandate.landlordEmail} · ${mandate.agentFeePercent}% fee`,
+              value: String(mandate.id),
+            }))}
+          />
+          <span className="mt-2 block font-body text-xs leading-5 text-muted">
+            The landlord remains the legal owner and payout recipient. You remain
+            the listing manager.
+          </span>
+          {errors.mandateId ? (
+            <span className="mt-2 block font-body text-sm font-medium text-red-700">
+              {errors.mandateId}
+            </span>
+          ) : null}
+        </label>
+      ) : null}
+
+      <label className="sm:col-span-2">
+        <span className="font-body text-sm font-bold text-primary">
+          How many identical units are available?
+        </span>
+        <input
+          type="number"
+          min="1"
+          max="500"
+          value={values.unitCount}
+          onChange={(event) =>
+            updateValue(
+              "unitCount",
+              Math.min(Math.max(Number(event.target.value) || 1, 1), 500),
+            )
+          }
+          className={INPUT_CLASS_NAME}
+          aria-invalid={Boolean(errors.unitCount)}
+        />
+        <span className="mt-2 block font-body text-xs leading-5 text-muted">
+          Renters see one listing. Rello tracks each identical unit separately and
+          assigns one when a request is accepted.
+        </span>
+        {errors.unitCount ? (
+          <span className="mt-2 block font-body text-sm font-medium text-red-700">
+            {errors.unitCount}
+          </span>
+        ) : null}
+      </label>
+    </>
+  );
+
   const buildListingInput = (): HostListingInput => ({
     id: draftId ?? undefined,
     ownerRole: role,
@@ -716,6 +810,8 @@ export default function CreateListingForm({
       values.rentalMode === "SHORT_STAY"
         ? Math.max(Number(values.cleaningFee) || 0, 0)
         : undefined,
+    unitCount: values.unitCount,
+    mandateId: values.mandateId ? Number(values.mandateId) : undefined,
     photos: photos.map((photo) => ({
       id: photo.id,
       dataUrl: photo.dataUrl,
@@ -759,7 +855,7 @@ export default function CreateListingForm({
             dataUrl: await readFileAsDataUrl(file),
             name: file.name,
             type: file.type,
-            uploading: true,
+            uploading: false,
           }),
         ),
       );
@@ -767,20 +863,6 @@ export default function CreateListingForm({
       setPhotos((current) => [...current, ...nextPhotos]);
       setIsDirty(true);
       setErrors((current) => ({ ...current, photos: undefined }));
-
-      nextPhotos.forEach((photo, index) => {
-        const timer = window.setTimeout(
-          () => {
-            setPhotos((current) =>
-              current.map((item) =>
-                item.id === photo.id ? { ...item, uploading: false } : item,
-              ),
-            );
-          },
-          650 + index * 180,
-        );
-        uploadTimers.current.push(timer);
-      });
     } catch {
       setErrors((current) => ({
         ...current,
@@ -903,7 +985,7 @@ export default function CreateListingForm({
   };
 
   const handleContinue = (): void => {
-    const nextErrors = validateListingStep(values, photos, listingStep);
+    const nextErrors = validateListingStep(values, photos, listingStep, role);
     setErrors(nextErrors);
 
     if (hasErrors(nextErrors)) {
@@ -957,7 +1039,7 @@ export default function CreateListingForm({
     event: FormEvent<HTMLFormElement>,
   ): Promise<void> => {
     event.preventDefault();
-    const nextErrors = validateForm(values, photos);
+    const nextErrors = validateForm(values, photos, role);
     setErrors(nextErrors);
 
     if (hasErrors(nextErrors)) {
@@ -1224,6 +1306,8 @@ export default function CreateListingForm({
                           </span>
                         </div>
                       </div>
+
+                      {renderListingPartiesAndUnits()}
 
                       <label className="sm:col-span-2">
                         <span className="font-body text-sm font-bold text-primary">
@@ -2127,6 +2211,8 @@ export default function CreateListingForm({
                     </span>
                   </div>
                 </div>
+
+                {renderListingPartiesAndUnits()}
 
                 <label className="sm:col-span-2">
                   <span className="font-body text-sm font-bold text-primary">

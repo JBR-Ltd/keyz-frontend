@@ -25,6 +25,7 @@ interface PropertyCardProps {
   isSaving?: boolean;
   onSaveToggle?: () => void;
   verified?: boolean;
+  availableUnitCount?: number;
 }
 
 export default function PropertyCard({
@@ -43,6 +44,7 @@ export default function PropertyCard({
   isSaving = false,
   onSaveToggle,
   verified = false,
+  availableUnitCount,
 }: PropertyCardProps): ReactElement {
   const propertyHref = propertyPath({ id, publicId, slug });
 
@@ -100,6 +102,11 @@ export default function PropertyCard({
               <Bath size={16} className="text-accent-alt" aria-hidden="true" />
               {bathrooms} bathrooms
             </span>
+            {availableUnitCount !== undefined && availableUnitCount > 1 ? (
+              <span className="rounded-full bg-accent/10 px-2.5 py-1 font-body text-xs font-bold text-primary">
+                {availableUnitCount} units available
+              </span>
+            ) : null}
           </div>
         </div>
       </Link>

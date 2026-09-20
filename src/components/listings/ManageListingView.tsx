@@ -12,6 +12,7 @@ import Link from "next/link";
 import { propertyPath } from "@/lib/publicIds";
 import {
   ArrowLeft,
+  Building2,
   CalendarOff,
   ImagePlus,
   Loader2,
@@ -39,6 +40,17 @@ import {
   reorderGallery,
   type GalleryImage,
 } from "@/lib/propertyGallery";
+import {
+  getPropertyUnits,
+  updatePropertyUnitStatus,
+  type PropertyUnit,
+} from "@/lib/propertyUnits";
+
+interface ListingAvailabilityState {
+  data: UnavailableRange[];
+  error: string;
+  key: string;
+}
 
 interface ManageListingViewProps {
   propertyId: string;
@@ -66,21 +78,30 @@ export default function ManageListingView({
 
   const [property, setProperty] = useState<BackendProperty | null>(null);
   const [photos, setPhotos] = useState<GalleryImage[]>([]);
-  const [ranges, setRanges] = useState<UnavailableRange[]>([]);
+  const [availability, setAvailability] =
+    useState<ListingAvailabilityState | null>(null);
+  const [availabilityRefreshKey, setAvailabilityRefreshKey] = useState(0);
+  const availabilityKey = `${numericId}:${availabilityRefreshKey}`;
+  const isAvailabilityLoading = availability?.key !== availabilityKey;
+  const ranges = isAvailabilityLoading ? [] : availability.data;
+  const availabilityError = isAvailabilityLoading ? "" : availability.error;
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [busyPhotoId, setBusyPhotoId] = useState<number | null>(null);
   const [busyBlockId, setBusyBlockId] = useState<number | null>(null);
   const [isBlocking, setIsBlocking] = useState(false);
+  const [units, setUnits] = useState<PropertyUnit[]>([]);
+  const [unitsLoading, setUnitsLoading] = useState(true);
+  const [unitsError, setUnitsError] = useState("");
+  const [busyUnitId, setBusyUnitId] = useState<string | null>(null);
   const [blockStart, setBlockStart] = useState("");
   const [blockEnd, setBlockEnd] = useState("");
   const [blockReason, setBlockReason] = useState("");
 
-  const loadAvailability = useCallback(async (): Promise<void> => {
-    const result = await getPropertyAvailability(numericId);
-    setRanges(result.data);
-  }, [numericId]);
+  const loadAvailability = useCallback((): void => {
+    setAvailabilityRefreshKey((current) => current + 1);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -88,15 +109,17 @@ export default function ManageListingView({
     void Promise.all([
       getBackendPropertyById(propertyId),
       getGallery(numericId),
-      getPropertyAvailability(numericId),
-    ]).then(([listing, gallery, availability]) => {
+      getPropertyUnits(numericId),
+    ]).then(([listing, gallery, propertyUnits]) => {
       if (!active) {
         return;
       }
 
       setProperty(listing.data);
       setPhotos(gallery.data);
-      setRanges(availability.data);
+      setUnits(propertyUnits.data);
+      setUnitsError(propertyUnits.message ?? "");
+      setUnitsLoading(false);
       setLoadError(listing.message ?? gallery.message ?? "");
       setIsLoading(false);
     });
@@ -105,6 +128,23 @@ export default function ManageListingView({
       active = false;
     };
   }, [numericId, propertyId]);
+
+  useEffect(() => {
+    let active = true;
+
+    void getPropertyAvailability(numericId).then((result) => {
+      if (!active) return;
+      setAvailability({
+        key: availabilityKey,
+        data: result.data,
+        error: result.message ?? "",
+      });
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [availabilityKey, numericId]);
 
   const upload = async (files: FileList | null): Promise<void> => {
     if (!files || files.length === 0) {
@@ -227,6 +267,33 @@ export default function ManageListingView({
     await loadAvailability();
   };
 
+  const toggleUnitAvailability = async (unit: PropertyUnit): Promise<void> => {
+    if (unit.status === "OCCUPIED") return;
+
+    setBusyUnitId(unit.publicId);
+    const result = await updatePropertyUnitStatus(
+      numericId,
+      unit.publicId,
+      unit.status === "AVAILABLE" ? "UNAVAILABLE" : "AVAILABLE",
+    );
+    setBusyUnitId(null);
+
+    if (!result.data) {
+      notify({
+        title: "Unit not updated",
+        description: result.message ?? "Try again in a moment.",
+        variant: "error",
+      });
+      return;
+    }
+
+    setUnits((current) =>
+      current.map((item) =>
+        item.publicId === result.data?.publicId ? result.data : item,
+      ),
+    );
+  };
+
   const blocks = ranges.filter((range) => range.source === "BLOCK");
   const booked = ranges.filter((range) => range.source === "BOOKING");
 
@@ -308,6 +375,77 @@ export default function ManageListingView({
         </div>
       ) : (
         <div className="grid gap-12">
+          <section>
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <h2 className="font-display text-2xl font-bold text-primary">
+                  Units
+                </h2>
+                <p className="mt-2 max-w-2xl font-body text-sm text-muted">
+                  One shared listing, with each physical unit tracked separately.
+                  Occupied units are controlled by their tenancy.
+                </p>
+              </div>
+              {!unitsLoading ? (
+                <p className="font-body text-sm font-bold text-primary">
+                  {units.filter((unit) => unit.status === "AVAILABLE").length} of{" "}
+                  {units.length} available
+                </p>
+              ) : null}
+            </div>
+
+            {unitsLoading ? (
+              <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {[0, 1, 2].map((item) => (
+                  <Skeleton key={item} className="h-24 w-full" />
+                ))}
+              </div>
+            ) : unitsError ? (
+              <p className="mt-6 font-body text-sm text-red-700">{unitsError}</p>
+            ) : (
+              <ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {units.map((unit) => (
+                  <li
+                    key={unit.publicId}
+                    className="flex items-center justify-between gap-4 rounded-xl border border-border bg-bg px-5 py-4 shadow-sm"
+                  >
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-soft text-primary">
+                        <Building2 size={18} aria-hidden="true" />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate font-body text-sm font-bold text-primary">
+                          {unit.label}
+                        </p>
+                        <p className="mt-1 font-body text-xs capitalize text-muted">
+                          {unit.status.toLowerCase()}
+                        </p>
+                      </div>
+                    </div>
+                    {unit.status === "OCCUPIED" ? (
+                      <span className="rounded-full bg-primary/10 px-3 py-1.5 font-body text-xs font-bold text-primary">
+                        In tenancy
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={busyUnitId === unit.publicId}
+                        onClick={() => void toggleUnitAvailability(unit)}
+                        className="inline-flex min-h-9 items-center rounded-full border border-primary/20 px-3 font-body text-xs font-bold text-primary transition-colors hover:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-60"
+                      >
+                        {busyUnitId === unit.publicId
+                          ? "Saving..."
+                          : unit.status === "AVAILABLE"
+                            ? "Mark unavailable"
+                            : "Make available"}
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
           <section>
             <div className="flex flex-wrap items-end justify-between gap-4">
               <div>
@@ -458,68 +596,87 @@ export default function ManageListingView({
               </button>
             </div>
 
-            <div className="mt-6 grid gap-4 sm:grid-cols-2">
-              <div>
-                <h3 className="font-accent text-xs font-bold uppercase tracking-[0.2em] text-muted">
-                  Closed by you
-                </h3>
-                {blocks.length === 0 ? (
-                  <p className="mt-3 font-body text-sm text-muted">
-                    Nothing is closed off.
-                  </p>
-                ) : (
-                  <ul className="mt-3 grid gap-3">
-                    {blocks.map((range) => (
-                      <li
-                        key={`block-${range.id}`}
-                        className="flex items-center justify-between gap-4 rounded-lg bg-[var(--color-bg)] px-5 py-4 shadow-sm"
-                      >
-                        <div className="min-w-0">
-                          <p className="font-body text-sm font-bold text-primary">
-                            {formatRange(range)}
-                          </p>
-                          {range.reason ? (
-                            <p className="mt-1 truncate font-body text-sm text-muted">
-                              {range.reason}
-                            </p>
-                          ) : null}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => void unblock(range)}
-                          disabled={busyBlockId === range.id}
-                          className="shrink-0 font-body text-xs font-bold text-accent-alt transition-all duration-200 ease-in-out hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-60"
+            {isAvailabilityLoading ? (
+              <p className="mt-6 font-body text-sm text-muted" role="status">
+                Loading availability...
+              </p>
+            ) : availabilityError ? (
+              <div className="mt-6">
+                <p className="font-body text-sm text-red-700">
+                  {availabilityError}
+                </p>
+                <button
+                  type="button"
+                  onClick={loadAvailability}
+                  className="mt-3 font-body text-sm font-bold text-primary focus-visible:outline focus-visible:outline-accent"
+                >
+                  Retry availability
+                </button>
+              </div>
+            ) : (
+              <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                <div>
+                  <h3 className="font-accent text-xs font-bold uppercase tracking-[0.2em] text-muted">
+                    Closed by you
+                  </h3>
+                  {blocks.length === 0 ? (
+                    <p className="mt-3 font-body text-sm text-muted">
+                      Nothing is closed off.
+                    </p>
+                  ) : (
+                    <ul className="mt-3 grid gap-3">
+                      {blocks.map((range) => (
+                        <li
+                          key={`block-${range.id}`}
+                          className="flex items-center justify-between gap-4 rounded-lg bg-[var(--color-bg)] px-5 py-4 shadow-sm"
                         >
-                          Reopen
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
+                          <div className="min-w-0">
+                            <p className="font-body text-sm font-bold text-primary">
+                              {formatRange(range)}
+                            </p>
+                            {range.reason ? (
+                              <p className="mt-1 truncate font-body text-sm text-muted">
+                                {range.reason}
+                              </p>
+                            ) : null}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => void unblock(range)}
+                            disabled={busyBlockId === range.id}
+                            className="shrink-0 font-body text-xs font-bold text-accent-alt transition-all duration-200 ease-in-out hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-60"
+                          >
+                            Reopen
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
 
-              <div>
-                <h3 className="font-accent text-xs font-bold uppercase tracking-[0.2em] text-muted">
-                  Booked
-                </h3>
-                {booked.length === 0 ? (
-                  <p className="mt-3 font-body text-sm text-muted">
-                    No bookings on the calendar.
-                  </p>
-                ) : (
-                  <ul className="mt-3 grid gap-3">
-                    {booked.map((range) => (
-                      <li
-                        key={`booking-${range.id}`}
-                        className="rounded-lg bg-surface-soft px-5 py-4 font-body text-sm text-primary shadow-sm"
-                      >
-                        {formatRange(range)}
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                <div>
+                  <h3 className="font-accent text-xs font-bold uppercase tracking-[0.2em] text-muted">
+                    Booked
+                  </h3>
+                  {booked.length === 0 ? (
+                    <p className="mt-3 font-body text-sm text-muted">
+                      No bookings on the calendar.
+                    </p>
+                  ) : (
+                    <ul className="mt-3 grid gap-3">
+                      {booked.map((range) => (
+                        <li
+                          key={`booking-${range.id}`}
+                          className="rounded-lg bg-surface-soft px-5 py-4 font-body text-sm text-primary shadow-sm"
+                        >
+                          {formatRange(range)}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
           </section>
         </div>
       )}
