@@ -4,6 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Loader2, MapPin, Video, X } from "lucide-react";
 import { useEffect, useState, type ReactElement } from "react";
 import OverlayPortal from "@/components/ui/OverlayPortal";
+import { DatePicker } from "@/components/ui/date-picker";
 import { useToast } from "@/components/ui/toast";
 import { useDialogFocus } from "@/lib/useDialogFocus";
 import { requestViewing, type ViewingType } from "@/lib/viewings";
@@ -162,10 +163,10 @@ export default function ViewingRequestDialog({
               role="radiogroup"
               aria-label="Kind of viewing"
             >
-              {([
+              {[
                 { icon: Video, id: "VIRTUAL" as const, label: "Video tour" },
                 { icon: MapPin, id: "IN_PERSON" as const, label: "In person" },
-              ]).map((option) => {
+              ].map((option) => {
                 const Icon = option.icon;
                 const active = type === option.id;
                 // A listing with no tour set up cannot host a video walk-through
@@ -192,18 +193,34 @@ export default function ViewingRequestDialog({
               })}
             </div>
 
-            <label className="mt-5 block">
-              <span className="font-body text-sm font-bold text-primary">
+            <div className="mt-5">
+              <p className="font-body text-sm font-bold text-primary">
                 Preferred time
-              </span>
-              <input
-                type="datetime-local"
-                value={startAt}
-                min={toInputValue(new Date())}
-                onChange={(event) => setStartAt(event.target.value)}
-                className="mt-2 min-h-12 w-full rounded-lg border border-border bg-bg px-4 font-body text-base text-primary outline-none focus:border-accent focus:ring-2 focus:ring-accent/30"
-              />
-            </label>
+              </p>
+              <div className="mt-2 grid gap-3 sm:grid-cols-[1fr_9rem]">
+                <DatePicker
+                  ariaLabel="Preferred viewing date"
+                  minDate={toInputValue(new Date()).slice(0, 10)}
+                  value={startAt.split("T")[0] ?? ""}
+                  onChange={(date) => {
+                    const time = startAt.split("T")[1] ?? "10:00";
+                    setStartAt(`${date}T${time}`);
+                  }}
+                />
+                <label>
+                  <span className="sr-only">Preferred viewing time</span>
+                  <input
+                    type="time"
+                    value={startAt.split("T")[1] ?? ""}
+                    onChange={(event) => {
+                      const date = startAt.split("T")[0] ?? "";
+                      setStartAt(`${date}T${event.target.value}`);
+                    }}
+                    className="min-h-12 w-full rounded-lg border border-border bg-bg px-4 font-body text-base text-primary outline-none focus:border-accent focus:ring-2 focus:ring-accent/30"
+                  />
+                </label>
+              </div>
+            </div>
 
             <label className="mt-5 block">
               <span className="font-body text-sm font-bold text-primary">
@@ -231,7 +248,9 @@ export default function ViewingRequestDialog({
               disabled={isSubmitting}
               className="mt-6 inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-full bg-accent px-6 font-body text-sm font-bold text-primary transition-all duration-200 ease-in-out hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isSubmitting ? <Loader2 size={17} className="animate-spin" /> : null}
+              {isSubmitting ? (
+                <Loader2 size={17} className="animate-spin" />
+              ) : null}
               Send request
             </button>
           </motion.div>

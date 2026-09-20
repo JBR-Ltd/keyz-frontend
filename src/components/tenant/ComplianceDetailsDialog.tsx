@@ -4,6 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Loader2, ShieldCheck, X } from "lucide-react";
 import { useEffect, useState, type ReactElement } from "react";
 import OverlayPortal from "@/components/ui/OverlayPortal";
+import { DatePicker } from "@/components/ui/date-picker";
 import { useToast } from "@/components/ui/toast";
 import { saveComplianceProfile } from "@/lib/compliance";
 import { useDialogFocus } from "@/lib/useDialogFocus";
@@ -57,7 +58,11 @@ export default function ComplianceDetailsDialog({
   }
 
   const save = async (): Promise<void> => {
-    if (!residentialAddress.trim() || !occupation.trim() || !sourceOfFunds.trim()) {
+    if (
+      !residentialAddress.trim() ||
+      !occupation.trim() ||
+      !sourceOfFunds.trim()
+    ) {
       setError("Fill in all three, then you can carry on to payment.");
       return;
     }
@@ -133,8 +138,8 @@ export default function ComplianceDetailsDialog({
                   className="mt-0.5 shrink-0 text-accent-alt"
                 />
                 Nigerian law asks a property business to know who it deals with
-                on payments this size. We keep this on file, we do not show it to
-                the host, and you only give it once.
+                on payments this size. We keep this on file, we do not show it
+                to the host, and you only give it once.
               </p>
 
               <label className="mt-5 block">
@@ -143,7 +148,9 @@ export default function ComplianceDetailsDialog({
                 </span>
                 <input
                   value={residentialAddress}
-                  onChange={(event) => setResidentialAddress(event.target.value)}
+                  onChange={(event) =>
+                    setResidentialAddress(event.target.value)
+                  }
                   maxLength={255}
                   className={INPUT_CLASS_NAME}
                   placeholder="12 Association Road, Ikeja, Lagos"
@@ -176,18 +183,21 @@ export default function ComplianceDetailsDialog({
                 />
               </label>
 
-              <label className="mt-4 block">
-                <span className="font-body text-sm font-bold text-primary">
+              <div className="mt-4">
+                <label
+                  htmlFor="compliance-date-of-birth"
+                  className="font-body text-sm font-bold text-primary"
+                >
                   Date of birth (optional)
-                </span>
-                <input
+                </label>
+                <DatePicker
                   id="compliance-date-of-birth"
-                  type="date"
+                  ariaLabel="Date of birth"
+                  className="mt-2"
                   value={dateOfBirth}
-                  onChange={(event) => setDateOfBirth(event.target.value)}
-                  className={INPUT_CLASS_NAME}
+                  onChange={setDateOfBirth}
                 />
-              </label>
+              </div>
 
               {error ? (
                 <p
@@ -204,7 +214,9 @@ export default function ComplianceDetailsDialog({
                 disabled={isSaving}
                 className="mt-6 inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-full bg-primary px-6 font-body text-sm font-bold text-white transition-colors hover:bg-primary/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-60"
               >
-                {isSaving ? <Loader2 size={18} className="animate-spin" /> : null}
+                {isSaving ? (
+                  <Loader2 size={18} className="animate-spin" />
+                ) : null}
                 Save and continue
               </button>
             </div>

@@ -20,6 +20,7 @@ import {
   Trash2,
 } from "lucide-react";
 import BackButton from "@/components/navigation/BackButton";
+import { DateRangePicker } from "@/components/ui/date-picker";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
@@ -382,14 +383,14 @@ export default function ManageListingView({
                   Units
                 </h2>
                 <p className="mt-2 max-w-2xl font-body text-sm text-muted">
-                  One shared listing, with each physical unit tracked separately.
-                  Occupied units are controlled by their tenancy.
+                  One shared listing, with each physical unit tracked
+                  separately. Occupied units are controlled by their tenancy.
                 </p>
               </div>
               {!unitsLoading ? (
                 <p className="font-body text-sm font-bold text-primary">
-                  {units.filter((unit) => unit.status === "AVAILABLE").length} of{" "}
-                  {units.length} available
+                  {units.filter((unit) => unit.status === "AVAILABLE").length}{" "}
+                  of {units.length} available
                 </p>
               ) : null}
             </div>
@@ -401,7 +402,9 @@ export default function ManageListingView({
                 ))}
               </div>
             ) : unitsError ? (
-              <p className="mt-6 font-body text-sm text-red-700">{unitsError}</p>
+              <p className="mt-6 font-body text-sm text-red-700">
+                {unitsError}
+              </p>
             ) : (
               <ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {units.map((unit) => (
@@ -552,25 +555,22 @@ export default function ManageListingView({
               be closed.
             </p>
 
-            <div className="mt-6 grid gap-4 rounded-lg bg-[var(--color-bg)] p-6 shadow-sm sm:grid-cols-[repeat(3,1fr)_auto] sm:items-end">
-              <label className="block font-body text-sm font-bold text-primary">
-                From
-                <input
-                  type="date"
-                  value={blockStart}
-                  onChange={(event) => setBlockStart(event.target.value)}
-                  className="mt-2 min-h-12 w-full rounded-lg border border-primary/15 bg-surface-soft px-4 font-body text-sm font-normal text-primary outline-none transition focus:border-accent focus:ring-4 focus:ring-accent/10"
+            <div className="mt-6 grid gap-4 rounded-lg bg-[var(--color-bg)] p-6 shadow-sm sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto] sm:items-end">
+              <div>
+                <p className="font-body text-sm font-bold text-primary">
+                  Dates unavailable
+                </p>
+                <DateRangePicker
+                  ariaLabel="Choose unavailable date range"
+                  className="mt-2 bg-surface-soft"
+                  startDate={blockStart}
+                  endDate={blockEnd}
+                  onChange={(startDate, endDate) => {
+                    setBlockStart(startDate);
+                    setBlockEnd(endDate);
+                  }}
                 />
-              </label>
-              <label className="block font-body text-sm font-bold text-primary">
-                Until
-                <input
-                  type="date"
-                  value={blockEnd}
-                  onChange={(event) => setBlockEnd(event.target.value)}
-                  className="mt-2 min-h-12 w-full rounded-lg border border-primary/15 bg-surface-soft px-4 font-body text-sm font-normal text-primary outline-none transition focus:border-accent focus:ring-4 focus:ring-accent/10"
-                />
-              </label>
+              </div>
               <label className="block font-body text-sm font-bold text-primary">
                 Why, for your own records
                 <input

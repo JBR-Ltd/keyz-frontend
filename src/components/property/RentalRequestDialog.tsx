@@ -4,6 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ArrowLeft, CalendarDays, Check, Loader2, X } from "lucide-react";
 import { useEffect, useState, type ReactElement } from "react";
 import OverlayPortal from "@/components/ui/OverlayPortal";
+import { DatePicker } from "@/components/ui/date-picker";
 import { useToast } from "@/components/ui/toast";
 import { createRentalRequest, type MoveInPreference } from "@/lib/bookings";
 import type { RentalMode } from "@/lib/hostListings";
@@ -235,20 +236,22 @@ export default function RentalRequestDialog({
                     </div>
                   </fieldset>
                   {preference === "EXACT_DATE" ? (
-                    <label className="mt-5 block">
-                      <span className="font-body text-sm font-bold text-primary">
+                    <div className="mt-5">
+                      <label
+                        htmlFor="preferred-move-in-date"
+                        className="font-body text-sm font-bold text-primary"
+                      >
                         Preferred move-in date
-                      </span>
-                      <input
-                        type="date"
-                        min={earliestMoveIn()}
+                      </label>
+                      <DatePicker
+                        id="preferred-move-in-date"
+                        ariaLabel="Preferred move-in date"
+                        className="mt-2"
+                        minDate={earliestMoveIn()}
                         value={preferredDate}
-                        onChange={(event) =>
-                          setPreferredDate(event.target.value)
-                        }
-                        className="mt-2 min-h-12 w-full rounded-lg border border-border bg-bg px-4 font-body text-base text-primary outline-none focus:border-accent focus:ring-2 focus:ring-accent/30"
+                        onChange={setPreferredDate}
                       />
-                    </label>
+                    </div>
                   ) : null}
                   <label className="mt-5 block">
                     <span className="flex justify-between gap-4 font-body text-sm font-bold text-primary">
