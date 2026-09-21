@@ -114,12 +114,12 @@ export default function ViewingRequestDialog({
   return (
     <AnimatePresence>
       <OverlayPortal>
-        <div className="fixed inset-0 z-[130] flex items-end justify-center sm:items-center">
+        <div className="fixed inset-0 z-[130] flex h-[100dvh] items-end justify-center sm:items-center sm:p-6">
           <motion.button
             type="button"
             aria-label="Close viewing request"
             onClick={onClose}
-            className="absolute inset-0 bg-primary/45"
+            className="modal-backdrop absolute inset-0"
             initial={reduceMotion ? false : { opacity: 0 }}
             animate={reduceMotion ? undefined : { opacity: 1 }}
             exit={reduceMotion ? undefined : { opacity: 0 }}
@@ -129,7 +129,7 @@ export default function ViewingRequestDialog({
             role="dialog"
             aria-modal="true"
             aria-label={`Request a viewing of ${propertyTitle}`}
-            className="relative w-full max-w-lg rounded-t-2xl bg-bg p-6 shadow-xl sm:rounded-2xl"
+            className="relative max-h-[100dvh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-bg p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] shadow-xl sm:max-h-[calc(100dvh-3rem)] sm:rounded-2xl sm:pb-6"
             initial={reduceMotion ? false : { opacity: 0, y: 24 }}
             animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
             exit={reduceMotion ? undefined : { opacity: 0, y: 24 }}

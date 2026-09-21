@@ -129,12 +129,12 @@ export default function RentalRequestDialog({
   return (
     <AnimatePresence>
       <OverlayPortal>
-        <div className="fixed inset-0 z-[130] flex items-end justify-center sm:items-center sm:p-6">
+        <div className="fixed inset-0 z-[130] flex h-[100dvh] items-end justify-center sm:items-center sm:p-6">
           <motion.button
             type="button"
             aria-label="Close rental request"
             onClick={onClose}
-            className="absolute inset-0 bg-primary/50"
+            className="modal-backdrop absolute inset-0"
             initial={reduceMotion ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -144,7 +144,7 @@ export default function RentalRequestDialog({
             role="dialog"
             aria-modal="true"
             aria-labelledby="rental-request-title"
-            className="relative max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-t-2xl bg-bg shadow-2xl sm:rounded-2xl"
+            className="relative max-h-[100dvh] w-full max-w-xl overflow-y-auto rounded-t-2xl bg-bg shadow-2xl sm:max-h-[calc(100dvh-3rem)] sm:rounded-2xl"
             initial={reduceMotion ? false : { opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 24 }}
@@ -166,7 +166,7 @@ export default function RentalRequestDialog({
               </span>
             </header>
 
-            <div className="p-5 sm:p-7">
+            <div className="p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:p-7">
               <p className="font-accent text-xs font-bold uppercase tracking-[0.18em] text-accent-alt">
                 Long-term rental
               </p>

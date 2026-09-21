@@ -29,6 +29,7 @@ import {
   Zap,
 } from "lucide-react";
 import Image from "next/image";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { TouchEvent, use, useEffect, useState } from "react";
@@ -36,10 +37,8 @@ import BackButton from "@/components/navigation/BackButton";
 import OverlayPortal from "@/components/ui/OverlayPortal";
 import MessageHostButton from "@/components/property/MessageHostButton";
 import ReportDialog from "@/components/reports/ReportDialog";
-import BookingRequestDialog from "@/components/property/BookingRequestDialog";
 import PropertyPrice from "@/components/property/PropertyPrice";
 import PropertyTourViewer from "@/components/property/PropertyTourViewer";
-import ViewingRequestDialog from "@/components/property/ViewingRequestDialog";
 import TenantVerificationGate from "@/components/tenant/TenantVerificationGate";
 import VerifiedBadge from "@/components/ui/VerifiedBadge";
 import { canonicalSegment, hostPath } from "@/lib/publicIds";
@@ -52,6 +51,29 @@ import {
 } from "@/lib/savedListings";
 import { useDialogFocus } from "@/lib/useDialogFocus";
 import { useToast } from "@/components/ui/toast";
+
+const BookingRequestDialog = dynamic(
+  () => import("@/components/property/BookingRequestDialog"),
+  { loading: RequestDialogLoading },
+);
+const ViewingRequestDialog = dynamic(
+  () => import("@/components/property/ViewingRequestDialog"),
+  { loading: RequestDialogLoading },
+);
+
+function RequestDialogLoading(): ReactElement {
+  return (
+    <OverlayPortal>
+      <div
+        role="status"
+        className="fixed bottom-6 left-1/2 z-[100] flex -translate-x-1/2 items-center gap-3 rounded-full bg-bg px-5 py-3 font-body text-sm font-medium text-primary shadow-lg"
+      >
+        <Loader2 size={18} className="animate-spin" aria-hidden="true" />
+        Loading request form
+      </div>
+    </OverlayPortal>
+  );
+}
 
 interface PropertyPageProps {
   params: Promise<{ id: string }>;
@@ -168,8 +190,20 @@ function getAmenityIcon(amenity: string): typeof Check {
 function PropertyDetailSkeleton(): ReactElement {
   return (
     <main className="bg-bg pt-6 text-primary">
-      <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-        <div className="h-[min(58vw,38rem)] animate-pulse rounded-2xl bg-skeleton-strong" />
+      <div className="mx-auto max-w-7xl px-4 py-10 pb-32 sm:px-6 lg:px-8 lg:pb-10">
+        <div className="aspect-video animate-pulse rounded-2xl bg-skeleton-strong lg:h-[min(58vw,38rem)] lg:aspect-auto" />
+        <div className="mt-4 space-y-3 lg:hidden">
+          <div className="h-8 w-3/4 animate-pulse rounded-lg bg-skeleton" />
+          <div className="h-4 w-1/2 animate-pulse rounded-lg bg-skeleton" />
+          <div className="grid grid-cols-2 gap-2">
+            {Array.from({ length: 4 }, (_, index) => (
+              <div
+                key={index}
+                className="h-14 animate-pulse rounded-lg bg-skeleton"
+              />
+            ))}
+          </div>
+        </div>
         <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,1fr)_24rem]">
           <div className="space-y-6">
             <div className="h-10 w-2/3 animate-pulse rounded-lg bg-skeleton" />
@@ -178,6 +212,17 @@ function PropertyDetailSkeleton(): ReactElement {
             <div className="h-52 animate-pulse rounded-lg bg-skeleton" />
           </div>
           <div className="h-80 animate-pulse rounded-2xl bg-skeleton shadow-sm" />
+        </div>
+      </div>
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-bg/95 px-4 pt-3 backdrop-blur-md lg:hidden">
+        <div
+          className="mx-auto flex max-w-7xl items-center gap-4"
+          style={{
+            paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))",
+          }}
+        >
+          <div className="h-10 min-w-0 flex-1 animate-pulse rounded-lg bg-skeleton" />
+          <div className="h-12 w-40 animate-pulse rounded-full bg-skeleton-strong" />
         </div>
       </div>
     </main>
@@ -221,9 +266,13 @@ export default function PropertyPage({
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [isBookingOpen, setIsBookingOpen] = useState(false);
-  const [isViewingOpen, setIsViewingOpen] = useState(false);
   const [isReporting, setIsReporting] = useState(false);
-  const [isSaved, setIsSaved] = useState(false);
+  const [viewingDialogState, setViewingDialogState] = useState<
+    "idle" | "open" | "closed"
+  >("idle");
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const [isSavedLoading, setIsSavedLoading] = useState(true);
+  const isSaved = property ? savedIds.has(property.id) : false;
   const [isSaving, setIsSaving] = useState(false);
   const lightboxRef = useDialogFocus<HTMLDivElement>(lightboxIndex !== null);
 
@@ -305,21 +354,14 @@ export default function PropertyPage({
   }, [id, router]);
 
   useEffect(() => {
-    // Keyed on the loaded listing: the address now carries a public identifier,
-    // not the numeric id saved listings are stored by
-    const listingId = property ? Number(property.id) : Number.NaN;
-
-    if (!Number.isFinite(listingId)) {
-      return;
-    }
-
     let active = true;
 
     async function loadSavedState(): Promise<void> {
       const result = await getSavedListings();
 
       if (active) {
-        setIsSaved(result.data.some((listing) => listing.id === listingId));
+        setSavedIds(new Set(result.data.map((listing) => String(listing.id))));
+        setIsSavedLoading(false);
       }
     }
 
@@ -328,7 +370,7 @@ export default function PropertyPage({
     return () => {
       active = false;
     };
-  }, [property]);
+  }, []);
 
   useEffect(() => {
     if (lightboxIndex === null || !property) {
@@ -450,7 +492,7 @@ export default function PropertyPage({
   };
 
   const handleSaveToggle = async (): Promise<void> => {
-    if (!property || !/^\d+$/.test(property.id) || isSaving) {
+    if (!property || !/^\d+$/.test(property.id) || isSavedLoading || isSaving) {
       return;
     }
 
@@ -468,7 +510,13 @@ export default function PropertyPage({
       return;
     }
 
-    setIsSaved((current) => !current);
+    const savedPropertyId = property.id;
+    setSavedIds((current) => {
+      const next = new Set(current);
+      if (isSaved) next.delete(savedPropertyId);
+      else next.add(savedPropertyId);
+      return next;
+    });
     notify({
       title: isSaved ? "Removed from saved homes" : "Saved to your homes",
       variant: "success",
@@ -490,7 +538,8 @@ export default function PropertyPage({
   const visibleGalleryImages = galleryImages.slice(0, 5);
   const sideGalleryImages = visibleGalleryImages.slice(1);
   const remainingPhotoCount = Math.max(property.images.length - 5, 0);
-  const mobileThumbnails = galleryImages.slice(1);
+  const mobileThumbnails = galleryImages.slice(1, 5);
+  const mobileRemainingPhotoCount = Math.max(property.images.length - 5, 0);
   const hasTour = Boolean(
     property.tour.videoUrl || property.tour.matterportUrl,
   );
@@ -502,7 +551,7 @@ export default function PropertyPage({
 
   return (
     <main className="bg-bg pt-6 text-primary">
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+      <div className="mx-auto max-w-7xl px-4 py-8 pb-32 sm:px-6 lg:px-8 lg:py-10">
         <div className="mb-6 hidden items-end justify-between gap-8 lg:flex">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-3">
@@ -534,11 +583,11 @@ export default function PropertyPage({
               <button
                 type="button"
                 onClick={() => void handleSaveToggle()}
-                disabled={isSaving}
+                disabled={isSavedLoading || isSaving}
                 aria-pressed={isSaved}
                 className="inline-flex min-h-10 items-center gap-2 rounded-full border border-border bg-bg px-4 font-body text-sm font-bold text-primary transition-all duration-200 ease-in-out hover:border-primary/30 hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-70"
               >
-                {isSaving ? (
+                {isSavedLoading || isSaving ? (
                   <Loader2
                     size={16}
                     className="animate-spin"
@@ -677,8 +726,42 @@ export default function PropertyPage({
               >
                 <ArrowLeft size={19} aria-hidden="true" />
               </BackButton>
+              <div className="absolute right-4 top-4 z-10 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => void handleShare()}
+                  aria-label="Share this property"
+                  className="flex h-11 w-11 items-center justify-center rounded-full border border-white/70 bg-bg/95 text-primary shadow-sm backdrop-blur-sm transition-colors hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                >
+                  <Share2 size={18} aria-hidden="true" />
+                </button>
+                {/^[0-9]+$/.test(property.id) ? (
+                  <button
+                    type="button"
+                    onClick={() => void handleSaveToggle()}
+                    disabled={isSavedLoading || isSaving}
+                    aria-label={isSaved ? "Remove from saved homes" : "Save this property"}
+                    aria-pressed={isSaved}
+                    className="flex h-11 w-11 items-center justify-center rounded-full border border-white/70 bg-bg/95 text-primary shadow-sm backdrop-blur-sm transition-colors hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-70"
+                  >
+                    {isSavedLoading || isSaving ? (
+                      <Loader2
+                        size={18}
+                        className="animate-spin"
+                        aria-hidden="true"
+                      />
+                    ) : (
+                      <Heart
+                        size={18}
+                        fill={isSaved ? "currentColor" : "none"}
+                        aria-hidden="true"
+                      />
+                    )}
+                  </button>
+                ) : null}
+              </div>
               {property.verified ? (
-                <span className="absolute right-4 top-4">
+                <span className="absolute bottom-4 left-4 z-10">
                   <VerifiedBadge size="sm" />
                 </span>
               ) : null}
@@ -686,7 +769,7 @@ export default function PropertyPage({
 
             {mobileThumbnails.length > 0 ? (
               <div className="mt-3 flex snap-x gap-2 overflow-x-auto pb-2">
-                {mobileThumbnails.map((image) => (
+                {mobileThumbnails.map((image, thumbnailIndex) => (
                   <button
                     key={image.src}
                     type="button"
@@ -702,6 +785,12 @@ export default function PropertyPage({
                       className="object-cover"
                       style={{ objectFit: "cover" }}
                     />
+                    {thumbnailIndex === mobileThumbnails.length - 1 &&
+                    mobileRemainingPhotoCount > 0 ? (
+                      <span className="absolute inset-0 flex items-center justify-center bg-black/55 px-2 font-body text-sm font-bold text-white">
+                        +{mobileRemainingPhotoCount} more
+                      </span>
+                    ) : null}
                   </button>
                 ))}
               </div>
@@ -797,8 +886,8 @@ export default function PropertyPage({
               </p>
             </div>
 
-            <div className="mt-4 flex flex-wrap items-center gap-4 rounded-xl border border-border/70 bg-surface-soft/50 px-5 py-4 font-body text-sm text-muted lg:mt-0">
-              <span className="inline-flex items-center gap-2">
+            <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl border border-border/70 bg-surface-soft/50 p-2 font-body text-sm text-muted lg:mt-0 lg:flex lg:flex-wrap lg:items-center lg:gap-4 lg:px-5 lg:py-4">
+              <span className="inline-flex min-h-12 items-center gap-2 rounded-lg bg-bg px-3 lg:min-h-0 lg:rounded-none lg:bg-transparent lg:px-0">
                 <BedDouble
                   size={17}
                   className="text-accent-alt"
@@ -806,8 +895,8 @@ export default function PropertyPage({
                 />
                 {property.bedrooms} bedrooms
               </span>
-              <span className="h-4 w-px bg-border" />
-              <span className="inline-flex items-center gap-2">
+              <span className="hidden h-4 w-px bg-border lg:block" />
+              <span className="inline-flex min-h-12 items-center gap-2 rounded-lg bg-bg px-3 lg:min-h-0 lg:rounded-none lg:bg-transparent lg:px-0">
                 <Bath
                   size={17}
                   className="text-accent-alt"
@@ -815,10 +904,11 @@ export default function PropertyPage({
                 />
                 {property.bathrooms} bathrooms
               </span>
-              {property.rentalMode === "SHORT_STAY" && property.maximumGuests ? (
+              {property.rentalMode === "SHORT_STAY" &&
+              property.maximumGuests ? (
                 <>
-                  <span className="h-4 w-px bg-border" />
-                  <span className="inline-flex items-center gap-2">
+                  <span className="hidden h-4 w-px bg-border lg:block" />
+                  <span className="inline-flex min-h-12 items-center gap-2 rounded-lg bg-bg px-3 lg:min-h-0 lg:rounded-none lg:bg-transparent lg:px-0">
                     <Users
                       size={17}
                       className="text-accent-alt"
@@ -830,16 +920,16 @@ export default function PropertyPage({
               ) : null}
               {property.availableUnitCount > 1 ? (
                 <>
-                  <span className="h-4 w-px bg-border" />
-                  <span className="inline-flex items-center gap-2 font-bold text-primary">
+                  <span className="hidden h-4 w-px bg-border lg:block" />
+                  <span className="inline-flex min-h-12 items-center rounded-lg bg-bg px-3 font-bold text-primary lg:min-h-0 lg:rounded-none lg:bg-transparent lg:px-0">
                     {property.availableUnitCount} units available
                   </span>
                 </>
               ) : null}
               {property.sqft ? (
                 <>
-                  <span className="h-4 w-px bg-border" />
-                  <span className="inline-flex items-center gap-2">
+                  <span className="hidden h-4 w-px bg-border lg:block" />
+                  <span className="inline-flex min-h-12 items-center gap-2 rounded-lg bg-bg px-3 lg:min-h-0 lg:rounded-none lg:bg-transparent lg:px-0">
                     <Ruler
                       size={17}
                       className="text-accent-alt"
@@ -895,19 +985,21 @@ export default function PropertyPage({
               )}
             </section>
 
-            <BookingRequestDialog
-              hostName={property.host.name}
-              hostRole={hostRole}
-              maximumGuests={property.maximumGuests}
-              minimumNights={property.minimumNights}
-              onClose={() => setIsBookingOpen(false)}
-              open={isBookingOpen}
-              price={property.price}
-              propertyId={property.id}
-              propertyPublicId={property.publicId}
-              propertyTitle={property.title}
-              rentalMode={property.rentalMode}
-            />
+            {isBookingOpen ? (
+              <BookingRequestDialog
+                hostName={property.host.name}
+                hostRole={hostRole}
+                maximumGuests={property.maximumGuests}
+                minimumNights={property.minimumNights}
+                onClose={() => setIsBookingOpen(false)}
+                open={isBookingOpen}
+                price={property.price}
+                propertyId={property.id}
+                propertyPublicId={property.publicId}
+                propertyTitle={property.title}
+                rentalMode={property.rentalMode}
+              />
+            ) : null}
 
             {hasTour ? (
               <>
@@ -1018,39 +1110,41 @@ export default function PropertyPage({
           </section>
 
           <aside className="rounded-2xl border border-border/80 bg-[var(--color-bg)] p-6 shadow-[0_18px_55px_-34px_rgba(1,57,81,0.45)] lg:sticky lg:top-24">
-            <p className="font-body text-xs font-bold uppercase tracking-[0.16em] text-muted">
-              {property.rentalMode === "SHORT_STAY"
-                ? "Price per night"
-                : property.rentalMode === "MONTHLY"
-                  ? "Monthly rent"
-                  : "Annual rent"}
-            </p>
-            <p className="mt-2 font-display text-3xl font-bold text-primary">
-              <PropertyPrice
-                value={property.price}
-                listingType={property.status}
-                rentalMode={property.rentalMode}
-              />
-            </p>
-            <TenantVerificationGate
-              intent={property.status === "FOR_RENT" ? "booking" : "offer"}
-              onVerifiedAction={openPrimaryFlow}
-            >
-              {(requestAction) => (
-                <button
-                  type="button"
-                  onClick={requestAction}
-                  className="mt-6 inline-flex min-h-14 w-full items-center justify-center rounded-full bg-accent px-6 py-4 font-body text-sm font-bold text-primary transition-all duration-200 ease-in-out hover:bg-primary hover:text-white hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                >
-                  {primaryCta}
-                </button>
-              )}
-            </TenantVerificationGate>
+            <div className="hidden lg:block">
+              <p className="font-body text-xs font-bold uppercase tracking-[0.16em] text-muted">
+                {property.rentalMode === "SHORT_STAY"
+                  ? "Price per night"
+                  : property.rentalMode === "MONTHLY"
+                    ? "Monthly rent"
+                    : "Annual rent"}
+              </p>
+              <p className="mt-2 font-display text-3xl font-bold text-primary">
+                <PropertyPrice
+                  value={property.price}
+                  listingType={property.status}
+                  rentalMode={property.rentalMode}
+                />
+              </p>
+              <TenantVerificationGate
+                intent={property.status === "FOR_RENT" ? "booking" : "offer"}
+                onVerifiedAction={openPrimaryFlow}
+              >
+                {(requestAction) => (
+                  <button
+                    type="button"
+                    onClick={requestAction}
+                    className="mt-6 inline-flex min-h-14 w-full items-center justify-center rounded-full bg-accent px-6 py-4 font-body text-sm font-bold text-primary transition-all duration-200 ease-in-out hover:bg-primary hover:text-white hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  >
+                    {primaryCta}
+                  </button>
+                )}
+              </TenantVerificationGate>
+            </div>
 
             <button
               type="button"
-              onClick={() => setIsViewingOpen(true)}
-              className="mt-3 inline-flex min-h-12 w-full items-center justify-center rounded-full border border-border bg-bg px-5 font-body text-sm font-bold text-primary transition-all duration-200 ease-in-out hover:border-primary/30 hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              onClick={() => setViewingDialogState("open")}
+              className="inline-flex min-h-12 w-full items-center justify-center rounded-full border border-border bg-bg px-5 font-body text-sm font-bold text-primary transition-all duration-200 ease-in-out hover:border-primary/30 hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent lg:mt-3"
             >
               Request a viewing
             </button>
@@ -1116,17 +1210,62 @@ export default function PropertyPage({
             <ReportDialog
               open={isReporting}
               onClose={() => setIsReporting(false)}
-              target={{ type: "LISTING", listingId: property.publicId ?? property.id }}
+              target={{
+                type: "LISTING",
+                listingId: property.publicId ?? property.id,
+              }}
             />
 
-            <ViewingRequestDialog
-              allowVirtual={hasTour}
-              onClose={() => setIsViewingOpen(false)}
-              open={isViewingOpen}
-              propertyId={property.id}
-              propertyTitle={property.title}
-            />
+            {viewingDialogState !== "idle" ? (
+              <ViewingRequestDialog
+                allowVirtual={hasTour}
+                onClose={() => setViewingDialogState("closed")}
+                open={viewingDialogState === "open"}
+                propertyId={property.id}
+                propertyTitle={property.title}
+              />
+            ) : null}
           </aside>
+        </div>
+      </div>
+
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-bg/95 px-4 pt-3 shadow-[0_-12px_30px_-24px_rgba(1,57,81,0.55)] backdrop-blur-md lg:hidden">
+        <div
+          className="mx-auto flex max-w-7xl items-center gap-3"
+          style={{
+            paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))",
+          }}
+        >
+          <div className="min-w-0 flex-1">
+            <p className="font-body text-[11px] font-bold uppercase tracking-[0.12em] text-muted">
+              {property.rentalMode === "SHORT_STAY"
+                ? "Price per night"
+                : property.rentalMode === "MONTHLY"
+                  ? "Monthly rent"
+                  : "Annual rent"}
+            </p>
+            <p className="truncate font-display text-lg font-bold text-primary">
+              <PropertyPrice
+                value={property.price}
+                listingType={property.status}
+                rentalMode={property.rentalMode}
+              />
+            </p>
+          </div>
+          <TenantVerificationGate
+            intent={property.status === "FOR_RENT" ? "booking" : "offer"}
+            onVerifiedAction={openPrimaryFlow}
+          >
+            {(requestAction) => (
+              <button
+                type="button"
+                onClick={requestAction}
+                className="inline-flex min-h-12 shrink-0 items-center justify-center rounded-full bg-accent px-5 font-body text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                {primaryCta}
+              </button>
+            )}
+          </TenantVerificationGate>
         </div>
       </div>
     </main>

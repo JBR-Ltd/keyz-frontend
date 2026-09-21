@@ -68,7 +68,7 @@ export default function ShortletBookingDialog({
   const numericId = Number(propertyId);
   const minimum = Math.max(minimumNights ?? 1, 1);
   const guestCeiling = maximumGuests ?? UNLIMITED_GUEST_CEILING;
-  const dateKey = `${startDate}:${endDate}:${guests}`;
+  const dateKey = `${numericId}:${startDate}:${endDate}:${guests}`;
   const quote = quotedFor?.key === dateKey ? quotedFor.value : null;
 
   const localProblem = useMemo((): string | null => {
@@ -87,19 +87,27 @@ export default function ShortletBookingDialog({
 
   useEffect(() => {
     if (!open || !Number.isFinite(numericId)) return;
-    void getPropertyAvailability(propertyPublicId ?? numericId).then((result) =>
-      setUnavailable(result.data),
+    let active = true;
+
+    void getPropertyAvailability(propertyPublicId ?? numericId).then(
+      (result) => {
+        if (active) setUnavailable(result.data);
+      },
     );
+
+    return () => {
+      active = false;
+    };
   }, [numericId, open, propertyPublicId]);
 
   useEffect(() => {
-    if (!startDate || !endDate || localProblem) return;
+    if (!open || !startDate || !endDate || localProblem) return;
     let active = true;
     void getBookingQuote(numericId, startDate, endDate, guests).then(
       (result) => {
         if (!active) return;
         setQuotedFor({
-          key: `${startDate}:${endDate}:${guests}`,
+          key: `${numericId}:${startDate}:${endDate}:${guests}`,
           value: result.data,
         });
         setError(result.message ?? result.data?.unavailableReason ?? "");
@@ -108,7 +116,7 @@ export default function ShortletBookingDialog({
     return () => {
       active = false;
     };
-  }, [endDate, guests, localProblem, numericId, startDate]);
+  }, [endDate, guests, localProblem, numericId, open, startDate]);
 
   const isQuoting =
     Boolean(startDate && endDate) &&
@@ -144,12 +152,12 @@ export default function ShortletBookingDialog({
   return (
     <AnimatePresence>
       <OverlayPortal>
-        <div className="fixed inset-0 z-[130] flex items-end justify-center sm:items-center sm:p-6">
+        <div className="fixed inset-0 z-[130] flex h-[100dvh] items-end justify-center sm:items-center sm:p-6">
           <motion.button
             type="button"
             aria-label="Close shortlet request"
             onClick={onClose}
-            className="absolute inset-0 bg-primary/50"
+            className="modal-backdrop absolute inset-0"
             initial={reduceMotion ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -159,7 +167,7 @@ export default function ShortletBookingDialog({
             role="dialog"
             aria-modal="true"
             aria-labelledby="shortlet-title"
-            className="relative max-h-[94vh] w-full max-w-4xl overflow-y-auto rounded-t-2xl bg-bg shadow-2xl sm:rounded-2xl"
+            className="relative max-h-[100dvh] w-full max-w-4xl overflow-y-auto rounded-t-2xl bg-bg shadow-2xl sm:max-h-[calc(100dvh-3rem)] sm:rounded-2xl"
             initial={reduceMotion ? false : { opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 24 }}
@@ -185,7 +193,7 @@ export default function ShortletBookingDialog({
                 <X size={19} />
               </button>
             </header>
-            <div className="p-5 pb-28 sm:p-7 sm:pb-7">
+            <div className="p-5 pb-[calc(7rem+env(safe-area-inset-bottom))] sm:p-7 sm:pb-7">
               <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <p className="font-body text-sm font-bold text-primary">
@@ -302,7 +310,7 @@ export default function ShortletBookingDialog({
                   isQuoting ||
                   isSubmitting
                 }
-                className="fixed inset-x-5 bottom-5 z-10 inline-flex min-h-14 items-center justify-center gap-2 rounded-full bg-accent px-6 font-body text-sm font-bold text-primary shadow-lg transition-colors hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-60 sm:static sm:mt-6 sm:w-full sm:shadow-none"
+                className="fixed inset-x-5 bottom-[max(1.25rem,env(safe-area-inset-bottom))] z-10 inline-flex min-h-14 items-center justify-center gap-2 rounded-full bg-accent px-6 font-body text-sm font-bold text-primary shadow-lg transition-colors hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-60 sm:static sm:mt-6 sm:w-full sm:shadow-none"
               >
                 {isQuoting || isSubmitting ? (
                   <Loader2 size={18} className="animate-spin" />
