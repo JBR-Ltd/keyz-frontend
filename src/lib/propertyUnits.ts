@@ -1,5 +1,7 @@
 "use client";
 
+import { getBrowserSessionMarker } from "@/lib/authSession";
+
 import { apiRequest } from "@/lib/apiRequest";
 import { resolveApiError } from "@/lib/errors";
 
@@ -17,8 +19,8 @@ export interface PropertyUnitResult<TValue> {
   message?: string;
 }
 
-function getAccessToken(): string {
-  return localStorage.getItem("rello_token") ?? "";
+function getSessionMarker(): string {
+  return getBrowserSessionMarker();
 }
 
 function isPropertyUnit(value: unknown): value is PropertyUnit {
@@ -39,7 +41,7 @@ async function request(
   path = "",
   init?: RequestInit,
 ): Promise<PropertyUnitResult<unknown>> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
 
   if (!token) {
     return { data: null, message: "Log in to manage units." };
@@ -52,7 +54,6 @@ async function request(
         ...init,
         headers: {
           ...(init?.headers ?? {}),
-          Authorization: `Bearer ${token}`,
         },
       },
     );

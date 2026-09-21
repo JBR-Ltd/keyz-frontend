@@ -1,5 +1,7 @@
 "use client";
 
+import { getBrowserSessionMarker } from "@/lib/authSession";
+
 import { apiRequest } from "@/lib/apiRequest";
 import type { PartySummary } from "@/lib/bookings";
 import { resolveApiError } from "@/lib/errors";
@@ -47,14 +49,14 @@ function isSavedProperty(value: unknown): value is SavedProperty {
 
 // === Requests
 
-function getAccessToken(): string {
-  return localStorage.getItem("rello_token") ?? "";
+function getSessionMarker(): string {
+  return getBrowserSessionMarker();
 }
 
 export async function getSavedListings(): Promise<
   SavedListingResult<SavedProperty[]>
 > {
-  const token = getAccessToken();
+  const token = getSessionMarker();
 
   if (!token) {
     return { data: [], message: "Log in to see your saved listings." };
@@ -62,7 +64,7 @@ export async function getSavedListings(): Promise<
 
   try {
     const response = await apiRequest("/api/saved-listings", {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {},
     });
     const payload: unknown = await response.json().catch(() => null);
 
@@ -96,7 +98,7 @@ async function changeSavedListing(
   method: "DELETE" | "POST",
   failureMessage: string,
 ): Promise<SavedListingResult<boolean>> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
 
   if (!token) {
     return { data: false, message: "Your session has expired. Log in again." };
@@ -105,7 +107,7 @@ async function changeSavedListing(
   try {
     const response = await apiRequest(`/api/saved-listings/${propertyId}`, {
       method,
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {},
     });
 
     if (!response.ok) {

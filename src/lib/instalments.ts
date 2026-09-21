@@ -1,5 +1,9 @@
 "use client";
 
+import { apiRequest } from "@/lib/apiRequest";
+
+import { getBrowserSessionMarker } from "@/lib/authSession";
+
 import { resolveApiError } from "@/lib/errors";
 
 // === Types
@@ -87,8 +91,8 @@ export interface MoneyResult<TValue> {
 
 // === Helpers
 
-function getAccessToken(): string {
-  return localStorage.getItem("rello_token") ?? "";
+function getSessionMarker(): string {
+  return getBrowserSessionMarker();
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -100,16 +104,16 @@ async function send(
   init: RequestInit,
   fallback: string,
 ): Promise<{ data: unknown; message?: string }> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
 
   if (!token) {
     return { data: null, message: "Your session has expired. Log in again." };
   }
 
   try {
-    const response = await fetch(path, {
+    const response = await apiRequest(path, {
       ...init,
-      headers: { Authorization: `Bearer ${token}`, ...(init.headers ?? {}) },
+      headers: { ...(init.headers ?? {}) },
     });
     const payload: unknown = await response.json().catch(() => null);
 

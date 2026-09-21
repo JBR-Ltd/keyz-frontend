@@ -1,5 +1,7 @@
 "use client";
 
+import { getBrowserSessionMarker } from "@/lib/authSession";
+
 import { apiRequest } from "@/lib/apiRequest";
 import type { Booking, PartySummary } from "@/lib/bookings";
 import type { Dispute, DisputeStatus } from "@/lib/disputes";
@@ -81,15 +83,15 @@ function unwrap(payload: unknown): unknown {
     : null;
 }
 
-function getAccessToken(): string {
-  return localStorage.getItem("rello_token") ?? "";
+function getSessionMarker(): string {
+  return getBrowserSessionMarker();
 }
 
 async function adminRequest(
   path: string,
   init?: RequestInit,
 ): Promise<{ ok: boolean; payload: unknown }> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
 
   if (!token) {
     return { ok: false, payload: null };
@@ -97,7 +99,7 @@ async function adminRequest(
 
   const response = await apiRequest(path, {
     ...init,
-    headers: { ...(init?.headers ?? {}), Authorization: `Bearer ${token}` },
+    headers: { ...(init?.headers ?? {}) },
   });
 
   return { ok: response.ok, payload: await response.json().catch(() => null) };

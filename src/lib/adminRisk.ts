@@ -1,5 +1,7 @@
 "use client";
 
+import { getBrowserSessionMarker } from "@/lib/authSession";
+
 import { apiRequest } from "@/lib/apiRequest";
 import type { EscrowEntry } from "@/lib/escrow";
 import { resolveApiError } from "@/lib/errors";
@@ -64,8 +66,8 @@ function unwrap(payload: unknown): unknown {
     : null;
 }
 
-function getAccessToken(): string {
-  return localStorage.getItem("rello_token") ?? "";
+function getSessionMarker(): string {
+  return getBrowserSessionMarker();
 }
 
 // === Requests
@@ -76,7 +78,7 @@ export async function getRiskFlags(
   size = 50,
   signal?: AbortSignal,
 ): Promise<AdminRiskResult<RiskFlag[]>> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
 
   if (!token) {
     return { data: [], message: "Log in as an admin to see this." };
@@ -90,7 +92,7 @@ export async function getRiskFlags(
     if (status) query.set("status", status);
     const response = await apiRequest(`/api/admin/risk-flags?${query}`, {
       signal,
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {},
     });
     const payload: unknown = await response.json().catch(() => null);
 
@@ -117,7 +119,7 @@ export async function reviewRiskFlag(
   status: Exclude<RiskStatus, "OPEN">,
   note: string,
 ): Promise<AdminRiskResult<RiskFlag | null>> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
 
   if (!token) {
     return { data: null, message: "Your session has expired. Log in again." };
@@ -127,7 +129,6 @@ export async function reviewRiskFlag(
     const response = await apiRequest(`/api/admin/risk-flags/${id}/review`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ status, note: note.trim() }),
@@ -157,7 +158,7 @@ export async function getDepositClaims(
   size = 50,
   signal?: AbortSignal,
 ): Promise<AdminRiskResult<EscrowEntry[]>> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
 
   if (!token) {
     return { data: [], message: "Log in as an admin to see this." };
@@ -168,7 +169,7 @@ export async function getDepositClaims(
       `/api/admin/deposits?page=${page}&size=${size}`,
       {
         signal,
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {},
       },
     );
     const payload: unknown = await response.json().catch(() => null);
@@ -199,7 +200,7 @@ export async function settleDeposit(
   amountToTenant: number,
   note: string,
 ): Promise<AdminRiskResult<EscrowEntry | null>> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
 
   if (!token) {
     return { data: null, message: "Your session has expired. Log in again." };
@@ -211,7 +212,6 @@ export async function settleDeposit(
       {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ amountToTenant, note: note.trim() }),

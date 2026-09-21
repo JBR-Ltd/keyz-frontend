@@ -1,5 +1,7 @@
 "use client";
 
+import { getBrowserSessionMarker } from "@/lib/authSession";
+
 import { apiRequest } from "@/lib/apiRequest";
 import { resolveApiError } from "@/lib/errors";
 
@@ -91,7 +93,7 @@ async function requestSummary<TValue>(
   path: string,
   guard: (value: unknown) => value is TValue,
 ): Promise<DashboardResult<TValue>> {
-  const token = localStorage.getItem("rello_token") ?? "";
+  const token = getBrowserSessionMarker();
 
   if (!token) {
     return { data: null, message: "Log in to see your dashboard." };
@@ -99,7 +101,7 @@ async function requestSummary<TValue>(
 
   try {
     const response = await apiRequest(path, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {},
     });
     const payload: unknown = await response.json().catch(() => null);
 

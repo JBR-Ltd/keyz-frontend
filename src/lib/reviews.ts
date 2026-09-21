@@ -1,5 +1,7 @@
 "use client";
 
+import { getBrowserSessionMarker } from "@/lib/authSession";
+
 import { apiRequest } from "@/lib/apiRequest";
 import type { PartySummary } from "@/lib/bookings";
 import { resolveApiError } from "@/lib/errors";
@@ -53,15 +55,15 @@ function isReview(value: unknown): value is Review {
 
 // === Requests
 
-function getAccessToken(): string {
-  return localStorage.getItem("rello_token") ?? "";
+function getSessionMarker(): string {
+  return getBrowserSessionMarker();
 }
 
 async function requestReviews(
   path: string,
   requireAuth: boolean,
 ): Promise<ReviewResult<Review[]>> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
 
   if (requireAuth && !token) {
     return { data: [], message: "Log in to see your reviews." };
@@ -69,7 +71,7 @@ async function requestReviews(
 
   try {
     const response = await apiRequest(path, {
-      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      headers: undefined,
     });
     const payload: unknown = await response.json().catch(() => null);
 
@@ -129,7 +131,7 @@ export interface NewReview {
 export async function submitReview(
   review: NewReview,
 ): Promise<ReviewResult<Review | null>> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
 
   if (!token) {
     return { data: null, message: "Your session has expired. Log in again." };
@@ -139,7 +141,6 @@ export async function submitReview(
     const response = await apiRequest("/api/reviews", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(review),
@@ -169,17 +170,16 @@ export async function replyToReview(
   reviewId: number,
   reply: string,
 ): Promise<ReviewResult<Review | null>> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
 
   if (!token) {
     return { data: null, message: "Your session has expired. Log in again." };
   }
 
   try {
-    const response = await fetch(`/api/reviews/${reviewId}/reply`, {
+    const response = await apiRequest(`/api/reviews/${reviewId}/reply`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ reply }),

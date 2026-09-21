@@ -1,5 +1,7 @@
 "use client";
 
+import { getBrowserSessionMarker } from "@/lib/authSession";
+
 import { Bell, CheckCheck, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type ReactElement } from "react";
@@ -64,11 +66,11 @@ export default function NotificationsBell(): ReactElement {
   const refreshUnread = useCallback(async (): Promise<void> => {
     if (readingRef.current) return;
     const version = ++countVersionRef.current;
-    const token = localStorage.getItem("rello_token");
+    const token = getBrowserSessionMarker();
     const count = await getUnreadNotificationCount();
 
     if (mountedRef.current && version === countVersionRef.current
-        && token === localStorage.getItem("rello_token") && count !== null) {
+        && token === getBrowserSessionMarker() && count !== null) {
       setUnread(count);
     }
   }, []);
@@ -103,10 +105,10 @@ export default function NotificationsBell(): ReactElement {
 
     const session = ++sessionRef.current;
     const controller = new AbortController();
-    const token = localStorage.getItem("rello_token");
+    const token = getBrowserSessionMarker();
 
     void getNotifications("", controller.signal).then((result) => {
-      if (controller.signal.aborted || session !== sessionRef.current || token !== localStorage.getItem("rello_token")) {
+      if (controller.signal.aborted || session !== sessionRef.current || token !== getBrowserSessionMarker()) {
         return;
       }
 
@@ -169,7 +171,7 @@ export default function NotificationsBell(): ReactElement {
     }
 
     const session = sessionRef.current;
-    const token = localStorage.getItem("rello_token");
+    const token = getBrowserSessionMarker();
     const controller = new AbortController();
     olderRequestRef.current = controller;
     setIsLoadingMore(true);
@@ -177,7 +179,7 @@ export default function NotificationsBell(): ReactElement {
     const result = await getNotifications(nextCursor, controller.signal);
 
     if (controller.signal.aborted || !mountedRef.current
-        || session !== sessionRef.current || token !== localStorage.getItem("rello_token")) return;
+        || session !== sessionRef.current || token !== getBrowserSessionMarker()) return;
     olderRequestRef.current = null;
     setIsLoadingMore(false);
     if (result.message) {
@@ -197,7 +199,7 @@ export default function NotificationsBell(): ReactElement {
   const open = async (notification: AppNotification): Promise<void> => {
     if (readingRef.current || olderRequestRef.current) return;
     const session = sessionRef.current;
-    const token = localStorage.getItem("rello_token");
+    const token = getBrowserSessionMarker();
     if (!notification.read) {
       readingRef.current = true;
       countVersionRef.current++;
@@ -206,7 +208,7 @@ export default function NotificationsBell(): ReactElement {
       if (!mountedRef.current) return;
       readingRef.current = false;
       setIsReading(false);
-      if (token !== localStorage.getItem("rello_token")) return;
+      if (token !== getBrowserSessionMarker()) return;
       if (saved) {
         setUnread((count) => Math.max(0, count - 1));
         if (session === sessionRef.current) {
@@ -227,7 +229,7 @@ export default function NotificationsBell(): ReactElement {
   const readAll = async (): Promise<void> => {
     if (isLoading || readingRef.current || olderRequestRef.current) return;
     const session = sessionRef.current;
-    const token = localStorage.getItem("rello_token");
+    const token = getBrowserSessionMarker();
     readingRef.current = true;
     countVersionRef.current++;
     setIsReading(true);
@@ -235,7 +237,7 @@ export default function NotificationsBell(): ReactElement {
     if (!mountedRef.current) return;
     readingRef.current = false;
     setIsReading(false);
-    if (token !== localStorage.getItem("rello_token")) return;
+    if (token !== getBrowserSessionMarker()) return;
     if (saved) {
       setUnread(0);
       if (session === sessionRef.current) {

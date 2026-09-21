@@ -1,4 +1,6 @@
+import { rejectCrossSiteMutation } from "@/app/api/_csrf";
 import { listHeaders } from "@/app/api/_requestId";
+import { clearSessionIfUnauthorized, getSessionToken } from "@/app/api/_session";
 
 const API_BASE_URL = process.env.API_BASE_URL;
 const BOOKING_REQUEST_TIMEOUT_MS = 90000;
@@ -28,9 +30,11 @@ async function handle(
     );
   }
 
-  const authorization = request.headers.get("Authorization");
+  const rejected = rejectCrossSiteMutation(request);
+  const token = await getSessionToken();
 
-  if (!authorization?.startsWith("Bearer ")) {
+  if (rejected) return rejected;
+  if (!token) {
     return Response.json(
       {
         success: false,
@@ -57,13 +61,14 @@ async function handle(
       {
         method,
         headers: {
-          Authorization: authorization,
           ...(contentType ? { "Content-Type": contentType } : {}),
         },
         body: method === "GET" ? undefined : await request.arrayBuffer(),
         signal: controller.signal,
       },
     );
+
+    await clearSessionIfUnauthorized(response);
 
     const body = await response.text();
 

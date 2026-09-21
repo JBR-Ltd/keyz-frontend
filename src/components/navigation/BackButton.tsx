@@ -3,6 +3,7 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { getInternalBackDestination } from "@/lib/internalNavigation";
+import { getAuthenticationSnapshot } from "@/lib/authSession";
 
 interface BackButtonProps extends Omit<
   ButtonHTMLAttributes<HTMLButtonElement>,
@@ -25,7 +26,7 @@ export default function BackButton({
 
   const handleClick = (): void => {
     const currentHref = `${window.location.pathname}${window.location.search}`;
-    const role = window.localStorage.getItem("rello_role");
+    const role = getAuthenticationSnapshot().user?.role ?? null;
     const roleFallback =
       role === "ADMIN" ||
       role === "AGENT" ||

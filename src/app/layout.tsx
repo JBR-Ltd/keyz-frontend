@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import InternalNavigationTracker from "@/components/navigation/InternalNavigationTracker";
 import { ToastProvider } from "@/components/ui/toast";
 import { Analytics } from "@vercel/analytics/next";
+import { AuthProvider } from "@/components/auth/AuthProvider";
 
 const dmSans = DM_Sans({
   subsets: ["latin"],
@@ -70,7 +71,9 @@ export default function RootLayout({
         <Suspense fallback={null}>
           <InternalNavigationTracker />
         </Suspense>
-        <ToastProvider>{children}</ToastProvider>
+        <AuthProvider>
+          <ToastProvider>{children}</ToastProvider>
+        </AuthProvider>
         <Analytics />
       </body>
     </html>

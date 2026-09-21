@@ -1,5 +1,7 @@
 "use client";
 
+import { getBrowserSessionMarker } from "@/lib/authSession";
+
 import { apiRequest } from "@/lib/apiRequest";
 import type { PartySummary } from "@/lib/bookings";
 import { resolveApiError } from "@/lib/errors";
@@ -59,14 +61,14 @@ function unwrap(payload: unknown): unknown {
     : null;
 }
 
-function getAccessToken(): string {
-  return localStorage.getItem("rello_token") ?? "";
+function getSessionMarker(): string {
+  return getBrowserSessionMarker();
 }
 
 // === Requests
 
 export async function getMyDisputes(): Promise<DisputeResult<Dispute[]>> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
 
   if (!token) {
     return { data: [], message: "Log in to see your disputes." };
@@ -74,7 +76,7 @@ export async function getMyDisputes(): Promise<DisputeResult<Dispute[]>> {
 
   try {
     const response = await apiRequest("/api/disputes/mine", {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {},
     });
     const payload: unknown = await response.json().catch(() => null);
 
@@ -98,7 +100,7 @@ export async function getMyDisputes(): Promise<DisputeResult<Dispute[]>> {
 export async function openDispute(
   dispute: NewDispute,
 ): Promise<DisputeResult<Dispute | null>> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
 
   if (!token) {
     return { data: null, message: "Your session has expired. Log in again." };
@@ -108,7 +110,6 @@ export async function openDispute(
     const response = await apiRequest("/api/disputes", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(dispute),
@@ -137,7 +138,7 @@ async function actOnDispute(
   action: "escalate" | "withdraw",
   failureMessage: string,
 ): Promise<DisputeResult<Dispute | null>> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
 
   if (!token) {
     return { data: null, message: "Your session has expired. Log in again." };
@@ -146,7 +147,7 @@ async function actOnDispute(
   try {
     const response = await apiRequest(`/api/disputes/${disputeId}/${action}`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {},
     });
     const payload: unknown = await response.json().catch(() => null);
 
@@ -183,7 +184,7 @@ export async function addDisputeEvidence(
   disputeId: number,
   file: File,
 ): Promise<DisputeResult<Dispute | null>> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
   const failureMessage = "That file could not be added.";
 
   if (!token) {
@@ -194,9 +195,9 @@ export async function addDisputeEvidence(
   form.append("file", file);
 
   try {
-    const response = await fetch(`/api/disputes/${disputeId}/evidence`, {
+    const response = await apiRequest(`/api/disputes/${disputeId}/evidence`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {},
       body: form,
     });
     const payload: unknown = await response.json().catch(() => null);

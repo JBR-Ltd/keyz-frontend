@@ -1,5 +1,7 @@
 "use client";
 
+import { apiRequest } from "@/lib/apiRequest";
+
 import { Download, Loader2, ScanSearch } from "lucide-react";
 import { useState, type ReactElement } from "react";
 import { DateRangePicker } from "@/components/ui/date-picker";
@@ -43,10 +45,6 @@ function isoDay(offsetDays: number): string {
   return day.toISOString().slice(0, 10);
 }
 
-function getAccessToken(): string {
-  return localStorage.getItem("rello_token") ?? "";
-}
-
 /** Exports for SCUML and the NFIU, and screening on demand. Every export is audited on the server. */
 export default function AdminCompliancePage(): ReactElement {
   const { notify } = useToast();
@@ -62,10 +60,10 @@ export default function AdminCompliancePage(): ReactElement {
 
     try {
       const query = ranged ? `?from=${from}&to=${to}` : "";
-      const response = await fetch(
+      const response = await apiRequest(
         `/api/admin/compliance/exports/${name}.csv${query}`,
         {
-          headers: { Authorization: `Bearer ${getAccessToken()}` },
+          headers: {},
         },
       );
 
@@ -117,11 +115,11 @@ export default function AdminCompliancePage(): ReactElement {
     setScreening("");
 
     try {
-      const response = await fetch(
+      const response = await apiRequest(
         `/api/admin/compliance/screenings/${userId.trim()}`,
         {
           method: "POST",
-          headers: { Authorization: `Bearer ${getAccessToken()}` },
+          headers: {},
         },
       );
       const payload: unknown = await response.json().catch(() => null);

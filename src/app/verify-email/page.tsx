@@ -19,6 +19,7 @@ import AuthSplitLayout from "@/components/auth/AuthSplitLayout";
 import { isAccountRole } from "@/components/auth/RoleGuard";
 import { useToast } from "@/components/ui/toast";
 import { resolveApiError } from "@/lib/errors";
+import { establishAuthentication } from "@/lib/authSession";
 
 interface VerifyEmailFormValues {
   email: string;
@@ -185,15 +186,14 @@ export default function VerifyEmailPage() {
       if (
         session !== null &&
         typeof session === "object" &&
-        "accessToken" in session &&
-        typeof session.accessToken === "string" &&
         "role" in session &&
         isAccountRole(session.role)
       ) {
         const role = session.role.toUpperCase();
 
-        localStorage.setItem("rello_token", session.accessToken);
-        localStorage.setItem("rello_role", role);
+        if (!establishAuthentication(session)) {
+          throw new Error("Unable to start your session. Please log in.");
+        }
 
         notify({
           title: "Email verified",

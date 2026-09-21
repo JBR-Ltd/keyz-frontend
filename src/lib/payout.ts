@@ -1,5 +1,7 @@
 "use client";
 
+import { getBrowserSessionMarker } from "@/lib/authSession";
+
 import { apiRequest } from "@/lib/apiRequest";
 import { resolveApiError } from "@/lib/errors";
 
@@ -26,8 +28,8 @@ function unwrap(payload: unknown): unknown {
     : null;
 }
 
-function getAccessToken(): string {
-  return localStorage.getItem("rello_token") ?? "";
+function getSessionMarker(): string {
+  return getBrowserSessionMarker();
 }
 
 function isResolvedAccount(value: unknown): value is ResolvedAccount {
@@ -44,7 +46,7 @@ async function postPayout(
   bankCode: string,
   accountNumber: string,
 ): Promise<{ ok: boolean; payload: unknown }> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
 
   if (!token) {
     return { ok: false, payload: null };
@@ -53,7 +55,7 @@ async function postPayout(
   const query = new URLSearchParams({ bankCode, accountNumber });
   const response = await apiRequest(
     `/api/verification/payout/${action}?${query.toString()}`,
-    { method: "POST", headers: { Authorization: `Bearer ${token}` } },
+    { method: "POST", headers: {} },
   );
 
   return { ok: response.ok, payload: await response.json().catch(() => null) };

@@ -1,14 +1,42 @@
 "use client";
 
+import {
+  clearAuthentication,
+  getAuthenticationSnapshot,
+  subscribeToAuthentication,
+} from "@/lib/authSession";
+
 // === Helpers
 
 const pendingReads = new Map<string, Promise<Response>>();
 
 function getSessionScope(): string {
+  const authentication = getAuthenticationSnapshot();
   return JSON.stringify([
-    localStorage.getItem("rello_token"),
-    localStorage.getItem("rello_role"),
+    authentication.generation,
+    authentication.user?.id ?? null,
   ]);
+}
+
+subscribeToAuthentication(clearPendingApiReads);
+
+function isAuthenticationEntryPoint(path: string): boolean {
+  return (
+    path.startsWith("/api/auth/login") ||
+    path.startsWith("/api/auth/google") ||
+    path.startsWith("/api/auth/verify-email") ||
+    path.startsWith("/api/auth/register") ||
+    path.startsWith("/api/auth/forgot-password") ||
+    path.startsWith("/api/auth/reset-password") ||
+    path.startsWith("/api/auth/resend-verification") ||
+    path.startsWith("/api/auth/2fa/verify")
+  );
+}
+
+function handleAuthenticationFailure(path: string, response: Response): void {
+  if (response.status === 401 && !isAuthenticationEntryPoint(path)) {
+    clearAuthentication();
+  }
 }
 
 export function clearPendingApiReads(): void {
@@ -27,21 +55,21 @@ export async function apiRequest(
 
   const scope = getSessionScope();
   const method = (init.method ?? "GET").toUpperCase();
-  const authorization = new Headers(init.headers).get("Authorization");
+  const headers = new Headers(init.headers);
 
-  if (
-    authorization &&
-    authorization !== `Bearer ${localStorage.getItem("rello_token") ?? ""}`
-  ) {
-    throw new Error("Your account changed. Reload to see your current data.");
+  if (headers.has("Authorization")) {
+    headers.delete("Authorization");
   }
+
+  const requestInit = { ...init, credentials: "same-origin" as const, headers };
 
   if (method !== "GET") {
     // A read begun before a write must not satisfy a refresh following it.
     clearPendingApiReads();
 
     try {
-      const response = await fetch(path, init);
+      const response = await fetch(path, requestInit);
+      handleAuthenticationFailure(path, response);
 
       if (scope !== getSessionScope()) {
         throw new Error(
@@ -57,15 +85,15 @@ export async function apiRequest(
 
   let response: Response;
 
-  if (init.signal || init.body || init.cache === "reload") {
+  if (requestInit.signal || requestInit.body || requestInit.cache === "reload") {
     // Independently cancellable requests cannot share another caller's signal.
-    response = await fetch(path, init);
+    response = await fetch(path, requestInit);
   } else {
-    const headers = [...new Headers(init.headers).entries()].sort(([a], [b]) =>
+    const normalizedHeaders = [...headers.entries()].sort(([a], [b]) =>
       a.localeCompare(b),
     );
     const options = Object.fromEntries(
-      Object.entries({ ...init, method, headers }).sort(([a], [b]) =>
+      Object.entries({ ...requestInit, method, headers: normalizedHeaders }).sort(([a], [b]) =>
         a.localeCompare(b),
       ),
     );
@@ -73,7 +101,7 @@ export async function apiRequest(
     let request = pendingReads.get(key);
 
     if (!request) {
-      request = fetch(path, init);
+      request = fetch(path, requestInit);
       pendingReads.set(key, request);
     }
 
@@ -85,6 +113,8 @@ export async function apiRequest(
       }
     }
   }
+
+  handleAuthenticationFailure(path, response);
 
   if (scope !== getSessionScope()) {
     throw new Error("Your account changed. Reload to see your current data.");

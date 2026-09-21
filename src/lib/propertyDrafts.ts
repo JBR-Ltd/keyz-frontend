@@ -1,5 +1,7 @@
 "use client";
 
+import { getBrowserSessionMarker } from "@/lib/authSession";
+
 import { apiRequest } from "@/lib/apiRequest";
 import { resolveApiError } from "@/lib/errors";
 import type { PropertyListingStatus } from "@/lib/propertyDetails";
@@ -67,8 +69,8 @@ export interface DraftResult<TValue> {
 
 // === Helpers
 
-function getAccessToken(): string {
-  return localStorage.getItem("rello_token") ?? "";
+function getSessionMarker(): string {
+  return getBrowserSessionMarker();
 }
 
 function unwrap(payload: unknown): unknown {
@@ -91,7 +93,7 @@ async function request(
   path: string,
   init?: RequestInit,
 ): Promise<{ ok: boolean; payload: unknown }> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
 
   if (!token) {
     return { ok: false, payload: null };
@@ -101,7 +103,6 @@ async function request(
     ...init,
     headers: {
       ...(init?.headers ?? {}),
-      Authorization: `Bearer ${token}`,
     },
   });
 
@@ -162,7 +163,7 @@ export function getDraft(
 }
 
 export async function getDrafts(): Promise<DraftResult<PropertyDraft[]>> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
   const drafts = new Map<number, PropertyDraft>();
   let page = 0;
   try {
@@ -194,7 +195,7 @@ export async function getDrafts(): Promise<DraftResult<PropertyDraft[]>> {
       ) {
         return { data: [], message: "Drafts could not be loaded." };
       }
-      if (token !== getAccessToken())
+      if (token !== getSessionMarker())
         return { data: [], message: "Your account changed. Reload this page." };
       for (const draft of items) drafts.set(draft.id, draft);
       if (!data.hasNext) return { data: Array.from(drafts.values()) };

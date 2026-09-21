@@ -12,6 +12,10 @@ import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
 import { isAccountRole } from "@/components/auth/RoleGuard";
 import { useToast } from "@/components/ui/toast";
 import { resolveApiError } from "@/lib/errors";
+import {
+  establishAuthentication,
+  getInstallationId,
+} from "@/lib/authSession";
 
 const loginPhotoUrl =
   "https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=1200&h=1400&fit=crop&auto=format&q=80";
@@ -22,8 +26,11 @@ interface LoginFormValues {
 }
 
 interface LoginResponseData {
-  accessToken: string;
+  email: string;
+  firstName: string;
+  lastName: string;
   role: unknown;
+  userId: number;
 }
 
 /** What login answers with when the account asks for a second step. */
@@ -62,38 +69,20 @@ function isLoginData(value: unknown): value is LoginResponseData {
   return (
     value !== null &&
     typeof value === "object" &&
-    "accessToken" in value &&
-    typeof value.accessToken === "string" &&
-    "role" in value
+    "email" in value &&
+    typeof value.email === "string" &&
+    "firstName" in value &&
+    typeof value.firstName === "string" &&
+    "lastName" in value &&
+    typeof value.lastName === "string" &&
+    "role" in value &&
+    "userId" in value &&
+    typeof value.userId === "number"
   );
 }
 
 function getApiMessage(value: unknown, fallback: string): string {
   return isApiEnvelope(value) ? value.message : fallback;
-}
-
-function createDeviceFingerprint(): string {
-  if (typeof window === "undefined") {
-    return "rello-server";
-  }
-
-  const source = [
-    window.navigator.userAgent,
-    window.navigator.language,
-    window.screen.width,
-    window.screen.height,
-    window.screen.colorDepth,
-    window.devicePixelRatio,
-  ].join("|");
-
-  let hash = 0;
-
-  for (let index = 0; index < source.length; index += 1) {
-    hash = (hash << 5) - hash + source.charCodeAt(index);
-    hash |= 0;
-  }
-
-  return `rello-${Math.abs(hash).toString(36)}`;
 }
 
 export default function LoginPage() {
@@ -150,8 +139,9 @@ export default function LoginPage() {
     const role = data.role.toUpperCase();
     const rolePath = role.toLowerCase();
 
-    localStorage.setItem("rello_token", data.accessToken);
-    localStorage.setItem("rello_role", role);
+    if (!establishAuthentication(data)) {
+      throw new Error("Unable to start your session. Please try again.");
+    }
     notify({ title: "Logged in", variant: "success" });
     router.replace(
       role === "TENANT" ? "/tenant/browse" : "/" + rolePath + "/dashboard",
@@ -167,7 +157,7 @@ export default function LoginPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Device-Fingerprint": createDeviceFingerprint(),
+          "X-Device-Fingerprint": getInstallationId(),
         },
         body: JSON.stringify({
           reference: challengeReference,
@@ -209,7 +199,7 @@ export default function LoginPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Device-Fingerprint": createDeviceFingerprint(),
+          "X-Device-Fingerprint": getInstallationId(),
         },
         body: JSON.stringify(values),
       });

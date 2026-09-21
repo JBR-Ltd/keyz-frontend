@@ -1,10 +1,15 @@
+import { rejectCrossSiteMutation } from "@/app/api/_csrf";
 import { requestIdHeader } from "@/app/api/_requestId";
+import { clearSessionIfUnauthorized, getSessionToken } from "@/app/api/_session";
 
 const API_BASE_URL = process.env.API_BASE_URL;
 const REQUEST_TIMEOUT_MS = 90000;
 
 /** Multipart, so the body is forwarded as bytes rather than read as text. */
 export async function POST(request: Request): Promise<Response> {
+  const rejected = rejectCrossSiteMutation(request);
+
+  if (rejected) return rejected;
   if (!API_BASE_URL) {
     return Response.json(
       { success: false, message: "API_BASE_URL is not configured.", data: null },
@@ -12,9 +17,9 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
-  const authorization = request.headers.get("Authorization");
+  const token = await getSessionToken();
 
-  if (!authorization) {
+  if (!token) {
     return Response.json(
       { success: false, message: "Authorization is required.", data: null },
       { status: 401 },
@@ -34,13 +39,13 @@ export async function POST(request: Request): Promise<Response> {
       {
         method: "POST",
         headers: {
-          Authorization: authorization,
           ...(contentType ? { "Content-Type": contentType } : {}),
         },
         body: await request.arrayBuffer(),
         signal: controller.signal,
       },
     );
+    await clearSessionIfUnauthorized(response);
     const body = await response.text();
 
     return new Response(body || null, {

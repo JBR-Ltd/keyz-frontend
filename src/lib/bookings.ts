@@ -1,5 +1,7 @@
 "use client";
 
+import { getBrowserSessionMarker } from "@/lib/authSession";
+
 import { apiRequest } from "@/lib/apiRequest";
 import type { DepositStatus, EscrowStatus } from "@/lib/escrow";
 import { resolveApiError } from "@/lib/errors";
@@ -134,15 +136,15 @@ function isBooking(value: unknown): value is Booking {
 
 // === Requests
 
-function getAccessToken(): string {
-  return localStorage.getItem("rello_token") ?? "";
+function getSessionMarker(): string {
+  return getBrowserSessionMarker();
 }
 
 async function requestBookings(
   path: string,
   signal?: AbortSignal,
 ): Promise<BookingResult<Booking[]>> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
 
   if (!token) {
     return { data: [], message: "Log in to see your bookings." };
@@ -151,7 +153,7 @@ async function requestBookings(
   try {
     const response = await apiRequest(path, {
       signal,
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {},
     });
     const payload: unknown = await response.json().catch(() => null);
 
@@ -210,12 +212,12 @@ export function getMyBookings(
 export async function getCurrentBooking(
   signal?: AbortSignal,
 ): Promise<BookingResult<Booking | null>> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
   if (!token) return { data: null, message: "Log in to see your home." };
   try {
     const response = await apiRequest("/api/bookings/mine/current", {
       signal,
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {},
     });
     const payload: unknown = await response.json().catch(() => null);
     if (!response.ok)
@@ -244,13 +246,13 @@ export function getHostBookings(
 async function requestAllBookings(
   path: string,
 ): Promise<BookingResult<Booking[]>> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
   const items = new Map<number, Booking>();
   let cursor = "";
   do {
     const result = await requestBookings(withPage(path, { cursor, size: 100 }));
     if (result.message) return { data: [], message: result.message };
-    if (token !== getAccessToken())
+    if (token !== getSessionMarker())
       return { data: [], message: "Your account changed. Reload this page." };
     for (const booking of result.data) items.set(booking.id, booking);
     cursor = result.nextCursor ?? "";
@@ -346,7 +348,7 @@ export async function createBooking(
   startDate: string,
   endDate: string,
 ): Promise<BookingResult<Booking | null>> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
 
   if (!token) {
     return { data: null, message: "Your session has expired. Log in again." };
@@ -356,7 +358,6 @@ export async function createBooking(
     const response = await apiRequest("/api/bookings", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ propertyId, startDate, endDate }),
@@ -393,7 +394,7 @@ export interface RentalRequestInput {
 export async function createRentalRequest(
   input: RentalRequestInput,
 ): Promise<BookingResult<Booking | null>> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
 
   if (!token) {
     return { data: null, message: "Your session has expired. Log in again." };
@@ -403,7 +404,6 @@ export async function createRentalRequest(
     const response = await apiRequest("/api/bookings/rental-requests", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(input),
@@ -444,7 +444,7 @@ export async function createShortletBooking(
   message?: string,
   guests?: number,
 ): Promise<BookingResult<Booking | null>> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
 
   if (!token) {
     return { data: null, message: "Your session has expired. Log in again." };
@@ -454,7 +454,6 @@ export async function createShortletBooking(
     const response = await apiRequest("/api/bookings/short-stays", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -492,7 +491,7 @@ export async function updateBookingStatus(
   status: BookingStatus,
   options: BookingStatusOptions = {},
 ): Promise<BookingResult<Booking | null>> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
 
   if (!token) {
     return { data: null, message: "Your session has expired. Log in again." };
@@ -513,7 +512,7 @@ export async function updateBookingStatus(
       `/api/bookings/${bookingId}/status?${query.toString()}`,
       {
         method: "PATCH",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {},
       },
     );
     const payload: unknown = await response.json().catch(() => null);
@@ -544,7 +543,7 @@ export async function recordMoveInDate(
   bookingId: number,
   moveInDate: string,
 ): Promise<BookingResult<Booking | null>> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
 
   if (!token) {
     return { data: null, message: "Your session has expired. Log in again." };
@@ -555,7 +554,7 @@ export async function recordMoveInDate(
       `/api/bookings/${bookingId}/move-in?moveInDate=${encodeURIComponent(moveInDate)}`,
       {
         method: "PATCH",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {},
       },
     );
     const payload: unknown = await response.json().catch(() => null);

@@ -1,9 +1,17 @@
+import { browserAuthResponse } from "@/app/api/_authResponse";
+import { rejectCrossSiteMutation } from "@/app/api/_csrf";
 import { requestIdHeader } from "@/app/api/_requestId";
 
 const API_BASE_URL = process.env.API_BASE_URL;
 const AUTH_REQUEST_TIMEOUT_MS = 30000;
 
 export async function POST(request: Request): Promise<Response> {
+  const rejected = rejectCrossSiteMutation(request);
+
+  if (rejected) {
+    return rejected;
+  }
+
   if (!API_BASE_URL) {
     return Response.json(
       { success: false, message: "API_BASE_URL is not configured.", data: null },
@@ -33,14 +41,14 @@ export async function POST(request: Request): Promise<Response> {
     });
     const body = await response.text();
 
-    return new Response(body || null, {
+    return browserAuthResponse(new Response(body || null, {
       status: response.status,
       headers: {
         "Content-Type":
           response.headers.get("Content-Type") ?? "application/json",
         ...requestIdHeader(response),
       },
-    });
+    }));
   } catch {
     return Response.json(
       {

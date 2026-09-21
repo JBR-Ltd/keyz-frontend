@@ -1,5 +1,7 @@
 "use client";
 
+import { getBrowserSessionMarker } from "@/lib/authSession";
+
 import { apiRequest } from "@/lib/apiRequest";
 import { resolveApiError } from "@/lib/errors";
 
@@ -78,8 +80,8 @@ export interface MaintenancePage {
 
 // === Helpers
 
-function getAccessToken(): string {
-  return localStorage.getItem("rello_token") ?? "";
+function getSessionMarker(): string {
+  return getBrowserSessionMarker();
 }
 
 function unwrap(payload: unknown): unknown {
@@ -101,7 +103,7 @@ async function request(
   path: string,
   init?: RequestInit,
 ): Promise<{ ok: boolean; payload: unknown }> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
 
   if (!token) {
     return { ok: false, payload: null };
@@ -111,7 +113,6 @@ async function request(
     ...init,
     headers: {
       ...(init?.headers ?? {}),
-      Authorization: `Bearer ${token}`,
     },
   });
 

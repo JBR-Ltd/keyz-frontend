@@ -1,5 +1,9 @@
 "use client";
 
+import { apiRequest } from "@/lib/apiRequest";
+
+import { getBrowserSessionMarker } from "@/lib/authSession";
+
 import { resolveApiError } from "@/lib/errors";
 import type { RentalMode, StayType } from "@/lib/hostListings";
 
@@ -121,8 +125,8 @@ export interface MarketResult<TValue> {
 
 // === Helpers
 
-function getAccessToken(): string {
-  return localStorage.getItem("rello_token") ?? "";
+function getSessionMarker(): string {
+  return getBrowserSessionMarker();
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -134,17 +138,16 @@ async function send(
   init: RequestInit,
   fallback: string,
 ): Promise<{ data: unknown; message?: string; ok: boolean; total?: number }> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
 
   if (!token) {
     return { data: null, message: "Log in first.", ok: false };
   }
 
   try {
-    const response = await fetch(path, {
+    const response = await apiRequest(path, {
       ...init,
       headers: {
-        Authorization: `Bearer ${token}`,
         ...(init.body ? { "Content-Type": "application/json" } : {}),
       },
     });

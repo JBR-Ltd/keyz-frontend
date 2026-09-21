@@ -1,3 +1,9 @@
+import { browserAuthResponse } from "@/app/api/_authResponse";
+import { rejectCrossSiteMutation } from "@/app/api/_csrf";
+import {
+  clearSessionIfUnauthorized,
+  getSessionToken,
+} from "@/app/api/_session";
 import { requestIdHeader } from "@/app/api/_requestId";
 
 const API_BASE_URL = process.env.API_BASE_URL;
@@ -14,6 +20,12 @@ export async function POST(
   request: Request,
   context: RouteContext,
 ): Promise<Response> {
+  const rejected = rejectCrossSiteMutation(request);
+
+  if (rejected) {
+    return rejected;
+  }
+
   const { action } = await context.params;
 
   if (!ACTIONS.has(action)) {
@@ -31,9 +43,9 @@ export async function POST(
   }
 
   // Finishing a sign-in has no session yet; the other three are account settings
-  const authorization = request.headers.get("Authorization");
+  const token = action === "verify" ? null : await getSessionToken();
 
-  if (action !== "verify" && !authorization) {
+  if (action !== "verify" && !token) {
     return Response.json(
       { success: false, message: "Authorization is required.", data: null },
       { status: 401 },
@@ -53,7 +65,7 @@ export async function POST(
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(authorization ? { Authorization: authorization } : {}),
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
           "X-Device-Fingerprint":
             request.headers.get("X-Device-Fingerprint") ?? "",
         },
@@ -61,9 +73,10 @@ export async function POST(
         signal: controller.signal,
       },
     );
+    await clearSessionIfUnauthorized(response);
     const body = await response.text();
 
-    return new Response(body || null, {
+    const browserResponse = new Response(body || null, {
       status: response.status,
       headers: {
         "Content-Type":
@@ -71,6 +84,10 @@ export async function POST(
         ...requestIdHeader(response),
       },
     });
+
+    return action === "verify"
+      ? browserAuthResponse(browserResponse)
+      : browserResponse;
   } catch {
     return Response.json(
       {

@@ -1,5 +1,7 @@
 "use client";
 
+import { getBrowserSessionMarker } from "@/lib/authSession";
+
 import { apiRequest } from "@/lib/apiRequest";
 import { resolveApiError } from "@/lib/errors";
 
@@ -116,8 +118,8 @@ export function toBlockedDates(ranges: UnavailableRange[]): Set<string> {
   return blocked;
 }
 
-function getAccessToken(): string {
-  return localStorage.getItem("rello_token") ?? "";
+function getSessionMarker(): string {
+  return getBrowserSessionMarker();
 }
 
 /** Dates the host is holding back: their own stay, repairs, a tenancy off-platform. */
@@ -127,7 +129,7 @@ export async function blockDates(
   endDate: string,
   reason: string,
 ): Promise<AvailabilityResult<UnavailableRange | null>> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
 
   if (!token) {
     return { data: null, message: "Log in again to block dates." };
@@ -139,7 +141,6 @@ export async function blockDates(
       {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ startDate, endDate, reason: reason || null }),
@@ -168,7 +169,7 @@ export async function unblockDates(
   propertyId: number,
   blockId: number,
 ): Promise<AvailabilityResult<boolean>> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
 
   if (!token) {
     return { data: false, message: "Log in again to open those dates." };
@@ -177,7 +178,7 @@ export async function unblockDates(
   try {
     const response = await apiRequest(
       `/api/properties/${propertyId}/availability/blocks/${blockId}`,
-      { method: "DELETE", headers: { Authorization: `Bearer ${token}` } },
+      { method: "DELETE", headers: {} },
     );
 
     if (!response.ok) {

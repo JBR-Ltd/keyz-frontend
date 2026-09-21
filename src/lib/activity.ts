@@ -1,5 +1,7 @@
 "use client";
 
+import { getBrowserSessionMarker } from "@/lib/authSession";
+
 import { apiRequest } from "@/lib/apiRequest";
 import { resolveApiError } from "@/lib/errors";
 
@@ -93,8 +95,8 @@ export function activityHref(event: ActivityEvent, role: string): string {
 
 // === Requests
 
-function getAccessToken(): string {
-  return localStorage.getItem("rello_token") ?? "";
+function getSessionMarker(): string {
+  return getBrowserSessionMarker();
 }
 
 function isActivityEvent(value: unknown): value is ActivityEvent {
@@ -114,7 +116,7 @@ export async function getMyActivity(
   cursor?: string,
   size = 20,
 ): Promise<ActivityResult> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
 
   if (!token) {
     return { data: EMPTY, message: "Log in to see your activity." };
@@ -128,7 +130,7 @@ export async function getMyActivity(
     }
 
     const response = await apiRequest(`/api/activity?${params.toString()}`, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {},
     });
     const payload: unknown = await response.json().catch(() => null);
 

@@ -1,4 +1,6 @@
 import { listHeaders, requestIdHeader } from "@/app/api/_requestId";
+import { rejectCrossSiteMutation } from "@/app/api/_csrf";
+import { clearSessionCookie, getSessionToken } from "@/app/api/_session";
 
 const API_BASE_URL = process.env.API_BASE_URL;
 const REQUEST_TIMEOUT_MS = 90000;
@@ -28,9 +30,15 @@ export async function proxyAuthenticatedRequest({
     );
   }
 
-  const authorization = request.headers.get("Authorization");
+  const rejected = rejectCrossSiteMutation(request);
 
-  if (!authorization && !allowAnonymous) {
+  if (rejected) {
+    return rejected;
+  }
+
+  const token = await getSessionToken();
+
+  if (!token && !allowAnonymous) {
     return Response.json(
       { success: false, message: "Authorization is required.", data: null },
       { status: 401 },
@@ -48,7 +56,7 @@ export async function proxyAuthenticatedRequest({
     method === "POST" || method === "PATCH" || method === "PUT"
       ? await request.arrayBuffer()
       : undefined;
-  const headers = new Headers(authorization ? { Authorization: authorization } : {});
+  const headers = new Headers(token ? { Authorization: `Bearer ${token}` } : {});
 
   if (body && body.byteLength > 0) {
     headers.set(
@@ -64,6 +72,10 @@ export async function proxyAuthenticatedRequest({
       body: body && body.byteLength > 0 ? body : undefined,
       signal: controller.signal,
     });
+
+    if (response.status === 401 && token) {
+      await clearSessionCookie();
+    }
     const contentDisposition = response.headers.get("Content-Disposition");
 
     // A download (a CSV export) passes through as bytes with its filename
@@ -74,6 +86,7 @@ export async function proxyAuthenticatedRequest({
           "Content-Type":
             response.headers.get("Content-Type") ?? "application/octet-stream",
           "Content-Disposition": contentDisposition,
+          "Cache-Control": response.headers.get("Cache-Control") ?? "no-store",
           ...requestIdHeader(response),
         },
       });
@@ -107,13 +120,23 @@ export async function proxyAuthenticatedRequest({
 
       return Response.json(
         { success: false, message, data: null },
-        { status: response.status, headers: requestIdHeader(response) },
+        {
+          status: response.status,
+          headers: {
+            "Cache-Control": "no-store",
+            ...requestIdHeader(response),
+          },
+        },
       );
     }
 
     return new Response(responseBody || null, {
       status: response.status,
-      headers: { "Content-Type": contentType, ...listHeaders(response) },
+      headers: {
+        "Cache-Control": "no-store",
+        "Content-Type": contentType,
+        ...listHeaders(response),
+      },
     });
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {

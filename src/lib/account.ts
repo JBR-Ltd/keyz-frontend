@@ -4,7 +4,11 @@ import { apiRequest, clearPendingApiReads } from "@/lib/apiRequest";
 import { useEffect, useState } from "react";
 import { resolveApiError } from "@/lib/errors";
 import { clearHostListingStorage } from "@/lib/hostListings";
-import { clearInternalNavigationHistory } from "@/lib/internalNavigation";
+import {
+  clearAuthentication,
+  getAuthenticationSnapshot,
+  subscribeToAuthentication,
+} from "@/lib/authSession";
 
 export interface AuthenticatedUser {
   avatarUrl: string | null;
@@ -137,14 +141,12 @@ async function parseApiResponse(response: Response): Promise<ApiEnvelope> {
   return value;
 }
 
-function getAccessToken(): string {
-  return localStorage.getItem("rello_token") ?? "";
-}
-
 function getAccountScope(): string {
-  return typeof window === "undefined"
-    ? ""
-    : JSON.stringify([getAccessToken(), localStorage.getItem("rello_role")]);
+  const authentication = getAuthenticationSnapshot();
+  return JSON.stringify([
+    authentication.generation,
+    authentication.user?.id ?? null,
+  ]);
 }
 
 function getScopedCachedUser(): AuthenticatedUser | null {
@@ -156,29 +158,22 @@ function clearAuthenticationState(): void {
   cachedUser = null;
   userRequest = null;
   clearPendingApiReads();
-  localStorage.removeItem("rello_token");
-  localStorage.removeItem("rello_role");
-  localStorage.removeItem("rello_tenant_verification");
-  localStorage.removeItem("rello_landlord_verification");
-  localStorage.removeItem("rello_agent_verification");
-  clearInternalNavigationHistory();
+  clearAuthentication();
 }
 
 async function authenticatedRequest(
   path: string,
   init: RequestInit = {},
 ): Promise<ApiEnvelope> {
-  const token = getAccessToken();
+  const authentication = getAuthenticationSnapshot();
 
-  if (!token) {
+  if (authentication.status !== "authenticated") {
     throw new Error("Your session has expired. Log in again.");
   }
 
-  const headers = new Headers(init.headers);
-  headers.set("Authorization", `Bearer ${token}`);
   const scope = getAccountScope();
 
-  const response = await apiRequest(path, { ...init, headers });
+  const response = await apiRequest(path, init);
   const envelope = await parseApiResponse(response);
 
   if (scope !== getAccountScope()) {
@@ -249,20 +244,29 @@ export function useAuthenticatedUser(): AuthenticatedUserState {
   useEffect(() => {
     let isActive = true;
 
-    void getAuthenticatedUser().then((result) => {
-      if (!isActive) {
-        return;
-      }
+    const loadUser = (): void => {
+      const user = getScopedCachedUser();
+      setState({ error: null, isLoading: user === null, user });
 
-      setState({
-        error: result.success ? null : result.message,
-        isLoading: false,
-        user: result.user,
+      void getAuthenticatedUser().then((result) => {
+        if (!isActive) {
+          return;
+        }
+
+        setState({
+          error: result.success ? null : result.message,
+          isLoading: false,
+          user: result.user,
+        });
       });
-    });
+    };
+
+    loadUser();
+    const unsubscribe = subscribeToAuthentication(loadUser);
 
     return () => {
       isActive = false;
+      unsubscribe();
     };
   }, []);
 

@@ -1,5 +1,7 @@
 "use client";
 
+import { getBrowserSessionMarker } from "@/lib/authSession";
+
 import { apiRequest } from "@/lib/apiRequest";
 import type { PartySummary } from "@/lib/bookings";
 import { resolveApiError } from "@/lib/errors";
@@ -96,8 +98,8 @@ function unwrap(payload: unknown): unknown {
     : null;
 }
 
-function getAccessToken(): string {
-  return localStorage.getItem("rello_token") ?? "";
+function getSessionMarker(): string {
+  return getBrowserSessionMarker();
 }
 
 // === Requests
@@ -106,7 +108,7 @@ export async function getMyEscrow(
   page = 0,
   size = 100,
 ): Promise<EscrowResult<EscrowEntry[]>> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
 
   if (!token) {
     return { data: [], message: "Log in to see your payments." };
@@ -116,7 +118,7 @@ export async function getMyEscrow(
     const response = await apiRequest(
       `/api/escrow/mine?page=${page}&size=${size}`,
       {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {},
       },
     );
     const payload: unknown = await response.json().catch(() => null);
@@ -143,14 +145,14 @@ export async function getMyEscrow(
 }
 
 export async function getAllMyEscrow(): Promise<EscrowResult<EscrowEntry[]>> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
   const entries = new Map<number, EscrowEntry>();
   let page = 0;
   let total = 0;
   do {
     const result = await getMyEscrow(page, 100);
     if (result.message) return { data: [], message: result.message };
-    if (token !== getAccessToken())
+    if (token !== getSessionMarker())
       return { data: [], message: "Your account changed. Reload this page." };
     for (const entry of result.data) entries.set(entry.id, entry);
     total = result.total ?? entries.size;
@@ -164,7 +166,7 @@ export async function getAllMyEscrow(): Promise<EscrowResult<EscrowEntry[]>> {
 export async function startBookingPayment(
   bookingId: number,
 ): Promise<EscrowResult<string | null>> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
 
   if (!token) {
     return { data: null, message: "Your session has expired. Log in again." };
@@ -173,7 +175,7 @@ export async function startBookingPayment(
   try {
     const response = await apiRequest(`/api/escrow/bookings/${bookingId}/pay`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {},
     });
     const payload: unknown = await response.json().catch(() => null);
 
@@ -209,7 +211,7 @@ export async function startBookingPayment(
 export async function verifyPaymentReturn(
   reference: string,
 ): Promise<EscrowResult<EscrowEntry | null>> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
 
   if (!token) {
     return { data: null, message: "Your session has expired. Log in again." };
@@ -220,7 +222,7 @@ export async function verifyPaymentReturn(
       `/api/escrow/payments/${encodeURIComponent(reference)}/verify`,
       {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {},
       },
     );
     const payload: unknown = await response.json().catch(() => null);
@@ -253,7 +255,7 @@ export async function claimDeposit(
   amount: number,
   note: string,
 ): Promise<EscrowResult<EscrowEntry | null>> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
 
   if (!token) {
     return { data: null, message: "Your session has expired. Log in again." };
@@ -265,7 +267,6 @@ export async function claimDeposit(
       {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ amount, note: note.trim() }),
@@ -293,7 +294,7 @@ export async function claimDeposit(
 export async function releaseEscrow(
   escrowId: number,
 ): Promise<EscrowResult<EscrowEntry | null>> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
 
   if (!token) {
     return { data: null, message: "Your session has expired. Log in again." };
@@ -302,7 +303,7 @@ export async function releaseEscrow(
   try {
     const response = await apiRequest(`/api/escrow/${escrowId}/release`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {},
     });
     const payload: unknown = await response.json().catch(() => null);
 

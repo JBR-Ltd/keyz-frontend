@@ -11,6 +11,7 @@ import { SubmitHandler, useForm } from "react-hook-form";
 import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
 import { useToast } from "@/components/ui/toast";
 import { resolveApiError } from "@/lib/errors";
+import { getInstallationId } from "@/lib/authSession";
 
 type UserRole = "LANDLORD" | "AGENT" | "TENANT";
 
@@ -64,30 +65,6 @@ function isApiEnvelope(value: unknown): value is ApiEnvelope<unknown> {
   );
 }
 
-function createDeviceFingerprint(): string {
-  if (typeof window === "undefined") {
-    return "rello-server";
-  }
-
-  const source = [
-    window.navigator.userAgent,
-    window.navigator.language,
-    window.screen.width,
-    window.screen.height,
-    window.screen.colorDepth,
-    window.devicePixelRatio,
-  ].join("|");
-
-  let hash = 0;
-
-  for (let index = 0; index < source.length; index += 1) {
-    hash = (hash << 5) - hash + source.charCodeAt(index);
-    hash |= 0;
-  }
-
-  return `rello-${Math.abs(hash).toString(36)}`;
-}
-
 export default function RegisterPage() {
   const router = useRouter();
   const reduceMotion = useReducedMotion();
@@ -124,7 +101,7 @@ export default function RegisterPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Device-Fingerprint": createDeviceFingerprint(),
+          "X-Device-Fingerprint": getInstallationId(),
         },
         body: JSON.stringify(values),
       });

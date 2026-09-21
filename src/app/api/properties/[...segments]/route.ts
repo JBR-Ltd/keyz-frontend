@@ -1,4 +1,6 @@
+import { rejectCrossSiteMutation } from "@/app/api/_csrf";
 import { cacheHeaders, requestIdHeader } from "@/app/api/_requestId";
+import { clearSessionIfUnauthorized, getSessionToken } from "@/app/api/_session";
 
 const API_BASE_URL = process.env.API_BASE_URL;
 const PROPERTY_REQUEST_TIMEOUT_MS = 90000;
@@ -170,6 +172,8 @@ async function proxyResponse(response: Response): Promise<Response> {
     });
   }
 
+  await clearSessionIfUnauthorized(response);
+
   const body = await response.text();
   const contentType =
     response.headers.get("Content-Type") ?? "application/json";
@@ -249,6 +253,10 @@ async function handlePropertyRequest(
   context: RouteContext,
   method: PropertyMethod,
 ): Promise<Response> {
+  const rejected = rejectCrossSiteMutation(request);
+
+  if (rejected) return rejected;
+
   const { segments } = await context.params;
 
   if (!isAllowedRequest(method, segments)) {
@@ -271,7 +279,8 @@ async function handlePropertyRequest(
     );
   }
 
-  const authorization = request.headers.get("Authorization");
+  const token = await getSessionToken();
+  const authorization = token ? `Bearer ${token}` : null;
 
   if (
     !isPublicRequest(method, segments) &&

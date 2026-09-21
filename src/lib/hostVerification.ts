@@ -1,5 +1,7 @@
 "use client";
 
+import { getBrowserSessionMarker } from "@/lib/authSession";
+
 import { apiRequest } from "@/lib/apiRequest";
 import { useCallback, useEffect, useState } from "react";
 import { resolveApiError } from "@/lib/errors";
@@ -137,8 +139,8 @@ function toSnapshot(status: VerificationStatus): HostVerificationSnapshot {
   };
 }
 
-function getAccessToken(): string {
-  return localStorage.getItem("rello_token") ?? "";
+function getSessionMarker(): string {
+  return getBrowserSessionMarker();
 }
 
 // === Requests
@@ -164,7 +166,7 @@ export async function submitKybDocuments(
   businessDocument: File,
   addressDocument: File,
 ): Promise<{ data: boolean; message?: string }> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
 
   if (!token) {
     return { data: false, message: "Your session has expired. Log in again." };
@@ -177,7 +179,7 @@ export async function submitKybDocuments(
 
     const response = await apiRequest("/api/verification/kyb", {
       method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {},
       body: formData,
     });
 

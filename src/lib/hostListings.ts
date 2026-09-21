@@ -1,5 +1,7 @@
 "use client";
 
+import { getBrowserSessionMarker } from "@/lib/authSession";
+
 import { apiRequest } from "@/lib/apiRequest";
 import { deleteDB, type DBSchema, type IDBPDatabase } from "idb";
 import { resolveApiError } from "@/lib/errors";
@@ -281,8 +283,8 @@ function isPropertyPortfolio(value: unknown): value is PropertyPortfolio {
   );
 }
 
-function getAccessToken(): string {
-  return localStorage.getItem("rello_token") ?? "";
+function getSessionMarker(): string {
+  return getBrowserSessionMarker();
 }
 
 function getListingRole(property: BackendProperty): HostListingRole {
@@ -484,7 +486,6 @@ function buildPropertyRequest(input: HostListingInput): object {
 async function uploadGallery(
   propertyId: number,
   photos: HostListingPhoto[],
-  token: string,
 ): Promise<string[]> {
   const failures: string[] = [];
 
@@ -503,7 +504,7 @@ async function uploadGallery(
         `/api/properties/${propertyId}/images`,
         {
           method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
+          headers: {},
           body: formData,
         },
       );
@@ -729,12 +730,10 @@ export async function interpretPublicProperties(
 export async function getBackendPropertyById(
   id: string,
 ): Promise<HostListingStorageResult<BackendProperty | null>> {
-  // A listing page is public, so this works logged out. The token only adds context.
-  const token = getAccessToken();
-
+  // A listing page is public, so this works logged out. The cookie only adds context.
   try {
     const property = await requestBackendProperty(id, {
-      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      headers: undefined,
     });
 
     return { data: property, unavailable: false };
@@ -773,7 +772,7 @@ export async function getBackendPropertyByPublicId(
 export async function getPropertyPortfolio(): Promise<
   HostListingStorageResult<PropertyPortfolio | null>
 > {
-  const token = getAccessToken();
+  const token = getSessionMarker();
 
   if (!token) {
     return {
@@ -786,7 +785,6 @@ export async function getPropertyPortfolio(): Promise<
   try {
     const response = await apiRequest("/api/properties/portfolio", {
       headers: {
-        Authorization: `Bearer ${token}`,
       },
     });
     const envelope = await parseApiResponse(response);
@@ -1006,7 +1004,7 @@ async function publishExistingDraft(
 export async function submitHostListing(
   input: HostListingInput,
 ): Promise<HostListingStorageResult<HostListingRecord | null>> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
 
   if (!token) {
     return {
@@ -1029,7 +1027,6 @@ export async function submitHostListing(
       {
         method: isUpdate ? "PUT" : "POST",
         headers: {
-          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify(buildPropertyRequest(input)),
@@ -1041,7 +1038,7 @@ export async function submitHostListing(
       : "Listing created successfully.";
 
     if (input.photos.length > 0) {
-      const failures = await uploadGallery(property.id, input.photos, token);
+      const failures = await uploadGallery(property.id, input.photos);
 
       if (failures.length > 0) {
         message = `${message} ${failures.length} of ${input.photos.length} photos did not upload. ${failures[0]}`;

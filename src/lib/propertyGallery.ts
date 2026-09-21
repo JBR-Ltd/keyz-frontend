@@ -1,5 +1,7 @@
 "use client";
 
+import { getBrowserSessionMarker } from "@/lib/authSession";
+
 import { apiRequest } from "@/lib/apiRequest";
 import { resolveApiError } from "@/lib/errors";
 
@@ -38,8 +40,8 @@ function unwrap(payload: unknown): unknown {
     : null;
 }
 
-function getAccessToken(): string {
-  return localStorage.getItem("rello_token") ?? "";
+function getSessionMarker(): string {
+  return getBrowserSessionMarker();
 }
 
 // === Requests
@@ -72,7 +74,7 @@ export async function addGalleryImage(
   propertyId: number,
   file: File,
 ): Promise<GalleryResult<GalleryImage | null>> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
 
   if (!token) {
     return { data: null, message: "Log in again to add photos." };
@@ -84,7 +86,7 @@ export async function addGalleryImage(
 
     const response = await apiRequest(`/api/properties/${propertyId}/images`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {},
       body,
     });
     const payload: unknown = await response.json().catch(() => null);
@@ -110,7 +112,7 @@ export async function deleteGalleryImage(
   propertyId: number,
   imageId: number,
 ): Promise<GalleryResult<boolean>> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
 
   if (!token) {
     return { data: false, message: "Log in again to remove photos." };
@@ -119,7 +121,7 @@ export async function deleteGalleryImage(
   try {
     const response = await apiRequest(
       `/api/properties/${propertyId}/images/${imageId}`,
-      { method: "DELETE", headers: { Authorization: `Bearer ${token}` } },
+      { method: "DELETE", headers: {} },
     );
 
     if (!response.ok) {
@@ -142,7 +144,7 @@ export async function reorderGallery(
   propertyId: number,
   imageIds: number[],
 ): Promise<GalleryResult<GalleryImage[]>> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
 
   if (!token) {
     return { data: [], message: "Log in again to reorder photos." };
@@ -154,7 +156,6 @@ export async function reorderGallery(
       {
         method: "PATCH",
         headers: {
-          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify(imageIds),

@@ -1,5 +1,7 @@
 "use client";
 
+import { getBrowserSessionMarker } from "@/lib/authSession";
+
 import { apiRequest } from "@/lib/apiRequest";
 import { resolveApiError } from "@/lib/errors";
 
@@ -57,8 +59,8 @@ export function readDeviceLocation(): Promise<CaptureFix | null> {
 
 // === Submission
 
-function getAccessToken(): string {
-  return localStorage.getItem("rello_token") ?? "";
+function getSessionMarker(): string {
+  return getBrowserSessionMarker();
 }
 
 async function dataUrlToBlob(dataUrl: string): Promise<Blob> {
@@ -75,7 +77,7 @@ export async function submitPropertyProof(
   propertyId: number,
   capture: ProofCapture,
 ): Promise<ProofSubmissionResult> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
 
   if (!token) {
     return {
@@ -101,7 +103,7 @@ export async function submitPropertyProof(
       `/api/verification/property/verify?propertyId=${propertyId}`,
       {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {},
         body: formData,
       },
     );
@@ -156,7 +158,7 @@ export async function submitUtilityBill(
   propertyId: number,
   bill: File,
 ): Promise<ProofSubmissionResult> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
 
   if (!token) {
     return {
@@ -173,7 +175,7 @@ export async function submitUtilityBill(
       `/api/verification/property/verify-bill?propertyId=${propertyId}`,
       {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {},
         body: formData,
       },
     );

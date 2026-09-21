@@ -1,5 +1,7 @@
 "use client";
 
+import { getBrowserSessionMarker } from "@/lib/authSession";
+
 import { apiRequest } from "@/lib/apiRequest";
 import { resolveApiError } from "@/lib/errors";
 
@@ -46,14 +48,14 @@ function unwrap(payload: unknown): unknown {
     : null;
 }
 
-function getAccessToken(): string {
-  return localStorage.getItem("rello_token") ?? "";
+function getSessionMarker(): string {
+  return getBrowserSessionMarker();
 }
 
 // === Requests
 
 export async function getComplianceProfile(): Promise<ComplianceResult> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
 
   if (!token) {
     return { data: null, message: "Log in to see your details." };
@@ -61,7 +63,7 @@ export async function getComplianceProfile(): Promise<ComplianceResult> {
 
   try {
     const response = await apiRequest("/api/compliance/profile", {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {},
     });
     const payload: unknown = await response.json().catch(() => null);
 
@@ -85,7 +87,7 @@ export async function getComplianceProfile(): Promise<ComplianceResult> {
 export async function saveComplianceProfile(
   input: ComplianceInput,
 ): Promise<ComplianceResult> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
 
   if (!token) {
     return { data: null, message: "Your session has expired. Log in again." };
@@ -95,7 +97,6 @@ export async function saveComplianceProfile(
     const response = await apiRequest("/api/compliance/profile", {
       method: "PUT",
       headers: {
-        Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(input),

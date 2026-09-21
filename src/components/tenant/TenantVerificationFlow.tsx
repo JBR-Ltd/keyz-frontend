@@ -178,16 +178,6 @@ async function parseVerificationResponse(
   return data;
 }
 
-function getAccessToken(): string {
-  const token = localStorage.getItem("rello_token") ?? "";
-
-  if (!token) {
-    throw new Error("Your session has expired. Log in again.");
-  }
-
-  return token;
-}
-
 async function verifyTenantIdentityNumbers(
   nin: string,
   bvn: string,
@@ -198,7 +188,6 @@ async function verifyTenantIdentityNumbers(
     {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${getAccessToken()}`,
       },
     },
   );
@@ -223,7 +212,6 @@ async function verifySelfie(
   const response = await apiRequest("/api/verification/dojah/selfie", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${getAccessToken()}`,
     },
     body: formData,
   });
@@ -234,7 +222,6 @@ async function verifySelfie(
 async function getTenantVerificationStatus(): Promise<TenantVerificationStatus> {
   const response = await apiRequest("/api/verification/status", {
     headers: {
-      Authorization: `Bearer ${getAccessToken()}`,
     },
   });
   const envelope = await parseVerificationResponse(response);

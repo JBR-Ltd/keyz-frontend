@@ -1,3 +1,6 @@
+import { rejectCrossSiteMutation } from "@/app/api/_csrf";
+import { clearSessionIfUnauthorized, getSessionToken } from "@/app/api/_session";
+
 const API_BASE_URL = process.env.API_BASE_URL;
 const VERIFICATION_REQUEST_TIMEOUT_MS = 90000;
 
@@ -37,6 +40,7 @@ function createTimeoutSignal(): TimeoutSignal {
 }
 
 async function proxyResponse(response: Response): Promise<Response> {
+  await clearSessionIfUnauthorized(response);
   const body = await response.text();
   const contentType =
     response.headers.get("Content-Type") ?? "application/json";
@@ -53,6 +57,9 @@ export async function POST(
   request: Request,
   context: RouteContext,
 ): Promise<Response> {
+  const rejected = rejectCrossSiteMutation(request);
+
+  if (rejected) return rejected;
   const { check } = await context.params;
 
   if (!isVerificationCheck(check)) {
@@ -82,9 +89,9 @@ export async function POST(
     );
   }
 
-  const authorization = request.headers.get("Authorization");
+  const token = await getSessionToken();
 
-  if (!authorization?.startsWith("Bearer ")) {
+  if (!token) {
     return Response.json(
       {
         success: false,
@@ -102,7 +109,6 @@ export async function POST(
     const response = await fetch(backendUrl, {
       method: "POST",
       headers: {
-        Authorization: authorization,
         ...(contentType ? { "Content-Type": contentType } : {}),
       },
       body: check === "selfie" ? await request.arrayBuffer() : undefined,

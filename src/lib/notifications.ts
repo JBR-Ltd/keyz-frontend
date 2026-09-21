@@ -1,5 +1,9 @@
 "use client";
 
+import { apiRequest } from "@/lib/apiRequest";
+
+import { getBrowserSessionMarker } from "@/lib/authSession";
+
 import { resolveApiError } from "@/lib/errors";
 
 // === Types
@@ -48,8 +52,8 @@ function unwrap(payload: unknown): unknown {
     : null;
 }
 
-function getAccessToken(): string {
-  return localStorage.getItem("rello_token") ?? "";
+function getSessionMarker(): string {
+  return getBrowserSessionMarker();
 }
 
 // === Requests
@@ -58,7 +62,7 @@ export async function getNotifications(
   cursor = "",
   signal?: AbortSignal,
 ): Promise<NotificationResult<NotificationPage>> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
   const empty = { items: [], nextCursor: null };
 
   if (!token) {
@@ -66,9 +70,9 @@ export async function getNotifications(
   }
 
   try {
-    const response = await fetch(
+    const response = await apiRequest(
       `/api/notifications?size=20&cursor=${encodeURIComponent(cursor)}`,
-      { headers: { Authorization: `Bearer ${token}` }, signal },
+      { headers: {}, signal },
     );
     const payload: unknown = await response.json().catch(() => null);
 
@@ -97,15 +101,15 @@ export async function getNotifications(
 }
 
 export async function getUnreadNotificationCount(): Promise<number | null> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
 
   if (!token) {
     return null;
   }
 
   try {
-    const response = await fetch("/api/notifications/unread-count", {
-      headers: { Authorization: `Bearer ${token}` },
+    const response = await apiRequest("/api/notifications/unread-count", {
+      headers: {},
     });
 
     if (!response.ok) {
@@ -128,16 +132,16 @@ export async function getUnreadNotificationCount(): Promise<number | null> {
 }
 
 async function post(path: string): Promise<boolean> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
 
   if (!token) {
     return false;
   }
 
   try {
-    const response = await fetch(path, {
+    const response = await apiRequest(path, {
       method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {},
     });
 
     return response.ok;
