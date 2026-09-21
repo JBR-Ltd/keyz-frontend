@@ -119,7 +119,7 @@ export default function MaintenanceReportDialog({
             type="button"
             aria-label="Close report form"
             onClick={onClose}
-            className="absolute inset-0 bg-primary/45"
+            className="modal-backdrop absolute inset-0"
             initial={reduceMotion ? false : { opacity: 0 }}
             animate={reduceMotion ? undefined : { opacity: 1 }}
             exit={reduceMotion ? undefined : { opacity: 0 }}

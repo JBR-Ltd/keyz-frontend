@@ -382,7 +382,7 @@ export default function LandlordHeader({
               <motion.button
                 type="button"
                 aria-label="Close navigation"
-                className="fixed inset-0 z-[100] bg-black/40 lg:hidden"
+                className="modal-backdrop fixed inset-0 z-[100] lg:hidden"
                 onClick={() => setIsMobileOpen(false)}
                 initial={reduceMotion ? false : { opacity: 0 }}
                 animate={reduceMotion ? undefined : { opacity: 1 }}

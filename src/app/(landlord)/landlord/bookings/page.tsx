@@ -264,7 +264,7 @@ function BookingDetailsDrawer({
           <div className="fixed inset-0 z-[120]">
             <motion.button
               type="button"
-              className="absolute inset-0 bg-primary/45"
+              className="modal-backdrop absolute inset-0"
               aria-label="Close tenancy details"
               onClick={onClose}
               initial={reduceMotion ? false : { opacity: 0 }}

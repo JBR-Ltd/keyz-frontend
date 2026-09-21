@@ -119,6 +119,12 @@
     background-color: var(--color-footer);
   }
 
+  .modal-backdrop {
+    background-color: rgb(4 52 76 / 60%);
+    -webkit-backdrop-filter: blur(2px);
+    backdrop-filter: blur(2px);
+  }
+
   .text-primary-soft {
     color: var(--color-primary-soft);
   }

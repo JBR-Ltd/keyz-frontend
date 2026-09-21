@@ -60,7 +60,7 @@ export default function TenancyRecordsDialog({
             type="button"
             aria-label="Close agreement and reports"
             onClick={onClose}
-            className="absolute inset-0 bg-primary/45"
+            className="modal-backdrop absolute inset-0"
             initial={reduceMotion ? false : { opacity: 0 }}
             animate={reduceMotion ? undefined : { opacity: 1 }}
           />

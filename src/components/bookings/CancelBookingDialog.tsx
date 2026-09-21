@@ -170,7 +170,7 @@ export default function CancelBookingDialog({
             type="button"
             aria-label="Close"
             onClick={onClose}
-            className="absolute inset-0 bg-primary/50"
+            className="modal-backdrop absolute inset-0"
             initial={reduceMotion ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
