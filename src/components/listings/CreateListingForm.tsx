@@ -124,6 +124,24 @@ interface NumberStepperProps {
   error?: string;
 }
 
+interface MoneyInputProps {
+  helperText: string;
+  label: string;
+  onChange: (value: string) => void;
+  value: string;
+}
+
+interface NumericStepperFieldProps {
+  helperText: string;
+  label: string;
+  max?: number;
+  min: number;
+  onChange: (value: string) => void;
+  placeholder: string;
+  unit: string;
+  value: string;
+}
+
 interface FormSectionHeadingProps {
   id: string;
   index: string;
@@ -315,6 +333,13 @@ function formatCurrencyInput(value: string): string {
   return value && Number.isFinite(amount) ? amount.toLocaleString("en-NG") : "";
 }
 
+function digitsOnly(value: string, maximumLength = 15): string {
+  return value
+    .replace(/\D/g, "")
+    .replace(/^0+(?=\d)/, "")
+    .slice(0, maximumLength);
+}
+
 function FormSectionHeading({
   id,
   index,
@@ -380,6 +405,108 @@ function NumberStepper({
           {error}
         </p>
       ) : null}
+    </div>
+  );
+}
+
+function MoneyInput({
+  helperText,
+  label,
+  onChange,
+  value,
+}: MoneyInputProps): ReactElement {
+  return (
+    <label>
+      <span className="font-body text-sm font-bold text-primary">{label}</span>
+      <span className="mt-2 flex min-h-12 items-center overflow-hidden rounded-lg border border-border bg-bg transition-all duration-200 ease-in-out focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/30">
+        <span className="flex min-h-12 items-center border-r border-border px-4 font-body text-base font-bold text-primary">
+          ₦
+        </span>
+        <input
+          type="text"
+          inputMode="numeric"
+          value={formatCurrencyInput(value)}
+          onChange={(event) => onChange(digitsOnly(event.target.value))}
+          className="min-h-12 min-w-0 flex-1 bg-transparent px-4 font-body text-base text-primary outline-none placeholder:text-primary/45"
+          placeholder="0"
+          aria-label={`${label} in naira`}
+        />
+      </span>
+      <span className="mt-2 block font-body text-xs leading-5 text-muted">
+        {helperText}
+      </span>
+    </label>
+  );
+}
+
+function NumericStepperField({
+  helperText,
+  label,
+  max,
+  min,
+  onChange,
+  placeholder,
+  unit,
+  value,
+}: NumericStepperFieldProps): ReactElement {
+  const parsedValue = value ? Number(value) : null;
+  const hasValue = parsedValue !== null && Number.isFinite(parsedValue);
+  const currentValue = hasValue ? parsedValue : min;
+  const decrementDisabled = !hasValue || currentValue <= min;
+  const incrementDisabled = max !== undefined && currentValue >= max;
+
+  const setBoundedValue = (nextValue: number): void => {
+    const boundedValue = Math.min(Math.max(nextValue, min), max ?? nextValue);
+    onChange(String(boundedValue));
+  };
+
+  return (
+    <div>
+      <span className="font-body text-sm font-bold text-primary">{label}</span>
+      <div className="mt-2 grid min-h-12 grid-cols-[3rem_minmax(0,1fr)_auto_3rem] overflow-hidden rounded-lg border border-border bg-bg transition-all duration-200 ease-in-out focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/30">
+        <button
+          type="button"
+          onClick={() => setBoundedValue(currentValue - 1)}
+          disabled={decrementDisabled}
+          className="flex items-center justify-center border-r border-border text-primary transition-colors hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent disabled:cursor-not-allowed disabled:text-muted/35"
+          aria-label={`Decrease ${label.toLowerCase()}`}
+        >
+          <Minus size={16} aria-hidden="true" />
+        </button>
+        <input
+          type="text"
+          inputMode="numeric"
+          value={value}
+          onChange={(event) => {
+            const nextValue = digitsOnly(event.target.value, 2);
+
+            if (!nextValue) {
+              onChange("");
+              return;
+            }
+
+            setBoundedValue(Number(nextValue));
+          }}
+          className="min-w-0 bg-transparent px-3 text-right font-body text-base font-bold text-primary outline-none placeholder:text-primary/45"
+          placeholder={placeholder}
+          aria-label={label}
+        />
+        <span className="flex items-center pr-3 font-body text-xs font-medium text-muted">
+          {unit}
+        </span>
+        <button
+          type="button"
+          onClick={() => setBoundedValue(hasValue ? currentValue + 1 : min)}
+          disabled={incrementDisabled}
+          className="flex items-center justify-center border-l border-border text-primary transition-colors hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent disabled:cursor-not-allowed disabled:text-muted/35"
+          aria-label={`Increase ${label.toLowerCase()}`}
+        >
+          <Plus size={16} aria-hidden="true" />
+        </button>
+      </div>
+      <span className="mt-2 block font-body text-xs leading-5 text-muted">
+        {helperText}
+      </span>
     </div>
   );
 }
@@ -569,31 +696,16 @@ export default function CreateListingForm({
         </span>
       </label>
 
-      <label>
-        <span className="font-body text-sm font-bold text-primary">
-          Refundable deposit
-        </span>
-        <span className="mt-2 flex min-h-12 items-center rounded-lg border border-border bg-bg focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/30">
-          <span className="border-r border-border px-4 font-body text-base font-bold text-primary">
-            \u20a6
-          </span>
-          <input
-            type="number"
-            min="0"
-            value={values.securityDeposit}
-            onChange={(event) =>
-              updateValue("securityDeposit", event.target.value)
-            }
-            className="min-h-12 min-w-0 flex-1 bg-bg px-4 font-body text-base text-primary outline-none placeholder:text-muted"
-            placeholder="0"
-          />
-        </span>
-        <span className="mt-2 block font-body text-xs leading-5 text-muted">
-          The caution fee, held by Rello and returned to the tenant when the
-          tenancy ends. You can claim against it for damage, with evidence.
-          Leave it empty if you ask for none.
-        </span>
-      </label>
+      <MoneyInput
+        label={isShortStay ? "Refundable damage deposit" : "Refundable deposit"}
+        value={values.securityDeposit}
+        onChange={(value) => updateValue("securityDeposit", value)}
+        helperText={
+          isShortStay
+            ? "Held by Rello and returned to the guest after checkout if no approved damage claim is made. Leave it empty if you ask for none."
+            : "The caution fee, held by Rello and returned to the tenant when the tenancy ends. You can claim against it for damage, with evidence. Leave it empty if you ask for none."
+        }
+      />
 
       {values.rentalMode === "ANNUAL" ? (
         <div className="sm:col-span-2 rounded-lg border border-border p-4">
@@ -612,9 +724,9 @@ export default function CreateListingForm({
                 Let tenants pay the rent in parts
               </span>
               <span className="mt-1 block font-body text-xs leading-5 text-muted">
-                Many tenants cannot raise a full year up front. The deposit is paid with
-                the first part, each later part is collected through Rello, and you are
-                paid a few days after each one lands.
+                Many tenants cannot raise a full year up front. The deposit is
+                paid with the first part, each later part is collected through
+                Rello, and you are paid a few days after each one lands.
               </span>
             </span>
           </label>
@@ -641,68 +753,33 @@ export default function CreateListingForm({
 
       {isShortStay ? (
         <>
-          <label>
-            <span className="font-body text-sm font-bold text-primary">
-              Minimum nights
-            </span>
-            <input
-              type="number"
-              min="1"
-              value={values.minimumNights}
-              onChange={(event) =>
-                updateValue("minimumNights", event.target.value)
-              }
-              className={INPUT_CLASS_NAME}
-              placeholder="2"
-            />
-            <span className="mt-2 block font-body text-xs leading-5 text-muted">
-              The shortest stay you will take.
-            </span>
-          </label>
+          <NumericStepperField
+            label="Minimum nights"
+            value={values.minimumNights}
+            min={1}
+            placeholder="2"
+            unit="nights"
+            onChange={(value) => updateValue("minimumNights", value)}
+            helperText="The shortest stay you will take."
+          />
 
-          <label>
-            <span className="font-body text-sm font-bold text-primary">
-              Maximum guests
-            </span>
-            <input
-              type="number"
-              min="1"
-              max="50"
-              value={values.maximumGuests}
-              onChange={(event) =>
-                updateValue("maximumGuests", event.target.value)
-              }
-              className={INPUT_CLASS_NAME}
-              placeholder="4"
-            />
-            <span className="mt-2 block font-body text-xs leading-5 text-muted">
-              How many people the home sleeps. Guests cannot book for more.
-            </span>
-          </label>
+          <NumericStepperField
+            label="Maximum guests"
+            value={values.maximumGuests}
+            min={1}
+            max={50}
+            placeholder="4"
+            unit="guests"
+            onChange={(value) => updateValue("maximumGuests", value)}
+            helperText="How many people the home sleeps. Guests cannot book for more."
+          />
 
-          <label>
-            <span className="font-body text-sm font-bold text-primary">
-              Cleaning fee
-            </span>
-            <span className="mt-2 flex min-h-12 items-center rounded-lg border border-border bg-bg focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/30">
-              <span className="border-r border-border px-4 font-body text-base font-bold text-primary">
-                ₦
-              </span>
-              <input
-                type="number"
-                min="0"
-                value={values.cleaningFee}
-                onChange={(event) =>
-                  updateValue("cleaningFee", event.target.value)
-                }
-                className="min-h-12 min-w-0 flex-1 bg-bg px-4 font-body text-base text-primary outline-none placeholder:text-muted"
-                placeholder="0"
-              />
-            </span>
-            <span className="mt-2 block font-body text-xs leading-5 text-muted">
-              Added once to the stay, not per night.
-            </span>
-          </label>
+          <MoneyInput
+            label="Cleaning fee"
+            value={values.cleaningFee}
+            onChange={(value) => updateValue("cleaningFee", value)}
+            helperText="Added once to the stay, not per night."
+          />
         </>
       ) : null}
     </>
@@ -730,8 +807,8 @@ export default function CreateListingForm({
             }))}
           />
           <span className="mt-2 block font-body text-xs leading-5 text-muted">
-            The landlord remains the legal owner and payout recipient. You remain
-            the listing manager.
+            The landlord remains the legal owner and payout recipient. You
+            remain the listing manager.
           </span>
           {errors.mandateId ? (
             <span className="mt-2 block font-body text-sm font-medium text-red-700">
@@ -760,8 +837,8 @@ export default function CreateListingForm({
           aria-invalid={Boolean(errors.unitCount)}
         />
         <span className="mt-2 block font-body text-xs leading-5 text-muted">
-          Renters see one listing. Rello tracks each identical unit separately and
-          assigns one when a request is accepted.
+          Renters see one listing. Rello tracks each identical unit separately
+          and assigns one when a request is accepted.
         </span>
         {errors.unitCount ? (
           <span className="mt-2 block font-body text-sm font-medium text-red-700">
@@ -1141,7 +1218,7 @@ export default function CreateListingForm({
 
   if (experience === "guided") {
     return (
-      <main className="min-h-screen overflow-x-hidden px-5 pb-0 pt-12 sm:px-8 lg:px-10 lg:pt-16 xl:px-14">
+      <main className="min-h-screen overflow-x-clip px-5 pb-0 pt-12 sm:px-8 lg:px-10 lg:pt-16 xl:px-14">
         <div className="mx-auto max-w-7xl">
           <header className="pb-8">
             {listingStepIndex > 0 ? (
