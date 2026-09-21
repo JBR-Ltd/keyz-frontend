@@ -23,7 +23,7 @@ import {
   type Dispute,
   type DisputeStatus,
 } from "@/lib/disputes";
-import { getHostBookings, getMyBookings, type Booking } from "@/lib/bookings";
+import { getAllHostBookings, getAllMyBookings, type Booking } from "@/lib/bookings";
 
 interface DisputeBoardProps {
   /** Whose bookings to offer when opening a case. */
@@ -74,7 +74,7 @@ export default function DisputeBoard({
     const load = async (): Promise<void> => {
       const [disputeResult, bookingResult] = await Promise.all([
         getMyDisputes(),
-        perspective === "host" ? getHostBookings() : getMyBookings(),
+        perspective === "host" ? getAllHostBookings() : getAllMyBookings(),
       ]);
 
       if (!active) {
@@ -83,7 +83,7 @@ export default function DisputeBoard({
 
       setDisputes(disputeResult.data);
       setBookings(bookingResult.data);
-      setLoadError(disputeResult.message ?? "");
+      setLoadError(disputeResult.message ?? bookingResult.message ?? "");
       setIsLoading(false);
     };
 

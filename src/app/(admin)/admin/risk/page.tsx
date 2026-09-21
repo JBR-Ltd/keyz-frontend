@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertTriangle, Loader2, Scale, ShieldCheck } from "lucide-react";
-import { useEffect, useState, type ReactElement } from "react";
+import { useEffect, useRef, useState, type ReactElement } from "react";
 import PropertyPrice from "@/components/property/PropertyPrice";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useToast } from "@/components/ui/toast";
@@ -42,6 +42,8 @@ const FILTERS: { id: RiskStatus | "ALL"; label: string }[] = [
   { id: "ALL", label: "All" },
 ];
 
+const PAGE_SIZE = 50;
+
 // === Helpers
 
 function formatMoment(value: string | null): string {
@@ -73,28 +75,153 @@ export default function AdminRiskPage(): ReactElement {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
+  const [flagPage, setFlagPage] = useState(0);
+  const [flagTotal, setFlagTotal] = useState(0);
+  const [isLoadingMoreFlags, setIsLoadingMoreFlags] = useState(false);
+  const [isClaimsLoading, setIsClaimsLoading] = useState(true);
+  const [claimError, setClaimError] = useState("");
+  const [claimsReloadKey, setClaimsReloadKey] = useState(0);
+  const [claimPage, setClaimPage] = useState(0);
+  const [claimTotal, setClaimTotal] = useState(0);
+  const [isLoadingMoreClaims, setIsLoadingMoreClaims] = useState(false);
+  const flagGeneration = useRef(0);
+  const claimGeneration = useRef(0);
+  const flagPaginationPending = useRef(false);
+  const claimPaginationPending = useRef(false);
 
   useEffect(() => {
     let active = true;
+    const controller = new AbortController();
+    const generation = ++flagGeneration.current;
+    flagPaginationPending.current = false;
 
-    void Promise.all([
-      getRiskFlags(filter === "ALL" ? undefined : filter),
-      getDepositClaims(),
-    ]).then(([flagResult, claimResult]) => {
-      if (!active) {
+    const loadFlags = async (): Promise<void> => {
+      setIsLoading(true);
+      setIsLoadingMoreFlags(false);
+      setLoadError("");
+      const flagResult = await getRiskFlags(
+        filter === "ALL" ? undefined : filter,
+        0,
+        PAGE_SIZE,
+        controller.signal,
+      );
+      if (!active || generation !== flagGeneration.current) {
         return;
       }
 
       setFlags(flagResult.data);
-      setClaims(claimResult.data);
-      setLoadError(flagResult.message ?? claimResult.message ?? "");
+      setFlagPage(0);
+      setFlagTotal(flagResult.total ?? flagResult.data.length);
+      setLoadError(flagResult.message ?? "");
       setIsLoading(false);
-    });
+    };
+
+    void loadFlags();
 
     return () => {
       active = false;
+      controller.abort();
+      flagGeneration.current = generation + 1;
     };
   }, [filter, reloadKey]);
+
+  useEffect(() => {
+    let active = true;
+    const controller = new AbortController();
+    const generation = ++claimGeneration.current;
+    claimPaginationPending.current = false;
+
+    const loadClaims = async (): Promise<void> => {
+      setIsClaimsLoading(true);
+      setIsLoadingMoreClaims(false);
+      setClaimError("");
+      const result = await getDepositClaims(0, PAGE_SIZE, controller.signal);
+      if (!active || generation !== claimGeneration.current) return;
+
+      setClaims(result.data);
+      setClaimPage(0);
+      setClaimTotal(result.total ?? result.data.length);
+      setClaimError(result.message ?? "");
+      setIsClaimsLoading(false);
+    };
+
+    void loadClaims();
+
+    return () => {
+      active = false;
+      controller.abort();
+      claimGeneration.current = generation + 1;
+    };
+  }, [claimsReloadKey]);
+
+  const loadMoreFlags = async (): Promise<void> => {
+    if (flagPaginationPending.current || isLoading || flags.length >= flagTotal)
+      return;
+    const generation = flagGeneration.current;
+    const controller = new AbortController();
+    flagPaginationPending.current = true;
+    setIsLoadingMoreFlags(true);
+    const result = await getRiskFlags(
+      filter === "ALL" ? undefined : filter,
+      flagPage + 1,
+      PAGE_SIZE,
+      controller.signal,
+    );
+    if (generation !== flagGeneration.current) return;
+    flagPaginationPending.current = false;
+    setIsLoadingMoreFlags(false);
+    if (result.message) {
+      notify({
+        title: "More risk flags could not load",
+        description: result.message,
+        variant: "error",
+      });
+      return;
+    }
+    setFlags((current) => {
+      const byId = new Map(current.map((flag) => [flag.id, flag]));
+      for (const flag of result.data) byId.set(flag.id, flag);
+      return Array.from(byId.values());
+    });
+    setFlagTotal(result.total ?? flagTotal);
+    setFlagPage((current) => current + 1);
+  };
+
+  const loadMoreClaims = async (): Promise<void> => {
+    if (
+      claimPaginationPending.current ||
+      isClaimsLoading ||
+      claims.length >= claimTotal
+    )
+      return;
+    const generation = claimGeneration.current;
+    const controller = new AbortController();
+    claimPaginationPending.current = true;
+    setIsLoadingMoreClaims(true);
+    const result = await getDepositClaims(
+      claimPage + 1,
+      PAGE_SIZE,
+      controller.signal,
+    );
+    if (generation !== claimGeneration.current) return;
+    claimPaginationPending.current = false;
+    setIsLoadingMoreClaims(false);
+    if (result.message) {
+      notify({
+        title: "More deposit claims could not load",
+        description: result.message,
+        variant: "error",
+      });
+      return;
+    }
+    setClaims((current) => {
+      const byId = new Map(current.map((claim) => [claim.id, claim]));
+      for (const claim of result.data) byId.set(claim.id, claim);
+      return Array.from(byId.values());
+    });
+    setClaimTotal(result.total ?? claimTotal);
+    setClaimPage((current) => current + 1);
+  };
 
   const review = async (
     flag: RiskFlag,
@@ -169,6 +296,7 @@ export default function AdminRiskPage(): ReactElement {
     }
 
     notify({ title: "Deposit settled", variant: "success" });
+    setClaimsReloadKey((current) => current + 1);
     setReloadKey((current) => current + 1);
   };
 
@@ -189,7 +317,11 @@ export default function AdminRiskPage(): ReactElement {
       </header>
 
       <section className="mt-8">
-        <div className="flex flex-wrap gap-2" role="tablist" aria-label="Risk flag status">
+        <div
+          className="flex flex-wrap gap-2"
+          role="tablist"
+          aria-label="Risk flag status"
+        >
           {FILTERS.map((item) => {
             const active = filter === item.id;
 
@@ -199,7 +331,9 @@ export default function AdminRiskPage(): ReactElement {
                 type="button"
                 role="tab"
                 aria-selected={active}
-                onClick={() => setFilter(item.id)}
+                onClick={() => {
+                  if (!active) setFilter(item.id);
+                }}
                 className={
                   active
                     ? "inline-flex min-h-11 items-center rounded-full bg-primary px-4 font-body text-sm font-bold text-white"
@@ -237,7 +371,10 @@ export default function AdminRiskPage(): ReactElement {
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <StatusBadge tone={SEVERITY_TONES[flag.severity]} size="sm">
+                      <StatusBadge
+                        tone={SEVERITY_TONES[flag.severity]}
+                        size="sm"
+                      >
                         {flag.severity}
                       </StatusBadge>
                       <span className="font-body text-sm font-bold text-primary">
@@ -309,6 +446,21 @@ export default function AdminRiskPage(): ReactElement {
             ))}
           </ul>
         )}
+        {!isLoading && !loadError && flags.length < flagTotal ? (
+          <button
+            type="button"
+            disabled={isLoadingMoreFlags}
+            onClick={() => void loadMoreFlags()}
+            className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-primary/15 px-5 font-body text-sm font-bold text-primary hover:bg-primary/5 focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60"
+          >
+            {isLoadingMoreFlags ? (
+              <Loader2 size={16} className="animate-spin" aria-hidden="true" />
+            ) : null}
+            {isLoadingMoreFlags
+              ? "Loading flags"
+              : `Load more flags (${flagTotal - flags.length} remaining)`}
+          </button>
+        ) : null}
       </section>
 
       <section className="mt-12">
@@ -317,11 +469,26 @@ export default function AdminRiskPage(): ReactElement {
         </h2>
         <p className="mt-2 max-w-2xl font-body text-sm leading-6 text-muted">
           A host has claimed against a deposit. Decide how much goes back to the
-          tenant; the rest is paid to the host. Fair wear and tear is not damage,
-          and a claim without evidence is not a claim.
+          tenant; the rest is paid to the host. Fair wear and tear is not
+          damage, and a claim without evidence is not a claim.
         </p>
 
-        {claims.length === 0 ? (
+        {isClaimsLoading ? (
+          <p className="mt-6 font-body text-sm text-muted" role="status">
+            Loading deposit claims...
+          </p>
+        ) : claimError ? (
+          <div className="mt-6 rounded-lg border border-red-500/30 bg-bg px-4 py-3">
+            <p className="font-body text-sm text-red-700">{claimError}</p>
+            <button
+              type="button"
+              onClick={() => setClaimsReloadKey((current) => current + 1)}
+              className="mt-3 font-body text-sm font-bold text-primary focus-visible:outline focus-visible:outline-accent"
+            >
+              Retry deposit claims
+            </button>
+          </div>
+        ) : claims.length === 0 ? (
           <div className="mt-6 rounded-2xl border border-border bg-bg p-8 text-center">
             <Scale size={32} className="mx-auto text-accent-alt" />
             <p className="mt-4 font-body text-sm text-muted">
@@ -405,6 +572,21 @@ export default function AdminRiskPage(): ReactElement {
             ))}
           </ul>
         )}
+        {!isClaimsLoading && !claimError && claims.length < claimTotal ? (
+          <button
+            type="button"
+            disabled={isLoadingMoreClaims}
+            onClick={() => void loadMoreClaims()}
+            className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-primary/15 px-5 font-body text-sm font-bold text-primary hover:bg-primary/5 focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60"
+          >
+            {isLoadingMoreClaims ? (
+              <Loader2 size={16} className="animate-spin" aria-hidden="true" />
+            ) : null}
+            {isLoadingMoreClaims
+              ? "Loading claims"
+              : `Load more claims (${claimTotal - claims.length} remaining)`}
+          </button>
+        ) : null}
       </section>
     </main>
   );

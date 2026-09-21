@@ -5,7 +5,6 @@ import "./globals.css";
 import { cn } from "@/lib/utils";
 import InternalNavigationTracker from "@/components/navigation/InternalNavigationTracker";
 import { ToastProvider } from "@/components/ui/toast";
-import { LoadingScreenGate } from "@/components/LoadingScreenGate";
 import { Analytics } from "@vercel/analytics/next";
 
 const dmSans = DM_Sans({
@@ -53,7 +52,6 @@ export default function RootLayout({
       lang="en"
       suppressHydrationWarning
       data-scroll-behavior="smooth"
-      style={{ visibility: "hidden", overflow: "hidden" }}
       className={cn(
         "h-full",
         "antialiased",
@@ -69,12 +67,10 @@ export default function RootLayout({
         markup we render is identical either way.
       */}
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
-        <LoadingScreenGate>
-          <Suspense fallback={null}>
-            <InternalNavigationTracker />
-          </Suspense>
-          <ToastProvider>{children}</ToastProvider>
-        </LoadingScreenGate>
+        <Suspense fallback={null}>
+          <InternalNavigationTracker />
+        </Suspense>
+        <ToastProvider>{children}</ToastProvider>
         <Analytics />
       </body>
     </html>

@@ -30,11 +30,15 @@ export default function IncomingCallWatcher(): ReactElement | null {
 
   useEffect(() => {
     let active = true;
+    let pending = false;
 
     const check = async (): Promise<void> => {
+      if (pending) return;
+      pending = true;
       const result = await getIncomingCall();
+      pending = false;
 
-      if (!active) {
+      if (!active || result.message) {
         return;
       }
 

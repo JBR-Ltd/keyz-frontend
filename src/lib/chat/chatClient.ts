@@ -1,5 +1,6 @@
 "use client";
 
+import { apiRequest } from "@/lib/apiRequest";
 import { resolveApiError } from "@/lib/errors";
 
 // === Types
@@ -90,7 +91,7 @@ async function request(
     return { ok: false, payload: null };
   }
 
-  const response = await fetch(path, {
+  const response = await apiRequest(path, {
     ...init,
     headers: {
       ...(init?.headers ?? {}),

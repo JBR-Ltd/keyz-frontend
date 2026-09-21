@@ -56,7 +56,7 @@ export default function DashboardShell({
     rolePath === "tenant",
   );
   const { isLoading: isHostStatusLoading, snapshot: hostVerification } =
-    useHostVerification();
+    useHostVerification(rolePath === "landlord" || rolePath === "agent");
 
   useEffect(() => {
     if (rolePath !== "tenant") {

@@ -1,5 +1,6 @@
 "use client";
 
+import { apiRequest } from "@/lib/apiRequest";
 import type { PartySummary } from "@/lib/bookings";
 import { resolveApiError } from "@/lib/errors";
 
@@ -60,7 +61,7 @@ export async function getSavedListings(): Promise<
   }
 
   try {
-    const response = await fetch("/api/saved-listings", {
+    const response = await apiRequest("/api/saved-listings", {
       headers: { Authorization: `Bearer ${token}` },
     });
     const payload: unknown = await response.json().catch(() => null);
@@ -102,7 +103,7 @@ async function changeSavedListing(
   }
 
   try {
-    const response = await fetch(`/api/saved-listings/${propertyId}`, {
+    const response = await apiRequest(`/api/saved-listings/${propertyId}`, {
       method,
       headers: { Authorization: `Bearer ${token}` },
     });

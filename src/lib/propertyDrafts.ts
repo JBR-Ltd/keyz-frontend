@@ -1,5 +1,6 @@
 "use client";
 
+import { apiRequest } from "@/lib/apiRequest";
 import { resolveApiError } from "@/lib/errors";
 import type { PropertyListingStatus } from "@/lib/propertyDetails";
 import type { RentalMode } from "@/lib/hostListings";
@@ -96,7 +97,7 @@ async function request(
     return { ok: false, payload: null };
   }
 
-  const response = await fetch(path, {
+  const response = await apiRequest(path, {
     ...init,
     headers: {
       ...(init?.headers ?? {}),
@@ -161,25 +162,44 @@ export function getDraft(
 }
 
 export async function getDrafts(): Promise<DraftResult<PropertyDraft[]>> {
+  const token = getAccessToken();
+  const drafts = new Map<number, PropertyDraft>();
+  let page = 0;
   try {
-    const { ok, payload } = await request("/api/property-drafts?size=50");
+    while (true) {
+      const { ok, payload } = await request(
+        `/api/property-drafts?page=${page}&size=50`,
+      );
 
-    if (!ok) {
-      return {
-        data: [],
-        message: resolveApiError(payload, "Drafts could not be loaded."),
-      };
+      if (!ok) {
+        return {
+          data: [],
+          message: resolveApiError(payload, "Drafts could not be loaded."),
+        };
+      }
+
+      const data = unwrap(payload);
+      const items =
+        data !== null && typeof data === "object" && "items" in data
+          ? data.items
+          : null;
+
+      if (
+        !Array.isArray(items) ||
+        !items.every(isDraft) ||
+        data === null ||
+        typeof data !== "object" ||
+        !("hasNext" in data) ||
+        typeof data.hasNext !== "boolean"
+      ) {
+        return { data: [], message: "Drafts could not be loaded." };
+      }
+      if (token !== getAccessToken())
+        return { data: [], message: "Your account changed. Reload this page." };
+      for (const draft of items) drafts.set(draft.id, draft);
+      if (!data.hasNext) return { data: Array.from(drafts.values()) };
+      page++;
     }
-
-    const data = unwrap(payload);
-    const items =
-      data !== null && typeof data === "object" && "items" in data
-        ? data.items
-        : null;
-
-    return Array.isArray(items) && items.every(isDraft)
-      ? { data: items }
-      : { data: [], message: "Drafts could not be loaded." };
   } catch {
     return { data: [], message: "Drafts could not be loaded." };
   }
@@ -249,7 +269,10 @@ export async function publishDraft(
     if (!ok) {
       return {
         data: null,
-        message: resolveApiError(payload, "That listing could not be published."),
+        message: resolveApiError(
+          payload,
+          "That listing could not be published.",
+        ),
       };
     }
 

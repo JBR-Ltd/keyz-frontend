@@ -1,5 +1,6 @@
 "use client";
 
+import { apiRequest } from "@/lib/apiRequest";
 import { resolveApiError } from "@/lib/errors";
 
 // === Types
@@ -47,7 +48,7 @@ export async function getGallery(
   propertyId: number,
 ): Promise<GalleryResult<GalleryImage[]>> {
   try {
-    const response = await fetch(`/api/properties/${propertyId}/images`);
+    const response = await apiRequest(`/api/properties/${propertyId}/images`);
     const payload: unknown = await response.json().catch(() => null);
 
     if (!response.ok) {
@@ -81,7 +82,7 @@ export async function addGalleryImage(
     const body = new FormData();
     body.append("image", file, file.name);
 
-    const response = await fetch(`/api/properties/${propertyId}/images`, {
+    const response = await apiRequest(`/api/properties/${propertyId}/images`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
       body,
@@ -116,7 +117,7 @@ export async function deleteGalleryImage(
   }
 
   try {
-    const response = await fetch(
+    const response = await apiRequest(
       `/api/properties/${propertyId}/images/${imageId}`,
       { method: "DELETE", headers: { Authorization: `Bearer ${token}` } },
     );
@@ -148,7 +149,7 @@ export async function reorderGallery(
   }
 
   try {
-    const response = await fetch(
+    const response = await apiRequest(
       `/api/properties/${propertyId}/images/order`,
       {
         method: "PATCH",

@@ -20,6 +20,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactElement,
 } from "react";
@@ -534,7 +535,8 @@ function TenancyDrawer({
 
                 {tenancy.booking.cancellationReason ? (
                   <p className="mt-3 rounded-lg bg-surface-soft p-4 font-body text-sm leading-6 text-primary">
-                    Reason given: &ldquo;{tenancy.booking.cancellationReason}&rdquo;
+                    Reason given: &ldquo;{tenancy.booking.cancellationReason}
+                    &rdquo;
                   </p>
                 ) : null}
 
@@ -646,33 +648,76 @@ export default function AgentBookingsPage(): ReactElement {
   const [accepting, setAccepting] = useState<AcceptTarget | null>(null);
   const [cancelling, setCancelling] = useState<Booking | null>(null);
   const [claiming, setClaiming] = useState<Booking | null>(null);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(0);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const requestGeneration = useRef(0);
+  const paginationGeneration = useRef<number | null>(null);
+  const isMounted = useRef(false);
+  const isRefreshing = useRef(true);
 
   const load = useCallback(async (): Promise<void> => {
-    const result = await getHostBookings();
+    const generation = ++requestGeneration.current;
+    paginationGeneration.current = null;
+    isRefreshing.current = true;
+    const result = await getHostBookings({ page: 0, size: 100 });
+
+    if (!isMounted.current || requestGeneration.current !== generation) return;
 
     setNow(Date.now());
     setTenancies(result.data.map(toTenancy));
+    setTotal(result.total ?? result.data.length);
+    setPage(0);
     setLoadError(result.message ?? "");
     setLoading(false);
+    setIsLoadingMore(false);
+    isRefreshing.current = false;
   }, []);
 
   useEffect(() => {
-    let active = true;
-
-    void getHostBookings().then((result) => {
-      if (!active) {
-        return;
-      }
-
-      setTenancies(result.data.map(toTenancy));
-      setLoadError(result.message ?? "");
-      setLoading(false);
-    });
+    isMounted.current = true;
+    void load();
 
     return () => {
-      active = false;
+      isMounted.current = false;
     };
-  }, []);
+  }, [load]);
+
+  const loadMore = async (): Promise<void> => {
+    if (
+      isRefreshing.current ||
+      tenancies.length >= total ||
+      paginationGeneration.current !== null
+    )
+      return;
+    const generation = requestGeneration.current;
+    paginationGeneration.current = generation;
+    setIsLoadingMore(true);
+    const result = await getHostBookings({ page: page + 1, size: 100 });
+
+    if (!isMounted.current || requestGeneration.current !== generation) return;
+    paginationGeneration.current = null;
+    setIsLoadingMore(false);
+
+    if (result.message) {
+      notify({
+        title: "More tenancies could not load",
+        description: result.message,
+        variant: "error",
+      });
+      return;
+    }
+
+    setTenancies((current) => {
+      const known = new Set(current.map((item) => item.id));
+      return [
+        ...current,
+        ...result.data.filter((item) => !known.has(item.id)).map(toTenancy),
+      ];
+    });
+    setTotal(result.total ?? total);
+    setPage((current) => current + 1);
+  };
 
   const changeStatus = async (
     tenancy: Tenancy,
@@ -934,6 +979,22 @@ export default function AgentBookingsPage(): ReactElement {
           propertyName={chatTenancy.propertyTitle}
           onClose={() => setChatTenancy(null)}
         />
+      ) : null}
+
+      {!loading && tenancies.length < total ? (
+        <div className="mt-6 text-center">
+          <button
+            type="button"
+            onClick={() => void loadMore()}
+            disabled={isLoadingMore}
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-primary/15 px-5 font-body text-sm font-bold text-primary hover:bg-primary/5 focus-visible:outline focus-visible:outline-accent disabled:cursor-wait disabled:opacity-60"
+          >
+            {isLoadingMore ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : null}
+            Show more tenancies ({total - tenancies.length} more)
+          </button>
+        </div>
       ) : null}
 
       <TenancyDrawer

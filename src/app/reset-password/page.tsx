@@ -1,5 +1,6 @@
 "use client";
 
+import { apiRequest } from "@/lib/apiRequest";
 import { motion, useReducedMotion } from "framer-motion";
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
@@ -72,7 +73,7 @@ export default function ResetPasswordPage() {
     setErrorMessage("");
 
     try {
-      const response = await fetch("/api/auth/reset-password", {
+      const response = await apiRequest("/api/auth/reset-password", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

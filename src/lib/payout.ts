@@ -1,5 +1,6 @@
 "use client";
 
+import { apiRequest } from "@/lib/apiRequest";
 import { resolveApiError } from "@/lib/errors";
 
 // === Types
@@ -50,7 +51,7 @@ async function postPayout(
   }
 
   const query = new URLSearchParams({ bankCode, accountNumber });
-  const response = await fetch(
+  const response = await apiRequest(
     `/api/verification/payout/${action}?${query.toString()}`,
     { method: "POST", headers: { Authorization: `Bearer ${token}` } },
   );
@@ -69,7 +70,11 @@ export async function resolvePayoutAccount(
   accountNumber: string,
 ): Promise<PayoutResult<ResolvedAccount | null>> {
   try {
-    const { ok, payload } = await postPayout("resolve", bankCode, accountNumber);
+    const { ok, payload } = await postPayout(
+      "resolve",
+      bankCode,
+      accountNumber,
+    );
 
     if (!ok) {
       return {

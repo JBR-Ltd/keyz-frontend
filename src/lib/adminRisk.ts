@@ -1,5 +1,6 @@
 "use client";
 
+import { apiRequest } from "@/lib/apiRequest";
 import type { EscrowEntry } from "@/lib/escrow";
 import { resolveApiError } from "@/lib/errors";
 
@@ -71,6 +72,9 @@ function getAccessToken(): string {
 
 export async function getRiskFlags(
   status?: RiskStatus,
+  page = 0,
+  size = 50,
+  signal?: AbortSignal,
 ): Promise<AdminRiskResult<RiskFlag[]>> {
   const token = getAccessToken();
 
@@ -79,8 +83,13 @@ export async function getRiskFlags(
   }
 
   try {
-    const query = status ? `?status=${status}` : "";
-    const response = await fetch(`/api/admin/risk-flags${query}`, {
+    const query = new URLSearchParams({
+      page: String(page),
+      size: String(size),
+    });
+    if (status) query.set("status", status);
+    const response = await apiRequest(`/api/admin/risk-flags?${query}`, {
+      signal,
       headers: { Authorization: `Bearer ${token}` },
     });
     const payload: unknown = await response.json().catch(() => null);
@@ -115,7 +124,7 @@ export async function reviewRiskFlag(
   }
 
   try {
-    const response = await fetch(`/api/admin/risk-flags/${id}/review`, {
+    const response = await apiRequest(`/api/admin/risk-flags/${id}/review`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -143,9 +152,11 @@ export async function reviewRiskFlag(
 }
 
 /** Deposits a host has claimed against, waiting on a decision. */
-export async function getDepositClaims(): Promise<
-  AdminRiskResult<EscrowEntry[]>
-> {
+export async function getDepositClaims(
+  page = 0,
+  size = 50,
+  signal?: AbortSignal,
+): Promise<AdminRiskResult<EscrowEntry[]>> {
   const token = getAccessToken();
 
   if (!token) {
@@ -153,22 +164,30 @@ export async function getDepositClaims(): Promise<
   }
 
   try {
-    const response = await fetch("/api/admin/deposits", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const response = await apiRequest(
+      `/api/admin/deposits?page=${page}&size=${size}`,
+      {
+        signal,
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    );
     const payload: unknown = await response.json().catch(() => null);
 
     if (!response.ok) {
       return {
         data: [],
-        message: resolveApiError(payload, "Deposit claims could not be loaded."),
+        message: resolveApiError(
+          payload,
+          "Deposit claims could not be loaded.",
+        ),
       };
     }
 
     const data = unwrap(payload);
+    const total = Number(response.headers.get("X-Total-Count"));
 
     return Array.isArray(data) && data.every(isEscrowEntry)
-      ? { data }
+      ? { data, total: Number.isFinite(total) ? total : data.length }
       : { data: [], message: "Deposit claims could not be loaded." };
   } catch {
     return { data: [], message: "Deposit claims could not be loaded." };
@@ -187,7 +206,7 @@ export async function settleDeposit(
   }
 
   try {
-    const response = await fetch(
+    const response = await apiRequest(
       `/api/admin/escrow/${escrowId}/deposit-settlement`,
       {
         method: "POST",

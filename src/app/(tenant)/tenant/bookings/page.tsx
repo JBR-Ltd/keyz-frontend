@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactElement } from "react";
+import { useEffect, useRef, useState, type ReactElement } from "react";
 import {
   CalendarDays,
   ChevronRight,
@@ -31,6 +31,7 @@ import MaintenanceReportDialog from "@/components/tenant/MaintenanceReportDialog
 import TenancyRecordsDialog from "@/components/tenancy/TenancyRecordsDialog";
 import {
   getMyBookings,
+  getCurrentBooking,
   type Booking,
   type BookingStatus,
 } from "@/lib/bookings";
@@ -74,13 +75,6 @@ const STATUS_LABELS: Record<BookingStatus, string> = {
   CONFIRMED: "Accepted",
   COMPLETED: "Completed",
   CANCELLED: "Cancelled",
-};
-
-const BOOKING_PRIORITY: Record<BookingStatus, number> = {
-  CONFIRMED: 0,
-  PENDING: 1,
-  COMPLETED: 2,
-  CANCELLED: 3,
 };
 
 // === Helpers
@@ -240,6 +234,14 @@ const REPAIR_TONES: Record<
 export default function TenantBookingsPage(): ReactElement {
   const { notify } = useToast();
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [primaryBooking, setPrimaryBooking] = useState<Booking | null>(null);
+  const [nextHistoryCursor, setNextHistoryCursor] = useState<string | null>(
+    null,
+  );
+  const [historyError, setHistoryError] = useState("");
+  const [isHistoryLoading, setIsHistoryLoading] = useState(false);
+  const historyGenerationRef = useRef(0);
+  const historyRequestRef = useRef<AbortController | null>(null);
   const [activeThread, setActiveThread] = useState<ActiveChatThread | null>(
     null,
   );
@@ -258,17 +260,30 @@ export default function TenantBookingsPage(): ReactElement {
 
   useEffect(() => {
     let active = true;
+    historyGenerationRef.current++;
+    const controller = new AbortController();
 
     const loadBookings = async (): Promise<void> => {
       setIsLoading(true);
       setLoadError("");
-      const result = await getMyBookings();
+      setIsHistoryLoading(false);
+      const [home, result] = await Promise.all([
+        getCurrentBooking(controller.signal),
+        getMyBookings({ cursor: "", size: 20 }, controller.signal),
+      ]);
 
       if (!active) return;
 
       setNow(Date.now());
-      setBookings(result.data);
-      setLoadError(result.message ?? "");
+      setPrimaryBooking(home.data);
+      setBookings(
+        Array.from(
+          new Map(result.data.map((booking) => [booking.id, booking])).values(),
+        ),
+      );
+      setNextHistoryCursor(result.nextCursor ?? null);
+      setHistoryError(result.message ?? "");
+      setLoadError(home.message ?? "");
       setIsLoading(false);
     };
 
@@ -276,25 +291,41 @@ export default function TenantBookingsPage(): ReactElement {
 
     return () => {
       active = false;
+      controller.abort();
+      historyRequestRef.current?.abort();
+      historyRequestRef.current = null;
     };
   }, [retryKey]);
 
-  const sortedBookings = useMemo(
-    () =>
-      [...bookings].sort((left, right) => {
-        const priorityDifference =
-          BOOKING_PRIORITY[left.status] - BOOKING_PRIORITY[right.status];
-
-        if (priorityDifference !== 0) return priorityDifference;
-
-        return (
-          new Date(right.createdAt ?? right.startDate ?? 0).getTime() -
-          new Date(left.createdAt ?? left.startDate ?? 0).getTime()
-        );
-      }),
-    [bookings],
-  );
-  const primaryBooking = sortedBookings[0] ?? null;
+  const loadHistory = async (): Promise<void> => {
+    if (historyRequestRef.current || (!nextHistoryCursor && !historyError))
+      return;
+    const generation = historyGenerationRef.current;
+    const controller = new AbortController();
+    historyRequestRef.current = controller;
+    setIsHistoryLoading(true);
+    const result = await getMyBookings(
+      { cursor: nextHistoryCursor ?? "", size: 20 },
+      controller.signal,
+    );
+    if (
+      controller.signal.aborted ||
+      generation !== historyGenerationRef.current
+    )
+      return;
+    historyRequestRef.current = null;
+    setIsHistoryLoading(false);
+    setHistoryError(result.message ?? "");
+    if (result.message) return;
+    setBookings((current) =>
+      Array.from(
+        new Map(
+          [...current, ...result.data].map((booking) => [booking.id, booking]),
+        ).values(),
+      ),
+    );
+    setNextHistoryCursor(result.nextCursor ?? null);
+  };
   const primaryBookingId = primaryBooking?.id ?? null;
   const tenancyLoadKey =
     primaryBookingId === null
@@ -310,8 +341,8 @@ export default function TenantBookingsPage(): ReactElement {
       repair.status !== "RESOLVED",
   );
   const bookingHistory = primaryBooking
-    ? sortedBookings.filter((booking) => booking.id !== primaryBooking.id)
-    : [];
+    ? bookings.filter((booking) => booking.id !== primaryBooking.id)
+    : bookings;
   const hostName = primaryBooking?.host?.name ?? "Property host";
   const hostInitials = hostName
     .split(" ")
@@ -466,10 +497,10 @@ export default function TenantBookingsPage(): ReactElement {
                         {primaryBooking.tenancyStartDate
                           ? formatDate(primaryBooking.tenancyStartDate)
                           : primaryBooking.startDate
-                          ? formatDate(primaryBooking.startDate)
-                          : primaryBooking.preferredMoveInDate
-                            ? formatDate(primaryBooking.preferredMoveInDate)
-                            : "Flexible"}
+                            ? formatDate(primaryBooking.startDate)
+                            : primaryBooking.preferredMoveInDate
+                              ? formatDate(primaryBooking.preferredMoveInDate)
+                              : "Flexible"}
                       </p>
                     </div>
                     <div className="rounded-xl bg-surface-soft p-4">
@@ -723,76 +754,110 @@ export default function TenantBookingsPage(): ReactElement {
                 </button>
               </article>
             </section>
-
-            {bookingHistory.length > 0 ? (
-              <section className="mt-10 overflow-hidden rounded-2xl border border-border bg-bg shadow-sm">
-                <div className="border-b border-border px-6 py-6 sm:px-7">
-                  <p className="font-accent text-xs font-bold uppercase tracking-[0.22em] text-accent-alt">
-                    Rental history
-                  </p>
-                  <h2 className="mt-2 font-display text-3xl font-bold text-primary">
-                    Other bookings
-                  </h2>
-                </div>
-                <div>
-                  {bookingHistory.map((booking, index) => (
-                    <Link
-                      key={booking.id}
-                      href={propertyPath({
-                        id: booking.propertyId,
-                        publicId: booking.propertyPublicId,
-                        slug: booking.propertySlug,
-                      })}
-                      className="grid gap-4 border-b border-border p-5 transition-colors last:border-b-0 hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent sm:grid-cols-[5rem_1fr_auto] sm:items-center sm:px-7"
-                    >
-                      <span className="relative h-20 overflow-hidden rounded-xl bg-surface-soft">
-                        <Image
-                          src={coverImage(booking, index + 1)}
-                          alt=""
-                          fill
-                          sizes="80px"
-                          className="object-cover"
-                        />
-                      </span>
-                      <span className="min-w-0">
-                        <span className="block truncate font-body text-base font-bold text-primary">
-                          {booking.propertyTitle}
-                        </span>
-                        <span className="mt-1 block font-body text-sm text-muted">
-                          {formatStayDates(booking)}
-                        </span>
-                        <span className="mt-2 block font-body text-xs font-medium text-muted">
-                          Updated {formatRelativeTime(booking.createdAt)}
-                        </span>
-                      </span>
-                      <span className="flex items-center justify-between gap-3 sm:justify-end">
-                        <StatusBadge tone={STATUS_TONES[booking.status]}>
-                          {STATUS_LABELS[booking.status]}
-                        </StatusBadge>
-                        <ChevronRight
-                          size={18}
-                          className="text-muted"
-                          aria-hidden="true"
-                        />
-                      </span>
-                    </Link>
-                  ))}
-                </div>
-              </section>
-            ) : null}
           </>
         )}
+        {!isLoading &&
+        !loadError &&
+        (bookingHistory.length > 0 || historyError || nextHistoryCursor) ? (
+          <section
+            className="mt-10 overflow-hidden rounded-2xl border border-border bg-bg shadow-sm"
+            aria-label="Booking history"
+          >
+            <div className="border-b border-border px-6 py-6 sm:px-7">
+              <h2 className="font-display text-2xl font-bold text-primary">
+                Other bookings
+              </h2>
+              <p className="mt-2 font-body text-sm text-muted">
+                Your requests and previous tenancies
+              </p>
+            </div>
+            {bookingHistory.map((booking, index) => (
+              <Link
+                key={booking.id}
+                href={propertyPath({
+                  id: booking.propertyId,
+                  publicId: booking.propertyPublicId,
+                  slug: booking.propertySlug,
+                })}
+                className="grid gap-4 border-b border-border p-5 transition-colors hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent sm:grid-cols-[5rem_1fr_auto] sm:items-center sm:px-7"
+              >
+                <span className="relative h-20 overflow-hidden rounded-xl bg-surface-soft">
+                  <Image
+                    src={coverImage(booking, index + 1)}
+                    alt=""
+                    fill
+                    sizes="80px"
+                    className="object-cover"
+                  />
+                </span>
+                <span className="min-w-0">
+                  <span className="block truncate font-body text-base font-bold text-primary">
+                    {booking.propertyTitle}
+                  </span>
+                  <span className="mt-1 block font-body text-sm text-muted">
+                    {formatStayDates(booking)}
+                  </span>
+                  {booking.unitLabel ? (
+                    <span className="mt-1 block font-body text-xs font-semibold text-primary">
+                      {booking.unitLabel}
+                    </span>
+                  ) : null}
+                  <span className="mt-2 block font-body text-xs text-muted">
+                    Updated {formatRelativeTime(booking.createdAt)}
+                  </span>
+                </span>
+                <StatusBadge tone={STATUS_TONES[booking.status]}>
+                  {STATUS_LABELS[booking.status]}
+                </StatusBadge>
+              </Link>
+            ))}
+            {historyError ? (
+              <p
+                role="alert"
+                className="px-6 py-3 font-body text-sm text-red-700"
+              >
+                {historyError}
+              </p>
+            ) : null}
+            {nextHistoryCursor || historyError ? (
+              <button
+                type="button"
+                disabled={isHistoryLoading}
+                onClick={() => void loadHistory()}
+                className="flex min-h-12 w-full items-center justify-center gap-2 px-6 py-3 font-body text-sm font-bold text-primary hover:bg-surface-soft focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60"
+              >
+                {isHistoryLoading ? (
+                  <Clock3
+                    size={16}
+                    className="animate-spin"
+                    aria-hidden="true"
+                  />
+                ) : null}
+                {isHistoryLoading
+                  ? "Loading bookings"
+                  : historyError
+                    ? "Retry loading bookings"
+                    : "Load older bookings"}
+              </button>
+            ) : null}
+          </section>
+        ) : null}
       </div>
 
       <TenancyRecordsDialog
         bookingId={recordsBookingId}
         onClose={() => setRecordsBookingId(null)}
         propertyTitle={
-          bookings.find((item) => item.id === recordsBookingId)?.propertyTitle ?? ""
+          primaryBooking?.id === recordsBookingId
+            ? primaryBooking.propertyTitle
+            : (bookings.find((item) => item.id === recordsBookingId)
+                ?.propertyTitle ?? "")
         }
         showAgreement={
-          bookings.find((item) => item.id === recordsBookingId)?.bookingKind !==
-          "SHORT_STAY"
+          (primaryBooking?.id === recordsBookingId
+            ? primaryBooking
+            : bookings.find((item) => item.id === recordsBookingId)
+          )?.bookingKind !== "SHORT_STAY"
         }
         viewer="tenant"
       />

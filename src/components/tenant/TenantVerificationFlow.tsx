@@ -1,5 +1,6 @@
 "use client";
 
+import { apiRequest } from "@/lib/apiRequest";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   ArrowLeft,
@@ -110,12 +111,6 @@ const STEP_COPY: Record<TenantVerificationStep, StepCopy> = {
   },
 };
 
-function delay(durationMs: number): Promise<void> {
-  return new Promise((resolve) => {
-    window.setTimeout(resolve, durationMs);
-  });
-}
-
 function getStepIndex(step: TenantVerificationStep): number {
   return STEP_ORDER.indexOf(step);
 }
@@ -198,7 +193,7 @@ async function verifyTenantIdentityNumbers(
   bvn: string,
 ): Promise<VerificationApiResponse> {
   const query = new URLSearchParams({ nin, bvn });
-  const response = await fetch(
+  const response = await apiRequest(
     `/api/verification/tenant?${query.toString()}`,
     {
       method: "POST",
@@ -214,7 +209,7 @@ async function verifyTenantIdentityNumbers(
 async function verifySelfie(
   selfiePreview: string,
 ): Promise<VerificationApiResponse> {
-  const imageResponse = await fetch(selfiePreview);
+  const imageResponse = await apiRequest(selfiePreview);
 
   if (!imageResponse.ok) {
     throw new Error("The selected selfie could not be prepared for upload.");
@@ -225,7 +220,7 @@ async function verifySelfie(
   const formData = new FormData();
   formData.append("selfie", image, `tenant-selfie.${extension}`);
 
-  const response = await fetch("/api/verification/dojah/selfie", {
+  const response = await apiRequest("/api/verification/dojah/selfie", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${getAccessToken()}`,
@@ -237,7 +232,7 @@ async function verifySelfie(
 }
 
 async function getTenantVerificationStatus(): Promise<TenantVerificationStatus> {
-  const response = await fetch("/api/verification/status", {
+  const response = await apiRequest("/api/verification/status", {
     headers: {
       Authorization: `Bearer ${getAccessToken()}`,
     },
@@ -278,15 +273,10 @@ export default function TenantVerificationFlow(): ReactElement {
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [stepError, setStepError] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [successStep, setSuccessStep] = useState<TenantVerificationStep | null>(
-    null,
-  );
 
   const firstIncompleteStep = useMemo(
     () =>
-      state.nin === "verified" && state.bvn === "verified"
-        ? "selfie"
-        : "nin",
+      state.nin === "verified" && state.bvn === "verified" ? "selfie" : "nin",
     [state],
   );
 
@@ -313,7 +303,6 @@ export default function TenantVerificationFlow(): ReactElement {
 
   const startFlow = (): void => {
     setStepError("");
-    setSuccessStep(null);
     setScreen(firstIncompleteStep);
   };
 
@@ -335,7 +324,6 @@ export default function TenantVerificationFlow(): ReactElement {
 
     const stepIndex = getStepIndex(screen);
     setStepError("");
-    setSuccessStep(null);
     setScreen(stepIndex === 0 ? "overview" : STEP_ORDER[stepIndex - 1]);
   };
 
@@ -419,12 +407,7 @@ export default function TenantVerificationFlow(): ReactElement {
     setStepError("");
   };
 
-  const advanceAfterSuccess = async (
-    step: TenantVerificationStep,
-  ): Promise<void> => {
-    setSuccessStep(step);
-    await delay(700);
-    setSuccessStep(null);
+  const advanceAfterSuccess = (step: TenantVerificationStep): void => {
     setStepError("");
     setScreen(getNextStep(step));
   };
@@ -467,7 +450,7 @@ export default function TenantVerificationFlow(): ReactElement {
         nin: "verified",
         bvn: "verified",
       });
-      await advanceAfterSuccess("bvn");
+      advanceAfterSuccess("bvn");
     } catch (error) {
       saveTenantVerificationState({
         ...state,
@@ -510,7 +493,7 @@ export default function TenantVerificationFlow(): ReactElement {
         throw new Error("Your identity verification is not complete yet.");
       }
 
-      await advanceAfterSuccess("selfie");
+      advanceAfterSuccess("selfie");
     } catch (error) {
       saveTenantVerificationStep("selfie", "failed");
       setStepError(
@@ -540,19 +523,6 @@ export default function TenantVerificationFlow(): ReactElement {
   };
 
   const renderStepFeedback = (): ReactElement | null => {
-    if (successStep) {
-      return (
-        <motion.p
-          className="mt-4 font-body text-sm font-bold text-accent"
-          initial={reduceMotion ? false : { opacity: 0, scale: 0.95 }}
-          animate={reduceMotion ? undefined : { opacity: 1, scale: 1 }}
-          transition={{ duration: 0.2, ease: "easeOut" }}
-        >
-          Verified
-        </motion.p>
-      );
-    }
-
     if (!stepError) {
       return null;
     }
@@ -1024,7 +994,7 @@ export default function TenantVerificationFlow(): ReactElement {
 
           <AnimatePresence mode="wait">
             <motion.section
-              key={successStep ?? activeStep}
+              key={activeStep}
               className="relative w-full overflow-hidden rounded-xl bg-bg p-6 text-primary shadow-xl sm:p-10 lg:p-12"
               initial={reduceMotion ? false : { opacity: 0, x: 28 }}
               animate={reduceMotion ? undefined : { opacity: 1, x: 0 }}

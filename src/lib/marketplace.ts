@@ -1,6 +1,7 @@
 "use client";
 
 import { resolveApiError } from "@/lib/errors";
+import type { RentalMode, StayType } from "@/lib/hostListings";
 
 // === Types
 
@@ -48,6 +49,8 @@ export interface SavedSearch {
   minPrice: number | null;
   name: string;
   query: string | null;
+  rentalMode: RentalMode | null;
+  stayType: StayType | null;
 }
 
 export interface SavedSearchInput {
@@ -58,6 +61,8 @@ export interface SavedSearchInput {
   minPrice?: number;
   name?: string;
   query?: string;
+  rentalMode?: RentalMode;
+  stayType?: StayType;
 }
 
 export type MandateStatus = "INVITED" | "ACTIVE" | "DECLINED" | "ENDED";
@@ -81,7 +86,13 @@ export interface Mandate {
 }
 
 export interface MandateOverview {
-  agentFees: { amount: number; bookingId: number; id: number; paidAt: string | null; status: string }[];
+  agentFees: {
+    amount: number;
+    bookingId: number;
+    id: number;
+    paidAt: string | null;
+    status: string;
+  }[];
   bookings: {
     createdAt: string;
     id: number;
@@ -105,6 +116,7 @@ export interface MandateOverview {
 export interface MarketResult<TValue> {
   data: TValue;
   message?: string;
+  total?: number;
 }
 
 // === Helpers
@@ -121,7 +133,7 @@ async function send(
   path: string,
   init: RequestInit,
   fallback: string,
-): Promise<{ data: unknown; message?: string; ok: boolean }> {
+): Promise<{ data: unknown; message?: string; ok: boolean; total?: number }> {
   const token = getAccessToken();
 
   if (!token) {
@@ -139,17 +151,32 @@ async function send(
     const payload: unknown = await response.json().catch(() => null);
 
     if (!response.ok) {
-      return { data: null, message: resolveApiError(payload, fallback), ok: false };
+      return {
+        data: null,
+        message: resolveApiError(payload, fallback),
+        ok: false,
+      };
     }
 
-    return { data: isRecord(payload) && "data" in payload ? payload.data : null, ok: true };
+    const count = response.headers.get("X-Total-Count");
+    const total = count === null ? undefined : Number(count);
+    return {
+      data: isRecord(payload) && "data" in payload ? payload.data : null,
+      ok: true,
+      total:
+        total !== undefined && Number.isSafeInteger(total) && total >= 0
+          ? total
+          : undefined,
+    };
   } catch {
     return { data: null, message: fallback, ok: false };
   }
 }
 
 function listOf<T>(value: unknown, key: string): T[] {
-  return Array.isArray(value) ? (value.filter((item) => isRecord(item) && key in item) as T[]) : [];
+  return Array.isArray(value)
+    ? (value.filter((item) => isRecord(item) && key in item) as T[])
+    : [];
 }
 
 function oneOf<T>(value: unknown, key: string): T | null {
@@ -183,14 +210,21 @@ export async function submitReport(
 
 export async function getAdminReports(
   status?: AdminReport["status"],
+  signal?: AbortSignal,
+  page = 0,
+  size = 20,
 ): Promise<MarketResult<AdminReport[]>> {
   const result = await send(
-    `/api/admin/reports${status ? `?status=${status}` : ""}`,
-    {},
+    `/api/admin/reports?page=${page}&size=${size}${status ? `&status=${status}` : ""}`,
+    { signal },
     "Reports could not be loaded.",
   );
 
-  return { data: listOf<AdminReport>(result.data, "reason"), message: result.message };
+  return {
+    data: listOf<AdminReport>(result.data, "reason"),
+    message: result.message,
+    total: result.total,
+  };
 }
 
 export async function reviewReport(
@@ -204,15 +238,25 @@ export async function reviewReport(
     "The review could not be saved.",
   );
 
-  return { data: oneOf<AdminReport>(result.data, "reason"), message: result.message };
+  return {
+    data: oneOf<AdminReport>(result.data, "reason"),
+    message: result.message,
+  };
 }
 
 // === Saved searches
 
 export async function getSavedSearches(): Promise<MarketResult<SavedSearch[]>> {
-  const result = await send("/api/saved-searches", {}, "Saved searches could not be loaded.");
+  const result = await send(
+    "/api/saved-searches",
+    {},
+    "Saved searches could not be loaded.",
+  );
 
-  return { data: listOf<SavedSearch>(result.data, "name"), message: result.message };
+  return {
+    data: listOf<SavedSearch>(result.data, "name"),
+    message: result.message,
+  };
 }
 
 export async function createSavedSearch(
@@ -224,7 +268,10 @@ export async function createSavedSearch(
     "This search could not be saved.",
   );
 
-  return { data: oneOf<SavedSearch>(result.data, "name"), message: result.message };
+  return {
+    data: oneOf<SavedSearch>(result.data, "name"),
+    message: result.message,
+  };
 }
 
 export async function updateSavedSearch(
@@ -237,11 +284,20 @@ export async function updateSavedSearch(
     "This search could not be updated.",
   );
 
-  return { data: oneOf<SavedSearch>(result.data, "name"), message: result.message };
+  return {
+    data: oneOf<SavedSearch>(result.data, "name"),
+    message: result.message,
+  };
 }
 
-export async function deleteSavedSearch(id: number): Promise<MarketResult<boolean>> {
-  const result = await send(`/api/saved-searches/${id}`, { method: "DELETE" }, "This search could not be deleted.");
+export async function deleteSavedSearch(
+  id: number,
+): Promise<MarketResult<boolean>> {
+  const result = await send(
+    `/api/saved-searches/${id}`,
+    { method: "DELETE" },
+    "This search could not be deleted.",
+  );
 
   return { data: result.ok, message: result.message };
 }
@@ -249,15 +305,31 @@ export async function deleteSavedSearch(id: number): Promise<MarketResult<boolea
 // === Mandates
 
 export async function getMandates(): Promise<MarketResult<Mandate[]>> {
-  const result = await send("/api/mandates", {}, "Mandates could not be loaded.");
+  const result = await send(
+    "/api/mandates",
+    {},
+    "Mandates could not be loaded.",
+  );
 
-  return { data: listOf<Mandate>(result.data, "agentFeePercent"), message: result.message };
+  return {
+    data: listOf<Mandate>(result.data, "agentFeePercent"),
+    message: result.message,
+  };
 }
 
-export async function getMandateOverview(id: number): Promise<MarketResult<MandateOverview | null>> {
-  const result = await send(`/api/mandates/${id}`, {}, "This mandate could not be loaded.");
+export async function getMandateOverview(
+  id: number,
+): Promise<MarketResult<MandateOverview | null>> {
+  const result = await send(
+    `/api/mandates/${id}`,
+    {},
+    "This mandate could not be loaded.",
+  );
 
-  return { data: oneOf<MandateOverview>(result.data, "mandate"), message: result.message };
+  return {
+    data: oneOf<MandateOverview>(result.data, "mandate"),
+    message: result.message,
+  };
 }
 
 async function mandateCall(
@@ -266,9 +338,16 @@ async function mandateCall(
   fallback: string,
   method = "POST",
 ): Promise<MarketResult<Mandate | null>> {
-  const result = await send(path, { method, body: body === undefined ? undefined : JSON.stringify(body) }, fallback);
+  const result = await send(
+    path,
+    { method, body: body === undefined ? undefined : JSON.stringify(body) },
+    fallback,
+  );
 
-  return { data: oneOf<Mandate>(result.data, "agentFeePercent"), message: result.message };
+  return {
+    data: oneOf<Mandate>(result.data, "agentFeePercent"),
+    message: result.message,
+  };
 }
 
 export function inviteLandlord(
@@ -276,26 +355,60 @@ export function inviteLandlord(
   agentFeePercent: number,
   note: string,
 ): Promise<MarketResult<Mandate | null>> {
-  return mandateCall("/api/mandates", { landlordEmail, agentFeePercent, note }, "The invitation could not be sent.");
+  return mandateCall(
+    "/api/mandates",
+    { landlordEmail, agentFeePercent, note },
+    "The invitation could not be sent.",
+  );
 }
 
-export function acceptMandate(id: number): Promise<MarketResult<Mandate | null>> {
-  return mandateCall(`/api/mandates/${id}/accept`, undefined, "The mandate could not be accepted.");
+export function acceptMandate(
+  id: number,
+): Promise<MarketResult<Mandate | null>> {
+  return mandateCall(
+    `/api/mandates/${id}/accept`,
+    undefined,
+    "The mandate could not be accepted.",
+  );
 }
 
-export function declineMandate(id: number, reason: string): Promise<MarketResult<Mandate | null>> {
-  return mandateCall(`/api/mandates/${id}/decline`, { reason }, "The mandate could not be declined.");
+export function declineMandate(
+  id: number,
+  reason: string,
+): Promise<MarketResult<Mandate | null>> {
+  return mandateCall(
+    `/api/mandates/${id}/decline`,
+    { reason },
+    "The mandate could not be declined.",
+  );
 }
 
-export function endMandate(id: number, reason: string): Promise<MarketResult<Mandate | null>> {
-  return mandateCall(`/api/mandates/${id}/end`, { reason }, "The mandate could not be ended.");
+export function endMandate(
+  id: number,
+  reason: string,
+): Promise<MarketResult<Mandate | null>> {
+  return mandateCall(
+    `/api/mandates/${id}/end`,
+    { reason },
+    "The mandate could not be ended.",
+  );
 }
 
-export function attachListing(id: number, propertyId: string): Promise<MarketResult<Mandate | null>> {
-  return mandateCall(`/api/mandates/${id}/properties`, { propertyId }, "That listing could not be added.");
+export function attachListing(
+  id: number,
+  propertyId: string,
+): Promise<MarketResult<Mandate | null>> {
+  return mandateCall(
+    `/api/mandates/${id}/properties`,
+    { propertyId },
+    "That listing could not be added.",
+  );
 }
 
-export function detachListing(id: number, propertyId: string): Promise<MarketResult<Mandate | null>> {
+export function detachListing(
+  id: number,
+  propertyId: string,
+): Promise<MarketResult<Mandate | null>> {
   return mandateCall(
     `/api/mandates/${id}/properties/${encodeURIComponent(propertyId)}`,
     undefined,

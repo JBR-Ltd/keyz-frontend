@@ -1,5 +1,6 @@
 "use client";
 
+import { apiRequest } from "@/lib/apiRequest";
 import { resolveApiError } from "@/lib/errors";
 
 // === Types
@@ -36,9 +37,7 @@ export interface ComplianceResult {
 // === Guards
 
 function isProfile(value: unknown): value is ComplianceProfile {
-  return (
-    value !== null && typeof value === "object" && "complete" in value
-  );
+  return value !== null && typeof value === "object" && "complete" in value;
 }
 
 function unwrap(payload: unknown): unknown {
@@ -61,7 +60,7 @@ export async function getComplianceProfile(): Promise<ComplianceResult> {
   }
 
   try {
-    const response = await fetch("/api/compliance/profile", {
+    const response = await apiRequest("/api/compliance/profile", {
       headers: { Authorization: `Bearer ${token}` },
     });
     const payload: unknown = await response.json().catch(() => null);
@@ -93,7 +92,7 @@ export async function saveComplianceProfile(
   }
 
   try {
-    const response = await fetch("/api/compliance/profile", {
+    const response = await apiRequest("/api/compliance/profile", {
       method: "PUT",
       headers: {
         Authorization: `Bearer ${token}`,

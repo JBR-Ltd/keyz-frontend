@@ -1,5 +1,6 @@
 "use client";
 
+import { apiRequest } from "@/lib/apiRequest";
 import type { DepositStatus, EscrowStatus } from "@/lib/escrow";
 import { resolveApiError } from "@/lib/errors";
 
@@ -79,11 +80,13 @@ export interface BookingResult<TValue> {
   message?: string;
   /** Every matching booking, when the list came back a page at a time. */
   total?: number;
+  nextCursor?: string | null;
 }
 
 export interface BookingPage {
   page?: number;
   size?: number;
+  cursor?: string;
 }
 
 export interface BookingStatusOptions {
@@ -137,6 +140,7 @@ function getAccessToken(): string {
 
 async function requestBookings(
   path: string,
+  signal?: AbortSignal,
 ): Promise<BookingResult<Booking[]>> {
   const token = getAccessToken();
 
@@ -145,7 +149,8 @@ async function requestBookings(
   }
 
   try {
-    const response = await fetch(path, {
+    const response = await apiRequest(path, {
+      signal,
       headers: { Authorization: `Bearer ${token}` },
     });
     const payload: unknown = await response.json().catch(() => null);
@@ -171,6 +176,7 @@ async function requestBookings(
     return {
       data,
       total: Number.isFinite(total) && total > 0 ? total : data.length,
+      nextCursor: response.headers.get("X-Next-Cursor"),
     };
   } catch {
     return { data: [], message: "Bookings could not be loaded." };
@@ -179,6 +185,7 @@ async function requestBookings(
 
 function withPage(path: string, page: BookingPage = {}): string {
   const query = new URLSearchParams();
+  if (page.cursor !== undefined) query.set("cursor", page.cursor);
 
   if (page.page !== undefined) {
     query.set("page", String(page.page));
@@ -195,14 +202,69 @@ function withPage(path: string, page: BookingPage = {}): string {
 
 export function getMyBookings(
   page?: BookingPage,
+  signal?: AbortSignal,
 ): Promise<BookingResult<Booking[]>> {
-  return requestBookings(withPage("/api/bookings/mine", page));
+  return requestBookings(withPage("/api/bookings/mine", page), signal);
+}
+
+export async function getCurrentBooking(
+  signal?: AbortSignal,
+): Promise<BookingResult<Booking | null>> {
+  const token = getAccessToken();
+  if (!token) return { data: null, message: "Log in to see your home." };
+  try {
+    const response = await apiRequest("/api/bookings/mine/current", {
+      signal,
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const payload: unknown = await response.json().catch(() => null);
+    if (!response.ok)
+      return {
+        data: null,
+        message: resolveApiError(payload, "Your home could not be loaded."),
+      };
+    const data =
+      payload !== null && typeof payload === "object" && "data" in payload
+        ? payload.data
+        : undefined;
+    return data === null || isBooking(data)
+      ? { data }
+      : { data: null, message: "Your home could not be loaded." };
+  } catch {
+    return { data: null, message: "Your home could not be loaded." };
+  }
 }
 
 export function getHostBookings(
   page?: BookingPage,
 ): Promise<BookingResult<Booking[]>> {
   return requestBookings(withPage("/api/bookings/host", page));
+}
+
+async function requestAllBookings(
+  path: string,
+): Promise<BookingResult<Booking[]>> {
+  const token = getAccessToken();
+  const items = new Map<number, Booking>();
+  let cursor = "";
+  do {
+    const result = await requestBookings(withPage(path, { cursor, size: 100 }));
+    if (result.message) return { data: [], message: result.message };
+    if (token !== getAccessToken())
+      return { data: [], message: "Your account changed. Reload this page." };
+    for (const booking of result.data) items.set(booking.id, booking);
+    cursor = result.nextCursor ?? "";
+  } while (cursor);
+  return { data: Array.from(items.values()), total: items.size };
+}
+
+// Selectors need eligible older bookings; a first-page preview is not a complete selection list.
+export function getAllMyBookings(): Promise<BookingResult<Booking[]>> {
+  return requestAllBookings("/api/bookings/mine");
+}
+
+export function getAllHostBookings(): Promise<BookingResult<Booking[]>> {
+  return requestAllBookings("/api/bookings/host");
 }
 
 /** What a stay would cost, worked out by the code that charges for it. */
@@ -247,7 +309,7 @@ export async function getBookingQuote(
     if (guests) {
       query.set("guests", String(guests));
     }
-    const response = await fetch(
+    const response = await apiRequest(
       `/api/bookings/short-stays/quote?${query.toString()}`,
     );
     const payload: unknown = await response.json().catch(() => null);
@@ -291,7 +353,7 @@ export async function createBooking(
   }
 
   try {
-    const response = await fetch("/api/bookings", {
+    const response = await apiRequest("/api/bookings", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -338,7 +400,7 @@ export async function createRentalRequest(
   }
 
   try {
-    const response = await fetch("/api/bookings/rental-requests", {
+    const response = await apiRequest("/api/bookings/rental-requests", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -389,7 +451,7 @@ export async function createShortletBooking(
   }
 
   try {
-    const response = await fetch("/api/bookings/short-stays", {
+    const response = await apiRequest("/api/bookings/short-stays", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -447,7 +509,7 @@ export async function updateBookingStatus(
       query.set("reason", options.reason.trim());
     }
 
-    const response = await fetch(
+    const response = await apiRequest(
       `/api/bookings/${bookingId}/status?${query.toString()}`,
       {
         method: "PATCH",
@@ -489,7 +551,7 @@ export async function recordMoveInDate(
   }
 
   try {
-    const response = await fetch(
+    const response = await apiRequest(
       `/api/bookings/${bookingId}/move-in?moveInDate=${encodeURIComponent(moveInDate)}`,
       {
         method: "PATCH",
@@ -501,7 +563,10 @@ export async function recordMoveInDate(
     if (!response.ok) {
       return {
         data: null,
-        message: resolveApiError(payload, "The move-in date could not be saved."),
+        message: resolveApiError(
+          payload,
+          "The move-in date could not be saved.",
+        ),
       };
     }
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { apiRequest } from "@/lib/apiRequest";
 import { resolveApiError } from "@/lib/errors";
 import type { BackendPage, BackendProperty } from "@/lib/hostListings";
 import { hostPublicIdFrom } from "@/lib/publicIds";
@@ -61,7 +62,7 @@ export async function getHostProfile(
   hostId: string,
 ): Promise<HostResult<HostProfile | null>> {
   try {
-    const response = await fetch(`/api/hosts/${hostApiPath(hostId)}`);
+    const response = await apiRequest(`/api/hosts/${hostApiPath(hostId)}`);
     const payload: unknown = await response.json().catch(() => null);
 
     if (!response.ok) {
@@ -87,7 +88,7 @@ export async function getHostListings(
   size = 12,
 ): Promise<HostResult<BackendPage<BackendProperty> | null>> {
   try {
-    const response = await fetch(
+    const response = await apiRequest(
       `/api/hosts/${hostApiPath(hostId)}/listings?page=${page}&size=${size}`,
     );
     const payload: unknown = await response.json().catch(() => null);

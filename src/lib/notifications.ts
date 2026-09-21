@@ -56,6 +56,7 @@ function getAccessToken(): string {
 
 export async function getNotifications(
   cursor = "",
+  signal?: AbortSignal,
 ): Promise<NotificationResult<NotificationPage>> {
   const token = getAccessToken();
   const empty = { items: [], nextCursor: null };
@@ -67,7 +68,7 @@ export async function getNotifications(
   try {
     const response = await fetch(
       `/api/notifications?size=20&cursor=${encodeURIComponent(cursor)}`,
-      { headers: { Authorization: `Bearer ${token}` } },
+      { headers: { Authorization: `Bearer ${token}` }, signal },
     );
     const payload: unknown = await response.json().catch(() => null);
 
@@ -80,9 +81,13 @@ export async function getNotifications(
 
     const data = unwrap(payload);
 
+    if (!Array.isArray(data)) {
+      return { data: empty, message: "Notifications could not be loaded." };
+    }
+
     return {
       data: {
-        items: Array.isArray(data) ? data.filter(isNotification) : [],
+        items: data.filter(isNotification),
         nextCursor: response.headers.get("X-Next-Cursor"),
       },
     };
@@ -91,11 +96,11 @@ export async function getNotifications(
   }
 }
 
-export async function getUnreadNotificationCount(): Promise<number> {
+export async function getUnreadNotificationCount(): Promise<number | null> {
   const token = getAccessToken();
 
   if (!token) {
-    return 0;
+    return null;
   }
 
   try {
@@ -104,7 +109,7 @@ export async function getUnreadNotificationCount(): Promise<number> {
     });
 
     if (!response.ok) {
-      return 0;
+      return null;
     }
 
     const data = unwrap(await response.json().catch(() => null));
@@ -112,11 +117,13 @@ export async function getUnreadNotificationCount(): Promise<number> {
     return data !== null &&
       typeof data === "object" &&
       "count" in data &&
-      typeof data.count === "number"
+      typeof data.count === "number" &&
+      Number.isSafeInteger(data.count) &&
+      data.count >= 0
       ? data.count
-      : 0;
+      : null;
   } catch {
-    return 0;
+    return null;
   }
 }
 

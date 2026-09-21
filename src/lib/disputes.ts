@@ -1,5 +1,6 @@
 "use client";
 
+import { apiRequest } from "@/lib/apiRequest";
 import type { PartySummary } from "@/lib/bookings";
 import { resolveApiError } from "@/lib/errors";
 
@@ -72,7 +73,7 @@ export async function getMyDisputes(): Promise<DisputeResult<Dispute[]>> {
   }
 
   try {
-    const response = await fetch("/api/disputes/mine", {
+    const response = await apiRequest("/api/disputes/mine", {
       headers: { Authorization: `Bearer ${token}` },
     });
     const payload: unknown = await response.json().catch(() => null);
@@ -104,7 +105,7 @@ export async function openDispute(
   }
 
   try {
-    const response = await fetch("/api/disputes", {
+    const response = await apiRequest("/api/disputes", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -143,7 +144,7 @@ async function actOnDispute(
   }
 
   try {
-    const response = await fetch(`/api/disputes/${disputeId}/${action}`, {
+    const response = await apiRequest(`/api/disputes/${disputeId}/${action}`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -164,7 +165,11 @@ async function actOnDispute(
 export function escalateDispute(
   disputeId: number,
 ): Promise<DisputeResult<Dispute | null>> {
-  return actOnDispute(disputeId, "escalate", "This could not be sent to Rello.");
+  return actOnDispute(
+    disputeId,
+    "escalate",
+    "This could not be sent to Rello.",
+  );
 }
 
 export function withdrawDispute(

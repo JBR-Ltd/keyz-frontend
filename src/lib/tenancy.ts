@@ -1,5 +1,6 @@
 "use client";
 
+import { apiRequest } from "@/lib/apiRequest";
 import { resolveApiError } from "@/lib/errors";
 
 // === Types
@@ -66,7 +67,13 @@ export interface MaintenanceRequest {
 
 export interface TenancyResult<TValue> {
   data: TValue;
+  hasNext?: boolean;
   message?: string;
+}
+
+export interface MaintenancePage {
+  page?: number;
+  size?: number;
 }
 
 // === Helpers
@@ -100,7 +107,7 @@ async function request(
     return { ok: false, payload: null };
   }
 
-  const response = await fetch(path, {
+  const response = await apiRequest(path, {
     ...init,
     headers: {
       ...(init?.headers ?? {}),
@@ -118,7 +125,9 @@ export async function getTenancyDocuments(
   bookingId: number,
 ): Promise<TenancyResult<TenancyDocument[]>> {
   try {
-    const { ok, payload } = await request(`/api/bookings/${bookingId}/documents`);
+    const { ok, payload } = await request(
+      `/api/bookings/${bookingId}/documents`,
+    );
 
     if (!ok) {
       return {
@@ -149,10 +158,13 @@ export async function uploadTenancyDocument(
     formData.append("type", type);
     formData.append("name", name);
 
-    const { ok, payload } = await request(`/api/bookings/${bookingId}/documents`, {
-      method: "POST",
-      body: formData,
-    });
+    const { ok, payload } = await request(
+      `/api/bookings/${bookingId}/documents`,
+      {
+        method: "POST",
+        body: formData,
+      },
+    );
 
     if (!ok) {
       return {
@@ -173,17 +185,31 @@ export async function uploadTenancyDocument(
 
 // === Maintenance
 
+function maintenanceQuery(page: MaintenancePage): URLSearchParams {
+  const query = new URLSearchParams();
+  if (page.page !== undefined) query.set("page", String(page.page));
+  if (page.size !== undefined) query.set("size", String(page.size));
+  return query;
+}
+
 export async function getMyMaintenanceRequests(
   bookingId?: number,
+  page: MaintenancePage = {},
 ): Promise<TenancyResult<MaintenanceRequest[]>> {
   try {
-    const query = bookingId === undefined ? "" : `?bookingId=${bookingId}`;
-    const { ok, payload } = await request(`/api/maintenance-requests/mine${query}`);
+    const query = maintenanceQuery(page);
+    if (bookingId !== undefined) query.set("bookingId", String(bookingId));
+    const { ok, payload } = await request(
+      `/api/maintenance-requests/mine?${query.toString()}`,
+    );
 
     if (!ok) {
       return {
         data: [],
-        message: resolveApiError(payload, "Repair reports could not be loaded."),
+        message: resolveApiError(
+          payload,
+          "Repair reports could not be loaded.",
+        ),
       };
     }
 
@@ -194,7 +220,14 @@ export async function getMyMaintenanceRequests(
         : null;
 
     return Array.isArray(items) && items.every(hasNumericId)
-      ? { data: items as MaintenanceRequest[] }
+      ? {
+          data: items as MaintenanceRequest[],
+          hasNext:
+            data !== null &&
+            typeof data === "object" &&
+            "hasNext" in data &&
+            data.hasNext === true,
+        }
       : { data: [], message: "Repair reports could not be loaded." };
   } catch {
     return { data: [], message: "Repair reports could not be loaded." };
@@ -244,17 +277,23 @@ export async function cancelMaintenanceRequest(
   requestId: number,
 ): Promise<TenancyResult<boolean>> {
   try {
-    const { ok, payload } = await request(`/api/maintenance-requests/${requestId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "CANCELLED" }),
-    });
+    const { ok, payload } = await request(
+      `/api/maintenance-requests/${requestId}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "CANCELLED" }),
+      },
+    );
 
     return ok
       ? { data: true }
       : {
           data: false,
-          message: resolveApiError(payload, "That report could not be withdrawn."),
+          message: resolveApiError(
+            payload,
+            "That report could not be withdrawn.",
+          ),
         };
   } catch {
     return { data: false, message: "That report could not be withdrawn." };
@@ -264,15 +303,22 @@ export async function cancelMaintenanceRequest(
 /** Every repair reported against a home this host lets. */
 export async function getHostMaintenanceRequests(
   status?: MaintenanceStatus,
+  page: MaintenancePage = {},
 ): Promise<TenancyResult<MaintenanceRequest[]>> {
   try {
-    const query = status === undefined ? "" : `?status=${status}`;
-    const { ok, payload } = await request(`/api/maintenance-requests/host${query}`);
+    const query = maintenanceQuery(page);
+    if (status !== undefined) query.set("status", status);
+    const { ok, payload } = await request(
+      `/api/maintenance-requests/host?${query.toString()}`,
+    );
 
     if (!ok) {
       return {
         data: [],
-        message: resolveApiError(payload, "Repair reports could not be loaded."),
+        message: resolveApiError(
+          payload,
+          "Repair reports could not be loaded.",
+        ),
       };
     }
 
@@ -283,7 +329,14 @@ export async function getHostMaintenanceRequests(
         : null;
 
     return Array.isArray(items) && items.every(hasNumericId)
-      ? { data: items as MaintenanceRequest[] }
+      ? {
+          data: items as MaintenanceRequest[],
+          hasNext:
+            data !== null &&
+            typeof data === "object" &&
+            "hasNext" in data &&
+            data.hasNext === true,
+        }
       : { data: [], message: "Repair reports could not be loaded." };
   } catch {
     return { data: [], message: "Repair reports could not be loaded." };
@@ -297,11 +350,14 @@ export async function updateMaintenanceRequest(
   hostNote?: string,
 ): Promise<TenancyResult<MaintenanceRequest | null>> {
   try {
-    const { ok, payload } = await request(`/api/maintenance-requests/${requestId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status, hostNote: hostNote ?? null }),
-    });
+    const { ok, payload } = await request(
+      `/api/maintenance-requests/${requestId}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status, hostNote: hostNote ?? null }),
+      },
+    );
 
     if (!ok) {
       return {

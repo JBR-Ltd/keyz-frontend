@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 import RatingsPageSkeleton from "@/components/reviews/RatingsPageSkeleton";
-import { getHostBookings, type Booking } from "@/lib/bookings";
+import { getAllHostBookings, type Booking } from "@/lib/bookings";
 import {
   getReviewsAboutMe,
   getReviewsIWrote,
@@ -64,7 +64,7 @@ export default function HostRatingsBoard(): ReactElement {
       const [reviewResult, writtenResult, bookingResult] = await Promise.all([
         getReviewsAboutMe(),
         getReviewsIWrote(),
-        getHostBookings(),
+        getAllHostBookings(),
       ]);
 
       if (!active) {
@@ -74,6 +74,7 @@ export default function HostRatingsBoard(): ReactElement {
       setReviews(reviewResult.data);
       setWritten(writtenResult.data);
       setBookings(bookingResult.data);
+      if (bookingResult.message) notify({ title: "Bookings could not be loaded", description: bookingResult.message, variant: "error" });
       setIsLoading(false);
     };
 
@@ -82,7 +83,7 @@ export default function HostRatingsBoard(): ReactElement {
     return () => {
       active = false;
     };
-  }, []);
+  }, [notify]);
 
   const averageRating = useMemo(() => {
     if (reviews.length === 0) {

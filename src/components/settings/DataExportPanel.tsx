@@ -49,12 +49,10 @@ export default function DataExportPanel(): ReactElement {
   const [exports, setExports] = useState<DataExport[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRequesting, setIsRequesting] = useState(false);
+  const [loadKey, setLoadKey] = useState(0);
 
   const load = (): void => {
-    void getDataExports().then((result) => {
-      setExports(result);
-      setIsLoading(false);
-    });
+    setLoadKey((current) => current + 1);
   };
 
   useEffect(() => {
@@ -70,7 +68,7 @@ export default function DataExportPanel(): ReactElement {
     return () => {
       active = false;
     };
-  }, []);
+  }, [loadKey]);
 
   const request = async (): Promise<void> => {
     setIsRequesting(true);

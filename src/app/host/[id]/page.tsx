@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useState, type ReactElement } from "react";
+import { use, useEffect, useRef, useState, type ReactElement } from "react";
 import {
   Building2,
   ChevronLeft,
@@ -18,6 +18,7 @@ import VerifiedBadge from "@/components/ui/VerifiedBadge";
 import ReportDialog from "@/components/reports/ReportDialog";
 import { getHostListings, getHostProfile, type HostProfile } from "@/lib/hosts";
 import type { BackendProperty } from "@/lib/hostListings";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface HostPageProps {
   params: Promise<{ id: string }>;
@@ -34,6 +35,26 @@ function getInitials(name: string): string {
     .map((part) => part.charAt(0))
     .join("")
     .toUpperCase();
+}
+
+function ListingGridSkeleton(): ReactElement {
+  return (
+    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {[0, 1, 2].map((item) => (
+        <div
+          key={item}
+          className="overflow-hidden rounded-xl border border-border"
+        >
+          <Skeleton className="aspect-video rounded-none" />
+          <div className="space-y-3 p-5">
+            <Skeleton className="h-6 w-3/4" />
+            <Skeleton className="h-4 w-1/2" />
+            <Skeleton className="h-5 w-1/3" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 function HostProfileSkeleton(): ReactElement {
@@ -96,18 +117,21 @@ export default function HostProfilePage({
   const [hasNext, setHasNext] = useState(false);
   const [page, setPage] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [isListingsLoading, setIsListingsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [loadError, setLoadError] = useState("");
   const [listingError, setListingError] = useState("");
+  const requestGeneration = useRef(0);
+  const paginationGeneration = useRef<number | null>(null);
 
   useEffect(() => {
     let active = true;
+    const generation = ++requestGeneration.current;
+    paginationGeneration.current = null;
 
     const load = async (): Promise<void> => {
-      const [profileResult, listingResult] = await Promise.all([
-        getHostProfile(id),
-        getHostListings(id, 0, PAGE_SIZE),
-      ]);
+      setIsLoading(true);
+      const profileResult = await getHostProfile(id);
 
       if (!active) {
         return;
@@ -125,25 +149,44 @@ export default function HostProfilePage({
           router.replace(`/host/${canonical}`, { scroll: false });
         }
       }
-      setListings(listingResult.data?.items ?? []);
-      setHasNext(listingResult.data?.hasNext ?? false);
       setLoadError(profileResult.message ?? "");
-      setListingError(listingResult.data ? "" : (listingResult.message ?? ""));
       setIsLoading(false);
     };
 
+    const loadListings = async (): Promise<void> => {
+      setIsListingsLoading(true);
+      setIsLoadingMore(false);
+      const result = await getHostListings(id, 0, PAGE_SIZE);
+
+      if (!active) return;
+
+      setListings(result.data?.items ?? []);
+      setHasNext(result.data?.hasNext ?? false);
+      setPage(0);
+      setListingError(result.data ? "" : (result.message ?? ""));
+      setIsListingsLoading(false);
+    };
+
     void load();
+    void loadListings();
 
     return () => {
       active = false;
+      requestGeneration.current = generation + 1;
     };
   }, [id, router]);
 
   const loadMore = async (): Promise<void> => {
+    if (isListingsLoading || !hasNext || paginationGeneration.current !== null)
+      return;
+    const generation = requestGeneration.current;
+    paginationGeneration.current = generation;
     const nextPage = page + 1;
     setIsLoadingMore(true);
     setListingError("");
     const result = await getHostListings(id, nextPage, PAGE_SIZE);
+    if (requestGeneration.current !== generation) return;
+    paginationGeneration.current = null;
     setIsLoadingMore(false);
 
     if (!result.data) {
@@ -151,15 +194,21 @@ export default function HostProfilePage({
       return;
     }
 
-    setListings((current) => [...current, ...result.data!.items]);
+    const { items } = result.data;
+    setListings((current) => [...current, ...items]);
     setHasNext(result.data.hasNext);
     setPage(nextPage);
   };
 
   const retryListings = async (): Promise<void> => {
+    if (isListingsLoading || paginationGeneration.current !== null) return;
+    const generation = requestGeneration.current;
+    paginationGeneration.current = generation;
     setIsLoadingMore(true);
     setListingError("");
     const result = await getHostListings(id, 0, PAGE_SIZE);
+    if (requestGeneration.current !== generation) return;
+    paginationGeneration.current = null;
     setIsLoadingMore(false);
 
     if (!result.data) {
@@ -344,7 +393,11 @@ export default function HostProfilePage({
             ) : null}
           </div>
 
-          {listingError && listings.length === 0 ? (
+          {isListingsLoading ? (
+            <div className="mt-8" role="status" aria-label="Loading host homes">
+              <ListingGridSkeleton />
+            </div>
+          ) : listingError && listings.length === 0 ? (
             <div className="mt-8 flex flex-col items-center rounded-3xl border border-border bg-[var(--color-bg)] px-6 py-12 text-center shadow-sm">
               <span className="flex h-16 w-16 items-center justify-center rounded-full bg-surface-soft text-primary">
                 <CircleAlert size={30} aria-hidden="true" />

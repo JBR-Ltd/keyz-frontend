@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactElement } from "react";
+import { useEffect, useRef, useState, type ReactElement } from "react";
 import { Loader2, Wrench } from "lucide-react";
 import { Select } from "@/components/ui/select";
 import { CardListSkeleton } from "@/components/ui/skeleton";
@@ -65,9 +65,15 @@ export default function HostMaintenanceView(): ReactElement {
   const [loadError, setLoadError] = useState("");
   const [busyId, setBusyId] = useState<number | null>(null);
   const [notes, setNotes] = useState<Record<number, string>>({});
+  const [page, setPage] = useState(0);
+  const [hasNext, setHasNext] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const paginationPending = useRef(false);
+  const isMounted = useRef(false);
 
   useEffect(() => {
     let active = true;
+    isMounted.current = true;
 
     void getHostMaintenanceRequests().then((result) => {
       if (!active) {
@@ -75,14 +81,46 @@ export default function HostMaintenanceView(): ReactElement {
       }
 
       setRequests(result.data);
+      setHasNext(result.hasNext ?? false);
       setLoadError(result.message ?? "");
       setIsLoading(false);
     });
 
     return () => {
       active = false;
+      isMounted.current = false;
     };
   }, []);
+
+  const loadMore = async (): Promise<void> => {
+    if (isLoading || !hasNext || paginationPending.current) return;
+    paginationPending.current = true;
+    setIsLoadingMore(true);
+    const result = await getHostMaintenanceRequests(undefined, {
+      page: page + 1,
+      size: 20,
+    });
+
+    if (!isMounted.current) return;
+    paginationPending.current = false;
+    setIsLoadingMore(false);
+
+    if (result.message) {
+      notify({
+        title: "More repairs could not load",
+        description: result.message,
+        variant: "error",
+      });
+      return;
+    }
+
+    setRequests((current) => {
+      const known = new Set(current.map((item) => item.id));
+      return [...current, ...result.data.filter((item) => !known.has(item.id))];
+    });
+    setHasNext(result.hasNext ?? false);
+    setPage((current) => current + 1);
+  };
 
   const moveTo = async (
     request: MaintenanceRequest,
@@ -248,6 +286,21 @@ export default function HostMaintenanceView(): ReactElement {
           })}
         </div>
       )}
+      {!isLoading && hasNext ? (
+        <div className="mt-6 text-center">
+          <button
+            type="button"
+            onClick={() => void loadMore()}
+            disabled={isLoadingMore}
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-primary/15 px-5 font-body text-sm font-bold text-primary hover:bg-primary/5 focus-visible:outline focus-visible:outline-accent disabled:cursor-wait disabled:opacity-60"
+          >
+            {isLoadingMore ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : null}
+            Show more repairs
+          </button>
+        </div>
+      ) : null}
     </main>
   );
 }

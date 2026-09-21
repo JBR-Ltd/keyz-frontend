@@ -2,7 +2,8 @@
 
 import { Bell, CheckCheck, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, type ReactElement } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactElement } from "react";
+import { useToast } from "@/components/ui/toast";
 import {
   getNotifications,
   getUnreadNotificationCount,
@@ -40,8 +41,14 @@ function formatWhen(value: string, now: number): string {
 
 export default function NotificationsBell(): ReactElement {
   const router = useRouter();
+  const { notify } = useToast();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const mountedRef = useRef(false);
+  const sessionRef = useRef(0);
+  const countVersionRef = useRef(0);
+  const readingRef = useRef(false);
+  const olderRequestRef = useRef<AbortController | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [unread, setUnread] = useState(0);
   const [items, setItems] = useState<AppNotification[]>([]);
@@ -49,31 +56,44 @@ export default function NotificationsBell(): ReactElement {
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState("");
+  const [olderError, setOlderError] = useState("");
+  const [isReading, setIsReading] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [now, setNow] = useState(0);
 
+  const refreshUnread = useCallback(async (): Promise<void> => {
+    if (readingRef.current) return;
+    const version = ++countVersionRef.current;
+    const token = localStorage.getItem("rello_token");
+    const count = await getUnreadNotificationCount();
+
+    if (mountedRef.current && version === countVersionRef.current
+        && token === localStorage.getItem("rello_token") && count !== null) {
+      setUnread(count);
+    }
+  }, []);
+
   useEffect(() => {
-    let active = true;
-
-    const refresh = async (): Promise<void> => {
-      const count = await getUnreadNotificationCount();
-
-      if (active) {
-        setUnread(count);
-      }
-    };
-
-    void refresh();
+    mountedRef.current = true;
+    void refreshUnread();
 
     const timer = window.setInterval(() => {
       if (document.visibilityState === "visible") {
-        void refresh();
+        void refreshUnread();
       }
     }, UNREAD_POLL_MS);
 
     return () => {
-      active = false;
+      mountedRef.current = false;
       window.clearInterval(timer);
     };
+  }, [refreshUnread]);
+
+  const close = useCallback((): void => {
+    sessionRef.current++;
+    olderRequestRef.current?.abort();
+    olderRequestRef.current = null;
+    setIsOpen(false);
   }, []);
 
   useEffect(() => {
@@ -81,16 +101,20 @@ export default function NotificationsBell(): ReactElement {
       return;
     }
 
-    let active = true;
+    const session = ++sessionRef.current;
+    const controller = new AbortController();
+    const token = localStorage.getItem("rello_token");
 
-    void getNotifications().then((result) => {
-      if (!active) {
+    void getNotifications("", controller.signal).then((result) => {
+      if (controller.signal.aborted || session !== sessionRef.current || token !== localStorage.getItem("rello_token")) {
         return;
       }
 
       setNow(Date.now());
-      setItems(result.data.items);
-      setNextCursor(result.data.nextCursor);
+      if (!result.message) {
+        setItems(Array.from(new Map(result.data.items.map((item) => [item.id, item])).values()));
+        setNextCursor(result.data.nextCursor);
+      }
       setError(result.message ?? "");
       setIsLoading(false);
     });
@@ -103,13 +127,13 @@ export default function NotificationsBell(): ReactElement {
         !triggerRef.current?.contains(target) &&
         !panelRef.current?.contains(target)
       ) {
-        setIsOpen(false);
+        close();
       }
     };
 
     const closeOnEscape = (event: KeyboardEvent): void => {
       if (event.key === "Escape") {
-        setIsOpen(false);
+        close();
         triggerRef.current?.focus();
       }
     };
@@ -118,53 +142,109 @@ export default function NotificationsBell(): ReactElement {
     window.addEventListener("keydown", closeOnEscape);
 
     return () => {
-      active = false;
+      controller.abort();
+      olderRequestRef.current?.abort();
+      olderRequestRef.current = null;
       window.removeEventListener("pointerdown", closeOnOutside);
       window.removeEventListener("keydown", closeOnEscape);
     };
-  }, [isOpen]);
+  }, [isOpen, reloadKey, close]);
 
   const toggle = (): void => {
-    if (!isOpen) {
-      setIsLoading(true);
-    }
-
-    setIsOpen((current) => !current);
-  };
-
-  const loadOlder = async (): Promise<void> => {
-    if (!nextCursor) {
+    if (isOpen) {
+      close();
       return;
     }
 
-    setIsLoadingMore(true);
-    const result = await getNotifications(nextCursor);
+    setIsLoading(true);
     setIsLoadingMore(false);
-    setItems((current) => [...current, ...result.data.items]);
+    setError("");
+    setOlderError("");
+    setIsOpen(true);
+  };
+
+  const loadOlder = async (): Promise<void> => {
+    if (!nextCursor || isLoading || readingRef.current || olderRequestRef.current) {
+      return;
+    }
+
+    const session = sessionRef.current;
+    const token = localStorage.getItem("rello_token");
+    const controller = new AbortController();
+    olderRequestRef.current = controller;
+    setIsLoadingMore(true);
+    setOlderError("");
+    const result = await getNotifications(nextCursor, controller.signal);
+
+    if (controller.signal.aborted || !mountedRef.current
+        || session !== sessionRef.current || token !== localStorage.getItem("rello_token")) return;
+    olderRequestRef.current = null;
+    setIsLoadingMore(false);
+    if (result.message) {
+      setOlderError(result.message);
+      return;
+    }
+    setItems((current) => {
+      const merged = new Map(current.map((item) => [item.id, item]));
+      for (const item of result.data.items) {
+        if (!merged.has(item.id)) merged.set(item.id, item);
+      }
+      return Array.from(merged.values());
+    });
     setNextCursor(result.data.nextCursor);
   };
 
   const open = async (notification: AppNotification): Promise<void> => {
+    if (readingRef.current || olderRequestRef.current) return;
+    const session = sessionRef.current;
+    const token = localStorage.getItem("rello_token");
     if (!notification.read) {
-      setItems((current) =>
-        current.map((item) =>
-          item.id === notification.id ? { ...item, read: true } : item,
-        ),
-      );
-      setUnread((count) => Math.max(0, count - 1));
-      void markNotificationRead(notification.id);
+      readingRef.current = true;
+      countVersionRef.current++;
+      setIsReading(true);
+      const saved = await markNotificationRead(notification.id);
+      if (!mountedRef.current) return;
+      readingRef.current = false;
+      setIsReading(false);
+      if (token !== localStorage.getItem("rello_token")) return;
+      if (saved) {
+        setUnread((count) => Math.max(0, count - 1));
+        if (session === sessionRef.current) {
+          setItems((current) => current.map((item) => item.id === notification.id ? { ...item, read: true } : item));
+        }
+      } else {
+        notify({ title: "Could not mark notification read", description: "It remains unread. Please try again.", variant: "error" });
+      }
+      void refreshUnread();
     }
 
-    if (notification.link?.startsWith("/")) {
-      setIsOpen(false);
+    if (session === sessionRef.current && notification.link?.startsWith("/")) {
+      close();
       router.push(notification.link);
     }
   };
 
   const readAll = async (): Promise<void> => {
-    setItems((current) => current.map((item) => ({ ...item, read: true })));
-    setUnread(0);
-    await markAllNotificationsRead();
+    if (isLoading || readingRef.current || olderRequestRef.current) return;
+    const session = sessionRef.current;
+    const token = localStorage.getItem("rello_token");
+    readingRef.current = true;
+    countVersionRef.current++;
+    setIsReading(true);
+    const saved = await markAllNotificationsRead();
+    if (!mountedRef.current) return;
+    readingRef.current = false;
+    setIsReading(false);
+    if (token !== localStorage.getItem("rello_token")) return;
+    if (saved) {
+      setUnread(0);
+      if (session === sessionRef.current) {
+        setItems((current) => current.map((item) => ({ ...item, read: true })));
+      }
+    } else {
+      notify({ title: "Could not mark notifications read", description: "They remain unread. Please try again.", variant: "error" });
+    }
+    void refreshUnread();
   };
 
   return (
@@ -197,13 +277,14 @@ export default function NotificationsBell(): ReactElement {
             <h2 className="font-body text-sm font-semibold text-primary">
               Notifications
             </h2>
-            {items.some((item) => !item.read) ? (
+            {!isLoading && !error && items.some((item) => !item.read) ? (
               <button
                 type="button"
                 onClick={() => void readAll()}
-                className="inline-flex items-center gap-1.5 rounded font-body text-xs font-bold text-accent-alt hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                disabled={isReading || isLoadingMore}
+                className="inline-flex items-center gap-1.5 rounded font-body text-xs font-bold text-accent-alt hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60"
               >
-                <CheckCheck size={14} aria-hidden="true" />
+                {isReading ? <Loader2 size={14} className="animate-spin" aria-hidden="true" /> : <CheckCheck size={14} aria-hidden="true" />}
                 Mark all read
               </button>
             ) : null}
@@ -215,9 +296,19 @@ export default function NotificationsBell(): ReactElement {
               <span className="sr-only">Loading notifications</span>
             </div>
           ) : error ? (
-            <p className="px-5 py-10 text-center font-body text-sm text-red-700">
-              {error}
-            </p>
+            <div className="px-5 py-10 text-center" role="alert">
+              <p className="font-body text-sm text-red-700">{error}</p>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsLoading(true);
+                  setReloadKey((current) => current + 1);
+                }}
+                className="mt-3 rounded px-3 py-2 font-body text-xs font-bold text-primary hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                Try again
+              </button>
+            </div>
           ) : items.length === 0 ? (
             <p className="px-5 py-10 text-center font-body text-sm text-muted">
               Nothing yet. Booking updates, payments and reminders show up here.
@@ -230,7 +321,8 @@ export default function NotificationsBell(): ReactElement {
                     <button
                       type="button"
                       onClick={() => void open(item)}
-                      className="grid w-full grid-cols-[0.5rem_minmax(0,1fr)_auto] gap-3 px-4 py-3 text-left transition-colors hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
+                      disabled={isReading || isLoadingMore}
+                      className="grid w-full grid-cols-[0.5rem_minmax(0,1fr)_auto] gap-3 px-4 py-3 text-left transition-colors hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent disabled:opacity-60"
                     >
                       <span
                         className={`mt-1.5 h-2 w-2 rounded-full ${item.read ? "bg-transparent" : "bg-accent"}`}
@@ -256,15 +348,16 @@ export default function NotificationsBell(): ReactElement {
                   </li>
                 ))}
               </ul>
+              {olderError ? <p role="alert" className="px-4 py-3 font-body text-xs text-red-700">{olderError}</p> : null}
               {nextCursor ? (
                 <button
                   type="button"
                   onClick={() => void loadOlder()}
-                  disabled={isLoadingMore}
+                  disabled={isLoadingMore || isReading}
                   className="flex w-full items-center justify-center gap-2 border-t border-border px-4 py-3 font-body text-xs font-bold text-primary hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent disabled:opacity-60"
                 >
                   {isLoadingMore ? <Loader2 size={13} className="animate-spin" /> : null}
-                  Load older
+                  {olderError ? "Retry loading older" : "Load older"}
                 </button>
               ) : null}
             </div>

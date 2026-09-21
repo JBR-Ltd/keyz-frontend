@@ -81,7 +81,6 @@ export interface PropertyDetail {
   reviews: PropertyReviews;
 }
 
-
 const DRAFT_IMAGE_FALLBACK =
   "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200&h=800&fit=crop&auto=format&q=80";
 
@@ -280,9 +279,9 @@ export async function getPropertyById(
   if (/^\d+$/.test(id)) {
     const backendProperty = await getBackendPropertyById(id);
 
-    if (backendProperty.data) {
-      return backendPropertyToPropertyDetail(backendProperty.data);
-    }
+    return backendProperty.data
+      ? backendPropertyToPropertyDetail(backendProperty.data)
+      : null;
   }
 
   const storedListing = await getHostListingById(id);

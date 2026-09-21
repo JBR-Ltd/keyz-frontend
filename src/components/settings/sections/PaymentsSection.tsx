@@ -7,7 +7,7 @@ import { useEffect, useState, type ReactElement } from "react";
 import PropertyPrice from "@/components/property/PropertyPrice";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getMyEscrow, type EscrowEntry, type EscrowStatus } from "@/lib/escrow";
+import { getAllMyEscrow, type EscrowEntry, type EscrowStatus } from "@/lib/escrow";
 import {
   getBankName,
   maskAccountNumber,
@@ -55,7 +55,7 @@ export default function PaymentsSection(): ReactElement {
   const pathname = usePathname();
   const role = pathname.split("/")[1] ?? "tenant";
   const isHost = role === "landlord" || role === "agent";
-  const { isLoading: isLoadingPayout, snapshot } = useHostVerification();
+  const { isLoading: isLoadingPayout, snapshot } = useHostVerification(isHost);
   const [entries, setEntries] = useState<EscrowEntry[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -63,7 +63,7 @@ export default function PaymentsSection(): ReactElement {
   useEffect(() => {
     let active = true;
 
-    void getMyEscrow().then((result) => {
+    void getAllMyEscrow().then((result) => {
       if (!active) {
         return;
       }

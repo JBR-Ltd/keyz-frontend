@@ -357,42 +357,17 @@ function getAttentionItems(
   return items;
 }
 
-/**
- * The server's counts when they have arrived, and the loaded lists until then. The
- * lists are paged, so only the server can count an account with more rows than a page.
- */
-function getSummaryItems(
-  portfolio: PropertyPortfolio | null,
-  bookings: Booking[],
-  escrow: EscrowEntry[],
-  now: number,
-  summary: HostDashboardSummary | null,
-): SummaryItem[] {
-  const pendingRequests =
-    summary?.bookings.requests ??
-    bookings.filter((booking) => booking.status === "PENDING").length;
-  const upcomingStays =
-    summary?.bookings.upcoming ??
-    bookings.filter(
-      (booking) =>
-        booking.status === "CONFIRMED" &&
-        (booking.lifecycleStage === "UPCOMING" ||
-          (booking.startDate !== null &&
-            new Date(booking.startDate).getTime() > now)),
-    ).length;
-  const fundsHeld =
-    summary?.money.held ??
-    escrow
-      .filter((entry) => entry.status === "HELD")
-      .reduce((total, entry) => total + entry.amount, 0);
+/** Paged detail lists cannot provide complete account totals. */
+function getSummaryItems(summary: HostDashboardSummary | null): SummaryItem[] {
+  const pendingRequests = summary?.bookings.requests ?? 0;
+  const upcomingStays = summary?.bookings.upcoming ?? 0;
+  const fundsHeld = summary?.money.held ?? 0;
 
   return [
     {
       label: "Live homes",
       source: "portfolio",
-      value: String(
-        summary?.listings.live ?? portfolio?.activeListingsCount ?? 0,
-      ).padStart(2, "0"),
+      value: String(summary?.listings.live ?? 0).padStart(2, "0"),
       detail: "Published and visible",
       icon: Building2,
       tone: "primary",
@@ -434,7 +409,10 @@ function getUpcomingBookings(bookings: Booking[], now: number): Booking[] {
     .sort(
       (left, right) =>
         new Date(
-          left.tenancyStartDate ?? left.startDate ?? left.preferredMoveInDate ?? 0,
+          left.tenancyStartDate ??
+            left.startDate ??
+            left.preferredMoveInDate ??
+            0,
         ).getTime() -
         new Date(
           right.tenancyStartDate ??
@@ -528,6 +506,10 @@ export default function LandlordDashboardPage(): ReactElement {
   // render body is impure and makes every memo below unstable
   const [loadedAt] = useState(() => Date.now());
   const [summary, setSummary] = useState<HostDashboardSummary | null>(null);
+  const [isSummaryLoading, setIsSummaryLoading] = useState(true);
+  const [summaryError, setSummaryError] = useState("");
+  const [summaryReloadKey, setSummaryReloadKey] = useState(0);
+  const [loadedSummaryKey, setLoadedSummaryKey] = useState(-1);
 
   useEffect(() => {
     let active = true;
@@ -552,12 +534,6 @@ export default function LandlordDashboardPage(): ReactElement {
       setIsBookingsLoading(false);
     });
 
-    void getHostDashboardSummary().then((result) => {
-      if (active) {
-        setSummary(result.data);
-      }
-    });
-
     void getMyEscrow().then((result) => {
       if (!active) {
         return;
@@ -573,16 +549,30 @@ export default function LandlordDashboardPage(): ReactElement {
     };
   }, []);
 
+  useEffect(() => {
+    let active = true;
+    void getHostDashboardSummary().then((result) => {
+      if (!active) return;
+      setSummary(result.data);
+      setSummaryError(
+        result.message ??
+          (result.data ? "" : "Your figures could not be loaded."),
+      );
+      setIsSummaryLoading(false);
+      setLoadedSummaryKey(summaryReloadKey);
+    });
+    return () => {
+      active = false;
+    };
+  }, [summaryReloadKey]);
+
   const verified = verification?.identity.status === "approved";
   const portfolioProperties = useMemo(
     () => portfolio?.properties ?? [],
     [portfolio],
   );
   const now = loadedAt;
-  const summaryItems = useMemo(
-    () => getSummaryItems(portfolio, bookings, escrow, now, summary),
-    [portfolio, bookings, escrow, now, summary],
-  );
+  const summaryItems = useMemo(() => getSummaryItems(summary), [summary]);
   const attentionItems = useMemo(
     () =>
       getAttentionItems(
@@ -606,13 +596,7 @@ export default function LandlordDashboardPage(): ReactElement {
     [bookings, now],
   );
   const recentEscrow = useMemo(() => escrow.slice(0, 3), [escrow]);
-  const fundsHeld = useMemo(
-    () =>
-      escrow
-        .filter((entry) => entry.status === "HELD")
-        .reduce((total, entry) => total + entry.amount, 0),
-    [escrow],
-  );
+  const fundsHeld = summary?.money.held ?? 0;
   const forceLoading = requestedViewState === "loading";
   const forceError = requestedViewState === "error";
   const accountBusy = forceLoading || isAccountLoading;
@@ -678,19 +662,14 @@ export default function LandlordDashboardPage(): ReactElement {
         aria-label="Portfolio summary"
       >
         {summaryItems.map(
-          ({ detail, icon: Icon, label, source, tone, value }, index) => {
+          ({ detail, icon: Icon, label, tone, value }, index) => {
             const sourceLoading =
-              source === "portfolio"
-                ? portfolioBusy
-                : source === "bookings"
-                  ? bookingsBusy
-                  : escrowBusy;
-            const sourceError =
-              source === "portfolio"
-                ? resolvedPortfolioError
-                : source === "bookings"
-                  ? resolvedBookingsError
-                  : resolvedEscrowError;
+              forceLoading ||
+              isSummaryLoading ||
+              loadedSummaryKey !== summaryReloadKey;
+            const sourceError = forceError
+              ? "Your figures could not be loaded."
+              : summaryError;
 
             if (sourceLoading) {
               return (
@@ -754,7 +733,19 @@ export default function LandlordDashboardPage(): ReactElement {
                   )}
                 </p>
                 <p className="mt-5 font-body text-xs font-bold leading-5 text-primary/70">
-                  {sourceError ? "Try again shortly" : detail}
+                  {sourceError ? (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSummaryReloadKey((current) => current + 1)
+                      }
+                      className="rounded font-bold underline focus-visible:ring-2 focus-visible:ring-accent"
+                    >
+                      Try again
+                    </button>
+                  ) : (
+                    detail
+                  )}
                 </p>
               </article>
             );
@@ -1097,7 +1088,11 @@ export default function LandlordDashboardPage(): ReactElement {
 
         <section
           className="overflow-hidden rounded-lg bg-primary text-white shadow-sm"
-          aria-busy={escrowBusy}
+          aria-busy={
+            escrowBusy ||
+            isSummaryLoading ||
+            loadedSummaryKey !== summaryReloadKey
+          }
         >
           <div className="flex items-start justify-between gap-4 px-5 py-5 sm:px-6">
             <div>
@@ -1120,11 +1115,13 @@ export default function LandlordDashboardPage(): ReactElement {
               Currently held
             </p>
             <p className="mt-2 font-display text-4xl font-bold">
-              {escrowBusy ? (
+              {forceLoading ||
+              isSummaryLoading ||
+              loadedSummaryKey !== summaryReloadKey ? (
                 <span
                   className={`inline-block h-10 w-40 rounded-lg bg-white/20 align-middle ${showSkeletons ? "animate-pulse motion-reduce:animate-none" : ""}`}
                 />
-              ) : resolvedEscrowError ? (
+              ) : summaryError || forceError ? (
                 "Unavailable"
               ) : (
                 <PropertyPrice value={fundsHeld} />

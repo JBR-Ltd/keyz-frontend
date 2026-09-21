@@ -1,5 +1,6 @@
 "use client";
 
+import { apiRequest } from "@/lib/apiRequest";
 import { useCallback, useEffect, useState } from "react";
 import { resolveApiError } from "@/lib/errors";
 import {
@@ -174,7 +175,7 @@ export async function submitKybDocuments(
     formData.append("businessDocument", businessDocument);
     formData.append("addressDocument", addressDocument);
 
-    const response = await fetch("/api/verification/kyb", {
+    const response = await apiRequest("/api/verification/kyb", {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
       body: formData,
@@ -204,22 +205,38 @@ export interface UseHostVerification {
 }
 
 /** Reads the host's verification state once on mount. */
-export function useHostVerification(): UseHostVerification {
-  const [snapshot, setSnapshot] = useState<HostVerificationSnapshot | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+export function useHostVerification(enabled = true): UseHostVerification {
+  const [snapshot, setSnapshot] = useState<HostVerificationSnapshot | null>(
+    null,
+  );
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [resolvedKey, setResolvedKey] = useState<number | null>(null);
 
   const refresh = useCallback((): void => {
-    void getHostVerification().then((result) => {
-      setSnapshot(result.data);
-      setIsLoading(false);
-    });
+    setRefreshKey((current) => current + 1);
   }, []);
 
   useEffect(() => {
-    refresh();
-  }, [refresh]);
+    if (!enabled) return;
+    let active = true;
 
-  return { isLoading, refresh, snapshot };
+    void getHostVerification().then((result) => {
+      if (!active) return;
+
+      setSnapshot(result.data);
+      setResolvedKey(refreshKey);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [enabled, refreshKey]);
+
+  return {
+    isLoading: enabled && resolvedKey !== refreshKey,
+    refresh,
+    snapshot: enabled ? snapshot : null,
+  };
 }
 
 /** How many of the three host checks are done. */
@@ -230,6 +247,9 @@ export function countVerifiedHostSteps(
     return 0;
   }
 
-  return [snapshot.identity.status, snapshot.kyb.status, snapshot.payout.status]
-    .filter((status) => status === "approved").length;
+  return [
+    snapshot.identity.status,
+    snapshot.kyb.status,
+    snapshot.payout.status,
+  ].filter((status) => status === "approved").length;
 }

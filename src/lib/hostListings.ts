@@ -1,5 +1,6 @@
 "use client";
 
+import { apiRequest } from "@/lib/apiRequest";
 import { deleteDB, type DBSchema, type IDBPDatabase } from "idb";
 import { resolveApiError } from "@/lib/errors";
 import {
@@ -35,6 +36,7 @@ export interface BackendPropertyHost {
 /** Mirrors PropertySummaryResponse. The Property entity is no longer returned to clients. */
 /** How a listing is priced. Decides what `price` means and how a total is worked out. */
 export type RentalMode = "ANNUAL" | "MONTHLY" | "SHORT_STAY";
+export type StayType = "LONG_TERM" | "SHORT_STAY";
 
 export interface PropertyImage {
   caption: string | null;
@@ -184,8 +186,9 @@ export interface HostListingStorageResult<TValue> {
   unavailable: boolean;
 }
 
-export interface PublicPropertiesResult
-  extends HostListingStorageResult<BackendProperty[]> {
+export interface PublicPropertiesResult extends HostListingStorageResult<
+  BackendProperty[]
+> {
   hasNext: boolean;
   totalItems: number;
 }
@@ -252,7 +255,9 @@ function isBackendProperty(value: unknown): value is BackendProperty {
       value.status === "FOR_SALE" ||
       value.status === "RENTED" ||
       value.status === "SOLD") &&
-    (!("host" in value) || value.host === null || isBackendPropertyHost(value.host))
+    (!("host" in value) ||
+      value.host === null ||
+      isBackendPropertyHost(value.host))
   );
 }
 
@@ -376,7 +381,7 @@ async function requestBackendProperty(
   path: string,
   init?: RequestInit,
 ): Promise<BackendProperty> {
-  const response = await fetch(`/api/properties/${path}`, init);
+  const response = await apiRequest(`/api/properties/${path}`, init);
   const envelope = await parseApiResponse(response);
 
   if (!isBackendProperty(envelope.data)) {
@@ -485,7 +490,7 @@ async function uploadGallery(
 
   for (const photo of photos) {
     try {
-      const imageResponse = await fetch(photo.dataUrl);
+      const imageResponse = await apiRequest(photo.dataUrl);
 
       if (!imageResponse.ok) {
         throw new Error("could not be read");
@@ -494,11 +499,14 @@ async function uploadGallery(
       const formData = new FormData();
       formData.append("image", await imageResponse.blob(), photo.name);
 
-      const response = await fetch(`/api/properties/${propertyId}/images`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      });
+      const response = await apiRequest(
+        `/api/properties/${propertyId}/images`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData,
+        },
+      );
 
       if (!response.ok) {
         const payload: unknown = await response.json().catch(() => null);
@@ -542,12 +550,18 @@ export interface ListingSearch {
   minBedrooms?: number;
   minPrice?: number;
   query?: string;
+  rentalMode?: RentalMode;
   /** PRICE_ASC, PRICE_DESC, BEDROOMS, or nothing for newest first. */
   sort?: string;
+  stayType?: StayType;
 }
 
 /** Filters the whole catalogue, not the page that happens to be loaded. */
-function searchParams(page: number, size: number, search?: ListingSearch): string {
+function searchParams(
+  page: number,
+  size: number,
+  search?: ListingSearch,
+): string {
   const params = new URLSearchParams({
     page: String(page),
     size: String(size),
@@ -573,6 +587,14 @@ function searchParams(page: number, size: number, search?: ListingSearch): strin
     params.set("minBedrooms", String(search.minBedrooms));
   }
 
+  if (search?.stayType) {
+    params.set("stayType", search.stayType);
+  }
+
+  if (search?.rentalMode) {
+    params.set("rentalMode", search.rentalMode);
+  }
+
   if (search?.sort) {
     params.set("sort", search.sort);
   }
@@ -587,7 +609,7 @@ export async function getPublicProperties(
   search?: ListingSearch,
 ): Promise<PublicPropertiesResult> {
   try {
-    const response = await fetch(
+    const response = await apiRequest(
       `/api/properties/${filter}?${searchParams(page, size, search)}`,
     );
     const envelope = await parseApiResponse(response);
@@ -655,7 +677,7 @@ export async function interpretPublicProperties(
   size = 12,
 ): Promise<InterpretedPropertiesResult> {
   try {
-    const response = await fetch(
+    const response = await apiRequest(
       `/api/search/interpret?${searchParams(page, size)}`,
       {
         method: "POST",
@@ -740,7 +762,9 @@ export async function getBackendPropertyByPublicId(
     return {
       data: null,
       message:
-        error instanceof Error ? error.message : "Property could not be loaded.",
+        error instanceof Error
+          ? error.message
+          : "Property could not be loaded.",
       unavailable: false,
     };
   }
@@ -760,7 +784,7 @@ export async function getPropertyPortfolio(): Promise<
   }
 
   try {
-    const response = await fetch("/api/properties/portfolio", {
+    const response = await apiRequest("/api/properties/portfolio", {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -787,13 +811,14 @@ export async function getPropertyPortfolio(): Promise<
 export async function getHostListings(
   role: HostListingRole,
 ): Promise<HostListingStorageResult<HostListingRecord[]>> {
-  const draftResult = await getDrafts();
+  const [draftResult, portfolioResult] = await Promise.all([
+    getDrafts(),
+    getPropertyPortfolio(),
+  ]);
   const storedListings = draftResult.data.map((draft) =>
     draftToRecord(draft, role),
   );
   const storageUnavailable = false;
-
-  const portfolioResult = await getPropertyPortfolio();
 
   if (!portfolioResult.data) {
     return {
@@ -887,7 +912,8 @@ export async function saveHostListingDraft(
     squareFootage: input.squareFootage,
     listingType: input.listingType,
     rentalMode: input.rentalMode,
-    minimumNights: input.rentalMode === "SHORT_STAY" ? input.minimumNights : null,
+    minimumNights:
+      input.rentalMode === "SHORT_STAY" ? input.minimumNights : null,
     maximumGuests:
       input.rentalMode === "SHORT_STAY" ? (input.maximumGuests ?? null) : null,
     securityDeposit: input.securityDeposit ?? null,
@@ -922,7 +948,7 @@ export async function saveHostListingDraft(
 
   for (const photo of pending) {
     try {
-      const response = await fetch(photo.dataUrl);
+      const response = await apiRequest(photo.dataUrl);
       const uploaded = await addDraftImage(
         draftId,
         await response.blob(),
@@ -1047,11 +1073,13 @@ export async function submitHostListing(
 /** The cities that actually have something to rent, for the filter menu. */
 export async function getRentalCities(): Promise<string[]> {
   try {
-    const response = await fetch("/api/properties/cities");
+    const response = await apiRequest("/api/properties/cities");
     const envelope = await parseApiResponse(response);
 
     return Array.isArray(envelope.data)
-      ? envelope.data.filter((value): value is string => typeof value === "string")
+      ? envelope.data.filter(
+          (value): value is string => typeof value === "string",
+        )
       : [];
   } catch {
     return [];

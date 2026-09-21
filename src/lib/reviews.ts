@@ -1,5 +1,6 @@
 "use client";
 
+import { apiRequest } from "@/lib/apiRequest";
 import type { PartySummary } from "@/lib/bookings";
 import { resolveApiError } from "@/lib/errors";
 
@@ -67,7 +68,7 @@ async function requestReviews(
   }
 
   try {
-    const response = await fetch(path, {
+    const response = await apiRequest(path, {
       headers: token ? { Authorization: `Bearer ${token}` } : undefined,
     });
     const payload: unknown = await response.json().catch(() => null);
@@ -135,7 +136,7 @@ export async function submitReview(
   }
 
   try {
-    const response = await fetch("/api/reviews", {
+    const response = await apiRequest("/api/reviews", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,

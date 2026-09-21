@@ -63,20 +63,27 @@ export default function MessagesDropdown(): ReactElement {
 
   useEffect(() => {
     let active = true;
+    let pending = false;
 
     async function loadThreads(): Promise<void> {
-      const [threads, unread] = await Promise.all([
-        getChatThreads(),
-        getUnreadCount(),
-      ]);
+      if (pending) return;
+      pending = true;
 
-      if (!active) {
-        return;
+      try {
+        await Promise.all([
+          getChatThreads().then((threads) => {
+            if (!active) return;
+            setLoadError(threads.message ?? "");
+            setConversations(threads.data);
+          }),
+          getUnreadCount().then((unread) => {
+            if (!active || unread.message) return;
+            setUnreadCount(unread.data);
+          }),
+        ]);
+      } finally {
+        pending = false;
       }
-
-      setLoadError(threads.message ?? "");
-      setConversations(threads.data);
-      setUnreadCount(unread.data);
     }
 
     // Runs on mount and again whenever the panel opens, so the badge is never
@@ -210,7 +217,9 @@ export default function MessagesDropdown(): ReactElement {
                   <span className="flex flex-col items-end gap-2">
                     <span className="font-body text-[11px] font-bold text-muted">
                       {conversation.lastMessageTimestamp
-                        ? formatRelativeTimestamp(conversation.lastMessageTimestamp)
+                        ? formatRelativeTimestamp(
+                            conversation.lastMessageTimestamp,
+                          )
                         : ""}
                     </span>
                     {!conversation.lastMessageRead ? (
@@ -225,10 +234,14 @@ export default function MessagesDropdown(): ReactElement {
       ) : null}
 
       <ChatThread
-        conversationId={activeConversation ? String(activeConversation.otherUserId) : null}
+        conversationId={
+          activeConversation ? String(activeConversation.otherUserId) : null
+        }
         otherUserId={activeConversation?.otherUserId ?? null}
         otherPartyName={activeConversation?.otherUserName ?? ""}
-        otherPartyRole={toDisplayRole(activeConversation?.otherUserRole ?? "AGENT")}
+        otherPartyRole={toDisplayRole(
+          activeConversation?.otherUserRole ?? "AGENT",
+        )}
         propertyName=""
         onClose={() => setActiveConversation(null)}
       />

@@ -16,7 +16,7 @@ import PropertyPrice from "@/components/property/PropertyPrice";
 import EscrowLedgerSkeleton from "@/components/escrow/EscrowLedgerSkeleton";
 import { useToast } from "@/components/ui/toast";
 import {
-  getMyEscrow,
+  getAllMyEscrow,
   releaseEscrow,
   type EscrowEntry,
   type EscrowStatus,
@@ -54,7 +54,7 @@ export default function TenantEscrowPage(): ReactElement {
   useEffect(() => {
     let active = true;
 
-    void getMyEscrow().then((result) => {
+    void getAllMyEscrow().then((result) => {
       if (!active) {
         return;
       }
@@ -120,7 +120,7 @@ export default function TenantEscrowPage(): ReactElement {
             Escrow command
           </p>
           <h1 className="mt-5 font-display text-5xl font-bold leading-[0.9] sm:text-6xl">
-            <PropertyPrice value={totals.held} /> protected right now.
+            {loadError ? "Unavailable" : <PropertyPrice value={totals.held} />} protected right now.
           </h1>
           <p className="mt-5 max-w-xl font-body text-base leading-7 text-muted">
             Money you pay stays with Rello until you move in. The host is paid
@@ -134,7 +134,7 @@ export default function TenantEscrowPage(): ReactElement {
                 Awaiting payment
               </p>
               <p className="mt-2 font-display text-3xl font-bold">
-                <PropertyPrice value={totals.awaiting} />
+                {loadError ? "Unavailable" : <PropertyPrice value={totals.awaiting} />}
               </p>
             </div>
             <div className="rounded-lg bg-primary/5 p-5 shadow-sm">
@@ -143,7 +143,7 @@ export default function TenantEscrowPage(): ReactElement {
                 Released to hosts
               </p>
               <p className="mt-2 font-display text-3xl font-bold">
-                <PropertyPrice value={totals.released} />
+                {loadError ? "Unavailable" : <PropertyPrice value={totals.released} />}
               </p>
             </div>
           </div>

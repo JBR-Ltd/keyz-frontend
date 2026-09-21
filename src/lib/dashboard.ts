@@ -1,5 +1,6 @@
 "use client";
 
+import { apiRequest } from "@/lib/apiRequest";
 import { resolveApiError } from "@/lib/errors";
 
 // === Types
@@ -97,7 +98,7 @@ async function requestSummary<TValue>(
   }
 
   try {
-    const response = await fetch(path, {
+    const response = await apiRequest(path, {
       headers: { Authorization: `Bearer ${token}` },
     });
     const payload: unknown = await response.json().catch(() => null);

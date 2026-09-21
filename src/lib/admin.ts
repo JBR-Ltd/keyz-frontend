@@ -1,5 +1,6 @@
 "use client";
 
+import { apiRequest } from "@/lib/apiRequest";
 import type { Booking, PartySummary } from "@/lib/bookings";
 import type { Dispute, DisputeStatus } from "@/lib/disputes";
 import { resolveApiError } from "@/lib/errors";
@@ -94,7 +95,7 @@ async function adminRequest(
     return { ok: false, payload: null };
   }
 
-  const response = await fetch(path, {
+  const response = await apiRequest(path, {
     ...init,
     headers: { ...(init?.headers ?? {}), Authorization: `Bearer ${token}` },
   });
@@ -149,7 +150,9 @@ async function searchPage<TItem>(
   failure: string,
 ): Promise<AdminResult<AdminPage<TItem>>> {
   try {
-    const { ok, payload } = await adminRequest(`${path}${searchParams(search)}`);
+    const { ok, payload } = await adminRequest(
+      `${path}${searchParams(search)}`,
+    );
 
     if (!ok) {
       return {
@@ -216,10 +219,7 @@ export async function getDisputeQueue(): Promise<AdminResult<Dispute[]>> {
 
 export async function resolveDispute(
   disputeId: number,
-  outcome: Extract<
-    DisputeStatus,
-    "RESOLVED_FOR_TENANT" | "RESOLVED_FOR_HOST"
-  >,
+  outcome: Extract<DisputeStatus, "RESOLVED_FOR_TENANT" | "RESOLVED_FOR_HOST">,
   note: string,
 ): Promise<AdminResult<Dispute | null>> {
   try {
@@ -285,7 +285,10 @@ export async function decideKyb(
       ? { data: true }
       : {
           data: false,
-          message: resolveApiError(payload, "That decision could not be saved."),
+          message: resolveApiError(
+            payload,
+            "That decision could not be saved.",
+          ),
         };
   } catch {
     return { data: false, message: "That decision could not be saved." };

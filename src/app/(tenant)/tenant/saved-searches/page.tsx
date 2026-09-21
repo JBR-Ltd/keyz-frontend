@@ -12,6 +12,12 @@ import {
   type SavedSearch,
 } from "@/lib/marketplace";
 
+const MODE_LABELS: Record<NonNullable<SavedSearch["rentalMode"]>, string> = {
+  ANNUAL: "Annual rent",
+  MONTHLY: "Monthly rent",
+  SHORT_STAY: "Shortlet",
+};
+
 function describe(search: SavedSearch): string[] {
   const parts: string[] = [];
 
@@ -25,6 +31,14 @@ function describe(search: SavedSearch): string[] {
 
   if (search.minBedrooms) {
     parts.push(`${search.minBedrooms}+ bedrooms`);
+  }
+
+  if (search.rentalMode) {
+    parts.push(MODE_LABELS[search.rentalMode]);
+  } else if (search.stayType === "LONG_TERM") {
+    parts.push("Long-term homes");
+  } else if (search.stayType === "SHORT_STAY") {
+    parts.push("Shortlets");
   }
 
   return parts;
@@ -57,16 +71,24 @@ export default function SavedSearchesPage(): ReactElement {
 
   const toggleAlerts = async (search: SavedSearch): Promise<void> => {
     setBusyId(search.id);
-    const result = await updateSavedSearch(search.id, { alerts: !search.alerts });
+    const result = await updateSavedSearch(search.id, {
+      alerts: !search.alerts,
+    });
     setBusyId(null);
 
     if (!result.data) {
-      notify({ title: "Not changed", description: result.message ?? "Try again in a moment.", variant: "error" });
+      notify({
+        title: "Not changed",
+        description: result.message ?? "Try again in a moment.",
+        variant: "error",
+      });
       return;
     }
 
     const updated = result.data;
-    setSearches((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+    setSearches((current) =>
+      current.map((item) => (item.id === updated.id ? updated : item)),
+    );
   };
 
   const remove = async (search: SavedSearch): Promise<void> => {
@@ -75,7 +97,11 @@ export default function SavedSearchesPage(): ReactElement {
     setBusyId(null);
 
     if (!result.data) {
-      notify({ title: "Not deleted", description: result.message ?? "Try again in a moment.", variant: "error" });
+      notify({
+        title: "Not deleted",
+        description: result.message ?? "Try again in a moment.",
+        variant: "error",
+      });
       return;
     }
 
@@ -85,11 +111,15 @@ export default function SavedSearchesPage(): ReactElement {
 
   return (
     <main className="min-h-screen overflow-x-hidden px-5 py-10 sm:px-8 lg:px-10 lg:py-14 xl:px-14">
-      <p className="font-accent text-xs font-bold uppercase tracking-[0.3em] text-accent-alt">Alerts</p>
-      <h1 className="mt-4 font-display text-4xl font-bold text-primary sm:text-5xl">Saved searches</h1>
+      <p className="font-accent text-xs font-bold uppercase tracking-[0.3em] text-accent-alt">
+        Alerts
+      </p>
+      <h1 className="mt-4 font-display text-4xl font-bold text-primary sm:text-5xl">
+        Saved searches
+      </h1>
       <p className="mt-3 max-w-2xl font-body text-sm leading-6 text-muted">
-        We check each search once a day and email you when a new home matches. Save one from Browse after setting
-        your filters. You can keep up to 20.
+        We check each search once a day and email you when a new home matches.
+        Save one from Browse after setting your filters. You can keep up to 20.
       </p>
 
       {isLoading ? (
@@ -113,16 +143,35 @@ export default function SavedSearchesPage(): ReactElement {
       ) : (
         <ul className="mt-8 grid gap-4 md:grid-cols-2">
           {searches.map((search) => (
-            <li key={search.id} className="flex flex-col rounded-lg bg-bg p-5 shadow-sm">
-              <p className="font-body text-lg font-bold text-primary">{search.name}</p>
+            <li
+              key={search.id}
+              className="flex flex-col rounded-lg bg-bg p-5 shadow-sm"
+            >
+              <p className="font-body text-lg font-bold text-primary">
+                {search.name}
+              </p>
               <p className="mt-1 font-body text-sm text-muted">
                 {describe(search).join(" · ") || "Any home"}
                 {search.minPrice || search.maxPrice ? (
                   <>
                     {" · "}
-                    {search.minPrice ? <PropertyPrice value={search.minPrice} /> : "Any"}
+                    {search.minPrice ? (
+                      <PropertyPrice
+                        value={search.minPrice}
+                        rentalMode={search.rentalMode ?? undefined}
+                      />
+                    ) : (
+                      "Any"
+                    )}
                     {" to "}
-                    {search.maxPrice ? <PropertyPrice value={search.maxPrice} /> : "any"}
+                    {search.maxPrice ? (
+                      <PropertyPrice
+                        value={search.maxPrice}
+                        rentalMode={search.rentalMode ?? undefined}
+                      />
+                    ) : (
+                      "any"
+                    )}
                   </>
                 ) : null}
               </p>
@@ -145,7 +194,11 @@ export default function SavedSearchesPage(): ReactElement {
                   aria-pressed={search.alerts}
                   className="inline-flex min-h-10 items-center gap-2 rounded-full border border-primary/20 px-4 font-body text-sm font-bold text-primary hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60"
                 >
-                  {search.alerts ? <Bell size={14} aria-hidden="true" /> : <BellOff size={14} aria-hidden="true" />}
+                  {search.alerts ? (
+                    <Bell size={14} aria-hidden="true" />
+                  ) : (
+                    <BellOff size={14} aria-hidden="true" />
+                  )}
                   {search.alerts ? "Alerts on" : "Alerts off"}
                 </button>
                 <button

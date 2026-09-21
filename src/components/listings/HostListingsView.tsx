@@ -77,11 +77,13 @@ export default function HostListingsView({
 
   useEffect(() => {
     let active = true;
+    let generation = 0;
 
     const loadListings = async (): Promise<void> => {
+      const requestGeneration = ++generation;
       const result = await getHostListings(role);
 
-      if (!active) {
+      if (!active || generation !== requestGeneration) {
         return;
       }
 

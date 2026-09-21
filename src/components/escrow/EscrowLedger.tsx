@@ -17,7 +17,7 @@ import {
 import PropertyPrice from "@/components/property/PropertyPrice";
 import EscrowLedgerSkeleton from "@/components/escrow/EscrowLedgerSkeleton";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getMyEscrow, type EscrowEntry, type EscrowStatus } from "@/lib/escrow";
+import { getAllMyEscrow, type EscrowEntry, type EscrowStatus } from "@/lib/escrow";
 
 const STATUS_LABELS: Record<EscrowStatus, string> = {
   AWAITING_PAYMENT: "Awaiting payment",
@@ -49,7 +49,7 @@ export default function EscrowLedger(): ReactElement {
   useEffect(() => {
     let active = true;
 
-    void getMyEscrow().then((result) => {
+    void getAllMyEscrow().then((result) => {
       if (!active) {
         return;
       }
@@ -100,7 +100,7 @@ export default function EscrowLedger(): ReactElement {
                 aria-label="Loading escrow total"
               />
             ) : (
-              <PropertyPrice value={totals.held} />
+              loadError ? "Unavailable" : <PropertyPrice value={totals.held} />
             )}{" "}
             secured in escrow.
           </h1>
@@ -118,7 +118,7 @@ export default function EscrowLedger(): ReactElement {
                 {isLoading ? (
                   <Skeleton className="h-9 w-28" />
                 ) : (
-                  <PropertyPrice value={totals.awaiting} />
+                  loadError ? "Unavailable" : <PropertyPrice value={totals.awaiting} />
                 )}
               </div>
             </div>
@@ -131,7 +131,7 @@ export default function EscrowLedger(): ReactElement {
                 {isLoading ? (
                   <Skeleton className="h-9 w-28" />
                 ) : (
-                  <PropertyPrice value={totals.released} />
+                  loadError ? "Unavailable" : <PropertyPrice value={totals.released} />
                 )}
               </div>
             </div>

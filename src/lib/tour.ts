@@ -1,5 +1,6 @@
 "use client";
 
+import { apiRequest } from "@/lib/apiRequest";
 // === Types
 
 export interface TourFloor {
@@ -42,7 +43,7 @@ function unwrap(payload: unknown): unknown {
 
 async function readList(path: string): Promise<unknown[]> {
   try {
-    const response = await fetch(path);
+    const response = await apiRequest(path);
 
     if (!response.ok) {
       return [];
@@ -100,9 +101,9 @@ export async function getPropertyTour(
 
   const withRooms = await Promise.all(
     floors.map(async (floor) => {
-      const rooms = (await readList(`/api/tours/floors/${floor.id}/rooms`)).filter(
-        isRoom,
-      );
+      const rooms = (
+        await readList(`/api/tours/floors/${floor.id}/rooms`)
+      ).filter(isRoom);
 
       const roomsWithViews = await Promise.all(
         rooms.map(async (room) => ({

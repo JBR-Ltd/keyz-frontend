@@ -118,49 +118,36 @@ export default function ChatThread({
     }
 
     let active = true;
+    let pending = false;
+    let hasLoaded = false;
 
-    async function loadMessages(): Promise<void> {
-      // Loading the thread is what marks it read, so there is no second call to miss
-      const result = await getConversation(otherUserId as number, propertyId);
+    const refresh = async (): Promise<void> => {
+      if (pending || document.visibilityState !== "visible") {
+        return;
+      }
 
+      pending = true;
+      const result = await getConversation(otherUserId, propertyId);
+      pending = false;
+
+      // A failed poll keeps what is on screen rather than blanking the thread
       if (!active) {
         return;
       }
 
       setLoadError(result.message ?? "");
-      setMessages(result.data.map(toDisplayMessage));
-    }
-
-    void loadMessages();
-    inputRef.current?.focus();
-
-    return () => {
-      active = false;
-    };
-  }, [conversationId, otherUserId, propertyId]);
-
-  // Messages used to refresh only when a thread was reopened, so a reply sat
-  // unseen while the thread was on screen
-  useEffect(() => {
-    if (!conversationId || otherUserId === null) {
-      return;
-    }
-
-    let active = true;
-
-    const refresh = async (): Promise<void> => {
-      if (document.visibilityState !== "visible") {
-        return;
-      }
-
-      const result = await getConversation(otherUserId as number, propertyId);
-
-      // A failed poll keeps what is on screen rather than blanking the thread
-      if (!active || result.message) {
+      if (result.message) {
+        if (!hasLoaded) setMessages([]);
         return;
       }
 
       const incoming = result.data.map(toDisplayMessage);
+
+      if (!hasLoaded) {
+        hasLoaded = true;
+        setMessages(incoming);
+        return;
+      }
 
       setMessages((current) => {
         const pending = current.filter((message) =>
@@ -180,6 +167,9 @@ export default function ChatThread({
         return unchanged ? current : [...incoming, ...pending];
       });
     };
+
+    void refresh();
+    inputRef.current?.focus();
 
     const timer = window.setInterval(
       () => void refresh(),
@@ -285,7 +275,9 @@ export default function ChatThread({
     return true;
   };
 
-  const handleSend = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
+  const handleSend = async (
+    event: FormEvent<HTMLFormElement>,
+  ): Promise<void> => {
     event.preventDefault();
 
     const body = draft.trim();
@@ -336,7 +328,6 @@ export default function ChatThread({
     );
   };
 
-
   return (
     <OverlayPortal>
       <AnimatePresence>
@@ -384,7 +375,11 @@ export default function ChatThread({
                       aria-label={`Call ${otherPartyName}`}
                     >
                       {isCalling ? (
-                        <Loader2 size={18} className="animate-spin" aria-hidden="true" />
+                        <Loader2
+                          size={18}
+                          className="animate-spin"
+                          aria-hidden="true"
+                        />
                       ) : (
                         <Phone size={18} aria-hidden="true" />
                       )}
@@ -448,11 +443,16 @@ export default function ChatThread({
                           >
                             {message.attachment ? (
                               <div className="mb-2 w-60 max-w-full">
-                                <ChatAttachmentCard attachment={message.attachment} />
+                                <ChatAttachmentCard
+                                  attachment={message.attachment}
+                                />
                               </div>
                             ) : null}
                             {message.attachment &&
-                            isDefaultShareText(message.body, message.attachment) ? null : (
+                            isDefaultShareText(
+                              message.body,
+                              message.attachment,
+                            ) ? null : (
                               <p className="break-words font-body text-sm leading-6">
                                 {message.body}
                               </p>

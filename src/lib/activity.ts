@@ -1,5 +1,6 @@
 "use client";
 
+import { apiRequest } from "@/lib/apiRequest";
 import { resolveApiError } from "@/lib/errors";
 
 // === Types
@@ -126,7 +127,7 @@ export async function getMyActivity(
       params.set("cursor", cursor);
     }
 
-    const response = await fetch(`/api/activity?${params.toString()}`, {
+    const response = await apiRequest(`/api/activity?${params.toString()}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     const payload: unknown = await response.json().catch(() => null);
@@ -147,7 +148,9 @@ export async function getMyActivity(
       return { data: EMPTY, message: "Your activity could not be loaded." };
     }
 
-    const items = Array.isArray(data.items) ? data.items.filter(isActivityEvent) : [];
+    const items = Array.isArray(data.items)
+      ? data.items.filter(isActivityEvent)
+      : [];
     const nextCursor =
       "nextCursor" in data && typeof data.nextCursor === "string"
         ? data.nextCursor

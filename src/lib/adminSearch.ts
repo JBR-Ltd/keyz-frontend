@@ -45,10 +45,10 @@ export function useAdminSearch<TItem>(
   const [applied, setApplied] = useState<AdminSearch | null>(null);
 
   useEffect(() => {
-    const timer = window.setTimeout(
-      () => setDebouncedQuery(query),
-      DEBOUNCE_MS,
-    );
+    const timer = window.setTimeout(() => {
+      setDebouncedQuery(query);
+      setPage(0);
+    }, DEBOUNCE_MS);
 
     return () => window.clearTimeout(timer);
   }, [query]);
@@ -76,13 +76,12 @@ export function useAdminSearch<TItem>(
   // exactly when it was fetched for different terms than the current ones
   const isSearching =
     applied === null ||
-    applied.query !== debouncedQuery ||
+    applied.query !== query ||
     applied.status !== status ||
     applied.page !== page;
 
   const setQuery = useCallback((next: string) => {
     setQueryValue(next);
-    setPage(0);
   }, []);
 
   const setStatus = useCallback((next: string) => {

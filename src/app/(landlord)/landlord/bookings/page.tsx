@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { useEffect, useMemo, useState, type ReactElement } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 import {
   ArrowRight,
   CalendarDays,
@@ -525,12 +525,19 @@ export default function LandlordBookingsPage(): ReactElement {
   const [claiming, setClaiming] = useState<Booking | null>(null);
   const [total, setTotal] = useState(0);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [page, setPage] = useState(0);
+  const requestGeneration = useRef(0);
+  const paginationGeneration = useRef<number | null>(null);
+  const isMounted = useRef(false);
+  const isRefreshing = useRef(true);
 
   useEffect(() => {
     let active = true;
+    isMounted.current = true;
+    const generation = ++requestGeneration.current;
 
     void getHostBookings().then((result) => {
-      if (!active) {
+      if (!active || requestGeneration.current !== generation) {
         return;
       }
 
@@ -539,10 +546,12 @@ export default function LandlordBookingsPage(): ReactElement {
       setTotal(result.total ?? result.data.length);
       setLoadError(result.message ?? "");
       setIsLoading(false);
+      isRefreshing.current = false;
     });
 
     return () => {
       active = false;
+      isMounted.current = false;
     };
   }, []);
 
@@ -574,20 +583,37 @@ export default function LandlordBookingsPage(): ReactElement {
 
   // Accepting a rental closes the other requests on that home, so the list is re-read
   const refresh = async (): Promise<void> => {
+    const generation = ++requestGeneration.current;
+    paginationGeneration.current = null;
+    isRefreshing.current = true;
     const result = await getHostBookings();
+    if (!isMounted.current || requestGeneration.current !== generation) return;
+    isRefreshing.current = false;
+    setIsLoadingMore(false);
 
     if (!result.message) {
       setBookings(result.data);
       setTotal(result.total ?? result.data.length);
+      setPage(0);
     }
   };
 
   const loadMore = async (): Promise<void> => {
+    if (
+      isRefreshing.current ||
+      bookings.length >= total ||
+      paginationGeneration.current !== null
+    )
+      return;
+    const generation = requestGeneration.current;
+    paginationGeneration.current = generation;
     setIsLoadingMore(true);
     const result = await getHostBookings({
-      page: Math.floor(bookings.length / HOST_PAGE_SIZE),
+      page: page + 1,
       size: HOST_PAGE_SIZE,
     });
+    if (!isMounted.current || requestGeneration.current !== generation) return;
+    paginationGeneration.current = null;
     setIsLoadingMore(false);
 
     if (result.message) {
@@ -603,6 +629,8 @@ export default function LandlordBookingsPage(): ReactElement {
       const known = new Set(current.map((item) => item.id));
       return [...current, ...result.data.filter((item) => !known.has(item.id))];
     });
+    setTotal(result.total ?? total);
+    setPage((current) => current + 1);
   };
 
   const changeStatus = async (
@@ -832,10 +860,10 @@ export default function LandlordBookingsPage(): ReactElement {
                           {booking.tenancyStartDate
                             ? formatDate(booking.tenancyStartDate)
                             : booking.startDate
-                            ? formatDate(booking.startDate)
-                            : booking.preferredMoveInDate
-                              ? formatDate(booking.preferredMoveInDate)
-                              : "Flexible"}
+                              ? formatDate(booking.startDate)
+                              : booking.preferredMoveInDate
+                                ? formatDate(booking.preferredMoveInDate)
+                                : "Flexible"}
                         </span>
                       </p>
                       <p className="flex items-baseline justify-between gap-3 xl:block">

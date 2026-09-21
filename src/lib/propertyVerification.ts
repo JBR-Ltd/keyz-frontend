@@ -1,5 +1,6 @@
 "use client";
 
+import { apiRequest } from "@/lib/apiRequest";
 import { resolveApiError } from "@/lib/errors";
 
 // === Types
@@ -61,7 +62,7 @@ function getAccessToken(): string {
 }
 
 async function dataUrlToBlob(dataUrl: string): Promise<Blob> {
-  const response = await fetch(dataUrl);
+  const response = await apiRequest(dataUrl);
 
   if (!response.ok) {
     throw new Error("The photo could not be prepared for upload.");
@@ -85,14 +86,18 @@ export async function submitPropertyProof(
 
   try {
     const formData = new FormData();
-    formData.append("proofImage", await dataUrlToBlob(capture.dataUrl), capture.name);
+    formData.append(
+      "proofImage",
+      await dataUrlToBlob(capture.dataUrl),
+      capture.name,
+    );
 
     if (capture.fix) {
       formData.append("capturedLatitude", String(capture.fix.latitude));
       formData.append("capturedLongitude", String(capture.fix.longitude));
     }
 
-    const response = await fetch(
+    const response = await apiRequest(
       `/api/verification/property/verify?propertyId=${propertyId}`,
       {
         method: "POST",
@@ -106,7 +111,10 @@ export async function submitPropertyProof(
     if (!response.ok) {
       return {
         success: false,
-        message: resolveApiError(payload, "This listing could not be verified."),
+        message: resolveApiError(
+          payload,
+          "This listing could not be verified.",
+        ),
       };
     }
 
@@ -128,7 +136,11 @@ export async function submitPropertyProof(
  * What the bill reader accepts. A clear phone photo of a paper bill works as well
  * as the PDF a provider emails.
  */
-export const UTILITY_BILL_TYPES = ["image/jpeg", "image/png", "application/pdf"];
+export const UTILITY_BILL_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "application/pdf",
+];
 
 /** The OCR provider reads documents sent inline only up to this size. */
 export const UTILITY_BILL_MAX_BYTES = 5 * 1024 * 1024;
@@ -157,7 +169,7 @@ export async function submitUtilityBill(
     const formData = new FormData();
     formData.append("utilityBill", bill, bill.name);
 
-    const response = await fetch(
+    const response = await apiRequest(
       `/api/verification/property/verify-bill?propertyId=${propertyId}`,
       {
         method: "POST",

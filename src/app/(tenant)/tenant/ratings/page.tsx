@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 import RatingsPageSkeleton from "@/components/reviews/RatingsPageSkeleton";
-import { getMyBookings, type Booking } from "@/lib/bookings";
+import { getAllMyBookings, type Booking } from "@/lib/bookings";
 import { getReviewsIWrote, submitReview, type Review } from "@/lib/reviews";
 
 const PROMPTS = [
@@ -50,7 +50,7 @@ export default function TenantRatingsPage(): ReactElement {
     const load = async (): Promise<void> => {
       const [reviewResult, bookingResult] = await Promise.all([
         getReviewsIWrote(),
-        getMyBookings(),
+        getAllMyBookings(),
       ]);
 
       if (!active) {
@@ -59,6 +59,7 @@ export default function TenantRatingsPage(): ReactElement {
 
       setReviews(reviewResult.data);
       setBookings(bookingResult.data);
+      if (bookingResult.message) notify({ title: "Bookings could not be loaded", description: bookingResult.message, variant: "error" });
       setIsLoading(false);
     };
 
@@ -67,7 +68,7 @@ export default function TenantRatingsPage(): ReactElement {
     return () => {
       active = false;
     };
-  }, []);
+  }, [notify]);
 
   const averageGiven = useMemo(() => {
     if (reviews.length === 0) {

@@ -1,5 +1,6 @@
 "use client";
 
+import { apiRequest } from "@/lib/apiRequest";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { EyeIcon, EyeOffIcon, Loader2, X } from "lucide-react";
 import Image from "next/image";
@@ -31,9 +32,7 @@ interface TwoFactorChallengeData {
   twoFactorRequired: true;
 }
 
-function isTwoFactorChallenge(
-  value: unknown,
-): value is TwoFactorChallengeData {
+function isTwoFactorChallenge(value: unknown): value is TwoFactorChallengeData {
   return (
     value !== null &&
     typeof value === "object" &&
@@ -143,7 +142,9 @@ export default function LoginPage() {
   /** Shared by both steps: a session only exists once this has run. */
   const startSession = (data: LoginResponseData): void => {
     if (!isAccountRole(data.role)) {
-      throw new Error("Unable to determine account type, please contact support");
+      throw new Error(
+        "Unable to determine account type, please contact support",
+      );
     }
 
     const role = data.role.toUpperCase();
@@ -162,7 +163,7 @@ export default function LoginPage() {
     setIsVerifying(true);
 
     try {
-      const response = await fetch("/api/auth/2fa/verify", {
+      const response = await apiRequest("/api/auth/2fa/verify", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -204,7 +205,7 @@ export default function LoginPage() {
     setSuccessMessage("");
 
     try {
-      const response = await fetch("/api/auth/login", {
+      const response = await apiRequest("/api/auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

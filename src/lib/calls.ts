@@ -1,5 +1,6 @@
 "use client";
 
+import { apiRequest } from "@/lib/apiRequest";
 import type { PartySummary } from "@/lib/bookings";
 import { resolveApiError } from "@/lib/errors";
 
@@ -63,7 +64,7 @@ async function request(
     return { ok: false, payload: null };
   }
 
-  const response = await fetch(path, {
+  const response = await apiRequest(path, {
     ...init,
     headers: { ...(init?.headers ?? {}), Authorization: `Bearer ${token}` },
   });
@@ -108,16 +109,31 @@ export function startCall(
   );
 }
 
-export function acceptCall(callId: number): Promise<CallResult<CallSession | null>> {
-  return callAction(`/api/calls/${callId}/accept`, "That call could not be answered.");
+export function acceptCall(
+  callId: number,
+): Promise<CallResult<CallSession | null>> {
+  return callAction(
+    `/api/calls/${callId}/accept`,
+    "That call could not be answered.",
+  );
 }
 
-export function rejectCall(callId: number): Promise<CallResult<CallSession | null>> {
-  return callAction(`/api/calls/${callId}/reject`, "That call could not be declined.");
+export function rejectCall(
+  callId: number,
+): Promise<CallResult<CallSession | null>> {
+  return callAction(
+    `/api/calls/${callId}/reject`,
+    "That call could not be declined.",
+  );
 }
 
-export function endCall(callId: number): Promise<CallResult<CallSession | null>> {
-  return callAction(`/api/calls/${callId}/end`, "That call could not be ended.");
+export function endCall(
+  callId: number,
+): Promise<CallResult<CallSession | null>> {
+  return callAction(
+    `/api/calls/${callId}/end`,
+    "That call could not be ended.",
+  );
 }
 
 /** Null means nothing is ringing, which is the ordinary answer. */

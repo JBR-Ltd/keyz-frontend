@@ -1,5 +1,6 @@
 "use client";
 
+import { apiRequest } from "@/lib/apiRequest";
 import type { PartySummary } from "@/lib/bookings";
 import { resolveApiError } from "@/lib/errors";
 
@@ -101,7 +102,10 @@ function getAccessToken(): string {
 
 // === Requests
 
-export async function getMyEscrow(): Promise<EscrowResult<EscrowEntry[]>> {
+export async function getMyEscrow(
+  page = 0,
+  size = 100,
+): Promise<EscrowResult<EscrowEntry[]>> {
   const token = getAccessToken();
 
   if (!token) {
@@ -109,9 +113,12 @@ export async function getMyEscrow(): Promise<EscrowResult<EscrowEntry[]>> {
   }
 
   try {
-    const response = await fetch("/api/escrow/mine", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const response = await apiRequest(
+      `/api/escrow/mine?page=${page}&size=${size}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    );
     const payload: unknown = await response.json().catch(() => null);
 
     if (!response.ok) {
@@ -125,11 +132,32 @@ export async function getMyEscrow(): Promise<EscrowResult<EscrowEntry[]>> {
     const total = Number(response.headers.get("X-Total-Count"));
 
     return Array.isArray(data) && data.every(isEscrowEntry)
-      ? { data, total: Number.isFinite(total) && total > 0 ? total : data.length }
+      ? {
+          data,
+          total: Number.isFinite(total) && total > 0 ? total : data.length,
+        }
       : { data: [], message: "Payments could not be loaded." };
   } catch {
     return { data: [], message: "Payments could not be loaded." };
   }
+}
+
+export async function getAllMyEscrow(): Promise<EscrowResult<EscrowEntry[]>> {
+  const token = getAccessToken();
+  const entries = new Map<number, EscrowEntry>();
+  let page = 0;
+  let total = 0;
+  do {
+    const result = await getMyEscrow(page, 100);
+    if (result.message) return { data: [], message: result.message };
+    if (token !== getAccessToken())
+      return { data: [], message: "Your account changed. Reload this page." };
+    for (const entry of result.data) entries.set(entry.id, entry);
+    total = result.total ?? entries.size;
+    page++;
+    if (result.data.length === 0) break;
+  } while (entries.size < total);
+  return { data: Array.from(entries.values()), total: entries.size };
 }
 
 /** Returns the Paystack page to send the tenant to. */
@@ -143,7 +171,7 @@ export async function startBookingPayment(
   }
 
   try {
-    const response = await fetch(`/api/escrow/bookings/${bookingId}/pay`, {
+    const response = await apiRequest(`/api/escrow/bookings/${bookingId}/pay`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -188,7 +216,7 @@ export async function verifyPaymentReturn(
   }
 
   try {
-    const response = await fetch(
+    const response = await apiRequest(
       `/api/escrow/payments/${encodeURIComponent(reference)}/verify`,
       {
         method: "POST",
@@ -232,14 +260,17 @@ export async function claimDeposit(
   }
 
   try {
-    const response = await fetch(`/api/bookings/${bookingId}/deposit-claim`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
+    const response = await apiRequest(
+      `/api/bookings/${bookingId}/deposit-claim`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ amount, note: note.trim() }),
       },
-      body: JSON.stringify({ amount, note: note.trim() }),
-    });
+    );
     const payload: unknown = await response.json().catch(() => null);
 
     if (!response.ok) {
@@ -269,7 +300,7 @@ export async function releaseEscrow(
   }
 
   try {
-    const response = await fetch(`/api/escrow/${escrowId}/release`, {
+    const response = await apiRequest(`/api/escrow/${escrowId}/release`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
     });

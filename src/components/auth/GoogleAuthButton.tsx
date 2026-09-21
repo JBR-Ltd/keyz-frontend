@@ -1,7 +1,14 @@
 "use client";
 
+import { apiRequest } from "@/lib/apiRequest";
 import Script from "next/script";
-import { useCallback, useEffect, useRef, useState, type ReactElement } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactElement,
+} from "react";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/toast";
@@ -93,7 +100,7 @@ export default function GoogleAuthButton({
       setIsSigningIn(true);
 
       try {
-        const result = await fetch("/api/auth/google", {
+        const result = await apiRequest("/api/auth/google", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

@@ -1,5 +1,6 @@
 "use client";
 
+import { apiRequest } from "@/lib/apiRequest";
 import { resolveApiError } from "@/lib/errors";
 
 // === Types
@@ -53,7 +54,9 @@ export async function getPropertyAvailability(
   propertyId: number | string,
 ): Promise<AvailabilityResult<UnavailableRange[]>> {
   try {
-    const response = await fetch(`/api/properties/${propertyId}/availability`);
+    const response = await apiRequest(
+      `/api/properties/${propertyId}/availability`,
+    );
     const payload: unknown = await response.json().catch(() => null);
 
     if (!response.ok) {
@@ -131,7 +134,7 @@ export async function blockDates(
   }
 
   try {
-    const response = await fetch(
+    const response = await apiRequest(
       `/api/properties/${propertyId}/availability/blocks`,
       {
         method: "POST",
@@ -172,7 +175,7 @@ export async function unblockDates(
   }
 
   try {
-    const response = await fetch(
+    const response = await apiRequest(
       `/api/properties/${propertyId}/availability/blocks/${blockId}`,
       { method: "DELETE", headers: { Authorization: `Bearer ${token}` } },
     );

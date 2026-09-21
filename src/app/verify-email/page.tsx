@@ -1,5 +1,6 @@
 "use client";
 
+import { apiRequest } from "@/lib/apiRequest";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
@@ -157,7 +158,7 @@ export default function VerifyEmailPage() {
         email: values.email,
         token,
       });
-      const response = await fetch(
+      const response = await apiRequest(
         `/api/auth/verify-email?${query.toString()}`,
         {
           method: "POST",
@@ -238,7 +239,7 @@ export default function VerifyEmailPage() {
     setIsResending(true);
 
     try {
-      const response = await fetch(
+      const response = await apiRequest(
         `/api/auth/resend-verification?email=${encodeURIComponent(email)}`,
         { method: "POST" },
       );

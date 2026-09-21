@@ -1,5 +1,6 @@
 "use client";
 
+import { apiRequest } from "@/lib/apiRequest";
 import { resolveApiError } from "@/lib/errors";
 
 // === Types
@@ -82,7 +83,7 @@ async function request(
     return { ok: false, payload: null };
   }
 
-  const response = await fetch(path, {
+  const response = await apiRequest(path, {
     ...init,
     headers: {
       ...(init?.headers ?? {}),
@@ -133,7 +134,10 @@ export async function requestViewing(
     if (!ok) {
       return {
         data: null,
-        message: resolveApiError(payload, "That viewing could not be requested."),
+        message: resolveApiError(
+          payload,
+          "That viewing could not be requested.",
+        ),
       };
     }
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { apiRequest } from "@/lib/apiRequest";
 import { resolveApiError } from "@/lib/errors";
 
 // === Types
@@ -48,7 +49,7 @@ function unwrap(payload: unknown): unknown {
 }
 
 async function dataUrlToBlob(dataUrl: string): Promise<Blob> {
-  const response = await fetch(dataUrl);
+  const response = await apiRequest(dataUrl);
 
   if (!response.ok) {
     throw new Error("The selfie could not be prepared for upload.");
@@ -70,7 +71,7 @@ export async function getVerificationStatus(): Promise<
   }
 
   try {
-    const response = await fetch("/api/verification/status", {
+    const response = await apiRequest("/api/verification/status", {
       headers: { Authorization: `Bearer ${token}` },
     });
     const payload: unknown = await response.json().catch(() => null);
@@ -105,7 +106,7 @@ export async function verifyIdentityNumber(
 
   try {
     const query = new URLSearchParams({ [check]: value });
-    const response = await fetch(
+    const response = await apiRequest(
       `/api/verification/dojah/${check}?${query.toString()}`,
       { method: "POST", headers: { Authorization: `Bearer ${token}` } },
     );
@@ -138,7 +139,7 @@ export async function verifySelfie(
     const formData = new FormData();
     formData.append("selfie", await dataUrlToBlob(selfieDataUrl), "selfie.jpg");
 
-    const response = await fetch("/api/verification/dojah/selfie", {
+    const response = await apiRequest("/api/verification/dojah/selfie", {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
       body: formData,
@@ -187,7 +188,7 @@ export async function submitAgentVerification(
       formData.append("longitude", String(position.longitude));
     }
 
-    const response = await fetch("/api/verification/agent", {
+    const response = await apiRequest("/api/verification/agent", {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
       body: formData,

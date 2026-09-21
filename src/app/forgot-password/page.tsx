@@ -1,5 +1,6 @@
 "use client";
 
+import { apiRequest } from "@/lib/apiRequest";
 import { motion, useReducedMotion } from "framer-motion";
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
@@ -57,7 +58,7 @@ export default function ForgotPasswordPage() {
     setSuccessMessage("");
 
     try {
-      const response = await fetch("/api/auth/forgot-password", {
+      const response = await apiRequest("/api/auth/forgot-password", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

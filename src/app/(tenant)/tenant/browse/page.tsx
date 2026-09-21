@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -24,7 +25,11 @@ import OverlayPortal from "@/components/ui/OverlayPortal";
 import { Select, type SelectOption } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
 import ActivityFeed from "@/components/dashboard/ActivityFeed";
-import type { ListingSearch, SearchFilters } from "@/lib/hostListings";
+import type {
+  ListingSearch,
+  RentalMode,
+  SearchFilters,
+} from "@/lib/hostListings";
 import {
   getProperties,
   interpretProperties,
@@ -58,6 +63,7 @@ type SortOption = "recommended" | "price-low" | "price-high" | "bedrooms";
  * results from the same supply, so this filters rather than merely relabels.
  */
 type StayMode = "all" | "long" | "short";
+type LongTermPeriod = "all" | "ANNUAL" | "MONTHLY";
 
 /** Keywords filter the catalogue directly; describe sends plain English to be read into filters. */
 type SearchMode = "keywords" | "describe";
@@ -92,28 +98,18 @@ const STICKY_STAY_MODE_OPTIONS: SelectOption[] = [
   { label: "Shortlets", value: "short" },
 ];
 
+const LONG_TERM_PERIOD_OPTIONS: SelectOption[] = [
+  { label: "Any period", value: "all" },
+  { label: "Annual rent", value: "ANNUAL" },
+  { label: "Monthly rent", value: "MONTHLY" },
+];
+
 const BEDROOM_OPTIONS: SelectOption[] = [
   { label: "Any bedrooms", value: "all" },
   { label: "1+ bedrooms", value: "1" },
   { label: "2+ bedrooms", value: "2" },
   { label: "3+ bedrooms", value: "3" },
   { label: "4+ bedrooms", value: "4" },
-];
-
-const PRICE_OPTIONS: SelectOption[] = [
-  { label: "Any monthly price", value: "all" },
-  { label: "Under ₦100,000", value: "under-100000" },
-  { label: "₦100,000 to ₦250,000", value: "100000-250000" },
-  { label: "₦250,000 to ₦500,000", value: "250000-500000" },
-  { label: "Above ₦500,000", value: "over-500000" },
-];
-
-const STICKY_PRICE_OPTIONS: SelectOption[] = [
-  { label: "Any price", value: "all" },
-  { label: "Under ₦100k", value: "under-100000" },
-  { label: "₦100k to ₦250k", value: "100000-250000" },
-  { label: "₦250k to ₦500k", value: "250000-500000" },
-  { label: "Above ₦500k", value: "over-500000" },
 ];
 
 const STICKY_BEDROOM_OPTIONS: SelectOption[] = [
@@ -130,6 +126,18 @@ const SORT_OPTIONS: SelectOption[] = [
   { label: "Highest price", value: "price-high" },
   { label: "Most bedrooms", value: "bedrooms" },
 ];
+
+const PRICE_PERIOD_LABELS: Record<RentalMode, string> = {
+  ANNUAL: "annual rent",
+  MONTHLY: "monthly rent",
+  SHORT_STAY: "nightly price",
+};
+
+const PRICE_PERIOD_SUFFIXES: Record<RentalMode, string> = {
+  ANNUAL: "/yr",
+  MONTHLY: "/mo",
+  SHORT_STAY: "/night",
+};
 
 // === Helpers
 
@@ -155,6 +163,34 @@ const SORT_PARAMS: Record<SortOption, string | undefined> = {
 
 function getOptionLabel(options: SelectOption[], value: string): string {
   return options.find((option) => option.value === value)?.label ?? value;
+}
+
+function priceOptionsFor(
+  rentalMode: RentalMode | undefined,
+  compact = false,
+): SelectOption[] {
+  const period = rentalMode ? PRICE_PERIOD_LABELS[rentalMode] : "price";
+  const suffix = rentalMode ? PRICE_PERIOD_SUFFIXES[rentalMode] : "";
+
+  return [
+    { label: `Any ${period}`, value: "all" },
+    {
+      label: `Under ₦${compact ? "100k" : "100,000"}${suffix}`,
+      value: "under-100000",
+    },
+    {
+      label: `₦${compact ? "100k–250k" : "100,000–250,000"}${suffix}`,
+      value: "100000-250000",
+    },
+    {
+      label: `₦${compact ? "250k–500k" : "250,000–500,000"}${suffix}`,
+      value: "250000-500000",
+    },
+    {
+      label: `Above ₦${compact ? "500k" : "500,000"}${suffix}`,
+      value: "over-500000",
+    },
+  ];
 }
 
 function formatNaira(amount: number): string {
@@ -244,9 +280,13 @@ export default function TenantBrowsePage(): ReactElement {
   const [bedroomFilter, setBedroomFilter] = useState<BedroomFilter>("all");
   const [sort, setSort] = useState<SortOption>("recommended");
   const [stayMode, setStayMode] = useState<StayMode>("all");
+  const [longTermPeriod, setLongTermPeriod] = useState<LongTermPeriod>("all");
   const [savedIds, setSavedIds] = useState<Set<string>>(() => new Set());
+  const [isSavedLoading, setIsSavedLoading] = useState(true);
   const [savingIds, setSavingIds] = useState<Set<string>>(() => new Set());
   const [isSavingSearch, setIsSavingSearch] = useState(false);
+  const searchGeneration = useRef(0);
+  const paginationGeneration = useRef<number | null>(null);
   const [isHeaderSearchVisible, setIsHeaderSearchVisible] = useState(false);
   const [searchMode, setSearchMode] = useState<SearchMode>("keywords");
   const [interpretation, setInterpretation] = useState<SearchFilters | null>(
@@ -257,13 +297,12 @@ export default function TenantBrowsePage(): ReactElement {
   const dialogRef = useDialogFocus<HTMLDivElement>(isSearchSheetOpen);
   const isDescribing = searchMode === "describe";
 
-  /**
-     The filters as the server takes them. Everything except the shortlet toggle is
-     applied in the query now, so a match on page nine is still a match.
-   */
+  /** Every filter is sent before pagination, so later-page matches remain visible. */
   // An alert email links to /tenant/browse?search={id}; open that search's filters
   useEffect(() => {
-    const savedSearchId = Number(new URLSearchParams(window.location.search).get("search"));
+    const savedSearchId = Number(
+      new URLSearchParams(window.location.search).get("search"),
+    );
 
     if (!savedSearchId) {
       return;
@@ -286,6 +325,25 @@ export default function TenantBrowsePage(): ReactElement {
 
       setQueryInput(saved.query ?? "");
       setSearchQuery(saved.query ?? "");
+      if (saved.rentalMode === "SHORT_STAY") {
+        setStayMode("short");
+        setLongTermPeriod("all");
+      } else if (
+        saved.rentalMode === "ANNUAL" ||
+        saved.rentalMode === "MONTHLY"
+      ) {
+        setStayMode("long");
+        setLongTermPeriod(saved.rentalMode);
+      } else if (saved.stayType === "SHORT_STAY") {
+        setStayMode("short");
+        setLongTermPeriod("all");
+      } else if (saved.stayType === "LONG_TERM") {
+        setStayMode("long");
+        setLongTermPeriod("all");
+      } else {
+        setStayMode("all");
+        setLongTermPeriod("all");
+      }
       setPriceFilter(bucket ?? "all");
       setBedroomFilter(
         saved.minBedrooms && saved.minBedrooms >= 1 && saved.minBedrooms <= 4
@@ -299,6 +357,32 @@ export default function TenantBrowsePage(): ReactElement {
     };
   }, []);
 
+  const exactRentalMode: RentalMode | undefined =
+    stayMode === "short"
+      ? "SHORT_STAY"
+      : stayMode === "long" && longTermPeriod !== "all"
+        ? longTermPeriod
+        : undefined;
+  const priceControlsEnabled = Boolean(exactRentalMode);
+  const priceOptions = useMemo(
+    () => priceOptionsFor(exactRentalMode),
+    [exactRentalMode],
+  );
+  const stickyPriceOptions = useMemo(
+    () => priceOptionsFor(exactRentalMode, true),
+    [exactRentalMode],
+  );
+  const sortOptions = useMemo(
+    () =>
+      SORT_OPTIONS.map((option) => ({
+        ...option,
+        disabled:
+          !priceControlsEnabled &&
+          (option.value === "price-low" || option.value === "price-high"),
+      })),
+    [priceControlsEnabled],
+  );
+
   const search = useMemo<ListingSearch>(() => {
     const [minPrice, maxPrice] = PRICE_BOUNDS[priceFilter];
 
@@ -307,23 +391,42 @@ export default function TenantBrowsePage(): ReactElement {
       minPrice,
       maxPrice,
       minBedrooms: bedroomFilter === "all" ? undefined : Number(bedroomFilter),
+      rentalMode: exactRentalMode,
       sort: SORT_PARAMS[sort],
+      stayType:
+        stayMode === "long"
+          ? "LONG_TERM"
+          : stayMode === "short"
+            ? "SHORT_STAY"
+            : undefined,
     };
-  }, [bedroomFilter, priceFilter, searchQuery, sort]);
+  }, [
+    bedroomFilter,
+    exactRentalMode,
+    priceFilter,
+    searchQuery,
+    sort,
+    stayMode,
+  ]);
 
   useEffect(() => {
     let active = true;
+    const generation = ++searchGeneration.current;
+    paginationGeneration.current = null;
 
     const loadProperties = async (): Promise<void> => {
       setPropertiesLoading(true);
+      setIsLoadingMore(false);
       setPropertyError("");
 
-      const [propertyResult, savedResult] = await Promise.all([
-        requestListings(searchMode, searchQuery, search, 0),
-        getSavedListings(),
-      ]);
+      const propertyResult = await requestListings(
+        searchMode,
+        searchQuery,
+        search,
+        0,
+      );
 
-      if (!active) return;
+      if (!active || searchGeneration.current !== generation) return;
 
       setProperties(propertyResult.data);
       setHasNext(propertyResult.hasNext);
@@ -331,9 +434,6 @@ export default function TenantBrowsePage(): ReactElement {
       setPropertyError(propertyResult.message ?? "");
       setInterpretation(propertyResult.filters);
       setIsFallback(propertyResult.fallback);
-      setSavedIds(
-        new Set(savedResult.data.map((listing) => String(listing.id))),
-      );
       setPage(0);
       setPropertiesLoading(false);
     };
@@ -342,8 +442,24 @@ export default function TenantBrowsePage(): ReactElement {
 
     return () => {
       active = false;
+      searchGeneration.current = generation + 1;
     };
   }, [retryKey, search, searchMode, searchQuery]);
+
+  useEffect(() => {
+    let active = true;
+
+    void getSavedListings().then((result) => {
+      if (!active) return;
+
+      setSavedIds(new Set(result.data.map((listing) => String(listing.id))));
+      setIsSavedLoading(false);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!isSearchSheetOpen) return;
@@ -382,32 +498,33 @@ export default function TenantBrowsePage(): ReactElement {
     };
   }, []);
 
-  /**
-     Searching, filtering and ordering all happen in the query now. What is left
-     here is the stay length toggle: a shortlet price is per night and a tenancy
-     price is per year, so the two cannot be filtered by the same number.
-   */
-  const visibleProperties = useMemo(
-    () =>
-      properties.filter((property) => {
-        // A plain-English search already chose the stay type from what was typed
-        if (isDescribing) {
-          return true;
-        }
+  const changeStayMode = useCallback(
+    (mode: StayMode): void => {
+      if (mode === stayMode) return;
 
-        const isShortlet = property.rentalMode === "SHORT_STAY";
+      setStayMode(mode);
+      setLongTermPeriod("all");
+      setPriceFilter("all");
+      if (sort === "price-low" || sort === "price-high") {
+        setSort("recommended");
+      }
+      setPage(0);
+    },
+    [sort, stayMode],
+  );
 
-        if (stayMode === "short") {
-          return isShortlet;
-        }
+  const changeLongTermPeriod = useCallback(
+    (period: LongTermPeriod): void => {
+      if (period === longTermPeriod) return;
 
-        if (stayMode === "long") {
-          return !isShortlet;
-        }
-
-        return true;
-      }),
-    [isDescribing, properties, stayMode],
+      setLongTermPeriod(period);
+      setPriceFilter("all");
+      if (sort === "price-low" || sort === "price-high") {
+        setSort("recommended");
+      }
+      setPage(0);
+    },
+    [longTermPeriod, sort],
   );
 
   const appliedFilters = useMemo<AppliedFilter[]>(() => {
@@ -431,7 +548,7 @@ export default function TenantBrowsePage(): ReactElement {
     if (priceFilter !== "all") {
       filters.push({
         id: "price",
-        label: getOptionLabel(PRICE_OPTIONS, priceFilter),
+        label: getOptionLabel(priceOptions, priceFilter),
         remove: () => setPriceFilter("all"),
       });
     }
@@ -449,12 +566,30 @@ export default function TenantBrowsePage(): ReactElement {
         id: "stay",
         label:
           STAY_MODES.find((mode) => mode.id === stayMode)?.label ?? stayMode,
-        remove: () => setStayMode("all"),
+        remove: () => changeStayMode("all"),
+      });
+    }
+
+    if (stayMode === "long" && longTermPeriod !== "all") {
+      filters.push({
+        id: "period",
+        label: getOptionLabel(LONG_TERM_PERIOD_OPTIONS, longTermPeriod),
+        remove: () => changeLongTermPeriod("all"),
       });
     }
 
     return filters;
-  }, [bedroomFilter, isDescribing, priceFilter, searchQuery, stayMode]);
+  }, [
+    bedroomFilter,
+    changeLongTermPeriod,
+    changeStayMode,
+    isDescribing,
+    longTermPeriod,
+    priceFilter,
+    priceOptions,
+    searchQuery,
+    stayMode,
+  ]);
 
   const clearFilters = (): void => {
     setQueryInput("");
@@ -467,6 +602,7 @@ export default function TenantBrowsePage(): ReactElement {
     setBedroomFilter("all");
     setSort("recommended");
     setStayMode("all");
+    setLongTermPeriod("all");
   };
 
   const submitSearch = (event?: FormEvent): void => {
@@ -486,6 +622,17 @@ export default function TenantBrowsePage(): ReactElement {
   };
 
   const loadMore = async (): Promise<void> => {
+    const generation = searchGeneration.current;
+
+    if (
+      propertiesLoading ||
+      !hasNext ||
+      paginationGeneration.current === generation
+    ) {
+      return;
+    }
+
+    paginationGeneration.current = generation;
     const nextPage = page + 1;
     setIsLoadingMore(true);
     setPropertyError("");
@@ -495,6 +642,11 @@ export default function TenantBrowsePage(): ReactElement {
       search,
       nextPage,
     );
+
+    // A page from the previous search must not append to the new results.
+    if (searchGeneration.current !== generation) return;
+
+    paginationGeneration.current = null;
     setIsLoadingMore(false);
 
     if (result.message) {
@@ -582,6 +734,8 @@ export default function TenantBrowsePage(): ReactElement {
       minPrice: search.minPrice,
       maxPrice: search.maxPrice,
       minBedrooms: search.minBedrooms,
+      rentalMode: search.rentalMode,
+      stayType: search.stayType,
     });
     setIsSavingSearch(false);
 
@@ -603,7 +757,7 @@ export default function TenantBrowsePage(): ReactElement {
   const resultLabel = propertiesLoading
     ? "Loading homes..."
     : appliedFilters.length > 0
-      ? `${visibleProperties.length} matching homes`
+      ? `${totalItems} matching homes`
       : `${totalItems || properties.length} homes available`;
 
   return (
@@ -699,10 +853,7 @@ export default function TenantBrowsePage(): ReactElement {
                       role="tab"
                       aria-selected={active}
                       title={mode.hint}
-                      onClick={() => {
-                        setStayMode(mode.id);
-                        setPage(0);
-                      }}
+                      onClick={() => changeStayMode(mode.id)}
                       className={`min-h-10 rounded-lg px-4 font-body text-sm font-bold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                         active
                           ? "bg-primary text-white shadow-sm"
@@ -715,15 +866,30 @@ export default function TenantBrowsePage(): ReactElement {
                 })}
               </div>
 
+              {stayMode === "long" ? (
+                <div className="min-w-44 rounded-xl border border-border px-4 py-2">
+                  <Select
+                    ariaLabel="Choose annual or monthly rent"
+                    value={longTermPeriod}
+                    onValueChange={(value) =>
+                      changeLongTermPeriod(value as LongTermPeriod)
+                    }
+                    options={LONG_TERM_PERIOD_OPTIONS}
+                    className="text-sm"
+                  />
+                </div>
+              ) : null}
+
               <span className="mx-1 hidden h-8 w-px bg-border lg:block" />
               <div className="min-w-52 rounded-xl border border-border px-4 py-2">
                 <Select
                   ariaLabel="Filter by price"
+                  disabled={!priceControlsEnabled}
                   value={priceFilter}
                   onValueChange={(value) =>
                     setPriceFilter(value as PriceFilter)
                   }
-                  options={PRICE_OPTIONS}
+                  options={priceOptions}
                   className="text-sm"
                 />
               </div>
@@ -892,23 +1058,39 @@ export default function TenantBrowsePage(): ReactElement {
                     <Select
                       ariaLabel="Filter by stay type"
                       value={stayMode}
-                      onValueChange={(value) => {
-                        setStayMode(value as StayMode);
-                        setPage(0);
-                      }}
+                      onValueChange={(value) =>
+                        changeStayMode(value as StayMode)
+                      }
                       options={STICKY_STAY_MODE_OPTIONS}
                       className="font-body text-xs font-bold"
                     />
                   </div>
+                  {stayMode === "long" ? (
+                    <>
+                      <div className="hidden h-8 w-px shrink-0 bg-border xl:block" />
+                      <div className="hidden w-28 shrink-0 px-3 xl:block">
+                        <Select
+                          ariaLabel="Choose annual or monthly rent"
+                          value={longTermPeriod}
+                          onValueChange={(value) =>
+                            changeLongTermPeriod(value as LongTermPeriod)
+                          }
+                          options={LONG_TERM_PERIOD_OPTIONS}
+                          className="font-body text-xs font-bold"
+                        />
+                      </div>
+                    </>
+                  ) : null}
                   <div className="hidden h-8 w-px shrink-0 bg-border xl:block" />
                   <div className="hidden w-36 shrink-0 px-3 xl:block">
                     <Select
                       ariaLabel="Filter by price"
+                      disabled={!priceControlsEnabled}
                       value={priceFilter}
                       onValueChange={(value) =>
                         setPriceFilter(value as PriceFilter)
                       }
-                      options={STICKY_PRICE_OPTIONS}
+                      options={stickyPriceOptions}
                       className="font-body text-xs font-bold"
                     />
                   </div>
@@ -972,7 +1154,9 @@ export default function TenantBrowsePage(): ReactElement {
                 disabled={isSavingSearch}
                 className="inline-flex min-h-10 items-center gap-2 rounded-full border border-primary/20 px-4 font-body text-sm font-bold text-primary hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60"
               >
-                {isSavingSearch ? <Loader2 size={14} className="animate-spin" /> : null}
+                {isSavingSearch ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : null}
                 Save search and get alerts
               </button>
             ) : null}
@@ -982,7 +1166,7 @@ export default function TenantBrowsePage(): ReactElement {
                   ariaLabel="Sort listings"
                   value={sort}
                   onValueChange={(value) => setSort(value as SortOption)}
-                  options={SORT_OPTIONS}
+                  options={sortOptions}
                   className="font-body text-sm font-bold"
                 />
               </div>
@@ -1035,7 +1219,7 @@ export default function TenantBrowsePage(): ReactElement {
               </article>
             ))}
           </div>
-        ) : visibleProperties.length === 0 ? (
+        ) : properties.length === 0 ? (
           <div className="flex min-h-72 flex-col items-center justify-center rounded-xl bg-bg px-6 py-12 text-center shadow-sm">
             <span className="flex h-14 w-14 items-center justify-center rounded-full bg-surface-soft text-primary">
               <SearchX size={24} aria-hidden="true" />
@@ -1059,7 +1243,7 @@ export default function TenantBrowsePage(): ReactElement {
           </div>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-            {visibleProperties.map((property) => (
+            {properties.map((property) => (
               <PropertyCard
                 key={property.id}
                 id={property.id}
@@ -1076,8 +1260,9 @@ export default function TenantBrowsePage(): ReactElement {
                 imageUrl={property.images[0]}
                 featured={false}
                 verified={property.verified}
+                availableUnitCount={property.availableUnitCount}
                 isSaved={savedIds.has(property.id)}
-                isSaving={savingIds.has(property.id)}
+                isSaving={isSavedLoading || savingIds.has(property.id)}
                 onSaveToggle={() => void toggleSavedListing(property)}
               />
             ))}
@@ -1211,7 +1396,7 @@ export default function TenantBrowsePage(): ReactElement {
                                   type="button"
                                   role="tab"
                                   aria-selected={active}
-                                  onClick={() => setStayMode(mode.id)}
+                                  onClick={() => changeStayMode(mode.id)}
                                   className={`min-h-11 rounded-lg px-2 font-body text-sm font-bold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                                     active
                                       ? "bg-primary text-white shadow-sm"
@@ -1225,11 +1410,30 @@ export default function TenantBrowsePage(): ReactElement {
                           </div>
                         </div>
 
+                        {stayMode === "long" ? (
+                          <label className="block">
+                            <span className="mb-2 block font-body text-xs font-bold uppercase tracking-[0.14em] text-muted">
+                              Price period
+                            </span>
+                            <div className="rounded-lg bg-surface-soft px-4 py-4">
+                              <Select
+                                ariaLabel="Choose annual or monthly rent"
+                                value={longTermPeriod}
+                                onValueChange={(value) =>
+                                  changeLongTermPeriod(value as LongTermPeriod)
+                                }
+                                options={LONG_TERM_PERIOD_OPTIONS}
+                              />
+                            </div>
+                          </label>
+                        ) : null}
+
                         {[
                           {
                             label: "Price",
                             value: priceFilter,
-                            options: PRICE_OPTIONS,
+                            options: priceOptions,
+                            disabled: !priceControlsEnabled,
                             change: (value: string) =>
                               setPriceFilter(value as PriceFilter),
                           },
@@ -1237,13 +1441,15 @@ export default function TenantBrowsePage(): ReactElement {
                             label: "Bedrooms",
                             value: bedroomFilter,
                             options: BEDROOM_OPTIONS,
+                            disabled: false,
                             change: (value: string) =>
                               setBedroomFilter(value as BedroomFilter),
                           },
                           {
                             label: "Sort by",
                             value: sort,
-                            options: SORT_OPTIONS,
+                            options: sortOptions,
+                            disabled: false,
                             change: (value: string) =>
                               setSort(value as SortOption),
                           },
@@ -1258,6 +1464,7 @@ export default function TenantBrowsePage(): ReactElement {
                                 value={field.value}
                                 onValueChange={field.change}
                                 options={field.options}
+                                disabled={field.disabled}
                               />
                             </div>
                           </label>
@@ -1280,9 +1487,7 @@ export default function TenantBrowsePage(): ReactElement {
                       className="flex items-center justify-center gap-2 rounded-full bg-accent px-6 py-3 font-body text-sm font-bold text-primary hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                     >
                       <Search size={16} aria-hidden="true" />
-                      {isDescribing
-                        ? "Search"
-                        : `Show ${visibleProperties.length} homes`}
+                      {isDescribing ? "Search" : `Show ${totalItems} homes`}
                     </button>
                   </div>
                 </motion.div>

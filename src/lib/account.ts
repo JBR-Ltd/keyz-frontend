@@ -1,5 +1,6 @@
 "use client";
 
+import { apiRequest, clearPendingApiReads } from "@/lib/apiRequest";
 import { useEffect, useState } from "react";
 import { resolveApiError } from "@/lib/errors";
 import { clearHostListingStorage } from "@/lib/hostListings";
@@ -77,6 +78,9 @@ export interface AuthenticatedUserState {
 }
 
 let cachedUser: AuthenticatedUser | null = null;
+let cachedUserScope = "";
+let userRequestScope = "";
+let userVersion = 0;
 let userRequest: Promise<
   AccountActionResult & { user: AuthenticatedUser | null }
 > | null = null;
@@ -137,9 +141,21 @@ function getAccessToken(): string {
   return localStorage.getItem("rello_token") ?? "";
 }
 
+function getAccountScope(): string {
+  return typeof window === "undefined"
+    ? ""
+    : JSON.stringify([getAccessToken(), localStorage.getItem("rello_role")]);
+}
+
+function getScopedCachedUser(): AuthenticatedUser | null {
+  return cachedUserScope === getAccountScope() ? cachedUser : null;
+}
+
 function clearAuthenticationState(): void {
+  userVersion += 1;
   cachedUser = null;
   userRequest = null;
+  clearPendingApiReads();
   localStorage.removeItem("rello_token");
   localStorage.removeItem("rello_role");
   localStorage.removeItem("rello_tenant_verification");
@@ -160,19 +176,35 @@ async function authenticatedRequest(
 
   const headers = new Headers(init.headers);
   headers.set("Authorization", `Bearer ${token}`);
+  const scope = getAccountScope();
 
-  const response = await fetch(path, { ...init, headers });
-  return parseApiResponse(response);
+  const response = await apiRequest(path, { ...init, headers });
+  const envelope = await parseApiResponse(response);
+
+  if (scope !== getAccountScope()) {
+    throw new Error("Your account changed. Reload your account details.");
+  }
+
+  return envelope;
 }
 
 export async function getAuthenticatedUser(): Promise<
   AccountActionResult & { user: AuthenticatedUser | null }
 > {
-  if (cachedUser) {
-    return { success: true, message: "", user: cachedUser };
+  const scope = getAccountScope();
+  const user = getScopedCachedUser();
+
+  if (user) {
+    return { success: true, message: "", user };
   }
 
-  userRequest ??= (async () => {
+  if (userRequest && userRequestScope === scope) {
+    return userRequest;
+  }
+
+  const version = userVersion;
+  userRequestScope = scope;
+  userRequest = (async () => {
     try {
       const envelope = await authenticatedRequest("/api/users/me");
 
@@ -180,7 +212,12 @@ export async function getAuthenticatedUser(): Promise<
         throw new Error("The account server returned invalid user details.");
       }
 
+      if (version !== userVersion || scope !== getAccountScope()) {
+        throw new Error("Your account changed. Reload your account details.");
+      }
+
       cachedUser = envelope.data;
+      cachedUserScope = scope;
       return { success: true, message: envelope.message, user: cachedUser };
     } catch (error) {
       return {
@@ -192,7 +229,9 @@ export async function getAuthenticatedUser(): Promise<
         user: null,
       };
     } finally {
-      userRequest = null;
+      if (userRequestScope === scope && userVersion === version) {
+        userRequest = null;
+      }
     }
   })();
 
@@ -200,10 +239,11 @@ export async function getAuthenticatedUser(): Promise<
 }
 
 export function useAuthenticatedUser(): AuthenticatedUserState {
+  const user = getScopedCachedUser();
   const [state, setState] = useState<AuthenticatedUserState>({
     error: null,
-    isLoading: cachedUser === null,
-    user: cachedUser,
+    isLoading: user === null,
+    user,
   });
 
   useEffect(() => {
@@ -234,7 +274,10 @@ function cacheUser(value: unknown): AuthenticatedUser {
     throw new Error("The account server returned invalid user details.");
   }
 
+  userVersion += 1;
+  userRequest = null;
   cachedUser = value;
+  cachedUserScope = getAccountScope();
   return value;
 }
 
@@ -363,6 +406,8 @@ export async function enableTwoFactor(
       body: JSON.stringify({ reference, code }),
     });
 
+    userVersion += 1;
+    userRequest = null;
     cachedUser = null;
     return { success: true, message: envelope.message };
   } catch (error) {
@@ -384,6 +429,8 @@ export async function disableTwoFactor(
       body: JSON.stringify({ password }),
     });
 
+    userVersion += 1;
+    userRequest = null;
     cachedUser = null;
     return { success: true, message: envelope.message };
   } catch (error) {

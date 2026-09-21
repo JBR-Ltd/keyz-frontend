@@ -1,5 +1,6 @@
 "use client";
 
+import { apiRequest } from "@/lib/apiRequest";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { EyeIcon, EyeOffIcon, Loader2, X } from "lucide-react";
 import Image from "next/image";
@@ -119,7 +120,7 @@ export default function RegisterPage() {
     setBannerMessage("");
 
     try {
-      const response = await fetch("/api/auth/register", {
+      const response = await apiRequest("/api/auth/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

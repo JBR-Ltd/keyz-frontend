@@ -112,18 +112,10 @@ export default function HostVerificationCenter({
   );
   const [loadError, setLoadError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
 
-  const load = useCallback(async (): Promise<void> => {
-    const result = await getHostVerification();
-
-    if (!result.data) {
-      setLoadError(result.message ?? "Your status could not be loaded.");
-    } else {
-      setLoadError("");
-      setSnapshot(result.data);
-    }
-
-    setIsLoading(false);
+  const load = useCallback((): void => {
+    setRefreshKey((current) => current + 1);
   }, []);
 
   useEffect(() => {
@@ -147,7 +139,7 @@ export default function HostVerificationCenter({
     return () => {
       active = false;
     };
-  }, []);
+  }, [refreshKey]);
 
   // Finishing a flow in another tab should not leave a stale page behind here
   useEffect(() => {

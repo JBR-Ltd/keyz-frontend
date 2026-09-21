@@ -13,13 +13,14 @@ import {
   MapPin,
   MoreHorizontal,
   Plus,
+  RotateCcw,
   ShieldCheck,
   UsersRound,
   type LucideIcon,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState, type ReactElement } from "react";
+import { useCallback, useEffect, useState, type ReactElement } from "react";
 import ActivityFeed from "@/components/dashboard/ActivityFeed";
 import PropertyPrice from "@/components/property/PropertyPrice";
 import { IconTile } from "@/components/ui/icon-tile";
@@ -37,7 +38,7 @@ import {
   type PropertyPortfolio,
   type RentalMode,
 } from "@/lib/hostListings";
-import { useHostVerification } from "@/lib/hostVerification";
+import { getHostVerification } from "@/lib/hostVerification";
 import {
   getHostDashboardSummary,
   type HostDashboardSummary,
@@ -54,6 +55,21 @@ interface SummaryItem {
   label: string;
   tone: "accent" | "neutral" | "primary";
   value: number | string;
+  isLoading?: boolean;
+  error?: string;
+  onRetry?: () => void;
+}
+
+interface DashboardResourceState<TValue extends object> {
+  data: TValue | null;
+  error: string;
+  isLoading: boolean;
+}
+
+interface DashboardErrorProps {
+  title: string;
+  message: string;
+  onRetry: () => void;
 }
 
 interface AttentionItem {
@@ -215,14 +231,10 @@ function toListingStatus(
  * them alone undercounts a busy agent.
  */
 function buildSummary(
-  portfolio: PropertyPortfolio,
-  bookings: Booking[],
-  occupiedIds: Set<number>,
+  portfolio: PropertyPortfolio | null,
   summary: HostDashboardSummary | null,
 ): SummaryItem[] {
-  const pendingCount =
-    summary?.bookings.requests ??
-    bookings.filter((booking) => booking.status === "PENDING").length;
+  const pendingCount = summary?.bookings.requests ?? 0;
 
   return [
     {
@@ -230,7 +242,7 @@ function buildSummary(
       icon: Building2,
       label: "Active listings",
       tone: "primary",
-      value: summary?.listings.live ?? portfolio.activeListingsCount,
+      value: summary?.listings.live ?? portfolio?.activeListingsCount ?? 0,
     },
     {
       detail: "Waiting for your response",
@@ -244,7 +256,7 @@ function buildSummary(
       icon: UsersRound,
       label: "Occupied homes",
       tone: "neutral",
-      value: summary?.bookings.active ?? occupiedIds.size,
+      value: summary?.bookings.active ?? 0,
     },
     {
       // Listings can be let nightly, monthly or yearly, so naming a period here
@@ -253,7 +265,7 @@ function buildSummary(
       icon: CircleDollarSign,
       label: "Expected rental income",
       tone: "primary",
-      value: portfolio.expectedMonthlyRentalIncome,
+      value: portfolio?.expectedMonthlyRentalIncome ?? 0,
     },
   ];
 }
@@ -263,14 +275,14 @@ function buildSummary(
  * nothing, which is the correct state for an agent with nothing outstanding.
  */
 function buildAttention(
-  portfolio: PropertyPortfolio,
+  portfolio: PropertyPortfolio | null,
   bookings: Booking[],
   pendingViewings: number,
-  identityVerified: boolean,
+  identityVerified: boolean | null,
 ): AttentionItem[] {
   const items: AttentionItem[] = [];
   const pending = bookings.filter((booking) => booking.status === "PENDING");
-  const unverified = portfolio.properties.filter(
+  const unverified = (portfolio?.properties ?? []).filter(
     (property) => !property.verified,
   );
   const imminentMoveIns = bookings.filter((booking) => {
@@ -284,7 +296,7 @@ function buildAttention(
     );
   });
 
-  if (!identityVerified) {
+  if (identityVerified === false) {
     items.push({
       actionLabel: "Finish verification",
       description:
@@ -407,10 +419,10 @@ function buildUpcoming(
 }
 
 function buildDashboard(
-  portfolio: PropertyPortfolio,
+  portfolio: PropertyPortfolio | null,
   bookings: Booking[],
   viewings: Viewing[],
-  identityVerified: boolean,
+  identityVerified: boolean | null,
   summary: HostDashboardSummary | null,
 ): DashboardData {
   const occupiedIds = new Set(
@@ -447,7 +459,7 @@ function buildDashboard(
         status: booking.status,
         tenant: booking.tenant?.name ?? "Tenant",
       })),
-    properties: portfolio.properties.map((property) => ({
+    properties: (portfolio?.properties ?? []).map((property) => ({
       address: property.address,
       id: property.id,
       imageUrl: property.imageUrl ?? null,
@@ -457,34 +469,104 @@ function buildDashboard(
       tenant: tenantByProperty.get(property.id) ?? null,
       title: property.title,
     })),
-    summary: buildSummary(portfolio, bookings, occupiedIds, summary),
+    summary: buildSummary(portfolio, summary),
     upcoming: buildUpcoming(bookings, viewings),
   };
 }
 
+// === Hooks
+
+function useDashboardResource<TValue extends object>(
+  request: () => Promise<{ data: TValue | null; message?: string }>,
+): DashboardResourceState<TValue> & { retry: () => void } {
+  const [state, setState] = useState<DashboardResourceState<TValue>>({
+    data: null,
+    error: "",
+    isLoading: true,
+  });
+  const [retryKey, setRetryKey] = useState(0);
+  const retry = useCallback((): void => {
+    setState((current) => ({ ...current, error: "", isLoading: true }));
+    setRetryKey((current) => current + 1);
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    const load = async (): Promise<void> => {
+      try {
+        const result = await request();
+        if (!active) return;
+
+        const error =
+          result.message ||
+          (result.data === null ? "This section could not be loaded." : "");
+        setState({ data: error ? null : result.data, error, isLoading: false });
+      } catch {
+        if (active) {
+          setState({
+            data: null,
+            error: "This section could not be loaded.",
+            isLoading: false,
+          });
+        }
+      }
+    };
+
+    void load();
+
+    return () => {
+      active = false;
+    };
+  }, [request, retryKey]);
+
+  return { ...state, retry };
+}
+
 // === Components
 
-function DashboardSkeleton(): ReactElement {
+function DashboardError({
+  title,
+  message,
+  onRetry,
+}: DashboardErrorProps): ReactElement {
   return (
     <div
-      className="animate-pulse space-y-7 motion-reduce:animate-none"
-      aria-busy="true"
-      aria-label="Loading agent dashboard"
+      className="rounded-lg border border-red-700/20 bg-red-700/5 p-4"
+      role="status"
     >
-      <div className="flex items-end justify-between gap-6">
-        <div className="h-12 w-72 max-w-full rounded-lg bg-skeleton" />
-        <div className="hidden h-12 w-36 rounded-full bg-skeleton sm:block" />
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {Array.from({ length: 4 }, (_, index) => (
-          <div key={index} className="h-40 rounded-lg bg-skeleton" />
-        ))}
-      </div>
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.7fr)_minmax(18rem,0.8fr)]">
-        <div className="h-80 rounded-lg bg-skeleton" />
-        <div className="h-80 rounded-lg bg-skeleton" />
-      </div>
-      <div className="h-96 rounded-lg bg-skeleton" />
+      <p className="font-body text-sm font-bold text-primary">
+        {title} unavailable
+      </p>
+      <p className="mt-1 font-body text-sm leading-6 text-muted">{message}</p>
+      <button
+        type="button"
+        onClick={onRetry}
+        className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-full px-3 font-body text-sm font-bold text-primary hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+      >
+        <RotateCcw size={16} aria-hidden="true" />
+        Retry
+      </button>
+    </div>
+  );
+}
+
+function PanelRowsSkeleton({ label }: { label: string }): ReactElement {
+  return (
+    <div
+      className="mt-6 animate-pulse space-y-5 motion-reduce:animate-none"
+      aria-busy="true"
+      aria-label={label}
+    >
+      {[0, 1].map((index) => (
+        <div key={index} className="flex items-center gap-4">
+          <div className="h-12 w-12 shrink-0 rounded-lg bg-skeleton-strong" />
+          <div className="min-w-0 flex-1 space-y-2">
+            <div className="h-4 w-3/4 rounded bg-skeleton" />
+            <div className="h-3 w-1/2 rounded bg-skeleton" />
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -526,44 +608,91 @@ function SummaryGrid({ items }: { items: SummaryItem[] }): ReactElement {
       className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
       aria-label="Portfolio summary"
     >
-      {items.map(({ detail, icon: Icon, label, tone, value }) => (
-        <article
-          key={label}
-          className={utilityCardVariants({
-            interactive: true,
-            tone:
-              tone === "accent"
-                ? "accentTint"
-                : tone === "primary"
-                  ? "primaryTint"
-                  : "soft",
-          })}
-        >
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="font-body text-xs font-medium uppercase tracking-[0.14em] text-muted">
-                {label}
-              </p>
-              <p className="mt-4 font-display text-3xl font-bold leading-none text-primary">
-                {label === "Expected rental income" ? (
-                  <PropertyPrice value={Number(value)} />
+      {items.map(
+        ({
+          detail,
+          icon: Icon,
+          label,
+          tone,
+          value,
+          isLoading,
+          error,
+          onRetry,
+        }) => (
+          <article
+            key={label}
+            aria-busy={isLoading}
+            className={utilityCardVariants({
+              interactive: true,
+              tone:
+                tone === "accent"
+                  ? "accentTint"
+                  : tone === "primary"
+                    ? "primaryTint"
+                    : "soft",
+            })}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="font-body text-xs font-medium uppercase tracking-[0.14em] text-muted">
+                  {label}
+                </p>
+                {isLoading ? (
+                  <div
+                    className="mt-4 h-8 w-24 animate-pulse rounded bg-skeleton motion-reduce:animate-none"
+                    aria-label={`Loading ${label}`}
+                  />
+                ) : error ? (
+                  <p className="mt-4 font-body text-sm font-medium text-muted">
+                    Unavailable
+                  </p>
                 ) : (
-                  value
+                  <p className="mt-4 font-display text-3xl font-bold leading-none text-primary">
+                    {label === "Expected rental income" ? (
+                      <PropertyPrice value={Number(value)} />
+                    ) : (
+                      value
+                    )}
+                  </p>
                 )}
-              </p>
+              </div>
+              <IconTile tone={tone}>
+                <Icon size={21} />
+              </IconTile>
             </div>
-            <IconTile tone={tone}>
-              <Icon size={21} />
-            </IconTile>
-          </div>
-          <p className="mt-5 font-body text-sm text-muted">{detail}</p>
-        </article>
-      ))}
+            <p
+              className="mt-5 font-body text-sm text-muted"
+              role={error ? "status" : undefined}
+            >
+              {error || detail}
+            </p>
+            {error && onRetry ? (
+              <button
+                type="button"
+                onClick={onRetry}
+                aria-label={`Retry ${label}`}
+                className="mt-2 inline-flex min-h-10 items-center gap-2 rounded-full px-2 font-body text-sm font-bold text-primary hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                <RotateCcw size={16} aria-hidden="true" />
+                Retry
+              </button>
+            ) : null}
+          </article>
+        ),
+      )}
     </section>
   );
 }
 
-function AttentionPanel({ items }: { items: AttentionItem[] }): ReactElement {
+function AttentionPanel({
+  items,
+  isLoading,
+  errors,
+}: {
+  items: AttentionItem[];
+  isLoading: boolean;
+  errors: DashboardErrorProps[];
+}): ReactElement {
   return (
     <section className="rounded-lg bg-bg p-5 shadow-sm sm:p-6">
       <div className="flex items-center justify-between gap-4">
@@ -579,12 +708,12 @@ function AttentionPanel({ items }: { items: AttentionItem[] }): ReactElement {
           <StatusBadge tone="danger">
             {items.length === 1 ? "1 action" : `${items.length} actions`}
           </StatusBadge>
-        ) : (
+        ) : !isLoading && errors.length === 0 ? (
           <StatusBadge tone="primary">All clear</StatusBadge>
-        )}
+        ) : null}
       </div>
 
-      {items.length === 0 ? (
+      {items.length === 0 && !isLoading && errors.length === 0 ? (
         <p className="mt-6 font-body text-sm leading-6 text-muted">
           Nothing needs you right now. New tenancy requests will appear here.
         </p>
@@ -623,11 +752,25 @@ function AttentionPanel({ items }: { items: AttentionItem[] }): ReactElement {
           })}
         </div>
       )}
+      {isLoading ? <PanelRowsSkeleton label="Checking priorities" /> : null}
+      <div className="mt-4 space-y-3">
+        {errors.map((error) => (
+          <DashboardError key={error.title} {...error} />
+        ))}
+      </div>
     </section>
   );
 }
 
-function UpcomingPanel({ items }: { items: UpcomingActivity[] }): ReactElement {
+function UpcomingPanel({
+  items,
+  isLoading,
+  errors,
+}: {
+  items: UpcomingActivity[];
+  isLoading: boolean;
+  errors: DashboardErrorProps[];
+}): ReactElement {
   return (
     <section className="rounded-lg bg-surface-soft p-5 shadow-sm sm:p-6">
       <div className="flex items-center justify-between gap-4">
@@ -644,7 +787,7 @@ function UpcomingPanel({ items }: { items: UpcomingActivity[] }): ReactElement {
         </IconTile>
       </div>
 
-      {items.length === 0 ? (
+      {items.length === 0 && !isLoading && errors.length === 0 ? (
         <p className="mt-6 font-body text-sm leading-6 text-muted">
           Nothing scheduled. Confirmed viewings and move-ins show up here.
         </p>
@@ -672,14 +815,32 @@ function UpcomingPanel({ items }: { items: UpcomingActivity[] }): ReactElement {
           ))}
         </ol>
       )}
+      {isLoading ? (
+        <PanelRowsSkeleton label="Loading upcoming schedule" />
+      ) : null}
+      <div className="mt-4 space-y-3">
+        {errors.map((error) => (
+          <DashboardError key={error.title} {...error} />
+        ))}
+      </div>
     </section>
   );
 }
 
 function PropertiesPanel({
   properties,
+  isLoading,
+  error,
+  onRetry,
+  isOccupancyLoading,
+  occupancyError,
 }: {
   properties: AgentProperty[];
+  isLoading: boolean;
+  error: string;
+  onRetry: () => void;
+  isOccupancyLoading: boolean;
+  occupancyError: string;
 }): ReactElement {
   return (
     <section className="mt-7 overflow-hidden rounded-lg bg-bg shadow-sm">
@@ -709,78 +870,147 @@ function PropertiesPanel({
         <span className="sr-only">Actions</span>
       </div>
 
-      <div className="divide-y divide-primary/10">
-        {properties.map((property) => (
-          <article
-            key={property.id}
-            className="grid gap-4 p-5 transition-colors hover:bg-surface-soft md:grid-cols-[minmax(16rem,1.6fr)_minmax(8rem,0.7fr)_minmax(8rem,0.7fr)_minmax(9rem,0.7fr)_2rem] md:items-center md:gap-5 md:px-6"
-          >
-            <div className="flex min-w-0 items-center gap-4">
-              {property.imageUrl ? (
-                <Image
-                  src={property.imageUrl}
-                  alt=""
-                  width={64}
-                  height={64}
-                  className="h-16 w-16 shrink-0 rounded-lg object-cover"
-                />
-              ) : (
-                <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-surface-soft text-muted">
-                  <ImageOff size={20} aria-hidden="true" />
-                </span>
-              )}
-              <div className="min-w-0">
-                <h3 className="truncate font-body text-sm font-bold text-primary">
-                  {property.title}
-                </h3>
-                <p className="mt-1 flex items-center gap-1.5 truncate font-body text-xs text-muted">
-                  <MapPin size={13} className="shrink-0" />
-                  {property.address}
+      {isLoading ? (
+        <div
+          className="animate-pulse divide-y divide-primary/10 motion-reduce:animate-none"
+          aria-busy="true"
+          aria-label="Loading properties"
+        >
+          {[0, 1, 2].map((index) => (
+            <div
+              key={index}
+              className="grid gap-4 p-5 md:grid-cols-[minmax(16rem,1.6fr)_minmax(8rem,0.7fr)_minmax(8rem,0.7fr)_minmax(9rem,0.7fr)_2rem] md:items-center md:gap-5 md:px-6"
+            >
+              <div className="flex items-center gap-4">
+                <div className="h-16 w-16 shrink-0 rounded-lg bg-skeleton-strong" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 w-3/4 rounded bg-skeleton" />
+                  <div className="h-3 w-1/2 rounded bg-skeleton" />
+                </div>
+              </div>
+              <div className="h-8 w-24 rounded bg-skeleton" />
+              <div className="h-4 w-24 rounded bg-skeleton" />
+              <div className="h-7 w-24 rounded-full bg-skeleton" />
+              <div className="h-9 w-9 rounded-full bg-skeleton" />
+            </div>
+          ))}
+        </div>
+      ) : error ? (
+        <div className="p-5 sm:p-6">
+          <DashboardError
+            title="Properties"
+            message={error}
+            onRetry={onRetry}
+          />
+        </div>
+      ) : properties.length === 0 ? (
+        <p className="p-5 font-body text-sm leading-6 text-muted sm:p-6">
+          No properties added yet.
+        </p>
+      ) : (
+        <div className="divide-y divide-primary/10">
+          {properties.map((property) => (
+            <article
+              key={property.id}
+              className="grid gap-4 p-5 transition-colors hover:bg-surface-soft md:grid-cols-[minmax(16rem,1.6fr)_minmax(8rem,0.7fr)_minmax(8rem,0.7fr)_minmax(9rem,0.7fr)_2rem] md:items-center md:gap-5 md:px-6"
+            >
+              <div className="flex min-w-0 items-center gap-4">
+                {property.imageUrl ? (
+                  <Image
+                    src={property.imageUrl}
+                    alt=""
+                    width={64}
+                    height={64}
+                    className="h-16 w-16 shrink-0 rounded-lg object-cover"
+                  />
+                ) : (
+                  <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-surface-soft text-muted">
+                    <ImageOff size={20} aria-hidden="true" />
+                  </span>
+                )}
+                <div className="min-w-0">
+                  <h3 className="truncate font-body text-sm font-bold text-primary">
+                    {property.title}
+                  </h3>
+                  <p className="mt-1 flex items-center gap-1.5 truncate font-body text-xs text-muted">
+                    <MapPin size={13} className="shrink-0" />
+                    {property.address}
+                  </p>
+                </div>
+              </div>
+              <div>
+                <p className="font-body text-[11px] font-bold uppercase tracking-wide text-muted md:hidden">
+                  Rent
+                </p>
+                <p className="mt-1 font-body text-sm font-bold text-primary md:mt-0">
+                  <PropertyPrice value={property.price} />
+                </p>
+                <p className="font-body text-xs text-muted">
+                  {RENTAL_PERIOD_LABELS[property.rentalMode]}
                 </p>
               </div>
-            </div>
-            <div>
-              <p className="font-body text-[11px] font-bold uppercase tracking-wide text-muted md:hidden">
-                Rent
-              </p>
-              <p className="mt-1 font-body text-sm font-bold text-primary md:mt-0">
-                <PropertyPrice value={property.price} />
-              </p>
-              <p className="font-body text-xs text-muted">
-                {RENTAL_PERIOD_LABELS[property.rentalMode]}
-              </p>
-            </div>
-            <div>
-              <p className="font-body text-[11px] font-bold uppercase tracking-wide text-muted md:hidden">
-                Occupancy
-              </p>
-              <p className="mt-1 font-body text-sm text-primary md:mt-0">
-                {property.tenant ?? "Available"}
-              </p>
-            </div>
-            <div>
-              <StatusBadge tone={LISTING_TONES[property.status]}>
-                {property.status}
-              </StatusBadge>
-            </div>
-            <Link
-              href="/agent/saved-listings"
-              aria-label={`Manage ${property.title}`}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full text-muted hover:bg-primary/5 hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            >
-              <MoreHorizontal size={19} />
-            </Link>
-          </article>
-        ))}
-      </div>
+              <div>
+                <p className="font-body text-[11px] font-bold uppercase tracking-wide text-muted md:hidden">
+                  Occupancy
+                </p>
+                {isOccupancyLoading ? (
+                  <div
+                    className="h-4 w-24 animate-pulse rounded bg-skeleton motion-reduce:animate-none"
+                    aria-label="Loading occupancy"
+                  />
+                ) : (
+                  <p className="mt-1 font-body text-sm text-primary md:mt-0">
+                    {occupancyError
+                      ? "Unavailable"
+                      : (property.tenant ?? "Available")}
+                  </p>
+                )}
+              </div>
+              <div>
+                {property.status !== "Pending review" && isOccupancyLoading ? (
+                  <div
+                    className="h-7 w-24 animate-pulse rounded-full bg-skeleton motion-reduce:animate-none"
+                    aria-label="Loading property status"
+                  />
+                ) : (
+                  <StatusBadge
+                    tone={
+                      occupancyError && property.status !== "Pending review"
+                        ? "neutral"
+                        : LISTING_TONES[property.status]
+                    }
+                  >
+                    {occupancyError && property.status !== "Pending review"
+                      ? "Occupancy unavailable"
+                      : property.status}
+                  </StatusBadge>
+                )}
+              </div>
+              <Link
+                href="/agent/saved-listings"
+                aria-label={`Manage ${property.title}`}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full text-muted hover:bg-primary/5 hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                <MoreHorizontal size={19} />
+              </Link>
+            </article>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
 
 function BookingsPanel({
   bookings,
+  isLoading,
+  error,
+  onRetry,
 }: {
   bookings: AgentBooking[];
+  isLoading: boolean;
+  error: string;
+  onRetry: () => void;
 }): ReactElement {
   return (
     <section className="mt-7 rounded-lg bg-bg p-5 shadow-sm sm:p-6">
@@ -802,7 +1032,33 @@ function BookingsPanel({
         </Link>
       </div>
 
-      {bookings.length === 0 ? (
+      {isLoading ? (
+        <div
+          className="mt-5 grid animate-pulse gap-3 motion-reduce:animate-none lg:grid-cols-3"
+          aria-busy="true"
+          aria-label="Loading tenancy activity"
+        >
+          {[0, 1, 2].map((index) => (
+            <div key={index} className="rounded-lg bg-surface-soft p-4">
+              <div className="flex items-start justify-between">
+                <div className="h-10 w-10 rounded-lg bg-skeleton-strong" />
+                <div className="h-6 w-20 rounded-full bg-skeleton" />
+              </div>
+              <div className="mt-4 h-4 w-2/3 rounded bg-skeleton" />
+              <div className="mt-2 h-4 w-3/4 rounded bg-skeleton" />
+              <div className="mt-4 h-3 w-1/3 rounded bg-skeleton" />
+            </div>
+          ))}
+        </div>
+      ) : error ? (
+        <div className="mt-5">
+          <DashboardError
+            title="Tenancy activity"
+            message={error}
+            onRetry={onRetry}
+          />
+        </div>
+      ) : bookings.length === 0 ? (
         <p className="mt-6 font-body text-sm leading-6 text-muted">
           No tenancy requests yet. They appear here as tenants apply.
         </p>
@@ -845,79 +1101,74 @@ function BookingsPanel({
 export default function AgentDashboardPage(): ReactElement {
   const reduceMotion = useReducedMotion();
   const { user } = useAuthenticatedUser();
-  const { snapshot: verification } = useHostVerification();
-  const [portfolio, setPortfolio] = useState<PropertyPortfolio | null>(null);
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [viewings, setViewings] = useState<Viewing[]>([]);
-  const [summary, setSummary] = useState<HostDashboardSummary | null>(null);
-  const [loadError, setLoadError] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    let active = true;
-
-    void Promise.all([
-      getPropertyPortfolio(),
-      getHostBookings(),
-      getHostViewings(),
-      getHostDashboardSummary(),
-    ]).then(
-      ([portfolioResult, bookingsResult, viewingsResult, summaryResult]) => {
-      if (!active) {
-        return;
-      }
-
-      setSummary(summaryResult.data);
-      setPortfolio(portfolioResult.data);
-      setBookings(bookingsResult.data);
-      setViewings(viewingsResult.data);
-      // The portfolio is the page. Bookings failing alone still leaves it useful.
-      setLoadError(portfolioResult.data ? "" : (portfolioResult.message ?? ""));
-      setIsLoading(false);
-      },
-    );
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  if (isLoading) {
-    return (
-      <main className="min-h-screen px-5 py-12 sm:px-8 lg:px-10 lg:py-16 xl:px-14">
-        <DashboardSkeleton />
-      </main>
-    );
-  }
-
-  if (!portfolio) {
-    return (
-      <main className="grid min-h-screen place-items-center px-5 py-12 sm:px-8">
-        <div className="max-w-md text-center">
-          <p className="font-body text-sm leading-6 text-muted">
-            {loadError || "Your dashboard could not be loaded."}
-          </p>
-        </div>
-      </main>
-    );
-  }
-
-  if (portfolio.properties.length === 0 && bookings.length === 0) {
-    return (
-      <main className="min-h-screen px-5 py-12 sm:px-8 lg:px-10 lg:py-16 xl:px-14">
-        <EmptyDashboard />
-      </main>
-    );
-  }
+  const portfolio = useDashboardResource(getPropertyPortfolio);
+  const bookings = useDashboardResource(getHostBookings);
+  const viewings = useDashboardResource(getHostViewings);
+  const summary = useDashboardResource(getHostDashboardSummary);
+  const verification = useDashboardResource(getHostVerification);
 
   const dashboard = buildDashboard(
-    portfolio,
-    bookings,
-    viewings,
-    verification?.identity.status === "approved",
-    summary,
+    portfolio.data,
+    bookings.data ?? [],
+    viewings.data ?? [],
+    verification.data ? verification.data.identity.status === "approved" : null,
+    summary.data,
   );
-  const now = new Date();
+  const summaryItems = dashboard.summary.map((item, index) => {
+    const resource = index === 3 ? portfolio : summary;
+    return {
+      ...item,
+      isLoading: resource.isLoading,
+      error: resource.error,
+      onRetry: resource.retry,
+    };
+  });
+  const bookingError: DashboardErrorProps[] = bookings.error
+    ? [{ title: "Tenancies", message: bookings.error, onRetry: bookings.retry }]
+    : [];
+  const viewingError: DashboardErrorProps[] = viewings.error
+    ? [{ title: "Viewings", message: viewings.error, onRetry: viewings.retry }]
+    : [];
+  const attentionErrors: DashboardErrorProps[] = [
+    ...bookingError,
+    ...viewingError,
+    ...(portfolio.error
+      ? [
+          {
+            title: "Properties",
+            message: portfolio.error,
+            onRetry: portfolio.retry,
+          },
+        ]
+      : []),
+    ...(verification.error
+      ? [
+          {
+            title: "Verification",
+            message: verification.error,
+            onRetry: verification.retry,
+          },
+        ]
+      : []),
+  ];
+  const isEmpty =
+    !portfolio.isLoading &&
+    !bookings.isLoading &&
+    !viewings.isLoading &&
+    !summary.isLoading &&
+    !verification.isLoading &&
+    !portfolio.error &&
+    !bookings.error &&
+    !viewings.error &&
+    !summary.error &&
+    !verification.error &&
+    summary.data?.listings.total === 0 &&
+    Object.values(summary.data?.bookings ?? {}).every((count) => count === 0) &&
+    portfolio.data?.properties.length === 0 &&
+    bookings.data?.length === 0 &&
+    viewings.data?.length === 0;
+  // The shell now renders on the server, before the browser's local clock is known.
+  const now = user ? new Date() : null;
 
   return (
     <motion.main
@@ -929,11 +1180,19 @@ export default function AgentDashboardPage(): ReactElement {
       <header className="flex flex-col gap-6 pb-9 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="font-body text-sm font-medium text-muted">
-            {formatFullDate(now)}
+            {now ? (
+              formatFullDate(now)
+            ) : (
+              <span
+                className="inline-block h-5 w-44 animate-pulse rounded bg-skeleton motion-reduce:animate-none"
+                aria-label="Loading your greeting"
+              />
+            )}
           </p>
           <h1 className="mt-2 font-display text-4xl font-bold leading-[0.95] text-primary sm:text-5xl">
-            {greetingFor(now.getHours())}
-            {user?.firstName ? `, ${user.firstName}.` : "."}
+            {now
+              ? `${greetingFor(now.getHours())}${user?.firstName ? `, ${user.firstName}.` : "."}`
+              : "Your dashboard"}
           </h1>
         </div>
         <Link
@@ -945,16 +1204,47 @@ export default function AgentDashboardPage(): ReactElement {
         </Link>
       </header>
 
-      <SummaryGrid items={dashboard.summary} />
+      {isEmpty ? (
+        <EmptyDashboard />
+      ) : (
+        <>
+          <SummaryGrid items={summaryItems} />
 
-      <div className="mt-7 grid gap-6 xl:grid-cols-[minmax(0,1.7fr)_minmax(18rem,0.8fr)]">
-        <AttentionPanel items={dashboard.attention} />
-        <UpcomingPanel items={dashboard.upcoming} />
-      </div>
+          <div className="mt-7 grid gap-6 xl:grid-cols-[minmax(0,1.7fr)_minmax(18rem,0.8fr)]">
+            <AttentionPanel
+              items={dashboard.attention}
+              isLoading={
+                portfolio.isLoading ||
+                bookings.isLoading ||
+                viewings.isLoading ||
+                verification.isLoading
+              }
+              errors={attentionErrors}
+            />
+            <UpcomingPanel
+              items={dashboard.upcoming}
+              isLoading={bookings.isLoading || viewings.isLoading}
+              errors={[...bookingError, ...viewingError]}
+            />
+          </div>
 
-      <PropertiesPanel properties={dashboard.properties} />
-      <BookingsPanel bookings={dashboard.bookings} />
-      <ActivityFeed role="agent" />
+          <PropertiesPanel
+            properties={dashboard.properties}
+            isLoading={portfolio.isLoading}
+            error={portfolio.error}
+            onRetry={portfolio.retry}
+            isOccupancyLoading={bookings.isLoading}
+            occupancyError={bookings.error}
+          />
+          <BookingsPanel
+            bookings={dashboard.bookings}
+            isLoading={bookings.isLoading}
+            error={bookings.error}
+            onRetry={bookings.retry}
+          />
+          <ActivityFeed role="agent" />
+        </>
+      )}
     </motion.main>
   );
 }
