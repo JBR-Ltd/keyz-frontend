@@ -1,6 +1,6 @@
 import { rejectCrossSiteMutation } from "@/app/api/_csrf";
 import { requestIdHeader } from "@/app/api/_requestId";
-import { clearSessionIfUnauthorized, getSessionToken } from "@/app/api/_session";
+import { getSessionToken } from "@/app/api/_session";
 
 const API_BASE_URL = process.env.API_BASE_URL;
 const REQUEST_TIMEOUT_MS = 90000;
@@ -19,7 +19,11 @@ async function handle(
 ): Promise<Response> {
   if (!API_BASE_URL) {
     return Response.json(
-      { success: false, message: "API_BASE_URL is not configured.", data: null },
+      {
+        success: false,
+        message: "API_BASE_URL is not configured.",
+        data: null,
+      },
       { status: 500 },
     );
   }
@@ -55,14 +59,13 @@ async function handle(
       {
         method,
         headers: {
+          Authorization: `Bearer ${token}`,
           ...(contentType ? { "Content-Type": contentType } : {}),
         },
         body: method === "GET" ? undefined : await request.arrayBuffer(),
         signal: controller.signal,
       },
     );
-
-    await clearSessionIfUnauthorized(response);
 
     const body = await response.text();
 

@@ -29,6 +29,7 @@ export interface VerificationStatus {
   payoutAccountLast4?: string | null;
   payoutAccountName?: string | null;
   payoutBankCode?: string | null;
+  payoutBankName?: string | null;
   /** NOT_STARTED or APPROVED. */
   payoutStatus?: string | null;
 }
@@ -217,12 +218,20 @@ export async function submitAgentVerification(
  */
 export async function submitLandlordVerification(
   nin: string,
+  bvn: string,
   selfieDataUrl: string,
 ): Promise<IdentityResult<boolean>> {
   const ninResult = await verifyIdentityNumber("nin", nin);
 
   if (!ninResult.data) {
     return ninResult;
+  }
+
+  // Stops at the first failure, so the reason shown names the check that failed
+  const bvnResult = await verifyIdentityNumber("bvn", bvn);
+
+  if (!bvnResult.data) {
+    return bvnResult;
   }
 
   return verifySelfie(selfieDataUrl);

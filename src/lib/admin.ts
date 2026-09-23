@@ -43,6 +43,19 @@ export interface KybSubmission {
   user: PartySummary | null;
 }
 
+export interface PropertyVerificationSubmission {
+  id: number;
+  latitude: number | null;
+  longitude: number | null;
+  owner: PartySummary | null;
+  proofOfOwnershipUrl: string | null;
+  propertyAddress: string | null;
+  propertyId: number | null;
+  propertyTitle: string | null;
+  rejectionReason: string | null;
+  status: string;
+}
+
 export interface AdminResult<TValue> {
   data: TValue;
   message?: string;
@@ -280,6 +293,63 @@ export async function decideKyb(
 
     const { ok, payload } = await adminRequest(
       `/api/admin/kyb/${kybId}/decision?${query.toString()}`,
+      { method: "POST" },
+    );
+
+    return ok
+      ? { data: true }
+      : {
+          data: false,
+          message: resolveApiError(
+            payload,
+            "That decision could not be saved.",
+          ),
+        };
+  } catch {
+    return { data: false, message: "That decision could not be saved." };
+  }
+}
+
+export async function getPropertyVerificationQueue(): Promise<
+  AdminResult<PropertyVerificationSubmission[]>
+> {
+  try {
+    const { ok, payload } = await adminRequest(
+      "/api/admin/property-verifications",
+    );
+
+    if (!ok) {
+      return {
+        data: [],
+        message: resolveApiError(payload, "The queue could not be loaded."),
+      };
+    }
+
+    const data = unwrap(payload);
+
+    return Array.isArray(data)
+      ? { data: data as PropertyVerificationSubmission[] }
+      : { data: [], message: "The queue could not be loaded." };
+  } catch {
+    return { data: [], message: "The queue could not be loaded." };
+  }
+}
+
+/** Approving publishes the listing; a rejection must say what the host should fix. */
+export async function decidePropertyVerification(
+  verificationId: number,
+  approved: boolean,
+  reason?: string,
+): Promise<AdminResult<boolean>> {
+  try {
+    const query = new URLSearchParams({ approved: String(approved) });
+
+    if (!approved && reason) {
+      query.set("reason", reason);
+    }
+
+    const { ok, payload } = await adminRequest(
+      `/api/admin/property-verifications/${verificationId}/decision?${query.toString()}`,
       { method: "POST" },
     );
 

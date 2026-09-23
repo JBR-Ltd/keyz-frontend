@@ -211,7 +211,12 @@ export default function HostVerificationCenter({
 
   const { identity, kyb, payout } = snapshot;
   const isLandlord = role === "landlord";
-  const completeCount = [identity.status, kyb.status, payout.status].filter(
+  // Business documents are an agent requirement; a landlord proves ownership per listing
+  const trackedStatuses: HostCheckStatus[] = isLandlord
+    ? [identity.status, payout.status]
+    : [identity.status, kyb.status, payout.status];
+  const totalCount = trackedStatuses.length;
+  const completeCount = trackedStatuses.filter(
     (status: HostCheckStatus) => status === "approved",
   ).length;
 
@@ -288,7 +293,7 @@ export default function HostVerificationCenter({
         <div className="space-y-3">
           <VerifiedBadge size="sm" />
           <p className="font-body text-sm font-bold text-primary">
-            {getBankName(payout.bankCode)} ·{" "}
+            {getBankName(payout.bankCode, payout.bankName)} ·{" "}
             {maskAccountNumber(payout.accountLast4)}
           </p>
           <p className="font-body text-sm text-muted">{payout.accountName}</p>
@@ -329,14 +334,14 @@ export default function HostVerificationCenter({
         </h1>
         <p className="mt-4 max-w-2xl font-body text-sm leading-6 text-muted">
           {isLandlord
-            ? "Identity verification, business documents, and payout setup are tracked separately. Missing payout details will not change your identity status."
+            ? "Identity verification and payout setup are tracked separately. Missing payout details will not change your identity status. Each property you list is verified on its own."
             : "Complete these checks to publish listings and receive payouts. Your identity is confirmed straight away; business documents are reviewed by our team."}
         </p>
 
         <div className="mt-8 rounded-xl border border-primary/10 bg-[var(--color-bg)] p-5 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="font-body text-sm font-bold text-primary">
-              {completeCount} of 3 setup tasks complete
+              {completeCount} of {totalCount} setup tasks complete
             </p>
             <p className="font-body text-xs text-muted">
               Property verification starts after your first listing is created.
@@ -345,7 +350,7 @@ export default function HostVerificationCenter({
           <div className="mt-4 h-2 overflow-hidden rounded-full bg-border">
             <div
               className="h-full rounded-full bg-accent transition-all duration-300 ease-in-out"
-              style={{ width: `${(completeCount / 3) * 100}%` }}
+              style={{ width: `${(completeCount / totalCount) * 100}%` }}
             />
           </div>
         </div>
@@ -362,14 +367,18 @@ export default function HostVerificationCenter({
             {renderIdentity()}
           </StatusCard>
 
-          <StatusCard
-            actionHref={kybActionLabel ? `/${role}/verify/identity` : undefined}
-            actionLabel={kybActionLabel}
-            icon={FileText}
-            title="Business Documents"
-          >
-            {renderKyb()}
-          </StatusCard>
+          {isLandlord ? null : (
+            <StatusCard
+              actionHref={
+                kybActionLabel ? `/${role}/verify/identity` : undefined
+              }
+              actionLabel={kybActionLabel}
+              icon={FileText}
+              title="Business Documents"
+            >
+              {renderKyb()}
+            </StatusCard>
+          )}
 
           <StatusCard
             actionHref={

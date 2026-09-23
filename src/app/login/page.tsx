@@ -2,7 +2,7 @@
 
 import { apiRequest } from "@/lib/apiRequest";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { EyeIcon, EyeOffIcon, Loader2, X } from "lucide-react";
+import { EyeIcon, EyeOffIcon, Loader2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -12,13 +12,12 @@ import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
 import { isAccountRole } from "@/components/auth/RoleGuard";
 import { useToast } from "@/components/ui/toast";
 import { resolveApiError } from "@/lib/errors";
-import {
-  establishAuthentication,
-  getInstallationId,
-} from "@/lib/authSession";
+import { establishAuthentication, getInstallationId } from "@/lib/authSession";
 
 const loginPhotoUrl =
   "https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=1200&h=1400&fit=crop&auto=format&q=80";
+
+const VERIFY_EMAIL_STORAGE_KEY = "rello_verify_email";
 
 interface LoginFormValues {
   email: string;
@@ -89,7 +88,7 @@ export default function LoginPage() {
   const router = useRouter();
   const reduceMotion = useReducedMotion();
   const { notify } = useToast();
-  const [errorMessage, setErrorMessage] = useState("");
+  const [isNavigating, setIsNavigating] = useState(false);
   /** Set when the password was right but the account wants a code as well. */
   const [challengeReference, setChallengeReference] = useState("");
   const [code, setCode] = useState("");
@@ -149,7 +148,6 @@ export default function LoginPage() {
   };
 
   const submitCode = async (): Promise<void> => {
-    setErrorMessage("");
     setIsVerifying(true);
 
     try {
@@ -174,12 +172,13 @@ export default function LoginPage() {
         throw new Error("That code is not right.");
       }
 
+      setIsNavigating(true);
       startSession(data.data);
     } catch (error) {
+      setIsNavigating(false);
       const message =
         error instanceof Error ? error.message : "That code is not right.";
 
-      setErrorMessage(message);
       notify({
         title: "Could not sign you in",
         description: message,
@@ -191,7 +190,6 @@ export default function LoginPage() {
   };
 
   const onSubmit: SubmitHandler<LoginFormValues> = async (values) => {
-    setErrorMessage("");
     setSuccessMessage("");
 
     try {
@@ -207,7 +205,40 @@ export default function LoginPage() {
       const data: unknown = await response.json().catch(() => null);
 
       if (!response.ok || (isApiEnvelope(data) && !data.success)) {
-        throw new Error(resolveApiError(data, "Login failed"));
+        const errorCode =
+          isApiEnvelope(data) && "code" in data && typeof data.code === "string"
+            ? data.code
+            : null;
+        const errorMessage =
+          isApiEnvelope(data) &&
+          "message" in data &&
+          typeof data.message === "string"
+            ? data.message
+            : "";
+
+        if (
+          errorCode === "EMAIL_NOT_VERIFIED" ||
+          errorMessage.toLowerCase().includes("verify your email")
+        ) {
+          sessionStorage.setItem(VERIFY_EMAIL_STORAGE_KEY, values.email);
+          notify({
+            title: "Verification required",
+            description: "Please verify your email address before logging in.",
+            variant: "error",
+          });
+          router.push(
+            `/verify-email?email=${encodeURIComponent(values.email)}`,
+          );
+          return;
+        }
+
+        if (
+          errorCode === "INVALID_CREDENTIALS" ||
+          (!errorCode && response.status === 401)
+        ) {
+          throw new Error("Incorrect login credentials");
+        }
+        throw new Error(resolveApiError(data, "Incorrect login credentials"));
       }
 
       // The password was right, but no session is issued until the code is
@@ -223,6 +254,7 @@ export default function LoginPage() {
       }
 
       if (isApiEnvelope(data) && isLoginData(data.data)) {
+        setIsNavigating(true);
         startSession(data.data);
         return;
       }
@@ -230,12 +262,13 @@ export default function LoginPage() {
       throw new Error(
         isApiEnvelope(data) && data.success
           ? "Unable to determine account type, please contact support"
-          : getApiMessage(data, "Login failed"),
+          : getApiMessage(data, "Incorrect login credentials"),
       );
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Login failed";
+      setIsNavigating(false);
+      const message =
+        error instanceof Error ? error.message : "Incorrect login credentials";
 
-      setErrorMessage(message);
       notify({
         title: "Login failed",
         description: message,
@@ -326,12 +359,6 @@ export default function LoginPage() {
                   signing in.
                 </p>
 
-                {errorMessage ? (
-                  <p className="rounded-lg border-l-4 border-red-700 bg-red-700/5 p-4 font-body text-sm font-medium text-red-700">
-                    {errorMessage}
-                  </p>
-                ) : null}
-
                 <label className="block font-body text-sm font-bold text-primary">
                   Your code
                   <input
@@ -360,7 +387,6 @@ export default function LoginPage() {
                   onClick={() => {
                     setChallengeReference("");
                     setCode("");
-                    setErrorMessage("");
                   }}
                   className="font-body text-sm font-medium text-muted transition-colors hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 >
@@ -373,56 +399,6 @@ export default function LoginPage() {
               className={`mt-8 grid gap-5 ${challengeReference ? "hidden" : ""}`}
               onSubmit={handleSubmit(onSubmit)}
             >
-              <AnimatePresence>
-                {successMessage ? (
-                  <motion.div
-                    className="flex items-start justify-between gap-4 rounded-lg border-l-4 border-accent bg-accent/10 p-4 font-body text-sm font-medium text-primary"
-                    initial={reduceMotion ? false : { height: 0, opacity: 0 }}
-                    animate={
-                      reduceMotion ? undefined : { height: "auto", opacity: 1 }
-                    }
-                    exit={reduceMotion ? undefined : { height: 0, opacity: 0 }}
-                    transition={{ duration: 0.2, ease: "easeOut" }}
-                    role="status"
-                  >
-                    <p>{successMessage}</p>
-                    <button
-                      type="button"
-                      aria-label="Dismiss message"
-                      onClick={() => setSuccessMessage("")}
-                      className="flex h-6 w-6 shrink-0 items-center justify-center transition-all duration-200 ease-in-out hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                    >
-                      <X size={16} />
-                    </button>
-                  </motion.div>
-                ) : null}
-              </AnimatePresence>
-
-              <AnimatePresence>
-                {errorMessage ? (
-                  <motion.div
-                    className="flex items-start justify-between gap-4 rounded-lg border-l-4 border-red-500 bg-red-500/10 p-4 font-body text-sm font-medium text-red-500"
-                    initial={reduceMotion ? false : { height: 0, opacity: 0 }}
-                    animate={
-                      reduceMotion ? undefined : { height: "auto", opacity: 1 }
-                    }
-                    exit={reduceMotion ? undefined : { height: 0, opacity: 0 }}
-                    transition={{ duration: 0.2, ease: "easeOut" }}
-                    role="alert"
-                  >
-                    <p>{errorMessage}</p>
-                    <button
-                      type="button"
-                      aria-label="Dismiss message"
-                      onClick={() => setErrorMessage("")}
-                      className="flex h-6 w-6 shrink-0 items-center justify-center transition-all duration-200 ease-in-out hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                    >
-                      <X size={16} />
-                    </button>
-                  </motion.div>
-                ) : null}
-              </AnimatePresence>
-
               <motion.label
                 className="block"
                 htmlFor="auth-email"
@@ -539,27 +515,29 @@ export default function LoginPage() {
 
               <motion.button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmitting || isNavigating}
                 className="mt-3 inline-flex min-h-14 w-full items-center justify-center rounded-full bg-accent px-5 py-4 font-body text-base font-medium text-primary transition-all duration-200 ease-in-out hover:scale-[1.01] hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-70"
                 initial={fieldInitial}
                 animate={
-                  isSubmitting && !reduceMotion
+                  (isSubmitting || isNavigating) && !reduceMotion
                     ? { opacity: [1, 0.7, 1], y: 0 }
                     : fieldAnimate
                 }
                 transition={
-                  isSubmitting && !reduceMotion
+                  (isSubmitting || isNavigating) && !reduceMotion
                     ? { duration: 1, repeat: Infinity, ease: "easeInOut" }
                     : { duration: 0.4, delay: 0.56, ease: "easeOut" }
                 }
               >
-                {isSubmitting ? (
+                {isSubmitting || isNavigating ? (
                   <span className="inline-flex items-center gap-2">
                     <Loader2
                       className="h-4 w-4 animate-spin"
                       aria-hidden="true"
                     />
-                    Logging in...
+                    {isNavigating
+                      ? "Taking you to your dashboard..."
+                      : "Logging in..."}
                   </span>
                 ) : (
                   "Log in"

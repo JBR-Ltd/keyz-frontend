@@ -1,8 +1,8 @@
 "use client";
 
 import {
-  clearAuthentication,
   getAuthenticationSnapshot,
+  refreshAuthentication,
   subscribeToAuthentication,
 } from "@/lib/authSession";
 
@@ -34,9 +34,11 @@ function isAuthenticationEntryPoint(path: string): boolean {
 }
 
 function handleAuthenticationFailure(path: string, response: Response): void {
-  if (response.status === 401 && !isAuthenticationEntryPoint(path)) {
-    clearAuthentication();
-  }
+  if (response.status !== 401 || isAuthenticationEntryPoint(path)) return;
+
+  // 401 also covers a wrong password on a flow that re-checks it while signed
+  // in, so only the session endpoint decides whether the session really ended.
+  void refreshAuthentication();
 }
 
 export function clearPendingApiReads(): void {
@@ -85,7 +87,11 @@ export async function apiRequest(
 
   let response: Response;
 
-  if (requestInit.signal || requestInit.body || requestInit.cache === "reload") {
+  if (
+    requestInit.signal ||
+    requestInit.body ||
+    requestInit.cache === "reload"
+  ) {
     // Independently cancellable requests cannot share another caller's signal.
     response = await fetch(path, requestInit);
   } else {
@@ -93,9 +99,11 @@ export async function apiRequest(
       a.localeCompare(b),
     );
     const options = Object.fromEntries(
-      Object.entries({ ...requestInit, method, headers: normalizedHeaders }).sort(([a], [b]) =>
-        a.localeCompare(b),
-      ),
+      Object.entries({
+        ...requestInit,
+        method,
+        headers: normalizedHeaders,
+      }).sort(([a], [b]) => a.localeCompare(b)),
     );
     const key = JSON.stringify([scope, path, options]);
     let request = pendingReads.get(key);

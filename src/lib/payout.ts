@@ -20,6 +20,11 @@ export interface PayoutResult<TValue> {
   message?: string;
 }
 
+export interface BankOption {
+  code: string;
+  name: string;
+}
+
 // === Helpers
 
 function unwrap(payload: unknown): unknown {
@@ -62,6 +67,46 @@ async function postPayout(
 }
 
 // === Requests
+
+function isBankOption(value: unknown): value is BankOption {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    "code" in value &&
+    typeof value.code === "string" &&
+    "name" in value &&
+    typeof value.name === "string"
+  );
+}
+
+/** Every institution a payout can reach. Served from the backend's cache. */
+export async function getPayoutBanks(): Promise<PayoutResult<BankOption[]>> {
+  const token = getSessionMarker();
+
+  if (!token) {
+    return { data: [], message: "Your session has expired. Log in again." };
+  }
+
+  try {
+    const response = await apiRequest("/api/verification/payout/banks");
+    const payload: unknown = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      return {
+        data: [],
+        message: resolveApiError(payload, "The bank list could not be loaded."),
+      };
+    }
+
+    const data = unwrap(payload);
+
+    return Array.isArray(data)
+      ? { data: data.filter(isBankOption) }
+      : { data: [], message: "The bank list could not be loaded." };
+  } catch {
+    return { data: [], message: "The bank list could not be loaded." };
+  }
+}
 
 /**
  * Asks the bank who owns this account. Saves nothing, so the host can see the

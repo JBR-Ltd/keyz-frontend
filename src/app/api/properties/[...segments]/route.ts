@@ -1,6 +1,6 @@
 import { rejectCrossSiteMutation } from "@/app/api/_csrf";
 import { cacheHeaders, requestIdHeader } from "@/app/api/_requestId";
-import { clearSessionIfUnauthorized, getSessionToken } from "@/app/api/_session";
+import { getSessionToken } from "@/app/api/_session";
 
 const API_BASE_URL = process.env.API_BASE_URL;
 const PROPERTY_REQUEST_TIMEOUT_MS = 90000;
@@ -171,8 +171,6 @@ async function proxyResponse(response: Response): Promise<Response> {
       headers: { ...requestIdHeader(response), ...cacheHeaders(response) },
     });
   }
-
-  await clearSessionIfUnauthorized(response);
 
   const body = await response.text();
   const contentType =

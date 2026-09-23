@@ -27,6 +27,16 @@ type AuthenticationListener = () => void;
 
 const AUTH_CHANNEL_NAME = "rello-auth";
 const AUTH_STORAGE_EVENT_KEY = "rello_auth_event";
+const CLIENT_ID =
+  typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+    ? crypto.randomUUID()
+    : Math.random().toString(36).slice(2);
+
+interface AuthBroadcastPayload {
+  senderId: string;
+  type: "refresh";
+}
+
 const INSTALLATION_ID_KEY = "rello_device_fingerprint";
 const LEGACY_AUTH_KEYS = [
   "rello_token",
@@ -102,13 +112,18 @@ function setSnapshot(
 function broadcastAuthenticationChange(): void {
   if (typeof window === "undefined") return;
 
+  const payload: AuthBroadcastPayload = {
+    senderId: CLIENT_ID,
+    type: "refresh",
+  };
+
   if ("BroadcastChannel" in window) {
     const channel = new BroadcastChannel(AUTH_CHANNEL_NAME);
-    channel.postMessage("refresh");
+    channel.postMessage(payload);
     channel.close();
   }
 
-  localStorage.setItem(AUTH_STORAGE_EVENT_KEY, String(Date.now()));
+  localStorage.setItem(AUTH_STORAGE_EVENT_KEY, JSON.stringify(payload));
   localStorage.removeItem(AUTH_STORAGE_EVENT_KEY);
 }
 
@@ -169,7 +184,10 @@ export async function refreshAuthentication(): Promise<AuthenticationSnapshot> {
       if (!response.ok) {
         return commit({
           error: "Your session could not be checked. Try again.",
-          status: "checking",
+          // A check that could not complete is not evidence the session ended. Keep a
+          // known-good session rather than blanking the screen behind a spinner.
+          status:
+            snapshot.status === "authenticated" ? "authenticated" : "checking",
           user: snapshot.user,
         });
       }
@@ -197,7 +215,10 @@ export async function refreshAuthentication(): Promise<AuthenticationSnapshot> {
     } catch {
       return commit({
         error: "Your session could not be checked. Try again.",
-        status: "checking",
+        // A check that could not complete is not evidence the session ended. Keep a
+        // known-good session rather than blanking the screen behind a spinner.
+        status:
+          snapshot.status === "authenticated" ? "authenticated" : "checking",
         user: snapshot.user,
       });
     } finally {
@@ -243,7 +264,9 @@ export function establishAuthentication(value: unknown): boolean {
   return true;
 }
 
-export function clearAuthentication(options: { broadcast?: boolean } = {}): void {
+export function clearAuthentication(
+  options: { broadcast?: boolean } = {},
+): void {
   const sessionChanged =
     snapshot.status !== "unauthenticated" || snapshot.user !== null;
 
@@ -279,9 +302,35 @@ export function listenForAuthenticationChanges(
     typeof BroadcastChannel === "undefined"
       ? null
       : new BroadcastChannel(AUTH_CHANNEL_NAME);
-  const receive = (): void => onChange();
+  const receive = (event: MessageEvent<unknown>): void => {
+    if (
+      event.data &&
+      typeof event.data === "object" &&
+      "senderId" in event.data &&
+      event.data.senderId === CLIENT_ID
+    ) {
+      return;
+    }
+    onChange();
+  };
   const receiveStorage = (event: StorageEvent): void => {
-    if (event.key === AUTH_STORAGE_EVENT_KEY) onChange();
+    if (event.key !== AUTH_STORAGE_EVENT_KEY || !event.newValue) {
+      return;
+    }
+    try {
+      const parsed: unknown = JSON.parse(event.newValue);
+      if (
+        parsed &&
+        typeof parsed === "object" &&
+        "senderId" in parsed &&
+        parsed.senderId === CLIENT_ID
+      ) {
+        return;
+      }
+    } catch {
+      // If parsing fails, fall through to onChange
+    }
+    onChange();
   };
 
   channel?.addEventListener("message", receive);

@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { ReactNode, useEffect } from "react";
+import { Loader2 } from "lucide-react";
 import { useAuthentication } from "@/components/auth/AuthProvider";
 import { type AccountRole } from "@/lib/authSession";
 
@@ -44,15 +45,12 @@ export default function RoleGuard({ children, expectedRole }: RoleGuardProps) {
 
   if (!isAllowed) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-primary px-5 text-white">
-        <div className="border border-accent px-8 py-10 text-center">
-          <p className="font-accent text-xs font-bold uppercase tracking-[0.3em] text-accent">
-            Rello
-          </p>
-          <p className="mt-4 font-display text-4xl font-bold">
-            Checking access
-          </p>
-        </div>
+      <main className="flex min-h-screen items-center justify-center bg-bg">
+        <Loader2
+          className="h-8 w-8 animate-spin text-primary"
+          aria-hidden="true"
+        />
+        <span className="sr-only">Loading</span>
       </main>
     );
   }

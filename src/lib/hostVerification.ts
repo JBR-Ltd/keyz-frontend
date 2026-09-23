@@ -39,6 +39,8 @@ export interface HostPayoutState {
   accountLast4: string | null;
   accountName: string | null;
   bankCode: string | null;
+  /** Recorded at setup. Null for accounts saved before it was stored. */
+  bankName: string | null;
   status: HostCheckStatus;
 }
 
@@ -72,7 +74,18 @@ const BANK_NAMES: Record<string, string> = {
   "100004": "OPay Digital Services",
 };
 
-export function getBankName(bankCode: string | null): string {
+/**
+ * The name recorded at setup wins. The map is only a fallback for accounts saved
+ * before that name was stored, and it covers the common banks rather than all of them.
+ */
+export function getBankName(
+  bankCode: string | null,
+  bankName?: string | null,
+): string {
+  if (bankName) {
+    return bankName;
+  }
+
   if (!bankCode) {
     return "Bank";
   }
@@ -134,6 +147,7 @@ function toSnapshot(status: VerificationStatus): HostVerificationSnapshot {
       accountLast4: status.payoutAccountLast4 ?? null,
       accountName: status.payoutAccountName ?? null,
       bankCode: status.payoutBankCode ?? null,
+      bankName: status.payoutBankName ?? null,
       status: toCheckStatus(status.payoutStatus),
     },
   };

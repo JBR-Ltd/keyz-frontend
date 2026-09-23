@@ -114,9 +114,8 @@ export default function HostIdentityVerificationFlow({
   const agentReady = identityDone
     ? documentsReady
     : ninValid && bvnValid && Boolean(selfiePreview) && documentsReady;
-  const landlordReady = identityDone
-    ? documentsReady
-    : ninValid && Boolean(selfiePreview) && documentsReady;
+  // Ownership documents are an agent requirement, so a landlord is done at identity
+  const landlordReady = ninValid && bvnValid && Boolean(selfiePreview);
 
   useEffect(() => {
     return () => {
@@ -142,6 +141,12 @@ export default function HostIdentityVerificationFlow({
 
       if (identity.status === "approved") {
         setIdentityDone(true);
+
+        // A landlord has nothing left once identity clears; only agents file documents
+        if (role !== "agent") {
+          setScreen("complete");
+          return;
+        }
 
         if (kyb.status === "pending") {
           setScreen("submitted");
@@ -317,7 +322,7 @@ export default function HostIdentityVerificationFlow({
 
     if (!landlordReady) {
       setFormError(
-        "Enter your NIN, add a selfie, and upload every document before submitting.",
+        "Enter your NIN and BVN, and add a selfie, before submitting.",
       );
       return;
     }
@@ -325,24 +330,21 @@ export default function HostIdentityVerificationFlow({
     setIsProcessing(true);
 
     try {
-      if (!identityDone) {
-        // NIN then selfie, both through Dojah. This is what marks a landlord
-        // verified; the documents are a separate human review.
-        const identity = await submitLandlordVerification(nin, selfiePreview);
+      // NIN, BVN then selfie, all through Dojah. Ownership of a specific address is
+      // proved per listing instead, by the geotagged photo and utility bill.
+      const identity = await submitLandlordVerification(
+        nin,
+        bvn,
+        selfiePreview,
+      );
 
-        if (!identity.data) {
-          setFormError(identity.message ?? "Verification failed. Try again.");
-          return;
-        }
-
-        // Identity is recorded server side from here, so a failed upload costs
-        // the host the documents only, not the checks they just passed
-        setIdentityDone(true);
+      if (!identity.data) {
+        setFormError(identity.message ?? "Verification failed. Try again.");
+        return;
       }
 
-      if (await uploadDocuments()) {
-        setScreen("submitted");
-      }
+      setIdentityDone(true);
+      setScreen("complete");
     } finally {
       setIsProcessing(false);
     }
@@ -374,25 +376,25 @@ export default function HostIdentityVerificationFlow({
         <h1 className="mt-3 font-display text-4xl font-bold leading-tight text-white">
           {isAgent
             ? "Let's verify your identity as an agent."
-            : "Let's verify your business."}
+            : "Let's verify your identity."}
         </h1>
         <p className="mx-auto mt-4 max-w-md font-body text-base leading-7 text-white/70">
           {isAgent
             ? "We will check your NIN, BVN, and selfie together through Dojah so residents know they are working with a trusted agent."
-            : "KYB requires document upload and review by the Rello team. This usually takes 1 to 2 business days."}
+            : "We will check your NIN, BVN, and selfie through Dojah. Each property you list is then verified on its own."}
         </p>
 
         <div className="mx-auto mt-12 max-w-xl rounded-lg border border-white/10 bg-primary p-6 text-left">
           <div className="flex items-center gap-3">
             <Lock className="h-5 w-5 text-accent" />
             <p className="font-body text-sm font-bold text-white/80">
-              {isAgent ? "Compound Dojah check" : "Reviewed by Rello"}
+              {isAgent ? "Compound Dojah check" : "Checked by Dojah"}
             </p>
           </div>
           <p className="mt-3 font-body text-xs leading-6 text-white/70">
             {isAgent
               ? "Your identity details are submitted once and verified together for a faster approval decision."
-              : "Your uploaded documents are checked securely before listing access is unlocked."}
+              : "Your identity details are checked securely before listing access is unlocked."}
           </p>
         </div>
 
@@ -401,7 +403,7 @@ export default function HostIdentityVerificationFlow({
           onClick={() => setScreen("step")}
           className="mt-10 rounded-full bg-accent px-10 py-4 font-body text-sm font-medium text-primary transition-all duration-200 ease-in-out hover:scale-[1.02] hover:bg-primary hover:text-white hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         >
-          {isAgent ? "Begin Verification" : "Submit Documents"}
+          Begin Verification
         </button>
         <button
           type="button"
@@ -687,22 +689,17 @@ export default function HostIdentityVerificationFlow({
           <BriefcaseBusiness size={27} />
         </span>
         <h1 className="mt-4 font-display text-2xl font-bold text-primary">
-          {identityDone ? "Upload your documents" : "Verify your account"}
+          Verify your account
         </h1>
         <p className="mx-auto mt-2 max-w-sm font-body text-sm leading-6 text-muted">
-          {identityDone
-            ? "Your identity is already confirmed. Add the two documents our review team needs."
-            : "Confirm your identity through Dojah, then upload the documents our review team needs before listing access is unlocked."}
+          Confirm your identity through Dojah. Each listing is verified
+          separately when you add it.
         </p>
       </div>
       {/* Identity first: the backend will not mark a landlord verified without these */}
-      {identityDone ? null : (
-        <>
-          {renderNumberField("NIN", nin, setNin, IdCard)}
-          {renderSelfieField()}
-        </>
-      )}
-      {renderDocumentFields()}
+      {renderNumberField("NIN", nin, setNin, IdCard)}
+      {renderNumberField("BVN", bvn, setBvn, Landmark)}
+      {renderSelfieField()}
       {formError ? (
         <p className="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 font-body text-sm font-bold text-red-700">
           {formError}
@@ -716,10 +713,10 @@ export default function HostIdentityVerificationFlow({
         {isProcessing ? (
           <span className="inline-flex items-center gap-2">
             <Loader2 className="h-4 w-4 animate-spin" />
-            Uploading documents...
+            Verifying your details...
           </span>
         ) : (
-          "Submit for Review"
+          "Submit for Verification"
         )}
       </button>
     </form>

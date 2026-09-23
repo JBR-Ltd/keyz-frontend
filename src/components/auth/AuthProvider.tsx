@@ -10,11 +10,11 @@ import {
   subscribeToAuthentication,
   type AuthenticationSnapshot,
 } from "@/lib/authSession";
-import { createContext, useContext, useEffect, useSyncExternalStore } from "react";
+import { createContext, useContext, useEffect, useSyncExternalStore, type ReactNode } from "react";
 
 const AuthenticationContext = createContext<AuthenticationSnapshot | null>(null);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export function AuthProvider({ children }: { children: ReactNode }) {
   const authentication = useSyncExternalStore(
     subscribeToAuthentication,
     getAuthenticationSnapshot,

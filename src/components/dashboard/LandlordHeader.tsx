@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactElement, ReactNode } from "react";
+import UserAvatar from "@/components/ui/user-avatar";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   Bookmark,
@@ -282,12 +283,16 @@ export default function LandlordHeader({
                   isAccountActive ? "bg-primary/5" : ""
                 }`}
               >
-                <span className="relative flex h-8 w-8 items-center justify-center rounded-full bg-primary font-body text-xs font-bold text-white">
-                  {profileInitials}
+                <UserAvatar
+                  avatarUrl={user?.avatarUrl}
+                  className="h-8 w-8 text-xs"
+                  initials={profileInitials}
+                  sizes="32px"
+                >
                   {showVerificationAction ? (
                     <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-accent ring-2 ring-bg" />
                   ) : null}
-                </span>
+                </UserAvatar>
               </button>
 
               <AnimatePresence>
@@ -420,12 +425,16 @@ export default function LandlordHeader({
 
                 <div className="border-t border-border p-5">
                   <div className="mb-4 flex items-center gap-3">
-                    <span className="relative flex h-11 w-11 items-center justify-center rounded-full bg-primary font-body text-sm font-bold text-white">
-                      {profileInitials}
+                    <UserAvatar
+                      avatarUrl={user?.avatarUrl}
+                      className="h-11 w-11 text-sm"
+                      initials={profileInitials}
+                      sizes="44px"
+                    >
                       {showVerificationAction ? (
                         <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-accent ring-2 ring-bg" />
                       ) : null}
-                    </span>
+                    </UserAvatar>
                     <span className="min-w-0">
                       <span className="block truncate font-body text-sm font-bold text-primary">
                         {profileName}

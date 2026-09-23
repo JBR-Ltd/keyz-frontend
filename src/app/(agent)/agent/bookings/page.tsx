@@ -1034,7 +1034,9 @@ export default function AgentBookingsPage(): ReactElement {
       />
 
       <AcceptBookingDialog
-        key={accepting ? `${accepting.mode}-${accepting.booking.id}` : "closed"}
+        key={
+          accepting ? `${accepting.mode}-${accepting.booking.id}` : "no-accept"
+        }
         booking={accepting?.booking ?? null}
         mode={accepting?.mode ?? "accept"}
         onClose={() => setAccepting(null)}
@@ -1055,7 +1057,7 @@ export default function AgentBookingsPage(): ReactElement {
       />
 
       <CancelBookingDialog
-        key={cancelling ? `cancel-${cancelling.id}` : "closed"}
+        key={cancelling ? `cancel-${cancelling.id}` : "no-cancel"}
         actor="host"
         booking={cancelling}
         now={now}

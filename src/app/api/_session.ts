@@ -46,11 +46,3 @@ export async function clearSessionCookie(): Promise<void> {
     secure: process.env.NODE_ENV === "production",
   });
 }
-
-export async function clearSessionIfUnauthorized(
-  response: Response,
-): Promise<void> {
-  if (response.status === 401) {
-    await clearSessionCookie();
-  }
-}

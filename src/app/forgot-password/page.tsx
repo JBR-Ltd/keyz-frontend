@@ -6,7 +6,6 @@ import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { SubmitHandler, useForm } from "react-hook-form";
-import AuthBanner from "@/components/auth/AuthBanner";
 import AuthInput from "@/components/auth/AuthInput";
 import AuthSplitLayout from "@/components/auth/AuthSplitLayout";
 import { useToast } from "@/components/ui/toast";
@@ -38,7 +37,6 @@ function getApiMessage(value: unknown, fallback: string): string {
 export default function ForgotPasswordPage() {
   const reduceMotion = useReducedMotion();
   const { notify } = useToast();
-  const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [requestedEmail, setRequestedEmail] = useState("");
   const {
@@ -54,7 +52,6 @@ export default function ForgotPasswordPage() {
   });
 
   const onSubmit: SubmitHandler<ForgotPasswordFormValues> = async (values) => {
-    setErrorMessage("");
     setSuccessMessage("");
 
     try {
@@ -90,7 +87,6 @@ export default function ForgotPasswordPage() {
           ? error.message
           : "Password reset request failed";
 
-      setErrorMessage(message);
       notify({
         title: "Reset request failed",
         description: message,
@@ -129,22 +125,6 @@ export default function ForgotPasswordPage() {
               className="mt-10 grid gap-5"
               onSubmit={handleSubmit(onSubmit)}
             >
-              {successMessage ? (
-                <AuthBanner
-                  key={successMessage}
-                  message={successMessage}
-                  type="success"
-                />
-              ) : null}
-
-              {errorMessage ? (
-                <AuthBanner
-                  key={errorMessage}
-                  message={errorMessage}
-                  type="error"
-                />
-              ) : null}
-
               <AuthInput
                 label="Email"
                 name="email"

@@ -26,6 +26,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { SyntheticEvent, useEffect, useRef, useState } from "react";
 import OverlayPortal from "@/components/ui/OverlayPortal";
+import UserAvatar from "@/components/ui/user-avatar";
 import { logOutAccount, useAuthenticatedUser } from "@/lib/account";
 import { useDialogFocus } from "@/lib/useDialogFocus";
 import relloLogoMark from "../../../public/rello-logo-cropped.svg";
@@ -404,13 +405,12 @@ function RoleProfileCard({
             : "border-l-2 border-transparent bg-bg text-primary hover:bg-primary/5 hover:shadow-sm"
         }`}
       >
-        <span
-          className={`flex items-center justify-center rounded-lg bg-primary font-body text-sm font-bold text-white ${
-            isCollapsed ? "h-10 w-10" : "h-12 w-12"
-          }`}
-        >
-          {profileInitials}
-        </span>
+        <UserAvatar
+          avatarUrl={user?.avatarUrl}
+          className={`rounded-lg text-sm ${isCollapsed ? "h-10 w-10" : "h-12 w-12"}`}
+          initials={profileInitials}
+          sizes="48px"
+        />
         <span
           className={`min-w-0 overflow-hidden transition-all duration-300 ease-in-out ${
             isCollapsed

@@ -1,6 +1,6 @@
 import { rejectCrossSiteMutation } from "@/app/api/_csrf";
 import { requestIdHeader } from "@/app/api/_requestId";
-import { clearSessionIfUnauthorized, getSessionToken } from "@/app/api/_session";
+import { getSessionToken } from "@/app/api/_session";
 
 const API_BASE_URL = process.env.API_BASE_URL;
 const VERIFICATION_REQUEST_TIMEOUT_MS = 90000;
@@ -66,13 +66,12 @@ export async function POST(request: Request): Promise<Response> {
     const response = await fetch(backendUrl, {
       method: "POST",
       headers: {
+        Authorization: `Bearer ${token}`,
         ...(contentType ? { "Content-Type": contentType } : {}),
       },
       body: await request.arrayBuffer(),
       signal: timeout.signal,
     });
-
-    await clearSessionIfUnauthorized(response);
 
     const body = await response.text();
 

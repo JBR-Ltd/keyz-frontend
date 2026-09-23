@@ -1,9 +1,6 @@
 import { browserAuthResponse } from "@/app/api/_authResponse";
 import { rejectCrossSiteMutation } from "@/app/api/_csrf";
-import {
-  clearSessionIfUnauthorized,
-  getSessionToken,
-} from "@/app/api/_session";
+import { getSessionToken } from "@/app/api/_session";
 import { requestIdHeader } from "@/app/api/_requestId";
 
 const API_BASE_URL = process.env.API_BASE_URL;
@@ -37,7 +34,11 @@ export async function POST(
 
   if (!API_BASE_URL) {
     return Response.json(
-      { success: false, message: "API_BASE_URL is not configured.", data: null },
+      {
+        success: false,
+        message: "API_BASE_URL is not configured.",
+        data: null,
+      },
       { status: 500 },
     );
   }
@@ -73,7 +74,6 @@ export async function POST(
         signal: controller.signal,
       },
     );
-    await clearSessionIfUnauthorized(response);
     const body = await response.text();
 
     const browserResponse = new Response(body || null, {

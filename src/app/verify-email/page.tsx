@@ -13,7 +13,6 @@ import {
   useState,
 } from "react";
 import { SubmitHandler, useForm } from "react-hook-form";
-import AuthBanner from "@/components/auth/AuthBanner";
 import AuthInput from "@/components/auth/AuthInput";
 import AuthSplitLayout from "@/components/auth/AuthSplitLayout";
 import { isAccountRole } from "@/components/auth/RoleGuard";
@@ -51,7 +50,6 @@ export default function VerifyEmailPage() {
   const router = useRouter();
   const reduceMotion = useReducedMotion();
   const { notify } = useToast();
-  const [errorMessage, setErrorMessage] = useState("");
   const [isResending, setIsResending] = useState(false);
   const [otpError, setOtpError] = useState("");
   const [otpDigits, setOtpDigits] = useState(() =>
@@ -144,7 +142,6 @@ export default function VerifyEmailPage() {
   }
 
   const onSubmit: SubmitHandler<VerifyEmailFormValues> = async (values) => {
-    setErrorMessage("");
     setOtpError("");
 
     const token = otpDigits.join("");
@@ -219,7 +216,6 @@ export default function VerifyEmailPage() {
       const message =
         error instanceof Error ? error.message : "Email verification failed";
 
-      setErrorMessage(message);
       notify({
         title: "Verification failed",
         description: message,
@@ -232,7 +228,11 @@ export default function VerifyEmailPage() {
     const email = getValues("email");
 
     if (!email) {
-      setErrorMessage("Enter your email address first.");
+      notify({
+        title: "Email required",
+        description: "Enter your email address first.",
+        variant: "error",
+      });
       return;
     }
 
@@ -296,14 +296,6 @@ export default function VerifyEmailPage() {
               className="mt-10 grid gap-5"
               onSubmit={handleSubmit(onSubmit)}
             >
-              {errorMessage ? (
-                <AuthBanner
-                  key={errorMessage}
-                  message={errorMessage}
-                  type="error"
-                />
-              ) : null}
-
               {initialEmail ? (
                 <input type="hidden" {...register("email")} />
               ) : (

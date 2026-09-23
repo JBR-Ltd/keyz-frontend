@@ -1,6 +1,6 @@
 import { listHeaders, requestIdHeader } from "@/app/api/_requestId";
 import { rejectCrossSiteMutation } from "@/app/api/_csrf";
-import { clearSessionCookie, getSessionToken } from "@/app/api/_session";
+import { getSessionToken } from "@/app/api/_session";
 
 const API_BASE_URL = process.env.API_BASE_URL;
 const REQUEST_TIMEOUT_MS = 90000;
@@ -56,7 +56,9 @@ export async function proxyAuthenticatedRequest({
     method === "POST" || method === "PATCH" || method === "PUT"
       ? await request.arrayBuffer()
       : undefined;
-  const headers = new Headers(token ? { Authorization: `Bearer ${token}` } : {});
+  const headers = new Headers(
+    token ? { Authorization: `Bearer ${token}` } : {},
+  );
 
   if (body && body.byteLength > 0) {
     headers.set(
@@ -73,9 +75,6 @@ export async function proxyAuthenticatedRequest({
       signal: controller.signal,
     });
 
-    if (response.status === 401 && token) {
-      await clearSessionCookie();
-    }
     const contentDisposition = response.headers.get("Content-Disposition");
 
     // A download (a CSV export) passes through as bytes with its filename
@@ -101,25 +100,41 @@ export async function proxyAuthenticatedRequest({
         response.status === 401 || response.status === 403
           ? "Your session has expired. Log in again."
           : "The account request failed.";
+      // The client keys its copy off this, and drops back to a generic line without it
+      let code: string | null = null;
+      // A rejected field carries its reason here, and "Validation failed" alone does not
+      let details: unknown = null;
 
       if (responseBody && contentType.includes("application/json")) {
         const errorBody: unknown = JSON.parse(responseBody);
 
-        if (
-          errorBody !== null &&
-          typeof errorBody === "object" &&
-          "message" in errorBody &&
-          typeof errorBody.message === "string" &&
-          errorBody.message
-        ) {
-          message = errorBody.message;
+        if (errorBody !== null && typeof errorBody === "object") {
+          if (
+            "message" in errorBody &&
+            typeof errorBody.message === "string" &&
+            errorBody.message
+          ) {
+            message = errorBody.message;
+          }
+
+          if (
+            "code" in errorBody &&
+            typeof errorBody.code === "string" &&
+            errorBody.code
+          ) {
+            code = errorBody.code;
+          }
+
+          if ("data" in errorBody && errorBody.data) {
+            details = errorBody.data;
+          }
         }
       } else if (responseBody) {
         message = responseBody;
       }
 
       return Response.json(
-        { success: false, message, data: null },
+        { success: false, message, data: details, ...(code ? { code } : {}) },
         {
           status: response.status,
           headers: {
