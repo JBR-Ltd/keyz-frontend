@@ -1,5 +1,8 @@
 "use client";
 
+import { getBrowserSessionMarker } from "@/lib/authSession";
+
+import { apiRequest } from "@/lib/apiRequest";
 import { resolveApiError } from "@/lib/errors";
 
 // === Types
@@ -17,6 +20,11 @@ export interface PayoutResult<TValue> {
   message?: string;
 }
 
+export interface BankOption {
+  code: string;
+  name: string;
+}
+
 // === Helpers
 
 function unwrap(payload: unknown): unknown {
@@ -25,8 +33,8 @@ function unwrap(payload: unknown): unknown {
     : null;
 }
 
-function getAccessToken(): string {
-  return localStorage.getItem("rello_token") ?? "";
+function getSessionMarker(): string {
+  return getBrowserSessionMarker();
 }
 
 function isResolvedAccount(value: unknown): value is ResolvedAccount {
@@ -43,22 +51,62 @@ async function postPayout(
   bankCode: string,
   accountNumber: string,
 ): Promise<{ ok: boolean; payload: unknown }> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
 
   if (!token) {
     return { ok: false, payload: null };
   }
 
   const query = new URLSearchParams({ bankCode, accountNumber });
-  const response = await fetch(
+  const response = await apiRequest(
     `/api/verification/payout/${action}?${query.toString()}`,
-    { method: "POST", headers: { Authorization: `Bearer ${token}` } },
+    { method: "POST", headers: {} },
   );
 
   return { ok: response.ok, payload: await response.json().catch(() => null) };
 }
 
 // === Requests
+
+function isBankOption(value: unknown): value is BankOption {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    "code" in value &&
+    typeof value.code === "string" &&
+    "name" in value &&
+    typeof value.name === "string"
+  );
+}
+
+/** Every institution a payout can reach. Served from the backend's cache. */
+export async function getPayoutBanks(): Promise<PayoutResult<BankOption[]>> {
+  const token = getSessionMarker();
+
+  if (!token) {
+    return { data: [], message: "Your session has expired. Log in again." };
+  }
+
+  try {
+    const response = await apiRequest("/api/verification/payout/banks");
+    const payload: unknown = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      return {
+        data: [],
+        message: resolveApiError(payload, "The bank list could not be loaded."),
+      };
+    }
+
+    const data = unwrap(payload);
+
+    return Array.isArray(data)
+      ? { data: data.filter(isBankOption) }
+      : { data: [], message: "The bank list could not be loaded." };
+  } catch {
+    return { data: [], message: "The bank list could not be loaded." };
+  }
+}
 
 /**
  * Asks the bank who owns this account. Saves nothing, so the host can see the
@@ -69,7 +117,11 @@ export async function resolvePayoutAccount(
   accountNumber: string,
 ): Promise<PayoutResult<ResolvedAccount | null>> {
   try {
-    const { ok, payload } = await postPayout("resolve", bankCode, accountNumber);
+    const { ok, payload } = await postPayout(
+      "resolve",
+      bankCode,
+      accountNumber,
+    );
 
     if (!ok) {
       return {

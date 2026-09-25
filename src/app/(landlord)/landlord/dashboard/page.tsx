@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { propertyPath } from "@/lib/publicIds";
 import {
   useEffect,
   useMemo,
@@ -29,9 +30,23 @@ import PropertyPrice from "@/components/property/PropertyPrice";
 import { IconTile } from "@/components/ui/icon-tile";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { utilityCardVariants } from "@/components/ui/utility-card";
-import type { Booking, BookingStatus, PartySummary } from "@/lib/bookings";
-import type { EscrowEntry, EscrowStatus } from "@/lib/escrow";
-import type { BackendProperty, PropertyPortfolio } from "@/lib/hostListings";
+import {
+  getHostBookings,
+  type Booking,
+  type BookingStatus,
+} from "@/lib/bookings";
+import { getMyEscrow, type EscrowEntry, type EscrowStatus } from "@/lib/escrow";
+import {
+  getHostDashboardSummary,
+  type HostDashboardSummary,
+} from "@/lib/dashboard";
+import {
+  getPropertyPortfolio,
+  type BackendProperty,
+  type PropertyPortfolio,
+} from "@/lib/hostListings";
+import { useAuthenticatedUser } from "@/lib/account";
+import { useHostVerification } from "@/lib/hostVerification";
 
 // === Types
 
@@ -81,196 +96,6 @@ interface EmptyDashboardProps {
 
 const FALLBACK_PROPERTY_IMAGE =
   "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=640&h=480&fit=crop&auto=format&q=80";
-const MOCK_NOW = new Date("2026-09-05T09:00:00.000Z").getTime();
-const MOCK_LANDLORD: PartySummary = {
-  id: 41,
-  identityVerified: false,
-  name: "Chinedu Okafor",
-  rating: 4.8,
-  role: "LANDLORD",
-};
-const MOCK_TENANTS: PartySummary[] = [
-  {
-    id: 71,
-    identityVerified: true,
-    name: "Kelechi Eze",
-    rating: 4.7,
-    role: "TENANT",
-  },
-  {
-    id: 72,
-    identityVerified: true,
-    name: "Ada Nwosu",
-    rating: 4.9,
-    role: "TENANT",
-  },
-  {
-    id: 73,
-    identityVerified: true,
-    name: "Tolu Martins",
-    rating: 4.6,
-    role: "TENANT",
-  },
-];
-const MOCK_PROPERTIES: BackendProperty[] = [
-  {
-    id: 201,
-    title: "Lekki Garden Maisonette",
-    description: "A calm three-bedroom home close to central Lekki.",
-    address: "Lekki Phase 1, Lagos",
-    bedrooms: 3,
-    bathrooms: 3,
-    price: 750000,
-    status: "FOR_RENT",
-    verified: true,
-    imageUrl:
-      "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=640&h=480&fit=crop&auto=format&q=80",
-    host: MOCK_LANDLORD,
-  },
-  {
-    id: 202,
-    title: "Ikoyi Waterfront Flat",
-    description: "A serviced waterfront apartment with reliable power.",
-    address: "Ikoyi, Lagos",
-    bedrooms: 2,
-    bathrooms: 2,
-    price: 1200000,
-    status: "FOR_RENT",
-    verified: true,
-    imageUrl:
-      "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=640&h=480&fit=crop&auto=format&q=80",
-    host: MOCK_LANDLORD,
-  },
-  {
-    id: 203,
-    title: "Banana Island Loft",
-    description: "A bright loft awaiting final media and verification.",
-    address: "Banana Island, Lagos",
-    bedrooms: 2,
-    bathrooms: 2,
-    price: 1650000,
-    status: "FOR_RENT",
-    verified: false,
-    imageUrl: null,
-    host: MOCK_LANDLORD,
-  },
-];
-const MOCK_PORTFOLIO: PropertyPortfolio = {
-  activeListingsCount: 2,
-  expectedMonthlyRentalIncome: 3600000,
-  pendingOffersCount: 2,
-  properties: MOCK_PROPERTIES,
-  totalPropertiesCount: 3,
-  totalValueForSale: 0,
-};
-const MOCK_BOOKINGS: Booking[] = [
-  {
-    id: 301,
-    createdAt: "2026-08-21T09:00:00.000Z",
-    startDate: "2026-09-01",
-    endDate: "2027-09-01",
-    host: MOCK_LANDLORD,
-    propertyAddress: MOCK_PROPERTIES[0].address,
-    propertyId: 201,
-    propertyImageUrl: MOCK_PROPERTIES[0].imageUrl ?? null,
-    propertyTitle: MOCK_PROPERTIES[0].title,
-    status: "CONFIRMED",
-    tenant: MOCK_TENANTS[0],
-    totalPrice: 750000,
-  },
-  {
-    id: 302,
-    createdAt: "2026-08-28T11:30:00.000Z",
-    startDate: "2026-09-16",
-    endDate: "2027-09-16",
-    host: MOCK_LANDLORD,
-    propertyAddress: MOCK_PROPERTIES[1].address,
-    propertyId: 202,
-    propertyImageUrl: MOCK_PROPERTIES[1].imageUrl ?? null,
-    propertyTitle: MOCK_PROPERTIES[1].title,
-    status: "CONFIRMED",
-    tenant: MOCK_TENANTS[1],
-    totalPrice: 1200000,
-  },
-  {
-    id: 303,
-    createdAt: "2026-09-03T14:00:00.000Z",
-    startDate: "2026-10-01",
-    endDate: "2027-10-01",
-    host: MOCK_LANDLORD,
-    propertyAddress: MOCK_PROPERTIES[2].address,
-    propertyId: 203,
-    propertyImageUrl: null,
-    propertyTitle: MOCK_PROPERTIES[2].title,
-    status: "PENDING",
-    tenant: MOCK_TENANTS[2],
-    totalPrice: 1650000,
-  },
-  {
-    id: 304,
-    createdAt: "2026-09-04T16:00:00.000Z",
-    startDate: "2027-10-01",
-    endDate: "2028-10-01",
-    host: MOCK_LANDLORD,
-    propertyAddress: MOCK_PROPERTIES[0].address,
-    propertyId: 201,
-    propertyImageUrl: MOCK_PROPERTIES[0].imageUrl ?? null,
-    propertyTitle: MOCK_PROPERTIES[0].title,
-    status: "PENDING",
-    tenant: MOCK_TENANTS[1],
-    totalPrice: 750000,
-  },
-];
-const MOCK_ESCROW: EscrowEntry[] = [
-  {
-    id: 401,
-    amount: 750000,
-    bookingId: 301,
-    createdAt: "2026-08-22T10:00:00.000Z",
-    heldAt: "2026-08-22T10:05:00.000Z",
-    host: MOCK_LANDLORD,
-    propertyTitle: MOCK_PROPERTIES[0].title,
-    releasedAt: null,
-    status: "HELD",
-    tenant: MOCK_TENANTS[0],
-  },
-  {
-    id: 402,
-    amount: 1200000,
-    bookingId: 302,
-    createdAt: "2026-08-29T08:00:00.000Z",
-    heldAt: "2026-08-29T08:05:00.000Z",
-    host: MOCK_LANDLORD,
-    propertyTitle: MOCK_PROPERTIES[1].title,
-    releasedAt: null,
-    status: "HELD",
-    tenant: MOCK_TENANTS[1],
-  },
-  {
-    id: 403,
-    amount: 1650000,
-    bookingId: 303,
-    createdAt: "2026-09-03T15:00:00.000Z",
-    heldAt: null,
-    host: MOCK_LANDLORD,
-    propertyTitle: MOCK_PROPERTIES[2].title,
-    releasedAt: null,
-    status: "AWAITING_PAYMENT",
-    tenant: MOCK_TENANTS[2],
-  },
-  {
-    id: 404,
-    amount: 750000,
-    bookingId: 304,
-    createdAt: "2026-09-04T16:30:00.000Z",
-    heldAt: "2026-09-04T16:35:00.000Z",
-    host: MOCK_LANDLORD,
-    propertyTitle: MOCK_PROPERTIES[0].title,
-    releasedAt: null,
-    status: "DISPUTED",
-    tenant: MOCK_TENANTS[1],
-  },
-];
 
 const ATTENTION_STYLES: Record<AttentionTone, string> = {
   urgent: "bg-red-700/10 text-red-700",
@@ -308,6 +133,7 @@ const ESCROW_STATUS_LABELS: Record<EscrowStatus, string> = {
   AWAITING_PAYMENT: "Awaiting payment",
   HELD: "Held",
   RELEASING: "Releasing",
+  REFUNDING: "Refund on its way",
   DISPUTED: "Disputed",
   RELEASED: "Paid out",
   REFUNDED: "Refunded",
@@ -321,6 +147,7 @@ const ESCROW_STATUS_TONES: Record<
   AWAITING_PAYMENT: "accent",
   HELD: "primary",
   RELEASING: "primary",
+  REFUNDING: "primary",
   DISPUTED: "danger",
   RELEASED: "neutral",
   REFUNDED: "neutral",
@@ -358,6 +185,16 @@ function formatStayDates(booking: Booking): string {
       month: "short",
     });
 
+  if (!booking.startDate || !booking.endDate) {
+    if (booking.tenancyStartDate) {
+      return `Move in ${formatDate(booking.tenancyStartDate)}`;
+    }
+
+    return booking.preferredMoveInDate
+      ? `Move in ${formatDate(booking.preferredMoveInDate)}`
+      : "Flexible move-in";
+  }
+
   return `${formatDate(booking.startDate)} to ${formatDate(booking.endDate)}`;
 }
 
@@ -370,18 +207,32 @@ function getTenancyStatus(
     (booking) =>
       booking.propertyId === propertyId && booking.status === "CONFIRMED",
   );
-  const hasActiveStay = confirmed.some(
-    (booking) =>
+  const hasActiveStay = confirmed.some((booking) => {
+    // The server knows whether an accepted rental has reached its move-in yet
+    if (booking.lifecycleStage) {
+      return booking.lifecycleStage === "ACTIVE";
+    }
+
+    if (booking.bookingKind === "RENTAL_REQUEST" || !booking.endDate) {
+      return true;
+    }
+
+    return (
+      booking.startDate !== null &&
       new Date(booking.startDate).getTime() <= now &&
-      new Date(booking.endDate).getTime() >= now,
-  );
+      new Date(booking.endDate).getTime() >= now
+    );
+  });
 
   if (hasActiveStay) {
     return "Occupied";
   }
 
   return confirmed.some(
-    (booking) => new Date(booking.startDate).getTime() > now,
+    (booking) =>
+      booking.lifecycleStage === "UPCOMING" ||
+      (booking.startDate !== null &&
+        new Date(booking.startDate).getTime() > now),
   )
     ? "Move-in scheduled"
     : "Available";
@@ -396,7 +247,7 @@ function mapDashboardProperty(
   const needsAttention = !property.verified || !property.imageUrl;
   const actionHref =
     tenancyStatus === "Available"
-      ? `/property/${property.id}`
+      ? propertyPath(property)
       : "/landlord/bookings";
 
   return {
@@ -426,17 +277,19 @@ function getAttentionItems(
   properties: BackendProperty[],
   bookings: Booking[],
   escrow: EscrowEntry[],
+  summary: HostDashboardSummary | null,
 ): AttentionItem[] {
   const items: AttentionItem[] = [];
-  const pendingBookings = bookings.filter(
-    (booking) => booking.status === "PENDING",
-  ).length;
+  const pendingBookings =
+    summary?.bookings.requests ??
+    bookings.filter((booking) => booking.status === "PENDING").length;
+  const awaitingPayment = summary?.bookings.awaitingPayment ?? 0;
   const incompleteProperties = properties.filter(
     (property) => !property.verified || !property.imageUrl,
   );
-  const disputedPayments = escrow.filter(
-    (entry) => entry.status === "DISPUTED",
-  ).length;
+  const disputedPayments =
+    summary?.openDisputes ??
+    escrow.filter((entry) => entry.status === "DISPUTED").length;
 
   if (!identityVerified) {
     items.push({
@@ -462,6 +315,19 @@ function getAttentionItems(
     });
   }
 
+  if (awaitingPayment > 0) {
+    items.push({
+      id: "awaiting-payment",
+      title: `${awaitingPayment} accepted booking${awaitingPayment === 1 ? " is" : "s are"} waiting on payment`,
+      description:
+        "Tenants have been asked to pay. Anything unpaid by its deadline is released automatically.",
+      actionLabel: "View bookings",
+      href: "/landlord/bookings",
+      icon: Landmark,
+      tone: "neutral",
+    });
+  }
+
   if (incompleteProperties.length > 0) {
     const firstProperty = incompleteProperties[0];
 
@@ -470,7 +336,7 @@ function getAttentionItems(
       title: `${incompleteProperties.length} propert${incompleteProperties.length === 1 ? "y needs" : "ies need"} attention`,
       description: "Complete missing media or property verification details.",
       actionLabel: "Review property",
-      href: `/property/${firstProperty.id}`,
+      href: propertyPath(firstProperty),
       icon: Building2,
       tone: "neutral",
     });
@@ -491,29 +357,17 @@ function getAttentionItems(
   return items;
 }
 
-function getSummaryItems(
-  portfolio: PropertyPortfolio | null,
-  bookings: Booking[],
-  escrow: EscrowEntry[],
-  now: number,
-): SummaryItem[] {
-  const pendingRequests = bookings.filter(
-    (booking) => booking.status === "PENDING",
-  ).length;
-  const upcomingStays = bookings.filter(
-    (booking) =>
-      booking.status === "CONFIRMED" &&
-      new Date(booking.startDate).getTime() > now,
-  ).length;
-  const fundsHeld = escrow
-    .filter((entry) => entry.status === "HELD")
-    .reduce((total, entry) => total + entry.amount, 0);
+/** Paged detail lists cannot provide complete account totals. */
+function getSummaryItems(summary: HostDashboardSummary | null): SummaryItem[] {
+  const pendingRequests = summary?.bookings.requests ?? 0;
+  const upcomingStays = summary?.bookings.upcoming ?? 0;
+  const fundsHeld = summary?.money.held ?? 0;
 
   return [
     {
       label: "Live homes",
       source: "portfolio",
-      value: String(portfolio?.activeListingsCount ?? 0).padStart(2, "0"),
+      value: String(summary?.listings.live ?? 0).padStart(2, "0"),
       detail: "Published and visible",
       icon: Building2,
       tone: "primary",
@@ -550,12 +404,22 @@ function getUpcomingBookings(bookings: Booking[], now: number): Booking[] {
     .filter(
       (booking) =>
         (booking.status === "PENDING" || booking.status === "CONFIRMED") &&
-        new Date(booking.endDate).getTime() >= now,
+        (!booking.endDate || new Date(booking.endDate).getTime() >= now),
     )
     .sort(
       (left, right) =>
-        new Date(left.startDate).getTime() -
-        new Date(right.startDate).getTime(),
+        new Date(
+          left.tenancyStartDate ??
+            left.startDate ??
+            left.preferredMoveInDate ??
+            0,
+        ).getTime() -
+        new Date(
+          right.tenancyStartDate ??
+            right.startDate ??
+            right.preferredMoveInDate ??
+            0,
+        ).getTime(),
     )
     .slice(0, 3);
 }
@@ -616,6 +480,11 @@ export default function LandlordDashboardPage(): ReactElement {
     getDashboardViewState,
     getServerDashboardViewState,
   );
+  const { isLoading: isAccountLoading, user } = useAuthenticatedUser();
+  const { isLoading: isVerificationLoading, snapshot: verification } =
+    useHostVerification();
+  // Skeletons appear only if loading outlasts a moment, so a fast response does
+  // not flash placeholder blocks at the user
   const [showSkeletons, setShowSkeletons] = useState(false);
 
   useEffect(() => {
@@ -624,53 +493,134 @@ export default function LandlordDashboardPage(): ReactElement {
     return () => window.clearTimeout(timer);
   }, []);
 
-  const verified = MOCK_LANDLORD.identityVerified;
-  const portfolio = MOCK_PORTFOLIO;
-  const portfolioProperties = MOCK_PROPERTIES;
-  const bookings = MOCK_BOOKINGS;
-  const escrow = MOCK_ESCROW;
-  const summaryItems = useMemo(
-    () => getSummaryItems(portfolio, bookings, escrow, MOCK_NOW),
-    [portfolio, bookings, escrow],
+  const [portfolio, setPortfolio] = useState<PropertyPortfolio | null>(null);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [escrow, setEscrow] = useState<EscrowEntry[]>([]);
+  const [isPortfolioLoading, setIsPortfolioLoading] = useState(true);
+  const [isBookingsLoading, setIsBookingsLoading] = useState(true);
+  const [isEscrowLoading, setIsEscrowLoading] = useState(true);
+  const [portfolioError, setPortfolioError] = useState("");
+  const [bookingsError, setBookingsError] = useState("");
+  const [escrowError, setEscrowError] = useState("");
+  // Captured when the data lands rather than read during render: Date.now() in a
+  // render body is impure and makes every memo below unstable
+  const [loadedAt] = useState(() => Date.now());
+  const [summary, setSummary] = useState<HostDashboardSummary | null>(null);
+  const [isSummaryLoading, setIsSummaryLoading] = useState(true);
+  const [summaryError, setSummaryError] = useState("");
+  const [summaryReloadKey, setSummaryReloadKey] = useState(0);
+  const [loadedSummaryKey, setLoadedSummaryKey] = useState(-1);
+
+  useEffect(() => {
+    let active = true;
+
+    void getPropertyPortfolio().then((result) => {
+      if (!active) {
+        return;
+      }
+
+      setPortfolio(result.data);
+      setPortfolioError(result.data ? "" : (result.message ?? ""));
+      setIsPortfolioLoading(false);
+    });
+
+    void getHostBookings().then((result) => {
+      if (!active) {
+        return;
+      }
+
+      setBookings(result.data);
+      setBookingsError(result.message ?? "");
+      setIsBookingsLoading(false);
+    });
+
+    void getMyEscrow().then((result) => {
+      if (!active) {
+        return;
+      }
+
+      setEscrow(result.data);
+      setEscrowError(result.message ?? "");
+      setIsEscrowLoading(false);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    void getHostDashboardSummary().then((result) => {
+      if (!active) return;
+      setSummary(result.data);
+      setSummaryError(
+        result.message ??
+          (result.data ? "" : "Your figures could not be loaded."),
+      );
+      setIsSummaryLoading(false);
+      setLoadedSummaryKey(summaryReloadKey);
+    });
+    return () => {
+      active = false;
+    };
+  }, [summaryReloadKey]);
+
+  const verified = verification?.identity.status === "approved";
+  const portfolioProperties = useMemo(
+    () => portfolio?.properties ?? [],
+    [portfolio],
   );
+  const now = loadedAt;
+  const summaryItems = useMemo(() => getSummaryItems(summary), [summary]);
   const attentionItems = useMemo(
-    () => getAttentionItems(verified, portfolioProperties, bookings, escrow),
-    [verified, portfolioProperties, bookings, escrow],
+    () =>
+      getAttentionItems(
+        verified,
+        portfolioProperties,
+        bookings,
+        escrow,
+        summary,
+      ),
+    [verified, portfolioProperties, bookings, escrow, summary],
   );
   const dashboardProperties = useMemo(
     () =>
       portfolioProperties
         .slice(0, 4)
-        .map((property) => mapDashboardProperty(property, bookings, MOCK_NOW)),
-    [portfolioProperties, bookings],
+        .map((property) => mapDashboardProperty(property, bookings, now)),
+    [portfolioProperties, bookings, now],
   );
   const upcomingBookings = useMemo(
-    () => getUpcomingBookings(bookings, MOCK_NOW),
-    [bookings],
+    () => getUpcomingBookings(bookings, now),
+    [bookings, now],
   );
   const recentEscrow = useMemo(() => escrow.slice(0, 3), [escrow]);
-  const fundsHeld = useMemo(
-    () =>
-      escrow
-        .filter((entry) => entry.status === "HELD")
-        .reduce((total, entry) => total + entry.amount, 0),
-    [escrow],
-  );
+  const fundsHeld = summary?.money.held ?? 0;
   const forceLoading = requestedViewState === "loading";
   const forceError = requestedViewState === "error";
-  const accountBusy = forceLoading;
-  const portfolioBusy = forceLoading;
-  const bookingsBusy = forceLoading;
-  const escrowBusy = forceLoading;
-  const attentionBusy = forceLoading;
+  const accountBusy = forceLoading || isAccountLoading;
+  const portfolioBusy = forceLoading || isPortfolioLoading;
+  const bookingsBusy = forceLoading || isBookingsLoading;
+  const escrowBusy = forceLoading || isEscrowLoading;
+  const attentionBusy =
+    forceLoading ||
+    isVerificationLoading ||
+    isPortfolioLoading ||
+    isBookingsLoading ||
+    isEscrowLoading;
   const resolvedPortfolioError = forceError
     ? "Properties could not be loaded."
-    : "";
+    : portfolioError;
   const resolvedBookingsError = forceError
     ? "Tenancies could not be loaded."
-    : "";
-  const resolvedEscrowError = forceError ? "Payments could not be loaded." : "";
-  const attentionError = forceError ? "Action items could not be loaded." : "";
+    : bookingsError;
+  const resolvedEscrowError = forceError
+    ? "Payments could not be loaded."
+    : escrowError;
+  const attentionError = forceError
+    ? "Action items could not be loaded."
+    : ([portfolioError, bookingsError, escrowError].find(Boolean) ?? "");
   const showEmpty = requestedViewState === "empty";
   if (showEmpty) {
     return (
@@ -689,12 +639,12 @@ export default function LandlordDashboardPage(): ReactElement {
       <header className="flex flex-col gap-6 pb-9 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-h-12" aria-busy={accountBusy}>
           {accountBusy ? (
-            showSkeletons ? (
-              <div className="h-12 w-72 max-w-full animate-pulse rounded-lg bg-primary/10 motion-reduce:animate-none" />
-            ) : null
+            <div
+              className={`h-16 w-72 max-w-full rounded-lg bg-skeleton sm:h-12 ${showSkeletons ? "animate-pulse motion-reduce:animate-none" : ""}`}
+            />
           ) : (
-            <h1 className="font-display text-4xl font-bold leading-[0.95] text-primary sm:text-5xl">
-              Welcome back, {MOCK_LANDLORD.name.split(" ")[0]}.
+            <h1 className="font-display text-3xl font-bold leading-tight text-primary sm:text-4xl">
+              Welcome back{user?.firstName ? `, ${user.firstName}` : ""}.
             </h1>
           )}
         </div>
@@ -708,41 +658,42 @@ export default function LandlordDashboardPage(): ReactElement {
       </header>
 
       <section
-        className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+        className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4"
         aria-label="Portfolio summary"
       >
         {summaryItems.map(
-          ({ detail, icon: Icon, label, source, tone, value }) => {
+          ({ detail, icon: Icon, label, tone, value }, index) => {
             const sourceLoading =
-              source === "portfolio"
-                ? portfolioBusy
-                : source === "bookings"
-                  ? bookingsBusy
-                  : escrowBusy;
-            const sourceError =
-              source === "portfolio"
-                ? resolvedPortfolioError
-                : source === "bookings"
-                  ? resolvedBookingsError
-                  : resolvedEscrowError;
+              forceLoading ||
+              isSummaryLoading ||
+              loadedSummaryKey !== summaryReloadKey;
+            const sourceError = forceError
+              ? "Your figures could not be loaded."
+              : summaryError;
 
             if (sourceLoading) {
               return (
                 <article
                   key={label}
-                  className="min-h-40 rounded-lg bg-primary/5 p-5 shadow-sm"
+                  className="min-h-40 rounded-lg border border-border bg-bg p-4 shadow-sm sm:p-5"
                   aria-busy="true"
                 >
-                  {showSkeletons ? (
-                    <div className="animate-pulse motion-reduce:animate-none">
-                      <div className="flex items-start justify-between">
-                        <div className="h-3 w-24 rounded-full bg-primary/10" />
-                        <div className="h-11 w-11 rounded-lg bg-primary/10" />
-                      </div>
-                      <div className="mt-5 h-8 w-20 rounded-lg bg-primary/10" />
-                      <div className="mt-5 h-3 w-28 rounded-full bg-primary/10" />
+                  <div
+                    className={
+                      showSkeletons
+                        ? "animate-pulse motion-reduce:animate-none"
+                        : ""
+                    }
+                  >
+                    <div className="flex items-start justify-between gap-2 sm:gap-4">
+                      <div className="h-3 w-20 max-w-[60%] rounded-full bg-skeleton sm:w-24" />
+                      <div className="h-9 w-9 shrink-0 rounded-lg bg-skeleton sm:h-11 sm:w-11" />
                     </div>
-                  ) : null}
+                    <div
+                      className={`mt-5 h-8 max-w-full rounded-lg bg-skeleton ${index === 3 ? "w-32 sm:w-40" : "w-14 sm:w-16"}`}
+                    />
+                    <div className="mt-5 h-3 w-24 max-w-full rounded-full bg-skeleton sm:w-28" />
+                  </div>
                 </article>
               );
             }
@@ -750,37 +701,51 @@ export default function LandlordDashboardPage(): ReactElement {
             return (
               <article
                 key={label}
-                className={utilityCardVariants({
+                className={`${utilityCardVariants({
                   tone:
                     tone === "accent"
                       ? "accentTint"
                       : tone === "primary"
                         ? "primaryTint"
                         : "soft",
+                  padding: "compact",
                   interactive: !sourceError,
-                })}
+                })} min-h-40 sm:p-5`}
               >
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="font-body text-xs font-medium uppercase tracking-[0.14em] text-muted">
-                      {label}
-                    </p>
-                    <p className="mt-4 font-display text-3xl font-bold leading-none text-primary">
-                      {sourceError ? (
-                        "Unavailable"
-                      ) : typeof value === "number" ? (
-                        <PropertyPrice value={value} />
-                      ) : (
-                        value
-                      )}
-                    </p>
-                  </div>
-                  <IconTile tone={tone}>
-                    <Icon size={21} />
+                <div className="flex items-start justify-between gap-2 sm:gap-4">
+                  <p className="min-w-0 font-body text-[0.6875rem] font-medium uppercase tracking-[0.12em] text-muted sm:text-xs sm:tracking-[0.14em]">
+                    {label}
+                  </p>
+                  <IconTile
+                    tone={tone}
+                    className="h-9 w-9 shrink-0 sm:h-11 sm:w-11"
+                  >
+                    <Icon size={19} />
                   </IconTile>
                 </div>
-                <p className="mt-5 font-body text-xs font-bold text-primary/70">
-                  {sourceError ? "Try again shortly" : detail}
+                <p className="mt-4 break-words font-display text-xl font-bold leading-none text-primary min-[430px]:text-2xl sm:text-3xl">
+                  {sourceError ? (
+                    "Unavailable"
+                  ) : typeof value === "number" ? (
+                    <PropertyPrice value={value} />
+                  ) : (
+                    value
+                  )}
+                </p>
+                <p className="mt-5 font-body text-xs font-bold leading-5 text-primary/70">
+                  {sourceError ? (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSummaryReloadKey((current) => current + 1)
+                      }
+                      className="rounded font-bold underline focus-visible:ring-2 focus-visible:ring-accent"
+                    >
+                      Try again
+                    </button>
+                  ) : (
+                    detail
+                  )}
                 </p>
               </article>
             );
@@ -802,7 +767,12 @@ export default function LandlordDashboardPage(): ReactElement {
                 Needs attention
               </h2>
             </div>
-            {!attentionBusy && attentionItems.length ? (
+            {attentionBusy ? (
+              <span
+                className={`h-8 w-24 rounded-full bg-skeleton ${showSkeletons ? "animate-pulse motion-reduce:animate-none" : ""}`}
+                aria-hidden="true"
+              />
+            ) : attentionItems.length ? (
               <StatusBadge tone="accent">
                 {attentionItems.length} open task
                 {attentionItems.length === 1 ? "" : "s"}
@@ -810,25 +780,23 @@ export default function LandlordDashboardPage(): ReactElement {
             ) : null}
           </div>
           {attentionBusy ? (
-            showSkeletons ? (
-              <div className="divide-y divide-primary/10 animate-pulse motion-reduce:animate-none">
-                {Array.from({ length: 3 }, (_, index) => (
-                  <div
-                    key={index}
-                    className="flex h-24 items-center gap-4 px-5 sm:px-6"
-                  >
-                    <div className="h-11 w-11 shrink-0 rounded-full bg-primary/10" />
-                    <div className="flex-1">
-                      <div className="h-4 w-48 max-w-[70%] rounded-full bg-primary/10" />
-                      <div className="mt-3 h-3 w-72 max-w-[90%] rounded-full bg-primary/5" />
-                    </div>
-                    <div className="h-4 w-24 rounded-full bg-primary/10" />
+            <div
+              className={`divide-y divide-primary/10 ${showSkeletons ? "animate-pulse motion-reduce:animate-none" : ""}`}
+            >
+              {Array.from({ length: 3 }, (_, index) => (
+                <div
+                  key={index}
+                  className="grid min-h-24 grid-cols-[2.75rem_minmax(0,1fr)] items-center gap-4 px-5 py-4 sm:grid-cols-[2.75rem_minmax(0,42rem)_auto] sm:justify-start sm:px-6"
+                >
+                  <div className="h-11 w-11 shrink-0 rounded-full bg-skeleton" />
+                  <div className="min-w-0">
+                    <div className="h-4 w-48 max-w-[70%] rounded-full bg-skeleton" />
+                    <div className="mt-3 h-3 w-72 max-w-[90%] rounded-full bg-skeleton" />
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="h-72" />
-            )
+                  <div className="col-start-2 h-4 w-24 rounded-full bg-skeleton sm:col-start-auto" />
+                </div>
+              ))}
+            </div>
           ) : attentionItems.length ? (
             <div className="divide-y divide-primary/10">
               {attentionItems.map(
@@ -843,7 +811,7 @@ export default function LandlordDashboardPage(): ReactElement {
                 }) => (
                   <article
                     key={id}
-                    className="flex flex-col gap-4 px-5 py-5 transition-colors hover:bg-surface-soft sm:flex-row sm:items-center sm:px-6"
+                    className="grid grid-cols-[2.75rem_minmax(0,1fr)] gap-4 px-5 py-5 transition-colors hover:bg-surface-soft sm:grid-cols-[2.75rem_minmax(0,42rem)_auto] sm:items-center sm:justify-start sm:px-6"
                   >
                     <span
                       className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${ATTENTION_STYLES[tone]}`}
@@ -854,13 +822,13 @@ export default function LandlordDashboardPage(): ReactElement {
                       <h3 className="font-body text-sm font-bold text-primary">
                         {title}
                       </h3>
-                      <p className="mt-1 font-body text-sm leading-6 text-muted">
+                      <p className="mt-1 max-w-2xl font-body text-sm leading-6 text-muted">
                         {description}
                       </p>
                     </div>
                     <Link
                       href={href}
-                      className="inline-flex min-h-10 shrink-0 items-center gap-2 self-start font-body text-sm font-bold text-primary hover:text-accent-alt focus:outline-none focus-visible:ring-2 focus-visible:ring-accent sm:self-auto"
+                      className="col-start-2 inline-flex min-h-10 shrink-0 items-center gap-2 justify-self-start font-body text-sm font-bold text-primary hover:text-accent-alt focus:outline-none focus-visible:ring-2 focus-visible:ring-accent sm:col-start-auto"
                     >
                       {actionLabel}
                       <ArrowRight size={16} />
@@ -898,30 +866,35 @@ export default function LandlordDashboardPage(): ReactElement {
           </h2>
         </div>
         {portfolioBusy ? (
-          showSkeletons ? (
-            <div
-              className="divide-y divide-primary/10 animate-pulse motion-reduce:animate-none"
-              aria-hidden="true"
-            >
-              {Array.from({ length: 3 }, (_, index) => (
-                <div
-                  key={index}
-                  className="grid min-h-32 gap-5 p-5 sm:grid-cols-[8rem_1fr] sm:items-center sm:px-6 lg:grid-cols-[9rem_minmax(12rem,1.2fr)_minmax(9rem,0.75fr)_minmax(9rem,0.75fr)_auto]"
-                >
-                  <div className="h-24 rounded-lg bg-primary/10" />
-                  <div>
-                    <div className="h-4 w-44 rounded-full bg-primary/10" />
-                    <div className="mt-3 h-3 w-32 rounded-full bg-primary/5" />
+          <div
+            className={`divide-y divide-primary/10 ${showSkeletons ? "animate-pulse motion-reduce:animate-none" : ""}`}
+            aria-hidden="true"
+          >
+            {Array.from({ length: 3 }, (_, index) => (
+              <div
+                key={index}
+                className="grid min-h-32 gap-5 p-5 sm:grid-cols-[8rem_1fr] sm:items-center sm:px-6 lg:grid-cols-[9rem_minmax(12rem,1.2fr)_minmax(9rem,0.75fr)_minmax(9rem,0.75fr)_auto]"
+              >
+                <div className="h-28 rounded-lg bg-skeleton-strong sm:h-24" />
+                <div>
+                  <div className="flex items-center gap-2">
+                    <div className="h-4 w-36 rounded-full bg-skeleton" />
+                    <div className="h-6 w-14 rounded-full bg-skeleton" />
                   </div>
-                  <div className="h-5 w-24 rounded-full bg-primary/10" />
-                  <div className="h-6 w-20 rounded-full bg-primary/10" />
-                  <div className="h-4 w-24 rounded-full bg-primary/10" />
+                  <div className="mt-3 h-3 w-32 rounded-full bg-skeleton" />
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="h-96" />
-          )
+                <div>
+                  <div className="h-3 w-20 rounded-full bg-skeleton" />
+                  <div className="mt-3 h-6 w-28 rounded-full bg-skeleton" />
+                </div>
+                <div>
+                  <div className="h-6 w-20 rounded-full bg-skeleton" />
+                  <div className="mt-3 h-3 w-24 rounded-full bg-skeleton" />
+                </div>
+                <div className="h-4 w-24 rounded-full bg-skeleton" />
+              </div>
+            ))}
+          </div>
         ) : resolvedPortfolioError ? (
           <div className="px-5 py-12 text-center sm:px-6">
             <AlertCircle size={28} className="mx-auto text-red-700" />
@@ -1040,27 +1013,26 @@ export default function LandlordDashboardPage(): ReactElement {
             </Link>
           </div>
           {bookingsBusy ? (
-            showSkeletons ? (
-              <div
-                className="divide-y divide-primary/10 animate-pulse motion-reduce:animate-none"
-                aria-hidden="true"
-              >
-                {Array.from({ length: 3 }, (_, index) => (
-                  <div
-                    key={index}
-                    className="flex h-24 items-center justify-between gap-4 px-5 sm:px-6"
-                  >
-                    <div className="flex-1">
-                      <div className="h-4 w-44 rounded-full bg-primary/10" />
-                      <div className="mt-3 h-3 w-36 rounded-full bg-primary/5" />
+            <div
+              className={`divide-y divide-primary/10 ${showSkeletons ? "animate-pulse motion-reduce:animate-none" : ""}`}
+              aria-hidden="true"
+            >
+              {Array.from({ length: 3 }, (_, index) => (
+                <div
+                  key={index}
+                  className="flex h-24 items-center justify-between gap-4 px-5 sm:px-6"
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <div className="h-4 w-36 rounded-full bg-skeleton" />
+                      <div className="h-6 w-20 rounded-full bg-skeleton" />
                     </div>
-                    <div className="h-5 w-24 rounded-full bg-primary/10" />
+                    <div className="mt-3 h-3 w-36 rounded-full bg-skeleton" />
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="h-72" />
-            )
+                  <div className="h-6 w-24 rounded-full bg-skeleton" />
+                </div>
+              ))}
+            </div>
           ) : resolvedBookingsError ? (
             <div className="px-5 py-12 text-center sm:px-6">
               <AlertCircle size={28} className="mx-auto text-red-700" />
@@ -1116,7 +1088,11 @@ export default function LandlordDashboardPage(): ReactElement {
 
         <section
           className="overflow-hidden rounded-lg bg-primary text-white shadow-sm"
-          aria-busy={escrowBusy}
+          aria-busy={
+            escrowBusy ||
+            isSummaryLoading ||
+            loadedSummaryKey !== summaryReloadKey
+          }
         >
           <div className="flex items-start justify-between gap-4 px-5 py-5 sm:px-6">
             <div>
@@ -1139,11 +1115,13 @@ export default function LandlordDashboardPage(): ReactElement {
               Currently held
             </p>
             <p className="mt-2 font-display text-4xl font-bold">
-              {escrowBusy ? (
-                showSkeletons ? (
-                  <span className="inline-block h-10 w-40 animate-pulse rounded-lg bg-white/10 align-middle motion-reduce:animate-none" />
-                ) : null
-              ) : resolvedEscrowError ? (
+              {forceLoading ||
+              isSummaryLoading ||
+              loadedSummaryKey !== summaryReloadKey ? (
+                <span
+                  className={`inline-block h-10 w-40 rounded-lg bg-white/20 align-middle ${showSkeletons ? "animate-pulse motion-reduce:animate-none" : ""}`}
+                />
+              ) : summaryError || forceError ? (
                 "Unavailable"
               ) : (
                 <PropertyPrice value={fundsHeld} />
@@ -1151,27 +1129,23 @@ export default function LandlordDashboardPage(): ReactElement {
             </p>
           </div>
           {escrowBusy ? (
-            showSkeletons ? (
-              <div
-                className="divide-y divide-white/10 animate-pulse motion-reduce:animate-none"
-                aria-hidden="true"
-              >
-                {Array.from({ length: 3 }, (_, index) => (
-                  <div
-                    key={index}
-                    className="flex h-20 items-center justify-between gap-4 px-5 sm:px-6"
-                  >
-                    <div className="flex-1">
-                      <div className="h-4 w-40 rounded-full bg-white/10" />
-                      <div className="mt-3 h-3 w-24 rounded-full bg-white/10" />
-                    </div>
-                    <div className="h-5 w-24 rounded-full bg-white/10" />
+            <div
+              className={`divide-y divide-white/10 ${showSkeletons ? "animate-pulse motion-reduce:animate-none" : ""}`}
+              aria-hidden="true"
+            >
+              {Array.from({ length: 3 }, (_, index) => (
+                <div
+                  key={index}
+                  className="flex h-20 items-center justify-between gap-4 px-5 sm:px-6"
+                >
+                  <div className="flex-1">
+                    <div className="h-4 w-40 rounded-full bg-white/20" />
+                    <div className="mt-3 h-3 w-24 rounded-full bg-white/15" />
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="h-60" />
-            )
+                  <div className="h-5 w-24 rounded-full bg-white/20" />
+                </div>
+              ))}
+            </div>
           ) : resolvedEscrowError ? (
             <div className="px-5 py-12 text-center sm:px-6">
               <AlertCircle size={28} className="mx-auto text-accent" />

@@ -1,7 +1,8 @@
 "use client";
 
+import { apiRequest } from "@/lib/apiRequest";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { EyeIcon, EyeOffIcon, Loader2, X } from "lucide-react";
+import { EyeIcon, EyeOffIcon, Loader2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -10,6 +11,7 @@ import { SubmitHandler, useForm } from "react-hook-form";
 import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
 import { useToast } from "@/components/ui/toast";
 import { resolveApiError } from "@/lib/errors";
+import { getInstallationId } from "@/lib/authSession";
 
 type UserRole = "LANDLORD" | "AGENT" | "TENANT";
 
@@ -63,35 +65,10 @@ function isApiEnvelope(value: unknown): value is ApiEnvelope<unknown> {
   );
 }
 
-function createDeviceFingerprint(): string {
-  if (typeof window === "undefined") {
-    return "rello-server";
-  }
-
-  const source = [
-    window.navigator.userAgent,
-    window.navigator.language,
-    window.screen.width,
-    window.screen.height,
-    window.screen.colorDepth,
-    window.devicePixelRatio,
-  ].join("|");
-
-  let hash = 0;
-
-  for (let index = 0; index < source.length; index += 1) {
-    hash = (hash << 5) - hash + source.charCodeAt(index);
-    hash |= 0;
-  }
-
-  return `rello-${Math.abs(hash).toString(36)}`;
-}
-
 export default function RegisterPage() {
   const router = useRouter();
   const reduceMotion = useReducedMotion();
   const { notify } = useToast();
-  const [bannerMessage, setBannerMessage] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [selectedRole, setSelectedRole] = useState<UserRole>("LANDLORD");
   const {
@@ -116,14 +93,12 @@ export default function RegisterPage() {
     roleOptions.find((role) => role.value === selectedRole)?.description ?? "";
 
   const onSubmit: SubmitHandler<RegisterFormValues> = async (values) => {
-    setBannerMessage("");
-
     try {
-      const response = await fetch("/api/auth/register", {
+      const response = await apiRequest("/api/auth/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Device-Fingerprint": createDeviceFingerprint(),
+          "X-Device-Fingerprint": getInstallationId(),
         },
         body: JSON.stringify(values),
       });
@@ -140,7 +115,6 @@ export default function RegisterPage() {
       const message =
         error instanceof Error ? error.message : "Registration failed";
 
-      setBannerMessage(message);
       notify({
         title: "Registration failed",
         description: message,
@@ -227,31 +201,6 @@ export default function RegisterPage() {
             </motion.p>
 
             <form className="mt-8 grid gap-5" onSubmit={handleSubmit(onSubmit)}>
-              <AnimatePresence>
-                {bannerMessage ? (
-                  <motion.div
-                    className="flex items-start justify-between gap-4 rounded-lg border-l-4 border-red-500 bg-red-500/10 p-4 font-body text-sm font-medium text-red-500"
-                    initial={reduceMotion ? false : { height: 0, opacity: 0 }}
-                    animate={
-                      reduceMotion ? undefined : { height: "auto", opacity: 1 }
-                    }
-                    exit={reduceMotion ? undefined : { height: 0, opacity: 0 }}
-                    transition={{ duration: 0.2, ease: "easeOut" }}
-                    role="alert"
-                  >
-                    <p>{bannerMessage}</p>
-                    <button
-                      type="button"
-                      aria-label="Dismiss message"
-                      onClick={() => setBannerMessage("")}
-                      className="flex h-6 w-6 shrink-0 items-center justify-center transition-all duration-200 ease-in-out hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                    >
-                      <X size={16} />
-                    </button>
-                  </motion.div>
-                ) : null}
-              </AnimatePresence>
-
               <motion.label
                 className="block"
                 htmlFor="auth-firstName"

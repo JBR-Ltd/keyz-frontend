@@ -7,3 +7,11 @@ export async function GET(request: Request): Promise<Response> {
     request,
   });
 }
+
+export async function PATCH(request: Request): Promise<Response> {
+  return proxyAuthenticatedRequest({
+    backendPath: "/api/users/me",
+    method: "PATCH",
+    request,
+  });
+}

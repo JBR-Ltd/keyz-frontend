@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches: [main, founder-1]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Typecheck, lint and build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      # Fails rather than silently updating pnpm-lock.yaml, so CI builds exactly
+      # what is committed
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      # next-env.d.ts is generated rather than committed, and it is what declares
+      # the image and route modules. Without this step every image import fails
+      # to typecheck on a fresh checkout, even though it builds locally.
+      - name: Generate Next types
+        run: pnpm exec next typegen
+
+      # Runs before the build: next build does not fail on type errors in every
+      # configuration, and a type error should never reach a deploy
+      - name: Typecheck
+        run: pnpm exec tsc --noEmit
+
+      - name: Lint
+        run: pnpm exec eslint src --max-warnings=0
+
+      # API_BASE_URL is read at request time by the route handlers, not at build
+      # time, so a placeholder is enough to build
+      - name: Build
+        run: pnpm build
+        env:
+          API_BASE_URL: http://localhost:8080
+
+  secret-scan:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # gitleaks-action needs a paid licence on an organisation repository and
+      # fails the job without one. The CLI is the same scanner with no licence.
+      - name: Scan for secrets
+        run: |
+          curl -sSfL -o gitleaks.tar.gz https://github.com/gitleaks/gitleaks/releases/download/v8.24.3/gitleaks_8.24.3_linux_x64.tar.gz
+          tar -xzf gitleaks.tar.gz gitleaks
+          ./gitleaks git . --redact --no-banner --verbose

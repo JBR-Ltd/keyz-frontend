@@ -1,5 +1,6 @@
 "use client";
 
+import { apiRequest } from "@/lib/apiRequest";
 import { FormEvent, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { Loader2 } from "lucide-react";
@@ -89,7 +90,7 @@ export default function WaitlistPage() {
     };
 
     try {
-      const response = await fetch("/api/waitlist", {
+      const response = await apiRequest("/api/waitlist", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

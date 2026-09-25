@@ -2,16 +2,22 @@
 
 import type { ReactElement } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { MessageCircle, Send, X } from "lucide-react";
+import { Loader2, MessageCircle, Phone, Send, X } from "lucide-react";
 import { FormEvent, useEffect, useRef, useState } from "react";
+import ChatAttachmentCard, {
+  isDefaultShareText,
+} from "@/components/chat/ChatAttachmentCard";
+import ChatShareMenu from "@/components/chat/ChatShareMenu";
 import OverlayPortal from "@/components/ui/OverlayPortal";
 import { useAuthenticatedUser } from "@/lib/account";
 import {
   getConversation,
   sendChatMessage,
+  type ChatAttachmentType,
   type ServerChatMessage,
 } from "@/lib/chat/chatClient";
 import type { ChatMessage, ChatPartyRole } from "@/lib/chat/chatStorage";
+import { startCall } from "@/lib/calls";
 import { useDialogFocus } from "@/lib/useDialogFocus";
 
 interface ChatThreadProps {
@@ -55,6 +61,18 @@ function getDateLabel(value: string): string {
 }
 
 /** The server speaks in numeric ids and `content`; the view speaks in strings and `body`. */
+/**
+ * How often an open thread asks for new messages.
+ *
+ * Polled rather than pushed. A socket would hold a server thread for every open
+ * chat, and the server caps its threads so fifty open chats cannot starve every
+ * other request. Four seconds is fast enough for a conversation about a viewing.
+ */
+const CONVERSATION_POLL_MS = 4000;
+
+/** A message still on its way has this id until the server gives it a real one. */
+const PENDING_ID_PREFIX = "pending-";
+
 function toDisplayMessage(message: ServerChatMessage): ChatMessage {
   return {
     id: String(message.id),
@@ -65,6 +83,7 @@ function toDisplayMessage(message: ServerChatMessage): ChatMessage {
     timestamp: message.timestamp,
     status: message.read ? "delivered" : "sent",
     read: message.read,
+    attachment: message.attachment ?? null,
   };
 }
 
@@ -85,6 +104,7 @@ export default function ChatThread({
   const [draft, setDraft] = useState("");
   const [sendingIds, setSendingIds] = useState<string[]>([]);
   const [loadError, setLoadError] = useState("");
+  const [isCalling, setIsCalling] = useState(false);
   const { user } = useAuthenticatedUser();
   const currentUserId = user ? String(user.id) : "";
 
@@ -98,24 +118,76 @@ export default function ChatThread({
     }
 
     let active = true;
+    let pending = false;
+    let hasLoaded = false;
 
-    async function loadMessages(): Promise<void> {
-      // Loading the thread is what marks it read, so there is no second call to miss
-      const result = await getConversation(otherUserId as number, propertyId);
+    const refresh = async (): Promise<void> => {
+      if (pending || document.visibilityState !== "visible") {
+        return;
+      }
 
+      pending = true;
+      const result = await getConversation(otherUserId, propertyId);
+      pending = false;
+
+      // A failed poll keeps what is on screen rather than blanking the thread
       if (!active) {
         return;
       }
 
       setLoadError(result.message ?? "");
-      setMessages(result.data.map(toDisplayMessage));
-    }
+      if (result.message) {
+        if (!hasLoaded) setMessages([]);
+        return;
+      }
 
-    void loadMessages();
+      const incoming = result.data.map(toDisplayMessage);
+
+      if (!hasLoaded) {
+        hasLoaded = true;
+        setMessages(incoming);
+        return;
+      }
+
+      setMessages((current) => {
+        const pending = current.filter((message) =>
+          message.id.startsWith(PENDING_ID_PREFIX),
+        );
+        const unchanged =
+          pending.length === 0 &&
+          incoming.length === current.length &&
+          incoming.every(
+            (message, index) =>
+              message.id === current[index]?.id &&
+              message.read === current[index]?.read,
+          );
+
+        // Returning the same array skips the re-render, so the thread does not
+        // jump to the bottom while someone is scrolled up reading
+        return unchanged ? current : [...incoming, ...pending];
+      });
+    };
+
+    void refresh();
     inputRef.current?.focus();
+
+    const timer = window.setInterval(
+      () => void refresh(),
+      CONVERSATION_POLL_MS,
+    );
+
+    const refreshWhenVisible = (): void => {
+      if (document.visibilityState === "visible") {
+        void refresh();
+      }
+    };
+
+    document.addEventListener("visibilitychange", refreshWhenVisible);
 
     return () => {
       active = false;
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
     };
   }, [conversationId, otherUserId, propertyId]);
 
@@ -145,7 +217,67 @@ export default function ChatThread({
     return null;
   }
 
-  const handleSend = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
+  /**
+   * Rings the other party and opens the room.
+   *
+   * A browser tab rather than an embedded frame: the call keeps running when the
+   * thread is closed, and the platform handles the camera permission prompt.
+   */
+  const placeCall = async (): Promise<void> => {
+    if (otherUserId === null || propertyId === undefined) {
+      return;
+    }
+
+    setIsCalling(true);
+    const result = await startCall(otherUserId, propertyId);
+    setIsCalling(false);
+
+    if (result.data === null) {
+      setLoadError(result.message ?? "That call could not be started.");
+      return;
+    }
+
+    if (result.data.joinUrl) {
+      window.open(result.data.joinUrl, "_blank", "noopener,noreferrer");
+    }
+  };
+
+  /**
+   * Shares a listing, tour or floor plan. No bubble is guessed at first: the server
+   * builds the card from the listing, so the saved message is what gets shown.
+   */
+  const handleShare = async (
+    type: ChatAttachmentType,
+    attachmentId: number,
+  ): Promise<boolean> => {
+    if (otherUserId === null) {
+      return false;
+    }
+
+    const result = await sendChatMessage(otherUserId, "", propertyId, {
+      type,
+      id: attachmentId,
+    });
+
+    if (!result.data) {
+      setLoadError(result.message ?? "That could not be shared.");
+      return false;
+    }
+
+    const saved = toDisplayMessage(result.data);
+
+    setLoadError("");
+    setMessages((current) => [
+      ...current.filter((message) => message.id !== saved.id),
+      saved,
+    ]);
+
+    return true;
+  };
+
+  const handleSend = async (
+    event: FormEvent<HTMLFormElement>,
+  ): Promise<void> => {
     event.preventDefault();
 
     const body = draft.trim();
@@ -155,7 +287,7 @@ export default function ChatThread({
     }
 
     // Shown immediately, reconciled with the saved message when the server answers
-    const optimisticId = `pending-${Date.now()}`;
+    const optimisticId = `${PENDING_ID_PREFIX}${Date.now()}`;
     const optimistic: ChatMessage = {
       id: optimisticId,
       conversationId: "",
@@ -187,17 +319,20 @@ export default function ChatThread({
 
     // The stored version is what other people will see, contact details stripped
     const saved = toDisplayMessage(result.data);
+    // A poll can land between sending and this answer and bring the saved copy in
+    // first, so that copy is dropped before the pending bubble is swapped for it
     setMessages((current) =>
-      current.map((message) => (message.id === optimisticId ? saved : message)),
+      current
+        .filter((message) => message.id !== saved.id)
+        .map((message) => (message.id === optimisticId ? saved : message)),
     );
   };
-
 
   return (
     <OverlayPortal>
       <AnimatePresence>
         <motion.div
-          className="fixed inset-0 z-[100] bg-black/40"
+          className="modal-backdrop fixed inset-0 z-[100]"
           initial={reduceMotion ? false : { opacity: 0 }}
           animate={reduceMotion ? undefined : { opacity: 1 }}
           exit={reduceMotion ? undefined : { opacity: 0 }}
@@ -230,14 +365,35 @@ export default function ChatThread({
                     {propertyName}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted transition-all duration-200 ease-in-out hover:bg-primary/10 hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                  aria-label="Close messages"
-                >
-                  <X size={18} aria-hidden="true" />
-                </button>
+                <div className="flex shrink-0 items-center gap-1">
+                  {otherUserId !== null && propertyId !== undefined ? (
+                    <button
+                      type="button"
+                      onClick={() => void placeCall()}
+                      disabled={isCalling}
+                      className="flex h-9 w-9 items-center justify-center rounded-full text-muted transition-all duration-200 ease-in-out hover:bg-primary/10 hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-60"
+                      aria-label={`Call ${otherPartyName}`}
+                    >
+                      {isCalling ? (
+                        <Loader2
+                          size={18}
+                          className="animate-spin"
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        <Phone size={18} aria-hidden="true" />
+                      )}
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="flex h-9 w-9 items-center justify-center rounded-full text-muted transition-all duration-200 ease-in-out hover:bg-primary/10 hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    aria-label="Close messages"
+                  >
+                    <X size={18} aria-hidden="true" />
+                  </button>
+                </div>
               </div>
               {loadError ? (
                 <p className="mt-3 rounded-lg bg-accent/10 shadow-sm px-3 py-2 font-body text-xs leading-5 text-primary">
@@ -285,9 +441,22 @@ export default function ChatThread({
                                 : "rounded-bl-md bg-primary/10 text-primary"
                             }`}
                           >
-                            <p className="break-words font-body text-sm leading-6">
-                              {message.body}
-                            </p>
+                            {message.attachment ? (
+                              <div className="mb-2 w-60 max-w-full">
+                                <ChatAttachmentCard
+                                  attachment={message.attachment}
+                                />
+                              </div>
+                            ) : null}
+                            {message.attachment &&
+                            isDefaultShareText(
+                              message.body,
+                              message.attachment,
+                            ) ? null : (
+                              <p className="break-words font-body text-sm leading-6">
+                                {message.body}
+                              </p>
+                            )}
                             <p
                               className={`mt-2 font-body text-[11px] ${
                                 isCurrentUser ? "text-primary/70" : "text-muted"
@@ -312,6 +481,7 @@ export default function ChatThread({
               className="shrink-0 border-t border-border bg-bg px-4 py-3"
             >
               <div className="flex items-center gap-2 rounded-full border border-border bg-white px-3 py-2 shadow-sm">
+                <ChatShareMenu propertyId={propertyId} onShare={handleShare} />
                 <input
                   ref={inputRef}
                   value={draft}

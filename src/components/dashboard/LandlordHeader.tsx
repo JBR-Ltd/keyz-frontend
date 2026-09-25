@@ -1,11 +1,11 @@
 "use client";
 
 import type { ReactElement, ReactNode } from "react";
+import UserAvatar from "@/components/ui/user-avatar";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   Bookmark,
   CalendarDays,
-  ChevronDown,
   LayoutDashboard,
   LoaderCircle,
   LogOut,
@@ -13,6 +13,8 @@ import {
   Settings,
   ShieldCheck,
   UserRound,
+  ReceiptText,
+  Handshake,
   X,
 } from "lucide-react";
 import Image from "next/image";
@@ -275,26 +277,22 @@ export default function LandlordHeader({
                 onClick={() => setIsProfileOpen((current) => !current)}
                 aria-haspopup="menu"
                 aria-expanded={isProfileOpen}
-                className={`flex min-h-11 items-center gap-2 rounded-full p-1.5 pr-2 font-body text-sm text-primary transition-all duration-200 ease-in-out hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                aria-label="Open account menu"
+                title="Account menu"
+                className={`flex h-10 w-10 items-center justify-center rounded-full text-primary transition-all duration-200 ease-in-out hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                   isAccountActive ? "bg-primary/5" : ""
                 }`}
               >
-                <span className="relative flex h-8 w-8 items-center justify-center rounded-full bg-primary font-body text-xs font-bold text-white">
-                  {profileInitials}
+                <UserAvatar
+                  avatarUrl={user?.avatarUrl}
+                  className="h-8 w-8 text-xs"
+                  initials={profileInitials}
+                  sizes="32px"
+                >
                   {showVerificationAction ? (
                     <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-accent ring-2 ring-bg" />
                   ) : null}
-                </span>
-                <span className="hidden max-w-28 truncate font-bold xl:block">
-                  {profileName}
-                </span>
-                <ChevronDown
-                  size={16}
-                  className={`text-muted transition-transform ${
-                    isProfileOpen ? "rotate-180" : ""
-                  }`}
-                  aria-hidden="true"
-                />
+                </UserAvatar>
               </button>
 
               <AnimatePresence>
@@ -314,6 +312,24 @@ export default function LandlordHeader({
                       show={showVerificationAction}
                       verifiedStepCount={verifiedStepCount}
                     />
+                    <Link
+                      href="/landlord/statement"
+                      role="menuitem"
+                      onClick={() => setIsProfileOpen(false)}
+                      className="flex items-center gap-3 rounded-lg px-4 py-3 font-body text-sm font-medium text-primary transition-colors hover:bg-primary/5"
+                    >
+                      <ReceiptText size={17} strokeWidth={1.9} />
+                      Statement
+                    </Link>
+                    <Link
+                      href="/landlord/mandates"
+                      role="menuitem"
+                      onClick={() => setIsProfileOpen(false)}
+                      className="flex items-center gap-3 rounded-lg px-4 py-3 font-body text-sm font-medium text-primary transition-colors hover:bg-primary/5"
+                    >
+                      <Handshake size={17} strokeWidth={1.9} />
+                      Agent mandates
+                    </Link>
                     <Link
                       href="/landlord/profile"
                       role="menuitem"
@@ -371,7 +387,7 @@ export default function LandlordHeader({
               <motion.button
                 type="button"
                 aria-label="Close navigation"
-                className="fixed inset-0 z-[100] bg-black/40 lg:hidden"
+                className="modal-backdrop fixed inset-0 z-[100] lg:hidden"
                 onClick={() => setIsMobileOpen(false)}
                 initial={reduceMotion ? false : { opacity: 0 }}
                 animate={reduceMotion ? undefined : { opacity: 1 }}
@@ -409,12 +425,16 @@ export default function LandlordHeader({
 
                 <div className="border-t border-border p-5">
                   <div className="mb-4 flex items-center gap-3">
-                    <span className="relative flex h-11 w-11 items-center justify-center rounded-full bg-primary font-body text-sm font-bold text-white">
-                      {profileInitials}
+                    <UserAvatar
+                      avatarUrl={user?.avatarUrl}
+                      className="h-11 w-11 text-sm"
+                      initials={profileInitials}
+                      sizes="44px"
+                    >
                       {showVerificationAction ? (
                         <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-accent ring-2 ring-bg" />
                       ) : null}
-                    </span>
+                    </UserAvatar>
                     <span className="min-w-0">
                       <span className="block truncate font-body text-sm font-bold text-primary">
                         {profileName}
@@ -430,6 +450,22 @@ export default function LandlordHeader({
                     show={showVerificationAction}
                     verifiedStepCount={verifiedStepCount}
                   />
+                  <Link
+                    href="/landlord/statement"
+                    onClick={() => setIsMobileOpen(false)}
+                    className="flex min-h-11 items-center gap-3 rounded-lg px-3 font-body text-sm font-medium text-primary transition-colors hover:bg-primary/5"
+                  >
+                    <ReceiptText size={17} />
+                    Statement
+                  </Link>
+                  <Link
+                    href="/landlord/mandates"
+                    onClick={() => setIsMobileOpen(false)}
+                    className="flex min-h-11 items-center gap-3 rounded-lg px-3 font-body text-sm font-medium text-primary transition-colors hover:bg-primary/5"
+                  >
+                    <Handshake size={17} />
+                    Agent mandates
+                  </Link>
                   <Link
                     href="/landlord/profile"
                     onClick={() => setIsMobileOpen(false)}

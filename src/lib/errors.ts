@@ -49,7 +49,7 @@ const GENERIC_MESSAGE = "Something went wrong. Try again in a moment.";
  * its message is preferred over these and this acts as the floor.
  */
 const ERROR_COPY: Record<ApiErrorCode, string> = {
-  INVALID_CREDENTIALS: "That email and password do not match. Check both and try again.",
+  INVALID_CREDENTIALS: "Incorrect login credentials. Check your email and password and try again.",
   EMAIL_NOT_VERIFIED: "Verify your email address before logging in. Check your inbox for the code.",
   EMAIL_ALREADY_REGISTERED: "An account already uses that email. Log in instead.",
   RESET_CODE_INVALID: "That reset code is wrong or has expired. Request a new one.",
@@ -113,6 +113,16 @@ export function resolveApiError(
     return fallback;
   }
 
+  // A rejected field says exactly what is wrong; the envelope message is "Validation
+  // failed", which leaves someone re-reading a form with no idea which box to fix.
+  const fieldReasons = collectFieldReasons(
+    "data" in payload ? payload.data : undefined,
+  );
+
+  if (fieldReasons) {
+    return fieldReasons;
+  }
+
   const message = "message" in payload ? payload.message : undefined;
 
   if (typeof message === "string" && message.trim()) {
@@ -120,6 +130,19 @@ export function resolveApiError(
   }
 
   return ERROR_COPY[code];
+}
+
+/** Bean validation answers with a field-to-reason map. Anything else is not one. */
+function collectFieldReasons(value: unknown): string | null {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+
+  const reasons = Object.values(value).filter(
+    (reason): reason is string => typeof reason === "string" && !!reason.trim(),
+  );
+
+  return reasons.length > 0 ? reasons.join(" ") : null;
 }
 
 export function getErrorCopy(code: ApiErrorCode): string {

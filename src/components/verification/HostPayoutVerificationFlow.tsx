@@ -1,13 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import {
-  Banknote,
-  Check,
-  Landmark,
-  Loader2,
-  Lock,
-} from "lucide-react";
+import { Banknote, Check, Landmark, Loader2, Lock } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   ChangeEvent,
@@ -16,13 +10,16 @@ import {
   useEffect,
   useState,
 } from "react";
-import { Select } from "@/components/ui/select";
+import BankPicker from "@/components/ui/bank-picker";
 import {
+  getPayoutBanks,
   resolvePayoutAccount,
   savePayoutAccount,
+  type BankOption,
   type ResolvedAccount,
 } from "@/lib/payout";
 import VerifiedBadge from "@/components/ui/VerifiedBadge";
+import VerificationFlowSkeleton from "@/components/verification/VerificationFlowSkeleton";
 import {
   getHostVerification,
   HostVerificationRole,
@@ -33,28 +30,11 @@ interface HostPayoutVerificationFlowProps {
   role: HostVerificationRole;
 }
 
-interface BankOption {
-  name: string;
-  code: string;
-}
-
 type PayoutScreen = "loading" | "overview" | "setup" | "complete";
-
-const BANK_OPTIONS: BankOption[] = [
-  { name: "Access Bank", code: "044" },
-  { name: "First Bank", code: "011" },
-  { name: "GTBank", code: "058" },
-  { name: "UBA", code: "033" },
-  { name: "Zenith Bank", code: "057" },
-];
-
 
 function isValidAccountNumber(value: string): boolean {
   return /^\d{10}$/.test(value);
 }
-
-
-
 
 export default function HostPayoutVerificationFlow({
   role,
@@ -66,7 +46,9 @@ export default function HostPayoutVerificationFlow({
   const initialMode: PayoutScreen =
     searchParams.get("mode") === "setup" ? "setup" : "overview";
   const [screen, setScreen] = useState<PayoutScreen>("loading");
-  const [bankName, setBankName] = useState(BANK_OPTIONS[0].name);
+  const [banks, setBanks] = useState<BankOption[]>([]);
+  const [areBanksLoading, setAreBanksLoading] = useState(true);
+  const [bankCode, setBankCode] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
   const [resolved, setResolved] = useState<ResolvedAccount | null>(null);
   const [formError, setFormError] = useState("");
@@ -80,13 +62,36 @@ export default function HostPayoutVerificationFlow({
         return;
       }
 
-      setScreen(result.data?.payout.status === "approved" ? "complete" : initialMode);
+      setScreen(
+        result.data?.payout.status === "approved" ? "complete" : initialMode,
+      );
     });
 
     return () => {
       active = false;
     };
   }, [initialMode]);
+
+  useEffect(() => {
+    let active = true;
+
+    void getPayoutBanks().then((result) => {
+      if (!active) {
+        return;
+      }
+
+      setBanks(result.data);
+      setAreBanksLoading(false);
+
+      if (result.data.length === 0) {
+        setFormError(result.message ?? "The bank list could not be loaded.");
+      }
+    });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const exitFlow = (): void => {
     router.push(centerHref);
@@ -103,8 +108,6 @@ export default function HostPayoutVerificationFlow({
   /** Step one: ask the bank who owns the account. Nothing is saved yet. */
   const lookUpAccount = async (): Promise<void> => {
     setFormError("");
-
-    const bankCode = BANK_OPTIONS.find((bank) => bank.name === bankName)?.code;
 
     if (!bankCode || !isValidAccountNumber(accountNumber)) {
       setFormError("Choose your bank and enter a 10 digit account number.");
@@ -132,8 +135,6 @@ export default function HostPayoutVerificationFlow({
   const submitSetup = async (): Promise<void> => {
     setFormError("");
 
-    const bankCode = BANK_OPTIONS.find((bank) => bank.name === bankName)?.code;
-
     if (!resolved || !bankCode) {
       setFormError("Look up the account before saving it.");
       return;
@@ -154,7 +155,6 @@ export default function HostPayoutVerificationFlow({
       setIsProcessing(false);
     }
   };
-
 
   const submitStep = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
@@ -253,19 +253,22 @@ export default function HostPayoutVerificationFlow({
       <div className="grid gap-4 text-left">
         <label className="block">
           <span className="font-body text-sm font-bold text-primary">Bank</span>
-          <Select
-            ariaLabel="Bank"
-            placeholder="Select your bank"
-            value={bankName}
-            onValueChange={(nextBank) => {
-              setBankName(nextBank);
+          <BankPicker
+            banks={banks}
+            disabled={banks.length === 0}
+            placeholder={
+              areBanksLoading
+                ? "Loading banks..."
+                : banks.length === 0
+                  ? "Bank list unavailable, reload to retry"
+                  : "Select your bank"
+            }
+            value={bankCode}
+            onChange={(nextCode) => {
+              setBankCode(nextCode);
+              setResolved(null);
               setFormError("");
             }}
-            className="mt-2 w-full rounded-lg border border-border bg-white px-4 py-3 font-body text-base text-primary transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-accent/40"
-            options={BANK_OPTIONS.map((bank) => ({
-              label: bank.name,
-              value: bank.name,
-            }))}
           />
         </label>
         <label className="block">
@@ -402,11 +405,7 @@ export default function HostPayoutVerificationFlow({
   }
 
   if (screen === "loading") {
-    return (
-      <main className="fixed inset-0 z-[100] flex items-center justify-center bg-primary text-white">
-        <Loader2 className="h-8 w-8 animate-spin text-accent" aria-label="Loading" />
-      </main>
-    );
+    return <VerificationFlowSkeleton />;
   }
 
   if (screen === "complete") {

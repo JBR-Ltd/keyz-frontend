@@ -10,6 +10,7 @@ const FOOTER_LINKS = [
   { label: "How It Works", href: "/#how-it-works" },
   { label: "Cities", href: "/#cities" },
   { label: "Waitlist", href: "/waitlist" },
+  { label: "Policies", href: "/policies" },
 ];
 
 const SOCIALS = [

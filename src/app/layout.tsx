@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
+import { Suspense, type ReactNode } from "react";
 import { DM_Sans, Fraunces, Syne } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
+import InternalNavigationTracker from "@/components/navigation/InternalNavigationTracker";
 import { ToastProvider } from "@/components/ui/toast";
-import { LoadingScreenGate } from "@/components/LoadingScreenGate";
 import { Analytics } from "@vercel/analytics/next";
+import { AuthProvider } from "@/components/auth/AuthProvider";
 
 const dmSans = DM_Sans({
   subsets: ["latin"],
@@ -44,14 +46,13 @@ export const metadata: Metadata = {
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode;
+  children: ReactNode;
 }>) {
   return (
     <html
       lang="en"
       suppressHydrationWarning
       data-scroll-behavior="smooth"
-      style={{ visibility: "hidden", overflow: "hidden" }}
       className={cn(
         "h-full",
         "antialiased",
@@ -61,10 +62,18 @@ export default function RootLayout({
         "font-body",
       )}
     >
-      <body className="min-h-full flex flex-col">
-        <LoadingScreenGate>
+      {/*
+        Extensions such as Grammarly add their own attributes to body before
+        React hydrates, which React reports as a mismatch it cannot patch. The
+        markup we render is identical either way.
+      */}
+      <body className="min-h-full flex flex-col" suppressHydrationWarning>
+        <Suspense fallback={null}>
+          <InternalNavigationTracker />
+        </Suspense>
+        <AuthProvider>
           <ToastProvider>{children}</ToastProvider>
-        </LoadingScreenGate>
+        </AuthProvider>
         <Analytics />
       </body>
     </html>

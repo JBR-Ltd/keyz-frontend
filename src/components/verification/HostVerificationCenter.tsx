@@ -6,13 +6,13 @@ import {
   Clock,
   FileText,
   Home,
-  Loader2,
   Lock,
   ShieldCheck,
 } from "lucide-react";
 import Link from "next/link";
 import { ReactElement, useCallback, useEffect, useState } from "react";
 import VerifiedBadge from "@/components/ui/VerifiedBadge";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   getBankName,
   getHostVerification,
@@ -112,18 +112,10 @@ export default function HostVerificationCenter({
   );
   const [loadError, setLoadError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
 
-  const load = useCallback(async (): Promise<void> => {
-    const result = await getHostVerification();
-
-    if (!result.data) {
-      setLoadError(result.message ?? "Your status could not be loaded.");
-    } else {
-      setLoadError("");
-      setSnapshot(result.data);
-    }
-
-    setIsLoading(false);
+  const load = useCallback((): void => {
+    setRefreshKey((current) => current + 1);
   }, []);
 
   useEffect(() => {
@@ -147,7 +139,7 @@ export default function HostVerificationCenter({
     return () => {
       active = false;
     };
-  }, []);
+  }, [refreshKey]);
 
   // Finishing a flow in another tab should not leave a stale page behind here
   useEffect(() => {
@@ -164,11 +156,32 @@ export default function HostVerificationCenter({
 
   if (isLoading) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-surface-soft">
-        <Loader2
-          className="h-8 w-8 animate-spin text-primary"
-          aria-label="Loading your verification status"
-        />
+      <main
+        className="min-h-screen bg-surface-soft px-5 py-12 sm:px-8 lg:px-10 lg:py-16 xl:px-14"
+        role="status"
+        aria-label="Loading your verification status"
+      >
+        <div className="mx-auto max-w-6xl">
+          <Skeleton className="h-4 w-36" />
+          <Skeleton className="mt-6 h-12 w-3/5 max-w-lg" />
+          <Skeleton className="mt-4 h-5 w-4/5 max-w-2xl" />
+          <div className="mt-10 grid gap-5 lg:grid-cols-3">
+            {Array.from({ length: 3 }, (_, index) => (
+              <div
+                key={`verification-card-${index + 1}`}
+                className="rounded-2xl bg-[var(--color-bg)] p-6 shadow-sm"
+                aria-hidden="true"
+              >
+                <Skeleton className="h-12 w-12 rounded-full" />
+                <Skeleton className="mt-6 h-7 w-2/3" />
+                <Skeleton className="mt-4 h-4 w-full" />
+                <Skeleton className="mt-2 h-4 w-4/5" />
+                <Skeleton className="mt-7 h-11 w-32 rounded-full" />
+              </div>
+            ))}
+          </div>
+        </div>
+        <span className="sr-only">Loading your verification status</span>
       </main>
     );
   }
@@ -198,7 +211,12 @@ export default function HostVerificationCenter({
 
   const { identity, kyb, payout } = snapshot;
   const isLandlord = role === "landlord";
-  const completeCount = [identity.status, kyb.status, payout.status].filter(
+  // Business documents are an agent requirement; a landlord proves ownership per listing
+  const trackedStatuses: HostCheckStatus[] = isLandlord
+    ? [identity.status, payout.status]
+    : [identity.status, kyb.status, payout.status];
+  const totalCount = trackedStatuses.length;
+  const completeCount = trackedStatuses.filter(
     (status: HostCheckStatus) => status === "approved",
   ).length;
 
@@ -275,7 +293,7 @@ export default function HostVerificationCenter({
         <div className="space-y-3">
           <VerifiedBadge size="sm" />
           <p className="font-body text-sm font-bold text-primary">
-            {getBankName(payout.bankCode)} ·{" "}
+            {getBankName(payout.bankCode, payout.bankName)} ·{" "}
             {maskAccountNumber(payout.accountLast4)}
           </p>
           <p className="font-body text-sm text-muted">{payout.accountName}</p>
@@ -316,14 +334,14 @@ export default function HostVerificationCenter({
         </h1>
         <p className="mt-4 max-w-2xl font-body text-sm leading-6 text-muted">
           {isLandlord
-            ? "Identity verification, business documents, and payout setup are tracked separately. Missing payout details will not change your identity status."
+            ? "Identity verification and payout setup are tracked separately. Missing payout details will not change your identity status. Each property you list is verified on its own."
             : "Complete these checks to publish listings and receive payouts. Your identity is confirmed straight away; business documents are reviewed by our team."}
         </p>
 
         <div className="mt-8 rounded-xl border border-primary/10 bg-[var(--color-bg)] p-5 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="font-body text-sm font-bold text-primary">
-              {completeCount} of 3 setup tasks complete
+              {completeCount} of {totalCount} setup tasks complete
             </p>
             <p className="font-body text-xs text-muted">
               Property verification starts after your first listing is created.
@@ -332,7 +350,7 @@ export default function HostVerificationCenter({
           <div className="mt-4 h-2 overflow-hidden rounded-full bg-border">
             <div
               className="h-full rounded-full bg-accent transition-all duration-300 ease-in-out"
-              style={{ width: `${(completeCount / 3) * 100}%` }}
+              style={{ width: `${(completeCount / totalCount) * 100}%` }}
             />
           </div>
         </div>
@@ -349,17 +367,23 @@ export default function HostVerificationCenter({
             {renderIdentity()}
           </StatusCard>
 
-          <StatusCard
-            actionHref={kybActionLabel ? `/${role}/verify/identity` : undefined}
-            actionLabel={kybActionLabel}
-            icon={FileText}
-            title="Business Documents"
-          >
-            {renderKyb()}
-          </StatusCard>
+          {isLandlord ? null : (
+            <StatusCard
+              actionHref={
+                kybActionLabel ? `/${role}/verify/identity` : undefined
+              }
+              actionLabel={kybActionLabel}
+              icon={FileText}
+              title="Business Documents"
+            >
+              {renderKyb()}
+            </StatusCard>
+          )}
 
           <StatusCard
-            actionHref={payoutActionLabel ? `/${role}/verify/payout` : undefined}
+            actionHref={
+              payoutActionLabel ? `/${role}/verify/payout` : undefined
+            }
             actionLabel={payoutActionLabel}
             icon={Banknote}
             title="Payout Setup"

@@ -1,12 +1,12 @@
 "use client";
 
+import { apiRequest } from "@/lib/apiRequest";
 import { motion, useReducedMotion } from "framer-motion";
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { SubmitHandler, useForm } from "react-hook-form";
-import AuthBanner from "@/components/auth/AuthBanner";
 import AuthInput from "@/components/auth/AuthInput";
 import AuthSplitLayout from "@/components/auth/AuthSplitLayout";
 import { useToast } from "@/components/ui/toast";
@@ -41,7 +41,6 @@ export default function ResetPasswordPage() {
   const router = useRouter();
   const reduceMotion = useReducedMotion();
   const { notify } = useToast();
-  const [errorMessage, setErrorMessage] = useState("");
   const [initialParams] = useState(() => {
     if (typeof window === "undefined") {
       return { email: "", token: "" };
@@ -69,10 +68,8 @@ export default function ResetPasswordPage() {
   });
 
   const onSubmit: SubmitHandler<ResetPasswordFormValues> = async (values) => {
-    setErrorMessage("");
-
     try {
-      const response = await fetch("/api/auth/reset-password", {
+      const response = await apiRequest("/api/auth/reset-password", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -98,7 +95,6 @@ export default function ResetPasswordPage() {
       const message =
         error instanceof Error ? error.message : "Password reset failed";
 
-      setErrorMessage(message);
       notify({
         title: "Password reset failed",
         description: message,
@@ -137,14 +133,6 @@ export default function ResetPasswordPage() {
               className="mt-10 grid gap-5"
               onSubmit={handleSubmit(onSubmit)}
             >
-              {errorMessage ? (
-                <AuthBanner
-                  key={errorMessage}
-                  message={errorMessage}
-                  type="error"
-                />
-              ) : null}
-
               <AuthInput
                 label="Email"
                 name="email"

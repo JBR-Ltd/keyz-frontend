@@ -1,3 +1,6 @@
+import { browserAuthResponse } from "@/app/api/_authResponse";
+import { rejectCrossSiteMutation } from "@/app/api/_csrf";
+
 const API_BASE_URL = process.env.API_BASE_URL;
 const AUTH_REQUEST_TIMEOUT_MS = 90000;
 
@@ -59,15 +62,21 @@ async function proxyJsonResponse(
     }
   }
 
-  return new Response(body || null, {
+  return browserAuthResponse(new Response(body || null, {
     status: response.status,
     headers: {
       "Content-Type": contentType,
     },
-  });
+  }));
 }
 
 export async function POST(request: Request): Promise<Response> {
+  const rejected = rejectCrossSiteMutation(request);
+
+  if (rejected) {
+    return rejected;
+  }
+
   const backendUrl = getBackendUrl("/api/auth/login");
 
   if (!backendUrl) {

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import ConfirmActionModal from "@/components/settings/ConfirmActionModal";
 import { useToast } from "@/components/ui/toast";
-import { deleteAccount } from "@/lib/account";
+import { deactivateAccount, deleteAccount } from "@/lib/account";
 
 type AccountAction = "deactivate" | "delete";
 
@@ -19,7 +19,9 @@ const ACTION_CONTENT: Record<
 > = {
   deactivate: {
     title: "Deactivate account?",
-    description: "Your profile will be hidden until you sign in again.",
+    description:
+      "Your listings leave the public feed and every device is signed out. "
+      + "Nothing is deleted, and signing in again brings it all back.",
     confirmLabel: "Deactivate account",
   },
   delete: {
@@ -32,7 +34,7 @@ const ACTION_CONTENT: Record<
 export default function SettingsDangerZone() {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [isWorking, setIsWorking] = useState(false);
   const [pendingAction, setPendingAction] = useState<AccountAction | null>(
     null,
   );
@@ -40,31 +42,30 @@ export default function SettingsDangerZone() {
 
   const handleActionRequest = (action: AccountAction): void => {
     setIsOpen(false);
-
-    if (action === "deactivate") {
-      notify({
-        title: "Deactivation unavailable",
-        description:
-          "The server does not support temporary account deactivation yet.",
-        variant: "error",
-      });
-      return;
-    }
-
     setPendingAction(action);
   };
 
   const handleConfirm = async (): Promise<void> => {
-    if (pendingAction !== "delete") {
+    if (pendingAction === null) {
       return;
     }
 
-    setIsDeleting(true);
-    const result = await deleteAccount();
-    setIsDeleting(false);
+    const deactivating = pendingAction === "deactivate";
+
+    setIsWorking(true);
+    const result = deactivating
+      ? await deactivateAccount()
+      : await deleteAccount();
+    setIsWorking(false);
 
     notify({
-      title: result.success ? "Account deleted" : "Account not deleted",
+      title: result.success
+        ? deactivating
+          ? "Account deactivated"
+          : "Account deleted"
+        : deactivating
+          ? "Account not deactivated"
+          : "Account not deleted",
       description: result.message,
       variant: result.success ? "success" : "error",
     });
@@ -111,7 +112,7 @@ export default function SettingsDangerZone() {
           pendingContent?.description ?? "Confirm this account action."
         }
         confirmLabel={pendingContent?.confirmLabel ?? "Confirm"}
-        isLoading={isDeleting}
+        isLoading={isWorking}
         onCancel={() => setPendingAction(null)}
         onConfirm={handleConfirm}
       />

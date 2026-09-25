@@ -17,6 +17,8 @@
   --color-text: #111827;
   --color-text-muted: #6b7280;
   --color-border: #e5e7eb;
+  --color-skeleton: #dce1e2;
+  --color-skeleton-strong: #cbd3d6;
 }
 
 @layer base {
@@ -77,6 +79,14 @@
     background-color: var(--color-border);
   }
 
+  .bg-skeleton {
+    background-color: var(--color-skeleton);
+  }
+
+  .bg-skeleton-strong {
+    background-color: var(--color-skeleton-strong);
+  }
+
   .bg-primary {
     background-color: var(--color-primary);
   }
@@ -107,6 +117,12 @@
 
   .bg-footer {
     background-color: var(--color-footer);
+  }
+
+  .modal-backdrop {
+    background-color: rgb(4 52 76 / 60%);
+    -webkit-backdrop-filter: blur(2px);
+    backdrop-filter: blur(2px);
   }
 
   .text-primary-soft {

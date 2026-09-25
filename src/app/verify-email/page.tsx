@@ -1,5 +1,6 @@
 "use client";
 
+import { apiRequest } from "@/lib/apiRequest";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
@@ -12,12 +13,12 @@ import {
   useState,
 } from "react";
 import { SubmitHandler, useForm } from "react-hook-form";
-import AuthBanner from "@/components/auth/AuthBanner";
 import AuthInput from "@/components/auth/AuthInput";
 import AuthSplitLayout from "@/components/auth/AuthSplitLayout";
 import { isAccountRole } from "@/components/auth/RoleGuard";
 import { useToast } from "@/components/ui/toast";
 import { resolveApiError } from "@/lib/errors";
+import { establishAuthentication } from "@/lib/authSession";
 
 interface VerifyEmailFormValues {
   email: string;
@@ -49,7 +50,6 @@ export default function VerifyEmailPage() {
   const router = useRouter();
   const reduceMotion = useReducedMotion();
   const { notify } = useToast();
-  const [errorMessage, setErrorMessage] = useState("");
   const [isResending, setIsResending] = useState(false);
   const [otpError, setOtpError] = useState("");
   const [otpDigits, setOtpDigits] = useState(() =>
@@ -142,7 +142,6 @@ export default function VerifyEmailPage() {
   }
 
   const onSubmit: SubmitHandler<VerifyEmailFormValues> = async (values) => {
-    setErrorMessage("");
     setOtpError("");
 
     const token = otpDigits.join("");
@@ -157,7 +156,7 @@ export default function VerifyEmailPage() {
         email: values.email,
         token,
       });
-      const response = await fetch(
+      const response = await apiRequest(
         `/api/auth/verify-email?${query.toString()}`,
         {
           method: "POST",
@@ -184,15 +183,14 @@ export default function VerifyEmailPage() {
       if (
         session !== null &&
         typeof session === "object" &&
-        "accessToken" in session &&
-        typeof session.accessToken === "string" &&
         "role" in session &&
         isAccountRole(session.role)
       ) {
         const role = session.role.toUpperCase();
 
-        localStorage.setItem("rello_token", session.accessToken);
-        localStorage.setItem("rello_role", role);
+        if (!establishAuthentication(session)) {
+          throw new Error("Unable to start your session. Please log in.");
+        }
 
         notify({
           title: "Email verified",
@@ -218,7 +216,6 @@ export default function VerifyEmailPage() {
       const message =
         error instanceof Error ? error.message : "Email verification failed";
 
-      setErrorMessage(message);
       notify({
         title: "Verification failed",
         description: message,
@@ -231,14 +228,18 @@ export default function VerifyEmailPage() {
     const email = getValues("email");
 
     if (!email) {
-      setErrorMessage("Enter your email address first.");
+      notify({
+        title: "Email required",
+        description: "Enter your email address first.",
+        variant: "error",
+      });
       return;
     }
 
     setIsResending(true);
 
     try {
-      const response = await fetch(
+      const response = await apiRequest(
         `/api/auth/resend-verification?email=${encodeURIComponent(email)}`,
         { method: "POST" },
       );
@@ -295,14 +296,6 @@ export default function VerifyEmailPage() {
               className="mt-10 grid gap-5"
               onSubmit={handleSubmit(onSubmit)}
             >
-              {errorMessage ? (
-                <AuthBanner
-                  key={errorMessage}
-                  message={errorMessage}
-                  type="error"
-                />
-              ) : null}
-
               {initialEmail ? (
                 <input type="hidden" {...register("email")} />
               ) : (

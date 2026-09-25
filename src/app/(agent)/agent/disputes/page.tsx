@@ -1,5 +1,6 @@
-import ComingSoon from "@/components/dashboard/ComingSoon";
+import type { ReactElement } from "react";
+import DisputeBoard from "@/components/disputes/DisputeBoard";
 
-export default function AgentDisputesPage() {
-  return <ComingSoon eyebrow="Agent portal" title="Requests" />;
+export default function AgentDisputesPage(): ReactElement {
+  return <DisputeBoard perspective="host" />;
 }

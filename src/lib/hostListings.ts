@@ -1,7 +1,19 @@
 "use client";
 
-import { deleteDB, openDB, type DBSchema, type IDBPDatabase } from "idb";
+import { getBrowserSessionMarker } from "@/lib/authSession";
+
+import { apiRequest } from "@/lib/apiRequest";
+import { deleteDB, type DBSchema, type IDBPDatabase } from "idb";
 import { resolveApiError } from "@/lib/errors";
+import {
+  addDraftImage,
+  createDraft,
+  getDraft,
+  getDrafts,
+  publishDraft,
+  updateDraft,
+  type PropertyDraft,
+} from "@/lib/propertyDrafts";
 import type { PropertyListingStatus } from "@/lib/propertyDetails";
 
 export type HostListingRole = "landlord" | "agent";
@@ -15,6 +27,8 @@ export type HostListingReviewStatus =
 /** Mirrors PartySummary on the backend: what a stranger may see about a person. */
 export interface BackendPropertyHost {
   id: number;
+  /** For linking to the host's public profile. */
+  publicId?: string;
   identityVerified: boolean;
   name: string;
   rating?: number | null;
@@ -22,8 +36,38 @@ export interface BackendPropertyHost {
 }
 
 /** Mirrors PropertySummaryResponse. The Property entity is no longer returned to clients. */
+/** How a listing is priced. Decides what `price` means and how a total is worked out. */
+export type RentalMode = "ANNUAL" | "MONTHLY" | "SHORT_STAY";
+export type StayType = "LONG_TERM" | "SHORT_STAY";
+
+export interface PropertyImage {
+  caption: string | null;
+  cover: boolean;
+  id: number;
+  position: number;
+  url: string;
+}
+
 export interface BackendProperty {
   address: string;
+  /** Immutable and opaque. What public links are built from. */
+  publicId?: string;
+  /** Readable only. Follows the title. */
+  slug?: string;
+  amenities?: string[];
+  area?: string | null;
+  city?: string | null;
+  cleaningFee?: number | null;
+  images?: PropertyImage[];
+  minimumNights?: number | null;
+  /** Shortlets only. Null when the host set no limit. */
+  maximumGuests?: number | null;
+  /** Refundable, and returned to the tenant after the tenancy. */
+  securityDeposit?: number | null;
+  /** Yearly lets only: whether rent can be paid in parts, and in how many at most. */
+  instalmentsAllowed?: boolean | null;
+  maxInstalments?: number | null;
+  rentalMode?: RentalMode | null;
   bathrooms: number;
   bedrooms: number;
   description?: string | null;
@@ -40,6 +84,8 @@ export interface BackendProperty {
   verified: boolean;
   videoWalkthroughUrl?: string | null;
   virtualTourUrl?: string | null;
+  totalUnitCount?: number;
+  availableUnitCount?: number;
 }
 
 /** Mirrors PageResponse. Public listing endpoints are paged. */
@@ -75,14 +121,45 @@ export interface HostListingInput {
   bathrooms: number;
   bedrooms: number;
   city: string;
+  /** Shortlets only. Added once to the stay, not per night. */
+  cleaningFee?: number;
   description: string;
   id?: string;
   listingType: PropertyListingStatus;
+  /** Shortlets only. The shortest stay this host will take. */
+  minimumNights?: number;
+  /** Shortlets only. The most guests the home sleeps. */
+  maximumGuests?: number;
+  /** A refundable deposit against damage, returned when the tenancy ends. */
+  securityDeposit?: number;
+  /** Yearly lets only. Tenants may pay the rent in up to maxInstalments parts. */
+  instalmentsAllowed?: boolean;
+  maxInstalments?: number;
+  /** Number of identical homes represented by this shared listing. */
+  unitCount: number;
+  availableUnitCount?: number;
+  /** Active landlord mandate selected by an agent. */
+  mandateId?: number;
+  rentalMode: RentalMode;
   ownerRole: HostListingRole;
   photos: HostListingPhoto[];
   price: number;
   squareFootage?: number;
   title: string;
+}
+
+/**
+ * Drafts and published listings are both numbered by the server, and the two
+ * sequences overlap, so a bare id is ambiguous. Drafts carry a prefix.
+ */
+export const DRAFT_ID_PREFIX = "draft-";
+
+export function isDraftId(id: string): boolean {
+  return id.startsWith(DRAFT_ID_PREFIX);
+}
+
+export function toDraftNumber(id: string): number {
+  return Number(id.slice(DRAFT_ID_PREFIX.length));
 }
 
 export interface HostListingRecord extends HostListingInput {
@@ -111,45 +188,17 @@ export interface HostListingStorageResult<TValue> {
   unavailable: boolean;
 }
 
-export interface PublicPropertiesResult
-  extends HostListingStorageResult<BackendProperty[]> {
+export interface PublicPropertiesResult extends HostListingStorageResult<
+  BackendProperty[]
+> {
   hasNext: boolean;
   totalItems: number;
 }
 
 const DATABASE_NAME = "rello-host-listings";
-const DATABASE_VERSION = 1;
 const STORAGE_EVENT = "rello-host-listings-change";
 
 let databasePromise: Promise<IDBPDatabase<HostListingsDatabase>> | null = null;
-
-function getDatabase(): Promise<IDBPDatabase<HostListingsDatabase>> {
-  if (typeof window === "undefined" || !("indexedDB" in window)) {
-    return Promise.reject(new Error("IndexedDB is unavailable"));
-  }
-
-  databasePromise ??= openDB<HostListingsDatabase>(
-    DATABASE_NAME,
-    DATABASE_VERSION,
-    {
-      upgrade(database) {
-        if (!database.objectStoreNames.contains("listings")) {
-          database.createObjectStore("listings", { keyPath: "id" });
-        }
-      },
-    },
-  );
-
-  return databasePromise;
-}
-
-function createListingId(): string {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return `listing-${crypto.randomUUID()}`;
-  }
-
-  return `listing-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-}
 
 function publishStorageChange(): void {
   window.dispatchEvent(new Event(STORAGE_EVENT));
@@ -208,7 +257,9 @@ function isBackendProperty(value: unknown): value is BackendProperty {
       value.status === "FOR_SALE" ||
       value.status === "RENTED" ||
       value.status === "SOLD") &&
-    (!("host" in value) || value.host === null || isBackendPropertyHost(value.host))
+    (!("host" in value) ||
+      value.host === null ||
+      isBackendPropertyHost(value.host))
   );
 }
 
@@ -232,8 +283,8 @@ function isPropertyPortfolio(value: unknown): value is PropertyPortfolio {
   );
 }
 
-function getAccessToken(): string {
-  return localStorage.getItem("rello_token") ?? "";
+function getSessionMarker(): string {
+  return getBrowserSessionMarker();
 }
 
 function getListingRole(property: BackendProperty): HostListingRole {
@@ -276,13 +327,29 @@ function mapBackendProperty(
     title: property.title,
     description: property.description ?? "",
     price: property.price,
-    city: localListing?.city ?? "",
-    area: localListing?.area ?? property.address,
+    city: property.city ?? localListing?.city ?? "",
+    area: property.area ?? localListing?.area ?? property.address,
     address: localListing?.address ?? property.address,
     bedrooms: property.bedrooms,
     bathrooms: property.bathrooms,
     squareFootage: property.squareFootage,
-    amenities: localListing?.amenities ?? [],
+    amenities: property.amenities ?? localListing?.amenities ?? [],
+    // The server is authoritative for pricing; the local copy is only a fallback
+    // for a draft that has never been published
+    rentalMode: property.rentalMode ?? localListing?.rentalMode ?? "ANNUAL",
+    minimumNights:
+      property.minimumNights ?? localListing?.minimumNights ?? undefined,
+    maximumGuests:
+      property.maximumGuests ?? localListing?.maximumGuests ?? undefined,
+    securityDeposit:
+      property.securityDeposit ?? localListing?.securityDeposit ?? undefined,
+    instalmentsAllowed: property.instalmentsAllowed ?? undefined,
+    maxInstalments: property.maxInstalments ?? undefined,
+    cleaningFee: property.cleaningFee ?? localListing?.cleaningFee ?? undefined,
+    unitCount: property.totalUnitCount ?? localListing?.unitCount ?? 1,
+    availableUnitCount:
+      property.availableUnitCount ?? localListing?.availableUnitCount ?? 1,
+    mandateId: localListing?.mandateId,
     photos: localListing?.photos.length
       ? localListing.photos
       : getRemotePhoto(property),
@@ -316,7 +383,7 @@ async function requestBackendProperty(
   path: string,
   init?: RequestInit,
 ): Promise<BackendProperty> {
-  const response = await fetch(`/api/properties/${path}`, init);
+  const response = await apiRequest(`/api/properties/${path}`, init);
   const envelope = await parseApiResponse(response);
 
   if (!isBackendProperty(envelope.data)) {
@@ -326,96 +393,134 @@ async function requestBackendProperty(
   return envelope.data;
 }
 
-async function getStoredListings(): Promise<HostListingRecord[]> {
-  const database = await getDatabase();
-  return database.getAll("listings");
-}
-
-async function persistRecord(
-  record: HostListingRecord,
-): Promise<HostListingStorageResult<HostListingRecord | null>> {
-  try {
-    const database = await getDatabase();
-    await database.put("listings", record);
-    publishStorageChange();
-
-    return { data: record, unavailable: false };
-  } catch {
-    return {
-      data: record,
-      message:
-        "The listing was saved remotely, but local metadata is unavailable.",
-      unavailable: true,
-    };
-  }
-}
-
-async function persistListing(
-  input: HostListingInput,
-  reviewStatus: HostListingReviewStatus,
-): Promise<HostListingStorageResult<HostListingRecord | null>> {
-  try {
-    const database = await getDatabase();
-    const now = new Date().toISOString();
-    const existing = input.id
-      ? await database.get("listings", input.id)
-      : undefined;
-    const record: HostListingRecord = {
-      ...input,
-      id: input.id ?? createListingId(),
-      reviewStatus,
-      createdAt: existing?.createdAt ?? now,
-      updatedAt: now,
-    };
-
-    await database.put("listings", record);
-    publishStorageChange();
-
-    return { data: record, unavailable: false };
-  } catch {
-    return {
-      data: null,
-      message: "Local listing storage is unavailable.",
-      unavailable: true,
-    };
-  }
+/**
+ * A server draft in the shape the listing screens already read.
+ *
+ * Drafts used to live in IndexedDB, so they never left the device they were
+ * started on. The local store is no longer read, but nothing deletes it either:
+ * anything still in there stays recoverable.
+ */
+function draftToRecord(
+  draft: PropertyDraft,
+  role: HostListingRole,
+): HostListingRecord {
+  return {
+    id: `${DRAFT_ID_PREFIX}${draft.id}`,
+    ownerRole: role,
+    listingType: draft.listingType ?? "FOR_RENT",
+    title: draft.title ?? "",
+    description: draft.description ?? "",
+    price: draft.price ?? 0,
+    city: draft.city ?? "",
+    area: draft.area ?? "",
+    address: draft.address ?? "",
+    bedrooms: draft.bedrooms ?? 0,
+    bathrooms: draft.bathrooms ?? 0,
+    squareFootage: draft.squareFootage ?? undefined,
+    amenities: draft.amenities,
+    rentalMode: draft.rentalMode ?? "ANNUAL",
+    minimumNights: draft.minimumNights ?? undefined,
+    maximumGuests: draft.maximumGuests ?? undefined,
+    securityDeposit: draft.securityDeposit ?? undefined,
+    instalmentsAllowed: draft.instalmentsAllowed ?? undefined,
+    maxInstalments: draft.maxInstalments ?? undefined,
+    cleaningFee: draft.cleaningFee ?? undefined,
+    unitCount: draft.unitCount ?? 1,
+    availableUnitCount: draft.unitCount ?? 1,
+    mandateId: draft.mandateId ?? undefined,
+    photos: draft.imageUrls.map((url, index) => ({
+      dataUrl: url,
+      id: `${draft.id}-${index}`,
+      name: `Photo ${index + 1}`,
+      type: "image/jpeg",
+    })),
+    reviewStatus: "DRAFT",
+    createdAt: draft.createdAt,
+    updatedAt: draft.updatedAt,
+  };
 }
 
 function buildPropertyRequest(input: HostListingInput): object {
+  const isShortStay = input.rentalMode === "SHORT_STAY";
+
   return {
     title: input.title,
     description: input.description,
+    // The joined address stays for display; city and area are sent separately so
+    // they can be searched on rather than parsed back out of a string
     address: [input.address, input.area, input.city].filter(Boolean).join(", "),
+    city: input.city,
+    area: input.area,
+    amenities: input.amenities,
     price: input.price,
     bedrooms: input.bedrooms,
     bathrooms: input.bathrooms,
     squareFootage: input.squareFootage ?? 0,
     status: input.listingType,
+    rentalMode: input.rentalMode,
+    // The server clears both for a listing that is not a shortlet, but sending
+    // them only when they apply keeps the request honest
+    minimumNights: isShortStay ? (input.minimumNights ?? 1) : null,
+    maximumGuests: isShortStay ? (input.maximumGuests ?? null) : null,
+    // Any letting can ask for a deposit, not just a shortlet
+    securityDeposit: input.securityDeposit ?? null,
+    instalmentsAllowed:
+      input.rentalMode === "ANNUAL" && input.instalmentsAllowed ? true : null,
+    maxInstalments:
+      input.rentalMode === "ANNUAL" && input.instalmentsAllowed
+        ? (input.maxInstalments ?? 4)
+        : null,
+    cleaningFee: isShortStay ? (input.cleaningFee ?? 0) : null,
+    unitCount: input.unitCount,
+    mandateId: input.mandateId ?? null,
   };
 }
 
-async function uploadCoverPhoto(
+/**
+ * Sends every photo to the gallery, in order. The first becomes the cover.
+ *
+ * Only the first photo used to be uploaded and the rest were dropped on the floor.
+ * Failures are collected rather than thrown, because a listing that saved with four
+ * of its five photos is still worth keeping.
+ */
+async function uploadGallery(
   propertyId: number,
-  photo: HostListingPhoto,
-  token: string,
-): Promise<BackendProperty> {
-  const imageResponse = await fetch(photo.dataUrl);
+  photos: HostListingPhoto[],
+): Promise<string[]> {
+  const failures: string[] = [];
 
-  if (!imageResponse.ok) {
-    throw new Error("The cover photo could not be prepared for upload.");
+  for (const photo of photos) {
+    try {
+      const imageResponse = await apiRequest(photo.dataUrl);
+
+      if (!imageResponse.ok) {
+        throw new Error("could not be read");
+      }
+
+      const formData = new FormData();
+      formData.append("image", await imageResponse.blob(), photo.name);
+
+      const response = await apiRequest(
+        `/api/properties/${propertyId}/images`,
+        {
+          method: "POST",
+          headers: {},
+          body: formData,
+        },
+      );
+
+      if (!response.ok) {
+        const payload: unknown = await response.json().catch(() => null);
+        throw new Error(resolveApiError(payload, "was rejected"));
+      }
+    } catch (error) {
+      failures.push(
+        `${photo.name}: ${error instanceof Error ? error.message : "could not be uploaded"}`,
+      );
+    }
   }
 
-  const image = await imageResponse.blob();
-  const formData = new FormData();
-  formData.append("image", image, photo.name);
-
-  return requestBackendProperty(`${propertyId}/upload-image`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    body: formData,
-  });
+  return failures;
 }
 
 export function subscribeToHostListings(callback: () => void): () => void {
@@ -423,6 +528,12 @@ export function subscribeToHostListings(callback: () => void): () => void {
   return () => window.removeEventListener(STORAGE_EVENT, callback);
 }
 
+/**
+ * Clears the old browser-side listing store.
+ *
+ * Drafts live on the server now and nothing reads this store any more, but logging
+ * out should still leave nothing behind on a shared device.
+ */
 export async function clearHostListingStorage(): Promise<void> {
   if (databasePromise) {
     const database = await databasePromise;
@@ -434,14 +545,73 @@ export async function clearHostListingStorage(): Promise<void> {
   publishStorageChange();
 }
 
+export interface ListingSearch {
+  city?: string;
+  maxPrice?: number;
+  minBedrooms?: number;
+  minPrice?: number;
+  query?: string;
+  rentalMode?: RentalMode;
+  /** PRICE_ASC, PRICE_DESC, BEDROOMS, or nothing for newest first. */
+  sort?: string;
+  stayType?: StayType;
+}
+
+/** Filters the whole catalogue, not the page that happens to be loaded. */
+function searchParams(
+  page: number,
+  size: number,
+  search?: ListingSearch,
+): string {
+  const params = new URLSearchParams({
+    page: String(page),
+    size: String(size),
+  });
+
+  if (search?.query?.trim()) {
+    params.set("query", search.query.trim());
+  }
+
+  if (search?.city) {
+    params.set("city", search.city);
+  }
+
+  if (search?.minPrice !== undefined) {
+    params.set("minPrice", String(search.minPrice));
+  }
+
+  if (search?.maxPrice !== undefined) {
+    params.set("maxPrice", String(search.maxPrice));
+  }
+
+  if (search?.minBedrooms !== undefined) {
+    params.set("minBedrooms", String(search.minBedrooms));
+  }
+
+  if (search?.stayType) {
+    params.set("stayType", search.stayType);
+  }
+
+  if (search?.rentalMode) {
+    params.set("rentalMode", search.rentalMode);
+  }
+
+  if (search?.sort) {
+    params.set("sort", search.sort);
+  }
+
+  return params.toString();
+}
+
 export async function getPublicProperties(
   filter: "all" | "rent" | "sale" = "all",
   page = 0,
   size = 12,
+  search?: ListingSearch,
 ): Promise<PublicPropertiesResult> {
   try {
-    const response = await fetch(
-      `/api/properties/${filter}?page=${page}&size=${size}`,
+    const response = await apiRequest(
+      `/api/properties/${filter}?${searchParams(page, size, search)}`,
     );
     const envelope = await parseApiResponse(response);
 
@@ -473,16 +643,118 @@ export async function getPublicProperties(
   }
 }
 
+/** Mirrors SearchFilters: what a plain-English search was read as. Null was not asked for. */
+export interface SearchFilters {
+  amenities: string[];
+  area: string | null;
+  city: string | null;
+  keywords: string | null;
+  maxPrice: number | null;
+  minBathrooms: number | null;
+  minBedrooms: number | null;
+  minPrice: number | null;
+  minSquareFootage: number | null;
+  rentalMode: RentalMode;
+}
+
+export interface InterpretedPropertiesResult extends PublicPropertiesResult {
+  /** True when the query could not be read and these are plain keyword matches. */
+  fallback: boolean;
+  filters: SearchFilters | null;
+}
+
+function isSearchFilters(value: unknown): value is SearchFilters {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    "rentalMode" in value &&
+    typeof value.rentalMode === "string"
+  );
+}
+
+export async function interpretPublicProperties(
+  query: string,
+  page = 0,
+  size = 12,
+): Promise<InterpretedPropertiesResult> {
+  try {
+    const response = await apiRequest(
+      `/api/search/interpret?${searchParams(page, size)}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: query.trim() }),
+      },
+    );
+    const envelope = await parseApiResponse(response);
+
+    if (
+      !isBackendPage(envelope.data) ||
+      !envelope.data.items.every(isBackendProperty)
+    ) {
+      throw new Error("The search server returned an invalid property list.");
+    }
+
+    const fallback =
+      "fallback" in envelope.data && envelope.data.fallback === true;
+    const filters =
+      "filters" in envelope.data && isSearchFilters(envelope.data.filters)
+        ? {
+            ...envelope.data.filters,
+            amenities: envelope.data.filters.amenities ?? [],
+          }
+        : null;
+
+    return {
+      data: envelope.data.items,
+      fallback,
+      filters,
+      hasNext: envelope.data.hasNext,
+      totalItems: envelope.data.totalItems,
+      unavailable: false,
+    };
+  } catch (error) {
+    return {
+      data: [],
+      fallback: false,
+      filters: null,
+      hasNext: false,
+      message:
+        error instanceof Error ? error.message : "The search could not be run.",
+      totalItems: 0,
+      unavailable: false,
+    };
+  }
+}
+
 export async function getBackendPropertyById(
   id: string,
 ): Promise<HostListingStorageResult<BackendProperty | null>> {
-  // A listing page is public, so this works logged out. The token only adds context.
-  const token = getAccessToken();
-
+  // A listing page is public, so this works logged out. The cookie only adds context.
   try {
     const property = await requestBackendProperty(id, {
-      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      headers: undefined,
     });
+
+    return { data: property, unavailable: false };
+  } catch (error) {
+    return {
+      data: null,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Property could not be loaded.",
+      unavailable: false,
+    };
+  }
+}
+
+/** A published listing by its public identifier. Works logged out. */
+export async function getBackendPropertyByPublicId(
+  publicId: string,
+): Promise<HostListingStorageResult<BackendProperty | null>> {
+  try {
+    const property = await requestBackendProperty(`public/${publicId}`);
 
     return { data: property, unavailable: false };
   } catch (error) {
@@ -500,7 +772,7 @@ export async function getBackendPropertyById(
 export async function getPropertyPortfolio(): Promise<
   HostListingStorageResult<PropertyPortfolio | null>
 > {
-  const token = getAccessToken();
+  const token = getSessionMarker();
 
   if (!token) {
     return {
@@ -511,9 +783,8 @@ export async function getPropertyPortfolio(): Promise<
   }
 
   try {
-    const response = await fetch("/api/properties/portfolio", {
+    const response = await apiRequest("/api/properties/portfolio", {
       headers: {
-        Authorization: `Bearer ${token}`,
       },
     });
     const envelope = await parseApiResponse(response);
@@ -538,18 +809,14 @@ export async function getPropertyPortfolio(): Promise<
 export async function getHostListings(
   role: HostListingRole,
 ): Promise<HostListingStorageResult<HostListingRecord[]>> {
-  let storedListings: HostListingRecord[] = [];
-  let storageUnavailable = false;
-
-  try {
-    storedListings = (await getStoredListings()).filter(
-      (listing) => listing.ownerRole === role,
-    );
-  } catch {
-    storageUnavailable = true;
-  }
-
-  const portfolioResult = await getPropertyPortfolio();
+  const [draftResult, portfolioResult] = await Promise.all([
+    getDrafts(),
+    getPropertyPortfolio(),
+  ]);
+  const storedListings = draftResult.data.map((draft) =>
+    draftToRecord(draft, role),
+  );
+  const storageUnavailable = false;
 
   if (!portfolioResult.data) {
     return {
@@ -590,49 +857,154 @@ export async function getHostListings(
 
 export async function getHostListingById(
   id: string,
+  role: HostListingRole = "landlord",
 ): Promise<HostListingStorageResult<HostListingRecord | null>> {
-  let storedListing: HostListingRecord | undefined;
-  let storageUnavailable = false;
+  if (isDraftId(id)) {
+    const draftResult = await getDraft(toDraftNumber(id));
 
-  try {
-    storedListing = await (await getDatabase()).get("listings", id);
-  } catch {
-    storageUnavailable = true;
+    return {
+      data: draftResult.data ? draftToRecord(draftResult.data, role) : null,
+      message: draftResult.message,
+      unavailable: false,
+    };
   }
 
   if (!/^\d+$/.test(id)) {
-    return {
-      data: storedListing ?? null,
-      unavailable: storageUnavailable,
-    };
+    return { data: null, unavailable: false };
   }
 
   const propertyResult = await getBackendPropertyById(id);
 
   if (!propertyResult.data) {
     return {
-      data: storedListing ?? null,
+      data: null,
       message: propertyResult.message,
-      unavailable: storageUnavailable,
+      unavailable: false,
     };
   }
 
   return {
-    data: mapBackendProperty(propertyResult.data, storedListing),
-    unavailable: storageUnavailable,
+    data: mapBackendProperty(propertyResult.data),
+    unavailable: false,
   };
 }
 
+/**
+ * Saves a draft on the server so it follows the host between devices.
+ *
+ * Photos are uploaded as they are added rather than at publish, which is what
+ * makes a draft opened elsewhere show its pictures instead of an empty gallery.
+ */
 export async function saveHostListingDraft(
   input: HostListingInput,
 ): Promise<HostListingStorageResult<HostListingRecord | null>> {
-  return persistListing(input, "DRAFT");
+  const payload = {
+    title: input.title,
+    description: input.description,
+    address: input.address,
+    city: input.city,
+    area: input.area,
+    price: input.price,
+    bedrooms: input.bedrooms,
+    bathrooms: input.bathrooms,
+    squareFootage: input.squareFootage,
+    listingType: input.listingType,
+    rentalMode: input.rentalMode,
+    minimumNights:
+      input.rentalMode === "SHORT_STAY" ? input.minimumNights : null,
+    maximumGuests:
+      input.rentalMode === "SHORT_STAY" ? (input.maximumGuests ?? null) : null,
+    securityDeposit: input.securityDeposit ?? null,
+    instalmentsAllowed:
+      input.rentalMode === "ANNUAL" && input.instalmentsAllowed ? true : null,
+    maxInstalments:
+      input.rentalMode === "ANNUAL" && input.instalmentsAllowed
+        ? (input.maxInstalments ?? 4)
+        : null,
+    cleaningFee: input.rentalMode === "SHORT_STAY" ? input.cleaningFee : null,
+    unitCount: input.unitCount,
+    mandateId: input.mandateId ?? null,
+    amenities: input.amenities,
+  };
+
+  const existingId =
+    input.id && isDraftId(input.id) ? toDraftNumber(input.id) : null;
+  const result = existingId
+    ? await updateDraft(existingId, payload)
+    : await createDraft(payload);
+
+  if (!result.data) {
+    return { data: null, message: result.message, unavailable: false };
+  }
+
+  const draftId = result.data.id;
+  // Only photos not already on the server, so re-saving does not duplicate them
+  const pending = input.photos.filter((photo) =>
+    photo.dataUrl.startsWith("data:"),
+  );
+  let message: string | undefined;
+
+  for (const photo of pending) {
+    try {
+      const response = await apiRequest(photo.dataUrl);
+      const uploaded = await addDraftImage(
+        draftId,
+        await response.blob(),
+        photo.name,
+      );
+
+      if (!uploaded.data) {
+        message = uploaded.message;
+      }
+    } catch {
+      message = "Some photos could not be uploaded.";
+    }
+  }
+
+  const refreshed = pending.length > 0 ? await getDraft(draftId) : result;
+
+  return {
+    data: draftToRecord(refreshed.data ?? result.data, input.ownerRole),
+    message,
+    unavailable: false,
+  };
+}
+
+/**
+ * Saves any last edits to the draft, then publishes it.
+ *
+ * Publishing is where the listing rules apply, so a rejection here is the server
+ * naming the field that is still missing.
+ */
+async function publishExistingDraft(
+  input: HostListingInput,
+): Promise<HostListingStorageResult<HostListingRecord | null>> {
+  const saved = await saveHostListingDraft(input);
+
+  if (!saved.data) {
+    return saved;
+  }
+
+  const draftId = toDraftNumber(saved.data.id);
+  const published = await publishDraft(draftId);
+
+  if (published.data === null) {
+    return { data: null, message: published.message, unavailable: false };
+  }
+
+  const property = await getBackendPropertyById(String(published.data));
+
+  return {
+    data: property.data ? mapBackendProperty(property.data) : null,
+    message: "Listing published.",
+    unavailable: false,
+  };
 }
 
 export async function submitHostListing(
   input: HostListingInput,
 ): Promise<HostListingStorageResult<HostListingRecord | null>> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
 
   if (!token) {
     return {
@@ -643,55 +1015,47 @@ export async function submitHostListing(
   }
 
   try {
+    // A draft is published rather than recreated: publishing carries its photos
+    // across by reference and stamps the draft so it cannot become a second listing
+    if (input.id && isDraftId(input.id)) {
+      return publishExistingDraft(input);
+    }
+
     const isUpdate = Boolean(input.id && /^\d+$/.test(input.id));
     let property = await requestBackendProperty(
       isUpdate ? (input.id ?? "") : "create",
       {
         method: isUpdate ? "PUT" : "POST",
         headers: {
-          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify(buildPropertyRequest(input)),
       },
     );
 
-    const coverPhoto = input.photos[0];
     let message = isUpdate
       ? "Listing updated successfully."
       : "Listing created successfully.";
 
-    if (coverPhoto) {
+    if (input.photos.length > 0) {
+      const failures = await uploadGallery(property.id, input.photos);
+
+      if (failures.length > 0) {
+        message = `${message} ${failures.length} of ${input.photos.length} photos did not upload. ${failures[0]}`;
+      }
+
+      // The cover is set server side from position zero, so re-read it
       try {
-        property = await uploadCoverPhoto(property.id, coverPhoto, token);
-      } catch (error) {
-        message =
-          error instanceof Error
-            ? `${message} ${error.message}`
-            : `${message} The cover photo could not be uploaded.`;
+        property = await requestBackendProperty(String(property.id));
+      } catch {
+        // The listing saved; only the refreshed copy is missing
       }
     }
 
-    const existing = input.id
-      ? await (await getDatabase()).get("listings", input.id)
-      : undefined;
-    const record = mapBackendProperty(property, {
-      ...input,
-      id: String(property.id),
-      reviewStatus: getReviewStatus(property),
-      createdAt: existing?.createdAt ?? new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    });
-
-    if (input.id && input.id !== record.id) {
-      await (await getDatabase()).delete("listings", input.id);
-    }
-
-    const persisted = await persistRecord(record);
-
     return {
-      ...persisted,
+      data: mapBackendProperty(property),
       message,
+      unavailable: false,
     };
   } catch (error) {
     return {
@@ -700,5 +1064,21 @@ export async function submitHostListing(
         error instanceof Error ? error.message : "Listing could not be saved.",
       unavailable: false,
     };
+  }
+}
+
+/** The cities that actually have something to rent, for the filter menu. */
+export async function getRentalCities(): Promise<string[]> {
+  try {
+    const response = await apiRequest("/api/properties/cities");
+    const envelope = await parseApiResponse(response);
+
+    return Array.isArray(envelope.data)
+      ? envelope.data.filter(
+          (value): value is string => typeof value === "string",
+        )
+      : [];
+  } catch {
+    return [];
   }
 }

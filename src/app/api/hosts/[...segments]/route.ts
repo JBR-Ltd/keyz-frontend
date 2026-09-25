@@ -1,3 +1,5 @@
+import { cacheHeaders, requestIdHeader } from "@/app/api/_requestId";
+
 const API_BASE_URL = process.env.API_BASE_URL;
 const HOST_REQUEST_TIMEOUT_MS = 30000;
 
@@ -30,7 +32,20 @@ export async function GET(
   );
 
   try {
-    const response = await fetch(backendUrl, { signal: controller.signal });
+    const ifNoneMatch = request.headers.get("If-None-Match");
+    const response = await fetch(backendUrl, {
+      headers: ifNoneMatch ? { "If-None-Match": ifNoneMatch } : undefined,
+      signal: controller.signal,
+    });
+
+    // Unchanged since the browser's copy: pass the 304 on, with no body to read
+    if (response.status === 304) {
+      return new Response(null, {
+        status: 304,
+        headers: { ...requestIdHeader(response), ...cacheHeaders(response) },
+      });
+    }
+
     const body = await response.text();
 
     return new Response(body || null, {
@@ -38,6 +53,8 @@ export async function GET(
       headers: {
         "Content-Type":
           response.headers.get("Content-Type") ?? "application/json",
+        ...requestIdHeader(response),
+        ...cacheHeaders(response),
       },
     });
   } catch {

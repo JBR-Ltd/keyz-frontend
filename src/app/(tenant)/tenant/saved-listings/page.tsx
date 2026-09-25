@@ -15,6 +15,7 @@ import Image from "next/image";
 import Link from "next/link";
 import PropertyPrice from "@/components/property/PropertyPrice";
 import TenantVerificationGate from "@/components/tenant/TenantVerificationGate";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import {
   getSavedListings,
@@ -78,9 +79,7 @@ export default function TenantSavedListingsPage(): ReactElement {
       return;
     }
 
-    setListings((current) =>
-      current.filter((item) => item.id !== listing.id),
-    );
+    setListings((current) => current.filter((item) => item.id !== listing.id));
     notify({ title: "Removed from your shortlist", variant: "success" });
   };
 
@@ -115,9 +114,26 @@ export default function TenantSavedListingsPage(): ReactElement {
       ) : null}
 
       {isLoading ? (
-        <p className="py-16 text-center font-body text-sm text-muted">
-          Loading your shortlist...
-        </p>
+        <section
+          className="grid gap-6 xl:grid-cols-[1fr_22rem]"
+          role="status"
+          aria-label="Loading saved listings"
+        >
+          <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+            <Skeleton className="h-[28rem] w-full" />
+            <div className="grid gap-4">
+              <Skeleton className="h-52 w-full" />
+              <Skeleton className="h-52 w-full" />
+            </div>
+          </div>
+          <div className="rounded-lg bg-[var(--color-bg)] p-6 shadow-sm">
+            <Skeleton className="h-7 w-32" />
+            <Skeleton className="mt-5 h-5 w-full" />
+            <Skeleton className="mt-3 h-5 w-4/5" />
+            <Skeleton className="mt-8 h-12 w-full" />
+          </div>
+          <span className="sr-only">Loading saved listings</span>
+        </section>
       ) : listings.length === 0 ? (
         <div className="rounded-lg bg-surface-soft p-10 text-center shadow-sm">
           <Heart size={26} className="mx-auto text-primary" />

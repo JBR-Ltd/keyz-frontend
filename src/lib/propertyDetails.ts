@@ -1,9 +1,18 @@
+import { propertyPublicIdFrom } from "@/lib/publicIds";
+import {
+  DRAFT_IMAGE_FALLBACK,
+  backendPropertyToPropertyDetail,
+} from "@/lib/propertyMapping";
+import type { ListingSearch } from "@/lib/hostListings";
 import {
   getBackendPropertyById,
+  getBackendPropertyByPublicId,
   getHostListingById,
   getPublicProperties,
-  type BackendProperty,
+  interpretPublicProperties,
   type HostListingRecord,
+  type RentalMode,
+  type SearchFilters,
 } from "@/lib/hostListings";
 export type PropertyListingStatus = "FOR_RENT" | "FOR_SALE";
 
@@ -17,6 +26,7 @@ export interface PropertyDetailLocation {
 
 export interface PropertyDetailHost {
   id: string;
+  publicId?: string;
   name: string;
   role: PropertyHostRole;
   avatarUrl?: string;
@@ -34,6 +44,7 @@ export interface PropertyReviewItem {
   rating: number;
   comment: string;
   createdAt: string;
+  reply?: string;
 }
 
 export interface PropertyReviews {
@@ -44,13 +55,26 @@ export interface PropertyReviews {
 
 export interface PropertyDetail {
   id: string;
+  publicId?: string;
+  slug?: string;
   title: string;
   description: string;
   status: PropertyListingStatus;
   price: number;
+  /** What the price is per. Decides how a stay total is worked out. */
+  rentalMode: RentalMode;
+  /** Shortlets only. */
+  minimumNights?: number | null;
+  /** Shortlets only. Null when the host set no limit. */
+  maximumGuests?: number | null;
+  /** Refundable, held by Rello, and returned after the tenancy. */
+  securityDeposit?: number | null;
+  cleaningFee?: number | null;
   location: PropertyDetailLocation;
   bedrooms: number;
   bathrooms: number;
+  totalUnitCount: number;
+  availableUnitCount: number;
   sqft?: number;
   images: string[];
   verified: boolean;
@@ -59,280 +83,6 @@ export interface PropertyDetail {
   tour: PropertyDetailTour;
   reviews: PropertyReviews;
 }
-
-export const MOCK_PROPERTY_DETAILS: PropertyDetail[] = [
-  {
-    id: "ikoyi-garden-residence",
-    title: "Ikoyi Garden Residence",
-    description:
-      "A calm, light-filled apartment minutes from Ikoyi's commercial core. The home pairs generous living areas with reliable power, secure parking, and a responsive verified landlord for tenants who need comfort without slowing down their week.",
-    status: "FOR_RENT",
-    price: 150000,
-    location: {
-      city: "Lagos",
-      area: "Ikoyi",
-      address: "Bourdillon Road, Ikoyi",
-    },
-    bedrooms: 3,
-    bathrooms: 3,
-    sqft: 1850,
-    images: [
-      "https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=1200&h=800&fit=crop&auto=format&q=80",
-      "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=1200&h=800&fit=crop&auto=format&q=80",
-      "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=1200&h=800&fit=crop&auto=format&q=80",
-      "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=1200&h=800&fit=crop&auto=format&q=80",
-    ],
-    verified: true,
-    host: {
-      id: "host-ikoyi-01",
-      name: "Chinedu Okafor",
-      role: "LANDLORD",
-      verified: true,
-    },
-    amenities: [
-      "Wifi",
-      "Parking",
-      "Air Conditioning",
-      "Kitchen",
-      "Security",
-      "Generator",
-    ],
-    tour: {
-      videoUrl:
-        "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
-    },
-    reviews: {
-      averageRating: 4.8,
-      count: 2,
-      items: [
-        {
-          id: "review-ikoyi-1",
-          reviewerName: "Amara Okafor",
-          rating: 5,
-          comment:
-            "The apartment looked exactly like the photos and the handoff was clear. Power backup was reliable throughout my stay.",
-          createdAt: "2026-06-18T10:00:00.000Z",
-        },
-        {
-          id: "review-ikoyi-2",
-          reviewerName: "Tunde Adebayo",
-          rating: 4.5,
-          comment:
-            "Great location for work around Ikoyi. The host responded quickly when I had questions about access.",
-          createdAt: "2026-05-29T12:00:00.000Z",
-        },
-      ],
-    },
-  },
-  {
-    id: "maitama-city-apartment",
-    title: "Maitama City Apartment",
-    description:
-      "A polished four-bedroom apartment in a quiet Maitama pocket with wide rooms, secure access, and city views. Ideal for buyers who want a ready home close to Abuja's civic and business districts.",
-    status: "FOR_SALE",
-    price: 85000000,
-    location: {
-      city: "Abuja",
-      area: "Maitama",
-      address: "Gana Street, Maitama",
-    },
-    bedrooms: 4,
-    bathrooms: 4,
-    sqft: 2600,
-    images: [
-      "https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=1200&h=800&fit=crop&auto=format&q=80",
-      "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=1200&h=800&fit=crop&auto=format&q=80",
-      "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=1200&h=800&fit=crop&auto=format&q=80",
-    ],
-    verified: true,
-    host: {
-      id: "host-maitama-01",
-      name: "Tomi Adeyemi",
-      role: "AGENT",
-      avatarUrl:
-        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=160&h=160&fit=crop&auto=format&q=80",
-      verified: true,
-    },
-    amenities: [
-      "Parking",
-      "Elevator",
-      "Security",
-      "Generator",
-      "Balcony",
-      "Water Supply",
-    ],
-    tour: {
-      matterportUrl: "https://my.matterport.com/show/?m=NUoB8bimH9B",
-    },
-    reviews: {
-      averageRating: 0,
-      count: 0,
-      items: [],
-    },
-  },
-  {
-    id: "lekki-contemporary-home",
-    title: "Lekki Contemporary Home",
-    description:
-      "A compact, modern two-bedroom home with clean finishes and quick access to Lekki Phase 1 restaurants, offices, and waterfront roads. A strong fit for renters who want a managed home base.",
-    status: "FOR_RENT",
-    price: 95000,
-    location: {
-      city: "Lagos",
-      area: "Lekki Phase 1",
-    },
-    bedrooms: 2,
-    bathrooms: 2,
-    images: [
-      "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=1200&h=800&fit=crop&auto=format&q=80",
-      "https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=1200&h=800&fit=crop&auto=format&q=80",
-      "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=1200&h=800&fit=crop&auto=format&q=80",
-    ],
-    verified: true,
-    host: {
-      id: "host-lekki-01",
-      name: "Kemi Balogun",
-      role: "LANDLORD",
-      verified: true,
-    },
-    amenities: ["Wifi", "Air Conditioning", "Kitchen", "Security"],
-    tour: {},
-    reviews: {
-      averageRating: 4.6,
-      count: 1,
-      items: [
-        {
-          id: "review-lekki-1",
-          reviewerName: "Jemimah Cole",
-          rating: 4.6,
-          comment:
-            "Easy viewing process and a clean apartment. The neighborhood was convenient for commuting around Lekki.",
-          createdAt: "2026-04-11T09:30:00.000Z",
-        },
-      ],
-    },
-  },
-  {
-    id: "gra-family-duplex",
-    title: "GRA Family Duplex",
-    description:
-      "A family-ready duplex with generous bedrooms, a private compound, and a quiet GRA address. The listing is verified for buyers comparing secure Port Harcourt homes.",
-    status: "FOR_SALE",
-    price: 64000000,
-    location: {
-      city: "Port Harcourt",
-      area: "GRA",
-    },
-    bedrooms: 4,
-    bathrooms: 3,
-    sqft: 3100,
-    images: [
-      "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=1200&h=800&fit=crop&auto=format&q=80",
-      "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=1200&h=800&fit=crop&auto=format&q=80",
-      "https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=1200&h=800&fit=crop&auto=format&q=80",
-    ],
-    verified: true,
-    host: {
-      id: "host-gra-01",
-      name: "Nnamdi Briggs",
-      role: "AGENT",
-      verified: false,
-    },
-    amenities: ["Parking", "Security", "Garden", "Generator", "Water Supply"],
-    tour: {},
-    reviews: {
-      averageRating: 0,
-      count: 0,
-      items: [],
-    },
-  },
-  {
-    id: "wuse-studio-loft",
-    title: "Wuse Studio Loft",
-    description:
-      "A neat studio loft with efficient storage, managed access, and a central Wuse location for tenants who want a lower-maintenance Abuja base.",
-    status: "FOR_RENT",
-    price: 420000,
-    location: {
-      city: "Abuja",
-      area: "Wuse 2",
-    },
-    bedrooms: 1,
-    bathrooms: 1,
-    sqft: 760,
-    images: [
-      "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=1200&h=800&fit=crop&auto=format&q=80",
-      "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=1200&h=800&fit=crop&auto=format&q=80",
-    ],
-    verified: true,
-    host: {
-      id: "host-wuse-01",
-      name: "Hadiza Musa",
-      role: "LANDLORD",
-      verified: true,
-    },
-    amenities: ["Wifi", "Kitchen", "Security", "Air Conditioning"],
-    tour: {},
-    reviews: {
-      averageRating: 4.3,
-      count: 1,
-      items: [
-        {
-          id: "review-wuse-1",
-          reviewerName: "Seyi Martins",
-          rating: 4.3,
-          comment:
-            "Compact but practical. The location made errands and meetings simple.",
-          createdAt: "2026-03-05T13:00:00.000Z",
-        },
-      ],
-    },
-  },
-  {
-    id: "banana-island-terrace",
-    title: "Banana Island Terrace",
-    description:
-      "A premium terrace home with expansive rooms, private outdoor space, and a verified sale listing in one of Lagos' most established residential enclaves.",
-    status: "FOR_SALE",
-    price: 125000000,
-    location: {
-      city: "Lagos",
-      area: "Banana Island",
-    },
-    bedrooms: 5,
-    bathrooms: 5,
-    sqft: 4200,
-    images: [
-      "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=1200&h=800&fit=crop&auto=format&q=80",
-      "https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=1200&h=800&fit=crop&auto=format&q=80",
-      "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=1200&h=800&fit=crop&auto=format&q=80",
-    ],
-    verified: true,
-    host: {
-      id: "host-banana-01",
-      name: "Adaora Eze",
-      role: "AGENT",
-      verified: true,
-    },
-    amenities: [
-      "Parking",
-      "Pool",
-      "Security",
-      "Generator",
-      "Garden",
-      "Balcony",
-    ],
-    tour: {},
-    reviews: {
-      averageRating: 0,
-      count: 0,
-      items: [],
-    },
-  },
-];
-
-const DRAFT_IMAGE_FALLBACK =
-  "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200&h=800&fit=crop&auto=format&q=80";
 
 function hostListingToPropertyDetail(
   listing: HostListingRecord,
@@ -346,6 +96,11 @@ function hostListingToPropertyDetail(
       listing.description || "This listing is currently saved as a draft.",
     status: listing.listingType,
     price: listing.price,
+    rentalMode: listing.rentalMode ?? "ANNUAL",
+    minimumNights: listing.minimumNights ?? null,
+    maximumGuests: listing.maximumGuests ?? null,
+    securityDeposit: listing.securityDeposit ?? null,
+    cleaningFee: listing.cleaningFee ?? null,
     location: {
       city: listing.city || "Location pending",
       area: listing.area || "Area pending",
@@ -353,6 +108,8 @@ function hostListingToPropertyDetail(
     },
     bedrooms: listing.bedrooms,
     bathrooms: listing.bathrooms,
+    totalUnitCount: listing.unitCount,
+    availableUnitCount: listing.unitCount,
     sqft: listing.squareFootage,
     images:
       listing.photos.length > 0
@@ -375,60 +132,6 @@ function hostListingToPropertyDetail(
   };
 }
 
-function getBackendPropertyLocation(address: string): PropertyDetailLocation {
-  const segments = address
-    .split(",")
-    .map((segment) => segment.trim())
-    .filter(Boolean);
-  const city = segments.at(-1) ?? "Location unavailable";
-  const area = segments.at(-2) ?? segments[0] ?? "Area unavailable";
-
-  return {
-    city,
-    area,
-    address,
-  };
-}
-
-function backendPropertyToPropertyDetail(
-  property: BackendProperty,
-): PropertyDetail {
-  const hostRole: PropertyHostRole =
-    property.host?.role === "AGENT" ? "AGENT" : "LANDLORD";
-  const hostName = property.host?.name ?? "";
-  const verified = property.verified;
-
-  return {
-    id: String(property.id),
-    title: property.title,
-    description: property.description ?? "",
-    status: property.status === "FOR_SALE" ? "FOR_SALE" : "FOR_RENT",
-    price: property.price,
-    location: getBackendPropertyLocation(property.address),
-    bedrooms: property.bedrooms,
-    bathrooms: property.bathrooms,
-    sqft: property.squareFootage,
-    images: [property.imageUrl ?? DRAFT_IMAGE_FALLBACK],
-    verified,
-    host: {
-      id: String(property.host?.id ?? 0),
-      name: hostName || "Property host",
-      role: hostRole,
-      verified: property.host?.identityVerified ?? false,
-    },
-    amenities: [],
-    tour: {
-      videoUrl: property.videoWalkthroughUrl ?? undefined,
-      matterportUrl: property.virtualTourUrl ?? undefined,
-    },
-    reviews: {
-      averageRating: property.host?.rating ?? 0,
-      count: 0,
-      items: [],
-    },
-  };
-}
-
 export interface PropertyQueryResult {
   data: PropertyDetail[];
   hasNext: boolean;
@@ -440,8 +143,9 @@ export async function getProperties(
   filter: "all" | "rent" | "sale" = "all",
   page = 0,
   size = 12,
+  search?: ListingSearch,
 ): Promise<PropertyQueryResult> {
-  const result = await getPublicProperties(filter, page, size);
+  const result = await getPublicProperties(filter, page, size, search);
 
   return {
     data: result.data
@@ -456,23 +160,50 @@ export async function getProperties(
   };
 }
 
+export interface InterpretedPropertyQueryResult extends PropertyQueryResult {
+  fallback: boolean;
+  filters: SearchFilters | null;
+}
+
+export async function interpretProperties(
+  query: string,
+  page = 0,
+  size = 12,
+): Promise<InterpretedPropertyQueryResult> {
+  const result = await interpretPublicProperties(query, page, size);
+
+  return {
+    data: result.data
+      .filter((property) => property.status === "FOR_RENT")
+      .map(backendPropertyToPropertyDetail),
+    fallback: result.fallback,
+    filters: result.filters,
+    hasNext: result.hasNext,
+    message: result.message,
+    totalItems: result.totalItems,
+  };
+}
+
 export async function getPropertyById(
   id: string,
 ): Promise<PropertyDetail | null> {
-  const mockProperty = MOCK_PROPERTY_DETAILS.find(
-    (property) => property.id === id,
-  );
+  // A canonical link ends in the public identifier; the slug before it is ignored
+  const publicId = propertyPublicIdFrom(id);
 
-  if (mockProperty) {
-    return mockProperty;
+  if (publicId) {
+    const publicProperty = await getBackendPropertyByPublicId(publicId);
+
+    return publicProperty.data
+      ? backendPropertyToPropertyDetail(publicProperty.data)
+      : null;
   }
 
   if (/^\d+$/.test(id)) {
     const backendProperty = await getBackendPropertyById(id);
 
-    if (backendProperty.data) {
-      return backendPropertyToPropertyDetail(backendProperty.data);
-    }
+    return backendProperty.data
+      ? backendPropertyToPropertyDetail(backendProperty.data)
+      : null;
   }
 
   const storedListing = await getHostListingById(id);

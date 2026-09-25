@@ -1,7 +1,11 @@
+import { rejectCrossSiteMutation } from "@/app/api/_csrf";
+import { cacheHeaders, requestIdHeader } from "@/app/api/_requestId";
+import { getSessionToken } from "@/app/api/_session";
+
 const API_BASE_URL = process.env.API_BASE_URL;
 const PROPERTY_REQUEST_TIMEOUT_MS = 90000;
 
-type PropertyMethod = "GET" | "POST" | "PUT";
+type PropertyMethod = "DELETE" | "GET" | "PATCH" | "POST" | "PUT";
 
 interface ApiEnvelope {
   data: unknown;
@@ -36,18 +40,36 @@ function createTimeoutSignal(): TimeoutSignal {
   };
 }
 
+/** A listing's public identifier, as the backend issues it. */
+function isPublicPropertyId(value: string): boolean {
+  return /^p_[0-9a-f]{16}$/.test(value);
+}
+
 function isNumericId(value: string): boolean {
   return /^\d+$/.test(value);
 }
 
 function isAllowedRequest(method: PropertyMethod, segments: string[]): boolean {
-  if (method === "GET" && segments.length === 1) {
+  if (method === "GET") {
+    if (segments.length === 1) {
+      return (
+        segments[0] === "all" ||
+        segments[0] === "sale" ||
+        segments[0] === "rent" ||
+        segments[0] === "portfolio" ||
+        isNumericId(segments[0])
+      );
+    }
+
+    if (segments.length === 2 && segments[0] === "public") {
+      return isPublicPropertyId(segments[1]);
+    }
+
+    // A guest needs the gallery and the calendar before they can pick dates
     return (
-      segments[0] === "all" ||
-      segments[0] === "sale" ||
-      segments[0] === "rent" ||
-      segments[0] === "portfolio" ||
-      isNumericId(segments[0])
+      segments.length === 2 &&
+      (isNumericId(segments[0]) || isPublicPropertyId(segments[0])) &&
+      (segments[1] === "images" || segments[1] === "availability")
     );
   }
 
@@ -56,7 +78,34 @@ function isAllowedRequest(method: PropertyMethod, segments: string[]): boolean {
       (segments.length === 1 && segments[0] === "create") ||
       (segments.length === 2 &&
         isNumericId(segments[0]) &&
-        segments[1] === "upload-image")
+        (segments[1] === "upload-image" || segments[1] === "images")) ||
+      (segments.length === 3 &&
+        isNumericId(segments[0]) &&
+        segments[1] === "availability" &&
+        segments[2] === "blocks")
+    );
+  }
+
+  if (method === "PATCH") {
+    return (
+      segments.length === 3 &&
+      isNumericId(segments[0]) &&
+      segments[1] === "images" &&
+      segments[2] === "order"
+    );
+  }
+
+  if (method === "DELETE") {
+    return (
+      (segments.length === 3 &&
+        isNumericId(segments[0]) &&
+        segments[1] === "images" &&
+        isNumericId(segments[2])) ||
+      (segments.length === 4 &&
+        isNumericId(segments[0]) &&
+        segments[1] === "availability" &&
+        segments[2] === "blocks" &&
+        isNumericId(segments[3]))
     );
   }
 
@@ -64,10 +113,25 @@ function isAllowedRequest(method: PropertyMethod, segments: string[]): boolean {
 }
 
 function isPublicRequest(method: PropertyMethod, segments: string[]): boolean {
+  if (method !== "GET") {
+    return false;
+  }
+
+  if (segments.length === 1) {
+    return (
+      segments[0] === "all" || segments[0] === "sale" || segments[0] === "rent"
+    );
+  }
+
+  // Shared links have to open for someone who has never signed in
+  if (segments.length === 2 && segments[0] === "public") {
+    return isPublicPropertyId(segments[1]);
+  }
+
+  // The listing page has to work logged out, gallery and calendar included
   return (
-    method === "GET" &&
-    segments.length === 1 &&
-    (segments[0] === "all" || segments[0] === "sale" || segments[0] === "rent")
+    segments.length === 2 &&
+    (segments[1] === "images" || segments[1] === "availability")
   );
 }
 
@@ -100,6 +164,14 @@ function getAuthenticatedUserId(value: unknown): number | null {
 }
 
 async function proxyResponse(response: Response): Promise<Response> {
+  // Unchanged since the browser's copy: pass the 304 on, with no body to read
+  if (response.status === 304) {
+    return new Response(null, {
+      status: 304,
+      headers: { ...requestIdHeader(response), ...cacheHeaders(response) },
+    });
+  }
+
   const body = await response.text();
   const contentType =
     response.headers.get("Content-Type") ?? "application/json";
@@ -108,6 +180,8 @@ async function proxyResponse(response: Response): Promise<Response> {
     status: response.status,
     headers: {
       "Content-Type": contentType,
+      ...requestIdHeader(response),
+      ...cacheHeaders(response),
     },
   });
 }
@@ -177,6 +251,10 @@ async function handlePropertyRequest(
   context: RouteContext,
   method: PropertyMethod,
 ): Promise<Response> {
+  const rejected = rejectCrossSiteMutation(request);
+
+  if (rejected) return rejected;
+
   const { segments } = await context.params;
 
   if (!isAllowedRequest(method, segments)) {
@@ -199,7 +277,8 @@ async function handlePropertyRequest(
     );
   }
 
-  const authorization = request.headers.get("Authorization");
+  const token = await getSessionToken();
+  const authorization = token ? `Bearer ${token}` : null;
 
   if (
     !isPublicRequest(method, segments) &&
@@ -238,11 +317,15 @@ async function handlePropertyRequest(
       body = await request.arrayBuffer();
     }
 
+    const ifNoneMatch =
+      method === "GET" ? request.headers.get("If-None-Match") : null;
+
     const response = await fetch(backendUrl, {
       method,
       headers: {
         ...(authorization ? { Authorization: authorization } : {}),
         ...(contentType ? { "Content-Type": contentType } : {}),
+        ...(ifNoneMatch ? { "If-None-Match": ifNoneMatch } : {}),
       },
       body,
       signal: timeout.signal,
@@ -298,4 +381,18 @@ export async function PUT(
   context: RouteContext,
 ): Promise<Response> {
   return handlePropertyRequest(request, context, "PUT");
+}
+
+export async function PATCH(
+  request: Request,
+  context: RouteContext,
+): Promise<Response> {
+  return handlePropertyRequest(request, context, "PATCH");
+}
+
+export async function DELETE(
+  request: Request,
+  context: RouteContext,
+): Promise<Response> {
+  return handlePropertyRequest(request, context, "DELETE");
 }

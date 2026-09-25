@@ -8,10 +8,12 @@ import SettingsTabBar from "@/components/settings/SettingsTabBar";
 import NotificationsSection from "@/components/settings/sections/NotificationsSection";
 import PaymentsSection from "@/components/settings/sections/PaymentsSection";
 import PrivacySection from "@/components/settings/sections/PrivacySection";
+import ProfileSection from "@/components/settings/sections/ProfileSection";
 import SecuritySection from "@/components/settings/sections/SecuritySection";
 import { SettingsSectionId } from "@/components/settings/types";
 
 const SECTION_COMPONENTS = {
+  profile: ProfileSection,
   security: SecuritySection,
   notifications: NotificationsSection,
   payments: PaymentsSection,
@@ -21,7 +23,7 @@ const SECTION_COMPONENTS = {
 export default function SettingsView() {
   const pathname = usePathname();
   const [activeSection, setActiveSection] =
-    useState<SettingsSectionId>("security");
+    useState<SettingsSectionId>("profile");
   const reduceMotion = useReducedMotion();
   const ActiveSection = SECTION_COMPONENTS[activeSection];
   const role = pathname.split("/")[1] as

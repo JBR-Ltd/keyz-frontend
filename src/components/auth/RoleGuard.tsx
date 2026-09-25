@@ -1,26 +1,17 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { ReactNode, useEffect, useSyncExternalStore } from "react";
+import { ReactNode, useEffect } from "react";
+import { Loader2 } from "lucide-react";
+import { useAuthentication } from "@/components/auth/AuthProvider";
+import { type AccountRole } from "@/lib/authSession";
 
-export type AccountRole = "TENANT" | "LANDLORD" | "AGENT" | "ADMIN";
+export { isAccountRole } from "@/lib/authSession";
+export type { AccountRole } from "@/lib/authSession";
 
 interface RoleGuardProps {
   children: ReactNode;
   expectedRole: AccountRole;
-}
-
-const ACCOUNT_ROLES: AccountRole[] = ["TENANT", "LANDLORD", "AGENT", "ADMIN"];
-
-export function isAccountRole(value: unknown): value is AccountRole {
-  return (
-    typeof value === "string" &&
-    ACCOUNT_ROLES.includes(value.toUpperCase() as AccountRole)
-  );
-}
-
-function subscribeToAuth(): () => void {
-  return () => undefined;
 }
 
 function getRoleHomePath(role: AccountRole): string {
@@ -29,53 +20,37 @@ function getRoleHomePath(role: AccountRole): string {
     : "/" + role.toLowerCase() + "/dashboard";
 }
 
-function getAuthSnapshot(): string {
-  const token = localStorage.getItem("rello_token") ?? "";
-  const role = localStorage.getItem("rello_role") ?? "";
-
-  return `${token}|${role}`;
-}
-
 export default function RoleGuard({ children, expectedRole }: RoleGuardProps) {
   const router = useRouter();
-  const authSnapshot = useSyncExternalStore(
-    subscribeToAuth,
-    getAuthSnapshot,
-    () => "",
-  );
-  const [token, storedRole] = authSnapshot.split("|");
-  const normalizedRole = isAccountRole(storedRole)
-    ? (storedRole.toUpperCase() as AccountRole)
-    : null;
-  const isAllowed = Boolean(token) && normalizedRole === expectedRole;
+  const authentication = useAuthentication();
+  const role = authentication.user?.role ?? null;
+  const isAllowed =
+    authentication.status === "authenticated" && role === expectedRole;
 
   useEffect(() => {
-    if (!authSnapshot) {
-      return;
-    }
-
-    if (!token || !normalizedRole) {
+    if (authentication.status === "unauthenticated") {
       router.replace("/login");
       return;
     }
 
-    if (normalizedRole !== expectedRole) {
+    if (
+      authentication.status === "authenticated" &&
+      role &&
+      role !== expectedRole
+    ) {
       // This client guard improves navigation UX. Authorization must also be enforced server-side.
-      router.replace(getRoleHomePath(normalizedRole));
+      router.replace(getRoleHomePath(role));
     }
-  }, [authSnapshot, expectedRole, normalizedRole, router, token]);
+  }, [authentication.status, expectedRole, role, router]);
 
   if (!isAllowed) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-primary px-5 text-white">
-        <div className="border border-accent px-8 py-10 text-center">
-          <p className="font-accent text-xs font-bold uppercase tracking-[0.3em] text-accent">
-            Rello
-          </p>
-          <p className="mt-4 font-display text-4xl font-bold">
-            Checking access
-          </p>
-        </div>
+      <main className="flex min-h-screen items-center justify-center bg-bg">
+        <Loader2
+          className="h-8 w-8 animate-spin text-primary"
+          aria-hidden="true"
+        />
+        <span className="sr-only">Loading</span>
       </main>
     );
   }

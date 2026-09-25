@@ -1,7 +1,8 @@
 "use client";
 
+import { apiRequest } from "@/lib/apiRequest";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { EyeIcon, EyeOffIcon, Loader2, X } from "lucide-react";
+import { EyeIcon, EyeOffIcon, Loader2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -11,9 +12,12 @@ import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
 import { isAccountRole } from "@/components/auth/RoleGuard";
 import { useToast } from "@/components/ui/toast";
 import { resolveApiError } from "@/lib/errors";
+import { establishAuthentication, getInstallationId } from "@/lib/authSession";
 
 const loginPhotoUrl =
   "https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=1200&h=1400&fit=crop&auto=format&q=80";
+
+const VERIFY_EMAIL_STORAGE_KEY = "rello_verify_email";
 
 interface LoginFormValues {
   email: string;
@@ -21,9 +25,28 @@ interface LoginFormValues {
 }
 
 interface LoginResponseData {
-  accessToken: string;
+  email: string;
+  firstName: string;
+  lastName: string;
   role: unknown;
   userId: number;
+}
+
+/** What login answers with when the account asks for a second step. */
+interface TwoFactorChallengeData {
+  challengeReference: string;
+  twoFactorRequired: true;
+}
+
+function isTwoFactorChallenge(value: unknown): value is TwoFactorChallengeData {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    "twoFactorRequired" in value &&
+    value.twoFactorRequired === true &&
+    "challengeReference" in value &&
+    typeof value.challengeReference === "string"
+  );
 }
 
 interface ApiEnvelope<TData> {
@@ -45,8 +68,12 @@ function isLoginData(value: unknown): value is LoginResponseData {
   return (
     value !== null &&
     typeof value === "object" &&
-    "accessToken" in value &&
-    typeof value.accessToken === "string" &&
+    "email" in value &&
+    typeof value.email === "string" &&
+    "firstName" in value &&
+    typeof value.firstName === "string" &&
+    "lastName" in value &&
+    typeof value.lastName === "string" &&
     "role" in value &&
     "userId" in value &&
     typeof value.userId === "number"
@@ -57,35 +84,15 @@ function getApiMessage(value: unknown, fallback: string): string {
   return isApiEnvelope(value) ? value.message : fallback;
 }
 
-function createDeviceFingerprint(): string {
-  if (typeof window === "undefined") {
-    return "rello-server";
-  }
-
-  const source = [
-    window.navigator.userAgent,
-    window.navigator.language,
-    window.screen.width,
-    window.screen.height,
-    window.screen.colorDepth,
-    window.devicePixelRatio,
-  ].join("|");
-
-  let hash = 0;
-
-  for (let index = 0; index < source.length; index += 1) {
-    hash = (hash << 5) - hash + source.charCodeAt(index);
-    hash |= 0;
-  }
-
-  return `rello-${Math.abs(hash).toString(36)}`;
-}
-
 export default function LoginPage() {
   const router = useRouter();
   const reduceMotion = useReducedMotion();
   const { notify } = useToast();
-  const [errorMessage, setErrorMessage] = useState("");
+  const [isNavigating, setIsNavigating] = useState(false);
+  /** Set when the password was right but the account wants a code as well. */
+  const [challengeReference, setChallengeReference] = useState("");
+  const [code, setCode] = useState("");
+  const [isVerifying, setIsVerifying] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [successMessage, setSuccessMessage] = useState(() => {
     if (typeof window === "undefined") {
@@ -120,16 +127,77 @@ export default function LoginPage() {
     }
   }, [notify, successMessage]);
 
-  const onSubmit: SubmitHandler<LoginFormValues> = async (values) => {
-    setErrorMessage("");
-    setSuccessMessage("");
+  /** Shared by both steps: a session only exists once this has run. */
+  const startSession = (data: LoginResponseData): void => {
+    if (!isAccountRole(data.role)) {
+      throw new Error(
+        "Unable to determine account type, please contact support",
+      );
+    }
+
+    const role = data.role.toUpperCase();
+    const rolePath = role.toLowerCase();
+
+    if (!establishAuthentication(data)) {
+      throw new Error("Unable to start your session. Please try again.");
+    }
+    notify({ title: "Logged in", variant: "success" });
+    router.replace(
+      role === "TENANT" ? "/tenant/browse" : "/" + rolePath + "/dashboard",
+    );
+  };
+
+  const submitCode = async (): Promise<void> => {
+    setIsVerifying(true);
 
     try {
-      const response = await fetch("/api/auth/login", {
+      const response = await apiRequest("/api/auth/2fa/verify", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Device-Fingerprint": createDeviceFingerprint(),
+          "X-Device-Fingerprint": getInstallationId(),
+        },
+        body: JSON.stringify({
+          reference: challengeReference,
+          code: code.trim(),
+        }),
+      });
+      const data: unknown = await response.json().catch(() => null);
+
+      if (!response.ok || (isApiEnvelope(data) && !data.success)) {
+        throw new Error(resolveApiError(data, "That code is not right."));
+      }
+
+      if (!isApiEnvelope(data) || !isLoginData(data.data)) {
+        throw new Error("That code is not right.");
+      }
+
+      setIsNavigating(true);
+      startSession(data.data);
+    } catch (error) {
+      setIsNavigating(false);
+      const message =
+        error instanceof Error ? error.message : "That code is not right.";
+
+      notify({
+        title: "Could not sign you in",
+        description: message,
+        variant: "error",
+      });
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const onSubmit: SubmitHandler<LoginFormValues> = async (values) => {
+    setSuccessMessage("");
+
+    try {
+      const response = await apiRequest("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Device-Fingerprint": getInstallationId(),
         },
         body: JSON.stringify(values),
       });
@@ -137,42 +205,70 @@ export default function LoginPage() {
       const data: unknown = await response.json().catch(() => null);
 
       if (!response.ok || (isApiEnvelope(data) && !data.success)) {
-        throw new Error(resolveApiError(data, "Login failed"));
+        const errorCode =
+          isApiEnvelope(data) && "code" in data && typeof data.code === "string"
+            ? data.code
+            : null;
+        const errorMessage =
+          isApiEnvelope(data) &&
+          "message" in data &&
+          typeof data.message === "string"
+            ? data.message
+            : "";
+
+        if (
+          errorCode === "EMAIL_NOT_VERIFIED" ||
+          errorMessage.toLowerCase().includes("verify your email")
+        ) {
+          sessionStorage.setItem(VERIFY_EMAIL_STORAGE_KEY, values.email);
+          notify({
+            title: "Verification required",
+            description: "Please verify your email address before logging in.",
+            variant: "error",
+          });
+          router.push(
+            `/verify-email?email=${encodeURIComponent(values.email)}`,
+          );
+          return;
+        }
+
+        if (
+          errorCode === "INVALID_CREDENTIALS" ||
+          (!errorCode && response.status === 401)
+        ) {
+          throw new Error("Incorrect login credentials");
+        }
+        throw new Error(resolveApiError(data, "Incorrect login credentials"));
+      }
+
+      // The password was right, but no session is issued until the code is
+      if (isApiEnvelope(data) && isTwoFactorChallenge(data.data)) {
+        setChallengeReference(data.data.challengeReference);
+        setCode("");
+        notify({
+          title: "Check your email",
+          description: "Enter the six digit code to finish signing in.",
+          variant: "success",
+        });
+        return;
       }
 
       if (isApiEnvelope(data) && isLoginData(data.data)) {
-        if (!isAccountRole(data.data.role)) {
-          throw new Error(
-            "Unable to determine account type, please contact support",
-          );
-        }
-
-        const role = data.data.role.toUpperCase();
-        const rolePath = role.toLowerCase();
-        const redirectPath =
-          role === "TENANT" ? "/tenant/browse" : "/" + rolePath + "/dashboard";
-
-        localStorage.setItem("rello_token", data.data.accessToken);
-        localStorage.setItem("rello_role", role);
-        localStorage.setItem("rello_user_id", String(data.data.userId));
-        notify({
-          title: "Logged in",
-          description: getApiMessage(data, "Login successful"),
-          variant: "success",
-        });
-        router.replace(redirectPath);
+        setIsNavigating(true);
+        startSession(data.data);
         return;
       }
 
       throw new Error(
         isApiEnvelope(data) && data.success
           ? "Unable to determine account type, please contact support"
-          : getApiMessage(data, "Login failed"),
+          : getApiMessage(data, "Incorrect login credentials"),
       );
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Login failed";
+      setIsNavigating(false);
+      const message =
+        error instanceof Error ? error.message : "Incorrect login credentials";
 
-      setErrorMessage(message);
       notify({
         title: "Login failed",
         description: message,
@@ -256,57 +352,53 @@ export default function LoginPage() {
               Pick up right where you left off.
             </motion.p>
 
-            <form className="mt-8 grid gap-5" onSubmit={handleSubmit(onSubmit)}>
-              <AnimatePresence>
-                {successMessage ? (
-                  <motion.div
-                    className="flex items-start justify-between gap-4 rounded-lg border-l-4 border-accent bg-accent/10 p-4 font-body text-sm font-medium text-primary"
-                    initial={reduceMotion ? false : { height: 0, opacity: 0 }}
-                    animate={
-                      reduceMotion ? undefined : { height: "auto", opacity: 1 }
-                    }
-                    exit={reduceMotion ? undefined : { height: 0, opacity: 0 }}
-                    transition={{ duration: 0.2, ease: "easeOut" }}
-                    role="status"
-                  >
-                    <p>{successMessage}</p>
-                    <button
-                      type="button"
-                      aria-label="Dismiss message"
-                      onClick={() => setSuccessMessage("")}
-                      className="flex h-6 w-6 shrink-0 items-center justify-center transition-all duration-200 ease-in-out hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                    >
-                      <X size={16} />
-                    </button>
-                  </motion.div>
-                ) : null}
-              </AnimatePresence>
+            {challengeReference ? (
+              <div className="mt-8 grid gap-5">
+                <p className="font-body text-sm leading-6 text-muted">
+                  Your password was right. We emailed a six digit code to finish
+                  signing in.
+                </p>
 
-              <AnimatePresence>
-                {errorMessage ? (
-                  <motion.div
-                    className="flex items-start justify-between gap-4 rounded-lg border-l-4 border-red-500 bg-red-500/10 p-4 font-body text-sm font-medium text-red-500"
-                    initial={reduceMotion ? false : { height: 0, opacity: 0 }}
-                    animate={
-                      reduceMotion ? undefined : { height: "auto", opacity: 1 }
-                    }
-                    exit={reduceMotion ? undefined : { height: 0, opacity: 0 }}
-                    transition={{ duration: 0.2, ease: "easeOut" }}
-                    role="alert"
-                  >
-                    <p>{errorMessage}</p>
-                    <button
-                      type="button"
-                      aria-label="Dismiss message"
-                      onClick={() => setErrorMessage("")}
-                      className="flex h-6 w-6 shrink-0 items-center justify-center transition-all duration-200 ease-in-out hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                    >
-                      <X size={16} />
-                    </button>
-                  </motion.div>
-                ) : null}
-              </AnimatePresence>
+                <label className="block font-body text-sm font-bold text-primary">
+                  Your code
+                  <input
+                    value={code}
+                    onChange={(event) => setCode(event.target.value)}
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    maxLength={6}
+                    placeholder="000000"
+                    autoFocus
+                    className="mt-2 min-h-14 w-full rounded-lg border border-border bg-bg px-4 font-body text-lg tracking-[0.5em] text-primary outline-none focus:border-accent focus:ring-2 focus:ring-accent/30"
+                  />
+                </label>
 
+                <button
+                  type="button"
+                  onClick={() => void submitCode()}
+                  disabled={isVerifying || code.trim().length < 6}
+                  className="min-h-14 rounded-full bg-primary px-6 font-body text-sm font-bold text-white transition-all duration-200 ease-in-out hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isVerifying ? "Checking..." : "Finish signing in"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setChallengeReference("");
+                    setCode("");
+                  }}
+                  className="font-body text-sm font-medium text-muted transition-colors hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                >
+                  Start again
+                </button>
+              </div>
+            ) : null}
+
+            <form
+              className={`mt-8 grid gap-5 ${challengeReference ? "hidden" : ""}`}
+              onSubmit={handleSubmit(onSubmit)}
+            >
               <motion.label
                 className="block"
                 htmlFor="auth-email"
@@ -423,27 +515,29 @@ export default function LoginPage() {
 
               <motion.button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmitting || isNavigating}
                 className="mt-3 inline-flex min-h-14 w-full items-center justify-center rounded-full bg-accent px-5 py-4 font-body text-base font-medium text-primary transition-all duration-200 ease-in-out hover:scale-[1.01] hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-70"
                 initial={fieldInitial}
                 animate={
-                  isSubmitting && !reduceMotion
+                  (isSubmitting || isNavigating) && !reduceMotion
                     ? { opacity: [1, 0.7, 1], y: 0 }
                     : fieldAnimate
                 }
                 transition={
-                  isSubmitting && !reduceMotion
+                  (isSubmitting || isNavigating) && !reduceMotion
                     ? { duration: 1, repeat: Infinity, ease: "easeInOut" }
                     : { duration: 0.4, delay: 0.56, ease: "easeOut" }
                 }
               >
-                {isSubmitting ? (
+                {isSubmitting || isNavigating ? (
                   <span className="inline-flex items-center gap-2">
                     <Loader2
                       className="h-4 w-4 animate-spin"
                       aria-hidden="true"
                     />
-                    Logging in...
+                    {isNavigating
+                      ? "Taking you to your dashboard..."
+                      : "Logging in..."}
                   </span>
                 ) : (
                   "Log in"

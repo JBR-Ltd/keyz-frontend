@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState, type ReactElement } from "react";
 import {
   ArrowDownLeft,
@@ -12,9 +13,10 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import PropertyPrice from "@/components/property/PropertyPrice";
+import EscrowLedgerSkeleton from "@/components/escrow/EscrowLedgerSkeleton";
 import { useToast } from "@/components/ui/toast";
 import {
-  getMyEscrow,
+  getAllMyEscrow,
   releaseEscrow,
   type EscrowEntry,
   type EscrowStatus,
@@ -25,6 +27,7 @@ const STATUS_LABELS: Record<EscrowStatus, string> = {
   HELD: "Held",
   DISPUTED: "Disputed",
   RELEASING: "Paying out",
+  REFUNDING: "Refund on its way",
   RELEASED: "Released",
   REFUNDED: "Refunded",
   FAILED: "Failed",
@@ -35,6 +38,7 @@ const STATUS_TONES: Record<EscrowStatus, string> = {
   HELD: "bg-primary/5 text-primary shadow-sm",
   DISPUTED: "bg-red-700/10 text-red-700 shadow-sm",
   RELEASING: "bg-accent/10 text-primary shadow-sm",
+  REFUNDING: "bg-accent/10 text-primary shadow-sm",
   RELEASED: "bg-bg text-primary shadow-sm",
   REFUNDED: "bg-bg text-primary shadow-sm",
   FAILED: "bg-red-700/10 text-red-700 shadow-sm",
@@ -50,7 +54,7 @@ export default function TenantEscrowPage(): ReactElement {
   useEffect(() => {
     let active = true;
 
-    void getMyEscrow().then((result) => {
+    void getAllMyEscrow().then((result) => {
       if (!active) {
         return;
       }
@@ -104,6 +108,10 @@ export default function TenantEscrowPage(): ReactElement {
     notify({ title: "Funds released to the host", variant: "success" });
   };
 
+  if (isLoading) {
+    return <EscrowLedgerSkeleton />;
+  }
+
   return (
     <main className="min-h-screen overflow-x-hidden px-5 py-10 sm:px-8 lg:px-10 lg:py-14 xl:px-14">
       <section className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
@@ -112,11 +120,12 @@ export default function TenantEscrowPage(): ReactElement {
             Escrow command
           </p>
           <h1 className="mt-5 font-display text-5xl font-bold leading-[0.9] sm:text-6xl">
-            <PropertyPrice value={totals.held} /> protected right now.
+            {loadError ? "Unavailable" : <PropertyPrice value={totals.held} />} protected right now.
           </h1>
           <p className="mt-5 max-w-xl font-body text-base leading-7 text-muted">
-            Money you have paid stays with Rello until you confirm you moved in.
-            The host is paid only after you release it.
+            Money you pay stays with Rello until you move in. The host is paid
+            when you release it, or a few days after move-in if you have not
+            reported a problem.
           </p>
           <div className="mt-8 grid gap-4 sm:grid-cols-2">
             <div className="rounded-lg bg-primary/5 p-5 shadow-sm">
@@ -125,7 +134,7 @@ export default function TenantEscrowPage(): ReactElement {
                 Awaiting payment
               </p>
               <p className="mt-2 font-display text-3xl font-bold">
-                <PropertyPrice value={totals.awaiting} />
+                {loadError ? "Unavailable" : <PropertyPrice value={totals.awaiting} />}
               </p>
             </div>
             <div className="rounded-lg bg-primary/5 p-5 shadow-sm">
@@ -134,7 +143,7 @@ export default function TenantEscrowPage(): ReactElement {
                 Released to hosts
               </p>
               <p className="mt-2 font-display text-3xl font-bold">
-                <PropertyPrice value={totals.released} />
+                {loadError ? "Unavailable" : <PropertyPrice value={totals.released} />}
               </p>
             </div>
           </div>
@@ -200,8 +209,8 @@ export default function TenantEscrowPage(): ReactElement {
 
               {nextRelease.status === "DISPUTED" ? (
                 <p className="mt-4 font-body text-sm leading-6 text-red-700">
-                  A dispute is open on this booking, so nothing can move until it
-                  is settled.
+                  A dispute is open on this booking, so nothing can move until
+                  it is settled.
                 </p>
               ) : null}
             </>
@@ -254,6 +263,46 @@ export default function TenantEscrowPage(): ReactElement {
                   <p className="mt-1 font-body text-sm text-muted">
                     {entry.host?.name ?? "Host"}
                   </p>
+                  {entry.reference ? (
+                    <p className="mt-1 font-mono text-xs text-muted">
+                      Ref {entry.reference}
+                    </p>
+                  ) : null}
+                  {entry.heldAt ? (
+                    <Link
+                      href={`/receipts/payment/${entry.id}`}
+                      className="mt-1 inline-block font-body text-xs font-bold text-accent-alt underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    >
+                      Receipt
+                    </Link>
+                  ) : null}
+                  {entry.status === "REFUNDED" && entry.refundedAt ? (
+                    <p className="mt-1 font-body text-xs text-muted">
+                      Refunded{" "}
+                      {new Date(entry.refundedAt).toLocaleDateString("en-NG", {
+                        dateStyle: "medium",
+                      })}
+                    </p>
+                  ) : null}
+                  {entry.status === "REFUNDING" ? (
+                    <p className="mt-1 font-body text-xs text-muted">
+                      Usually reaches your account within a few working days
+                    </p>
+                  ) : null}
+                  {entry.depositAmount ? (
+                    <p className="mt-1 font-body text-xs text-muted">
+                      Includes a{" "}
+                      <PropertyPrice value={entry.depositAmount} /> refundable
+                      deposit
+                      {entry.depositStatus === "RETURNED"
+                        ? ", returned to you"
+                        : entry.depositStatus === "CLAIMED"
+                          ? ", claimed by the host and being decided"
+                          : entry.depositStatus === "SETTLED"
+                            ? ", settled by Rello"
+                            : ", returned when the tenancy ends"}
+                    </p>
+                  ) : null}
                 </div>
               </div>
               <p className="font-display text-2xl font-bold text-primary">
@@ -272,7 +321,10 @@ export default function TenantEscrowPage(): ReactElement {
       <section className="mt-8 grid gap-5 md:grid-cols-3">
         {[
           ["Dispute shield", "Opening a dispute freezes the money immediately"],
-          ["You hold the key", "The host is paid only when you release"],
+          [
+            "You hold the key",
+            "The host is paid when you release, or a few days after move-in if nothing is reported",
+          ],
           ["Audit trail", "Every movement is recorded against the booking"],
         ].map(([title, text]) => (
           <div key={title} className="rounded-lg bg-surface-soft p-5 shadow-sm">
@@ -280,7 +332,9 @@ export default function TenantEscrowPage(): ReactElement {
             <p className="mt-4 font-body text-base font-bold text-primary">
               {title}
             </p>
-            <p className="mt-2 font-body text-sm leading-6 text-muted">{text}</p>
+            <p className="mt-2 font-body text-sm leading-6 text-muted">
+              {text}
+            </p>
           </div>
         ))}
       </section>

@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -9,16 +10,32 @@ import {
   type ReactElement,
 } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Loader2, MapPin, RotateCcw, Search, SearchX, X } from "lucide-react";
-import Image from "next/image";
-import Link from "next/link";
+import {
+  Loader2,
+  MapPin,
+  RotateCcw,
+  Search,
+  SearchX,
+  SlidersHorizontal,
+  Sparkles,
+  X,
+} from "lucide-react";
 import PropertyCard from "@/components/public/PropertyCard";
 import OverlayPortal from "@/components/ui/OverlayPortal";
 import { Select, type SelectOption } from "@/components/ui/select";
-import { StatusBadge } from "@/components/ui/status-badge";
 import { useToast } from "@/components/ui/toast";
-import { TENANT_ACTIVITIES, TENANT_STATUS_TONES } from "@/lib/tenantActivity";
-import { getProperties, type PropertyDetail } from "@/lib/propertyDetails";
+import ActivityFeed from "@/components/dashboard/ActivityFeed";
+import type {
+  ListingSearch,
+  RentalMode,
+  SearchFilters,
+} from "@/lib/hostListings";
+import {
+  getProperties,
+  interpretProperties,
+  type InterpretedPropertyQueryResult,
+  type PropertyDetail,
+} from "@/lib/propertyDetails";
 import {
   getSavedListings,
   removeSavedListing,
@@ -26,6 +43,7 @@ import {
 } from "@/lib/savedListings";
 import { publishTenantHeaderSearch } from "@/lib/tenantHeaderSearch";
 import { useDialogFocus } from "@/lib/useDialogFocus";
+import { createSavedSearch, getSavedSearches } from "@/lib/marketplace";
 
 // === Types
 
@@ -38,6 +56,18 @@ type PriceFilter =
   | "over-500000";
 type SortOption = "recommended" | "price-low" | "price-high" | "bedrooms";
 
+/**
+ * Which kind of stay the searcher is after.
+ *
+ * Someone looking for a home and someone looking for a weekend want different
+ * results from the same supply, so this filters rather than merely relabels.
+ */
+type StayMode = "all" | "long" | "short";
+type LongTermPeriod = "all" | "ANNUAL" | "MONTHLY";
+
+/** Keywords filter the catalogue directly; describe sends plain English to be read into filters. */
+type SearchMode = "keywords" | "describe";
+
 interface AppliedFilter {
   id: string;
   label: string;
@@ -48,6 +78,32 @@ interface AppliedFilter {
 
 const PAGE_SIZE = 12;
 
+/** The backend refuses longer descriptions. */
+const DESCRIBE_QUERY_MAX_LENGTH = 300;
+
+const SEARCH_MODES: { id: SearchMode; label: string }[] = [
+  { id: "keywords", label: "Keywords" },
+  { id: "describe", label: "Describe it" },
+];
+
+const STAY_MODES: { hint: string; id: StayMode; label: string }[] = [
+  { hint: "Everything available", id: "all", label: "All stays" },
+  { hint: "Rented by the month or year", id: "long", label: "Homes to rent" },
+  { hint: "Booked by the night", id: "short", label: "Shortlets" },
+];
+
+const STICKY_STAY_MODE_OPTIONS: SelectOption[] = [
+  { label: "All stays", value: "all" },
+  { label: "Rent", value: "long" },
+  { label: "Shortlets", value: "short" },
+];
+
+const LONG_TERM_PERIOD_OPTIONS: SelectOption[] = [
+  { label: "Any period", value: "all" },
+  { label: "Annual rent", value: "ANNUAL" },
+  { label: "Monthly rent", value: "MONTHLY" },
+];
+
 const BEDROOM_OPTIONS: SelectOption[] = [
   { label: "Any bedrooms", value: "all" },
   { label: "1+ bedrooms", value: "1" },
@@ -56,12 +112,12 @@ const BEDROOM_OPTIONS: SelectOption[] = [
   { label: "4+ bedrooms", value: "4" },
 ];
 
-const PRICE_OPTIONS: SelectOption[] = [
-  { label: "Any monthly price", value: "all" },
-  { label: "Under ₦100,000", value: "under-100000" },
-  { label: "₦100,000 to ₦250,000", value: "100000-250000" },
-  { label: "₦250,000 to ₦500,000", value: "250000-500000" },
-  { label: "Above ₦500,000", value: "over-500000" },
+const STICKY_BEDROOM_OPTIONS: SelectOption[] = [
+  { label: "Any beds", value: "all" },
+  { label: "1+ beds", value: "1" },
+  { label: "2+ beds", value: "2" },
+  { label: "3+ beds", value: "3" },
+  { label: "4+ beds", value: "4" },
 ];
 
 const SORT_OPTIONS: SelectOption[] = [
@@ -71,27 +127,137 @@ const SORT_OPTIONS: SelectOption[] = [
   { label: "Most bedrooms", value: "bedrooms" },
 ];
 
-const activeActivities = TENANT_ACTIVITIES.filter(
-  (activity) =>
-    activity.status === "Escrow Held" ||
-    activity.status === "Upcoming" ||
-    activity.status === "Pending",
-);
-const visibleActivities = activeActivities.slice(0, 3);
-const remainingActivityCount = activeActivities.length - visibleActivities.length;
+const PRICE_PERIOD_LABELS: Record<RentalMode, string> = {
+  ANNUAL: "annual rent",
+  MONTHLY: "monthly rent",
+  SHORT_STAY: "nightly price",
+};
+
+const PRICE_PERIOD_SUFFIXES: Record<RentalMode, string> = {
+  ANNUAL: "/yr",
+  MONTHLY: "/mo",
+  SHORT_STAY: "/night",
+};
 
 // === Helpers
 
-function matchesPrice(price: number, filter: PriceFilter): boolean {
-  if (filter === "under-100000") return price < 100000;
-  if (filter === "100000-250000") return price >= 100000 && price <= 250000;
-  if (filter === "250000-500000") return price > 250000 && price <= 500000;
-  if (filter === "over-500000") return price > 500000;
-  return true;
-}
+/** The price bands the menu offers, as the bounds the query takes. */
+const PRICE_BOUNDS: Record<
+  PriceFilter,
+  [number | undefined, number | undefined]
+> = {
+  all: [undefined, undefined],
+  "under-100000": [undefined, 100000],
+  "100000-250000": [100000, 250000],
+  "250000-500000": [250000, 500000],
+  "over-500000": [500000, undefined],
+};
+
+/** What the server calls each ordering. Recommended is its default, so it sends none. */
+const SORT_PARAMS: Record<SortOption, string | undefined> = {
+  recommended: undefined,
+  "price-low": "PRICE_ASC",
+  "price-high": "PRICE_DESC",
+  bedrooms: "BEDROOMS",
+};
 
 function getOptionLabel(options: SelectOption[], value: string): string {
   return options.find((option) => option.value === value)?.label ?? value;
+}
+
+function priceOptionsFor(
+  rentalMode: RentalMode | undefined,
+  compact = false,
+): SelectOption[] {
+  const period = rentalMode ? PRICE_PERIOD_LABELS[rentalMode] : "price";
+  const suffix = rentalMode ? PRICE_PERIOD_SUFFIXES[rentalMode] : "";
+
+  return [
+    { label: `Any ${period}`, value: "all" },
+    {
+      label: `Under ₦${compact ? "100k" : "100,000"}${suffix}`,
+      value: "under-100000",
+    },
+    {
+      label: `₦${compact ? "100k–250k" : "100,000–250,000"}${suffix}`,
+      value: "100000-250000",
+    },
+    {
+      label: `₦${compact ? "250k–500k" : "250,000–500,000"}${suffix}`,
+      value: "250000-500000",
+    },
+    {
+      label: `Above ₦${compact ? "500k" : "500,000"}${suffix}`,
+      value: "over-500000",
+    },
+  ];
+}
+
+function formatNaira(amount: number): string {
+  return `₦${amount.toLocaleString("en-NG")}`;
+}
+
+/** Shows the reading back, so a bad reading is visible rather than just a surprising list. */
+function getInterpretationLabels(filters: SearchFilters): string[] {
+  const labels: string[] = [];
+  const place = [filters.area, filters.city].filter(Boolean).join(", ");
+  const { maxPrice, minPrice } = filters;
+
+  if (place) {
+    labels.push(place);
+  }
+
+  if (typeof minPrice === "number" && typeof maxPrice === "number") {
+    labels.push(`${formatNaira(minPrice)} to ${formatNaira(maxPrice)}`);
+  } else if (typeof maxPrice === "number") {
+    labels.push(`Under ${formatNaira(maxPrice)}`);
+  } else if (typeof minPrice === "number") {
+    labels.push(`Above ${formatNaira(minPrice)}`);
+  }
+
+  if (typeof filters.minBedrooms === "number") {
+    labels.push(`${filters.minBedrooms}+ bedrooms`);
+  }
+
+  if (typeof filters.minBathrooms === "number") {
+    labels.push(`${filters.minBathrooms}+ bathrooms`);
+  }
+
+  if (typeof filters.minSquareFootage === "number") {
+    labels.push(`${filters.minSquareFootage.toLocaleString("en-NG")}+ sqft`);
+  }
+
+  labels.push(
+    filters.rentalMode === "SHORT_STAY" ? "Shortlets" : "Homes to rent",
+  );
+  labels.push(...filters.amenities);
+
+  if (filters.keywords) {
+    labels.push(filters.keywords);
+  }
+
+  return labels;
+}
+
+/** Keyword filters stay set while describing so they come back later, but they are hidden, so they must not narrow results. */
+async function requestListings(
+  mode: SearchMode,
+  query: string,
+  search: ListingSearch,
+  page: number,
+): Promise<InterpretedPropertyQueryResult> {
+  if (mode === "describe" && query) {
+    return interpretProperties(query, page, PAGE_SIZE);
+  }
+
+  const result = await getProperties(
+    "rent",
+    page,
+    PAGE_SIZE,
+    mode === "describe" ? undefined : search,
+  );
+
+  return { ...result, fallback: false, filters: null };
 }
 
 // === Component
@@ -110,35 +276,164 @@ export default function TenantBrowsePage(): ReactElement {
   const [retryKey, setRetryKey] = useState(0);
   const [queryInput, setQueryInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [city, setCity] = useState("all");
   const [priceFilter, setPriceFilter] = useState<PriceFilter>("all");
   const [bedroomFilter, setBedroomFilter] = useState<BedroomFilter>("all");
   const [sort, setSort] = useState<SortOption>("recommended");
+  const [stayMode, setStayMode] = useState<StayMode>("all");
+  const [longTermPeriod, setLongTermPeriod] = useState<LongTermPeriod>("all");
   const [savedIds, setSavedIds] = useState<Set<string>>(() => new Set());
+  const [isSavedLoading, setIsSavedLoading] = useState(true);
   const [savingIds, setSavingIds] = useState<Set<string>>(() => new Set());
+  const [isSavingSearch, setIsSavingSearch] = useState(false);
+  const searchGeneration = useRef(0);
+  const paginationGeneration = useRef<number | null>(null);
   const [isHeaderSearchVisible, setIsHeaderSearchVisible] = useState(false);
+  const [searchMode, setSearchMode] = useState<SearchMode>("keywords");
+  const [interpretation, setInterpretation] = useState<SearchFilters | null>(
+    null,
+  );
+  const [isFallback, setIsFallback] = useState(false);
   const desktopSearchRef = useRef<HTMLFormElement>(null);
   const dialogRef = useDialogFocus<HTMLDivElement>(isSearchSheetOpen);
+  const isDescribing = searchMode === "describe";
+
+  /** Every filter is sent before pagination, so later-page matches remain visible. */
+  // An alert email links to /tenant/browse?search={id}; open that search's filters
+  useEffect(() => {
+    const savedSearchId = Number(
+      new URLSearchParams(window.location.search).get("search"),
+    );
+
+    if (!savedSearchId) {
+      return;
+    }
+
+    let active = true;
+
+    void getSavedSearches().then((result) => {
+      const saved = result.data.find((item) => item.id === savedSearchId);
+
+      if (!active || !saved) {
+        return;
+      }
+
+      const bucket = (Object.keys(PRICE_BOUNDS) as PriceFilter[]).find(
+        (key) =>
+          PRICE_BOUNDS[key][0] === (saved.minPrice ?? undefined) &&
+          PRICE_BOUNDS[key][1] === (saved.maxPrice ?? undefined),
+      );
+
+      setQueryInput(saved.query ?? "");
+      setSearchQuery(saved.query ?? "");
+      if (saved.rentalMode === "SHORT_STAY") {
+        setStayMode("short");
+        setLongTermPeriod("all");
+      } else if (
+        saved.rentalMode === "ANNUAL" ||
+        saved.rentalMode === "MONTHLY"
+      ) {
+        setStayMode("long");
+        setLongTermPeriod(saved.rentalMode);
+      } else if (saved.stayType === "SHORT_STAY") {
+        setStayMode("short");
+        setLongTermPeriod("all");
+      } else if (saved.stayType === "LONG_TERM") {
+        setStayMode("long");
+        setLongTermPeriod("all");
+      } else {
+        setStayMode("all");
+        setLongTermPeriod("all");
+      }
+      setPriceFilter(bucket ?? "all");
+      setBedroomFilter(
+        saved.minBedrooms && saved.minBedrooms >= 1 && saved.minBedrooms <= 4
+          ? (String(saved.minBedrooms) as BedroomFilter)
+          : "all",
+      );
+    });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const exactRentalMode: RentalMode | undefined =
+    stayMode === "short"
+      ? "SHORT_STAY"
+      : stayMode === "long" && longTermPeriod !== "all"
+        ? longTermPeriod
+        : undefined;
+  const priceControlsEnabled = Boolean(exactRentalMode);
+  const priceOptions = useMemo(
+    () => priceOptionsFor(exactRentalMode),
+    [exactRentalMode],
+  );
+  const stickyPriceOptions = useMemo(
+    () => priceOptionsFor(exactRentalMode, true),
+    [exactRentalMode],
+  );
+  const sortOptions = useMemo(
+    () =>
+      SORT_OPTIONS.map((option) => ({
+        ...option,
+        disabled:
+          !priceControlsEnabled &&
+          (option.value === "price-low" || option.value === "price-high"),
+      })),
+    [priceControlsEnabled],
+  );
+
+  const search = useMemo<ListingSearch>(() => {
+    const [minPrice, maxPrice] = PRICE_BOUNDS[priceFilter];
+
+    return {
+      query: searchQuery.trim() || undefined,
+      minPrice,
+      maxPrice,
+      minBedrooms: bedroomFilter === "all" ? undefined : Number(bedroomFilter),
+      rentalMode: exactRentalMode,
+      sort: SORT_PARAMS[sort],
+      stayType:
+        stayMode === "long"
+          ? "LONG_TERM"
+          : stayMode === "short"
+            ? "SHORT_STAY"
+            : undefined,
+    };
+  }, [
+    bedroomFilter,
+    exactRentalMode,
+    priceFilter,
+    searchQuery,
+    sort,
+    stayMode,
+  ]);
 
   useEffect(() => {
     let active = true;
+    const generation = ++searchGeneration.current;
+    paginationGeneration.current = null;
 
     const loadProperties = async (): Promise<void> => {
       setPropertiesLoading(true);
+      setIsLoadingMore(false);
       setPropertyError("");
 
-      const [propertyResult, savedResult] = await Promise.all([
-        getProperties("rent", 0, PAGE_SIZE),
-        getSavedListings(),
-      ]);
+      const propertyResult = await requestListings(
+        searchMode,
+        searchQuery,
+        search,
+        0,
+      );
 
-      if (!active) return;
+      if (!active || searchGeneration.current !== generation) return;
 
       setProperties(propertyResult.data);
       setHasNext(propertyResult.hasNext);
       setTotalItems(propertyResult.totalItems);
       setPropertyError(propertyResult.message ?? "");
-      setSavedIds(new Set(savedResult.data.map((listing) => String(listing.id))));
+      setInterpretation(propertyResult.filters);
+      setIsFallback(propertyResult.fallback);
       setPage(0);
       setPropertiesLoading(false);
     };
@@ -147,8 +442,24 @@ export default function TenantBrowsePage(): ReactElement {
 
     return () => {
       active = false;
+      searchGeneration.current = generation + 1;
     };
-  }, [retryKey]);
+  }, [retryKey, search, searchMode, searchQuery]);
+
+  useEffect(() => {
+    let active = true;
+
+    void getSavedListings().then((result) => {
+      if (!active) return;
+
+      setSavedIds(new Set(result.data.map((listing) => String(listing.id))));
+      setIsSavedLoading(false);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!isSearchSheetOpen) return;
@@ -187,47 +498,34 @@ export default function TenantBrowsePage(): ReactElement {
     };
   }, []);
 
-  const cityOptions = useMemo<SelectOption[]>(() => {
-    const cities = Array.from(
-      new Set(properties.map((property) => property.location.city).filter(Boolean)),
-    ).sort((left, right) => left.localeCompare(right));
+  const changeStayMode = useCallback(
+    (mode: StayMode): void => {
+      if (mode === stayMode) return;
 
-    return [
-      { label: "Any city", value: "all" },
-      ...cities.map((value) => ({ label: value, value })),
-    ];
-  }, [properties]);
+      setStayMode(mode);
+      setLongTermPeriod("all");
+      setPriceFilter("all");
+      if (sort === "price-low" || sort === "price-high") {
+        setSort("recommended");
+      }
+      setPage(0);
+    },
+    [sort, stayMode],
+  );
 
-  const visibleProperties = useMemo(() => {
-    const normalizedQuery = searchQuery.trim().toLowerCase();
-    const minimumBedrooms = bedroomFilter === "all" ? 0 : Number(bedroomFilter);
-    const filtered = properties.filter((property) => {
-      const locationText = [
-        property.title,
-        property.description,
-        property.location.address,
-        property.location.area,
-        property.location.city,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
+  const changeLongTermPeriod = useCallback(
+    (period: LongTermPeriod): void => {
+      if (period === longTermPeriod) return;
 
-      return (
-        (!normalizedQuery || locationText.includes(normalizedQuery)) &&
-        (city === "all" || property.location.city === city) &&
-        property.bedrooms >= minimumBedrooms &&
-        matchesPrice(property.price, priceFilter)
-      );
-    });
-
-    return [...filtered].sort((left, right) => {
-      if (sort === "price-low") return left.price - right.price;
-      if (sort === "price-high") return right.price - left.price;
-      if (sort === "bedrooms") return right.bedrooms - left.bedrooms;
-      return 0;
-    });
-  }, [bedroomFilter, city, priceFilter, properties, searchQuery, sort]);
+      setLongTermPeriod(period);
+      setPriceFilter("all");
+      if (sort === "price-low" || sort === "price-high") {
+        setSort("recommended");
+      }
+      setPage(0);
+    },
+    [longTermPeriod, sort],
+  );
 
   const appliedFilters = useMemo<AppliedFilter[]>(() => {
     const filters: AppliedFilter[] = [];
@@ -235,7 +533,7 @@ export default function TenantBrowsePage(): ReactElement {
     if (searchQuery) {
       filters.push({
         id: "location",
-        label: searchQuery,
+        label: isDescribing ? `"${searchQuery}"` : searchQuery,
         remove: () => {
           setQueryInput("");
           setSearchQuery("");
@@ -243,14 +541,14 @@ export default function TenantBrowsePage(): ReactElement {
       });
     }
 
-    if (city !== "all") {
-      filters.push({ id: "city", label: city, remove: () => setCity("all") });
+    if (isDescribing) {
+      return filters;
     }
 
     if (priceFilter !== "all") {
       filters.push({
         id: "price",
-        label: getOptionLabel(PRICE_OPTIONS, priceFilter),
+        label: getOptionLabel(priceOptions, priceFilter),
         remove: () => setPriceFilter("all"),
       });
     }
@@ -263,16 +561,48 @@ export default function TenantBrowsePage(): ReactElement {
       });
     }
 
+    if (stayMode !== "all") {
+      filters.push({
+        id: "stay",
+        label:
+          STAY_MODES.find((mode) => mode.id === stayMode)?.label ?? stayMode,
+        remove: () => changeStayMode("all"),
+      });
+    }
+
+    if (stayMode === "long" && longTermPeriod !== "all") {
+      filters.push({
+        id: "period",
+        label: getOptionLabel(LONG_TERM_PERIOD_OPTIONS, longTermPeriod),
+        remove: () => changeLongTermPeriod("all"),
+      });
+    }
+
     return filters;
-  }, [bedroomFilter, city, priceFilter, searchQuery]);
+  }, [
+    bedroomFilter,
+    changeLongTermPeriod,
+    changeStayMode,
+    isDescribing,
+    longTermPeriod,
+    priceFilter,
+    priceOptions,
+    searchQuery,
+    stayMode,
+  ]);
 
   const clearFilters = (): void => {
     setQueryInput("");
     setSearchQuery("");
-    setCity("all");
+
+    // Keyword filters are only hidden while describing, so they come back as they were
+    if (isDescribing) return;
+
     setPriceFilter("all");
     setBedroomFilter("all");
     setSort("recommended");
+    setStayMode("all");
+    setLongTermPeriod("all");
   };
 
   const submitSearch = (event?: FormEvent): void => {
@@ -281,11 +611,42 @@ export default function TenantBrowsePage(): ReactElement {
     setIsSearchSheetOpen(false);
   };
 
+  const changeSearchMode = (mode: SearchMode): void => {
+    if (mode === searchMode) return;
+
+    setSearchMode(mode);
+    setSearchQuery("");
+    if (mode === "describe") {
+      setQueryInput((current) => current.slice(0, DESCRIBE_QUERY_MAX_LENGTH));
+    }
+  };
+
   const loadMore = async (): Promise<void> => {
+    const generation = searchGeneration.current;
+
+    if (
+      propertiesLoading ||
+      !hasNext ||
+      paginationGeneration.current === generation
+    ) {
+      return;
+    }
+
+    paginationGeneration.current = generation;
     const nextPage = page + 1;
     setIsLoadingMore(true);
     setPropertyError("");
-    const result = await getProperties("rent", nextPage, PAGE_SIZE);
+    const result = await requestListings(
+      searchMode,
+      searchQuery,
+      search,
+      nextPage,
+    );
+
+    // A page from the previous search must not append to the new results.
+    if (searchGeneration.current !== generation) return;
+
+    paginationGeneration.current = null;
     setIsLoadingMore(false);
 
     if (result.message) {
@@ -305,7 +666,9 @@ export default function TenantBrowsePage(): ReactElement {
     setPage(nextPage);
   };
 
-  const toggleSavedListing = async (property: PropertyDetail): Promise<void> => {
+  const toggleSavedListing = async (
+    property: PropertyDetail,
+  ): Promise<void> => {
     const propertyId = Number(property.id);
 
     if (!Number.isInteger(propertyId)) {
@@ -349,83 +712,221 @@ export default function TenantBrowsePage(): ReactElement {
     });
   };
 
-  const mobileSearchSummary =
-    appliedFilters.length > 0
+  const interpretationLabels = useMemo(
+    () => (interpretation ? getInterpretationLabels(interpretation) : []),
+    [interpretation],
+  );
+
+  const mobileSearchSummary = isDescribing
+    ? searchQuery || "Describe the home you want"
+    : appliedFilters.length > 0
       ? `${appliedFilters.length} filter${appliedFilters.length === 1 ? "" : "s"} applied`
       : "Where are you looking?";
+  const searchPlaceholder = isDescribing
+    ? "Describe it, like a 3 bed in Lekki under ₦5m with a pool"
+    : "City, area, or property";
+  const SearchInputIcon = isDescribing ? Sparkles : MapPin;
+  const saveSearch = async (): Promise<void> => {
+    setIsSavingSearch(true);
+    const result = await createSavedSearch({
+      alerts: true,
+      query: search.query,
+      minPrice: search.minPrice,
+      maxPrice: search.maxPrice,
+      minBedrooms: search.minBedrooms,
+      rentalMode: search.rentalMode,
+      stayType: search.stayType,
+    });
+    setIsSavingSearch(false);
+
+    notify(
+      result.data
+        ? {
+            title: "Search saved",
+            description: "We will email you when a new home matches it.",
+            variant: "success",
+          }
+        : {
+            title: "Search not saved",
+            description: result.message ?? "Try again in a moment.",
+            variant: "error",
+          },
+    );
+  };
+
   const resultLabel = propertiesLoading
     ? "Loading homes..."
     : appliedFilters.length > 0
-      ? `${visibleProperties.length} matching homes`
+      ? `${totalItems} matching homes`
       : `${totalItems || properties.length} homes available`;
 
   return (
     <main className="min-h-screen overflow-x-hidden px-5 pb-12 pt-8 sm:px-8 lg:px-10 lg:pb-16 lg:pt-10 xl:px-14">
       <section aria-label="Search and filter listings">
-        <div className="mx-auto hidden max-w-5xl md:block">
-          <form
-            ref={desktopSearchRef}
-            onSubmit={submitSearch}
-            className="flex h-16 w-full items-center overflow-hidden rounded-full bg-bg shadow-sm"
-          >
-            <label className="flex min-w-0 flex-1 items-center gap-3 px-6 focus-within:text-primary">
-              <MapPin className="shrink-0 text-muted" size={19} aria-hidden="true" />
-              <span className="sr-only">Search by location or property name</span>
-              <input
-                type="search"
-                value={queryInput}
-                onChange={(event) => setQueryInput(event.target.value)}
-                placeholder="Search by city, area, or property"
-                className="min-w-0 flex-1 bg-transparent font-body text-sm text-primary outline-none placeholder:text-muted"
-              />
-            </label>
-            <span className="h-8 w-px bg-border" />
-            <div className="w-48 px-5">
-              <Select
-                ariaLabel="Sort listings"
-                value={sort}
-                onValueChange={(value) => setSort(value as SortOption)}
-                options={SORT_OPTIONS}
-                className="font-body text-sm font-bold"
-              />
-            </div>
-            <span className="h-8 w-px bg-border" />
-            <button
-              type="submit"
-              className="mr-2 flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent text-primary transition-all duration-200 ease-in-out hover:scale-105 hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-              aria-label="Search listings"
+        <div className="mx-auto hidden max-w-7xl md:block">
+          <div className="overflow-visible rounded-2xl border border-border bg-bg shadow-sm">
+            <form
+              ref={desktopSearchRef}
+              onSubmit={submitSearch}
+              className={`flex h-16 w-full items-center ${
+                isDescribing ? "" : "border-b border-border"
+              }`}
             >
-              <Search size={19} aria-hidden="true" />
-            </button>
-          </form>
+              <div
+                className="ml-2 flex shrink-0 gap-1 rounded-xl bg-surface-soft p-1"
+                role="tablist"
+                aria-label="Search style"
+              >
+                {SEARCH_MODES.map((mode) => {
+                  const active = searchMode === mode.id;
 
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <div className="min-w-40 rounded-full bg-bg px-4 py-2 shadow-sm">
-              <Select
-                ariaLabel="Filter by city"
-                value={city}
-                onValueChange={setCity}
-                options={cityOptions}
-                className="text-sm"
-              />
-            </div>
-            <div className="min-w-52 rounded-full bg-bg px-4 py-2 shadow-sm">
-              <Select
-                ariaLabel="Filter by monthly price"
-                value={priceFilter}
-                onValueChange={(value) => setPriceFilter(value as PriceFilter)}
-                options={PRICE_OPTIONS}
-                className="text-sm"
-              />
-            </div>
-            <div className="min-w-44 rounded-full bg-bg px-4 py-2 shadow-sm">
-              <Select
-                ariaLabel="Filter by bedrooms"
-                value={bedroomFilter}
-                onValueChange={(value) => setBedroomFilter(value as BedroomFilter)}
-                options={BEDROOM_OPTIONS}
-                className="text-sm"
-              />
+                  return (
+                    <button
+                      key={mode.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={active}
+                      onClick={() => changeSearchMode(mode.id)}
+                      className={`min-h-10 rounded-lg px-3 font-body text-sm font-bold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                        active
+                          ? "bg-primary text-white shadow-sm"
+                          : "text-muted hover:bg-primary/5 hover:text-primary"
+                      }`}
+                    >
+                      {mode.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <label className="flex min-w-0 flex-1 items-center gap-3 px-6 focus-within:text-primary">
+                <SearchInputIcon
+                  className="shrink-0 text-muted"
+                  size={19}
+                  aria-hidden="true"
+                />
+                <span className="sr-only">
+                  {isDescribing
+                    ? "Describe the home you want"
+                    : "Search by location or property name"}
+                </span>
+                <input
+                  type="search"
+                  value={queryInput}
+                  onChange={(event) => setQueryInput(event.target.value)}
+                  placeholder={
+                    isDescribing
+                      ? searchPlaceholder
+                      : "Search by city, area, or property"
+                  }
+                  maxLength={
+                    isDescribing ? DESCRIBE_QUERY_MAX_LENGTH : undefined
+                  }
+                  className="min-w-0 flex-1 bg-transparent font-body text-sm text-primary outline-none placeholder:text-muted"
+                />
+              </label>
+              <button
+                type="submit"
+                className="mr-2 inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-accent px-5 font-body text-sm font-bold text-primary transition-colors duration-200 ease-in-out hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                <Search size={18} aria-hidden="true" />
+                Search
+              </button>
+            </form>
+
+            <div
+              className={`flex-wrap items-center gap-2 p-3 ${
+                isDescribing ? "hidden" : "flex"
+              }`}
+            >
+              <div
+                className="flex gap-1 rounded-xl bg-surface-soft p-1"
+                role="tablist"
+                aria-label="Kind of stay"
+              >
+                {STAY_MODES.map((mode) => {
+                  const active = stayMode === mode.id;
+
+                  return (
+                    <button
+                      key={mode.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={active}
+                      title={mode.hint}
+                      onClick={() => changeStayMode(mode.id)}
+                      className={`min-h-10 rounded-lg px-4 font-body text-sm font-bold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                        active
+                          ? "bg-primary text-white shadow-sm"
+                          : "text-muted hover:bg-primary/5 hover:text-primary"
+                      }`}
+                    >
+                      {mode.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {stayMode === "long" ? (
+                <div className="min-w-44 rounded-xl border border-border px-4 py-2">
+                  <Select
+                    ariaLabel="Choose annual or monthly rent"
+                    value={longTermPeriod}
+                    onValueChange={(value) =>
+                      changeLongTermPeriod(value as LongTermPeriod)
+                    }
+                    options={LONG_TERM_PERIOD_OPTIONS}
+                    className="text-sm"
+                  />
+                </div>
+              ) : null}
+
+              <span className="mx-1 hidden h-8 w-px bg-border lg:block" />
+              <div className="min-w-52 rounded-xl border border-border px-4 py-2">
+                <Select
+                  ariaLabel="Filter by price"
+                  disabled={!priceControlsEnabled}
+                  value={priceFilter}
+                  onValueChange={(value) =>
+                    setPriceFilter(value as PriceFilter)
+                  }
+                  options={priceOptions}
+                  className="text-sm"
+                />
+              </div>
+              <div className="min-w-44 rounded-xl border border-border px-4 py-2">
+                <Select
+                  ariaLabel="Filter by bedrooms"
+                  value={bedroomFilter}
+                  onValueChange={(value) =>
+                    setBedroomFilter(value as BedroomFilter)
+                  }
+                  options={BEDROOM_OPTIONS}
+                  className="text-sm"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsSearchSheetOpen(true)}
+                className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-border px-4 font-body text-sm font-bold text-primary transition-colors hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                <SlidersHorizontal size={17} aria-hidden="true" />
+                More filters
+                {appliedFilters.length > 0 ? (
+                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] text-white">
+                    {appliedFilters.length}
+                  </span>
+                ) : null}
+              </button>
+              {appliedFilters.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  className="ml-auto inline-flex min-h-11 items-center gap-2 px-3 font-body text-sm font-bold text-muted hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                >
+                  <RotateCcw size={15} aria-hidden="true" />
+                  Clear all
+                </button>
+              ) : null}
             </div>
           </div>
         </div>
@@ -438,17 +939,28 @@ export default function TenantBrowsePage(): ReactElement {
             aria-label="Open search filters"
           >
             <span className="flex min-w-0 items-center gap-3">
-              <MapPin size={18} className="shrink-0 text-muted" aria-hidden="true" />
+              <MapPin
+                size={18}
+                className="shrink-0 text-muted"
+                aria-hidden="true"
+              />
               <span className="truncate font-body text-sm font-bold text-primary">
                 {mobileSearchSummary}
               </span>
             </span>
-            <Search size={17} className="shrink-0 text-primary" aria-hidden="true" />
+            <Search
+              size={17}
+              className="shrink-0 text-primary"
+              aria-hidden="true"
+            />
           </button>
         </div>
 
         {appliedFilters.length > 0 ? (
-          <div className="mt-4 flex flex-wrap items-center gap-2" aria-label="Applied filters">
+          <div
+            className="mt-4 flex flex-wrap items-center gap-2"
+            aria-label="Applied filters"
+          >
             {appliedFilters.map((filter) => (
               <button
                 key={filter.id}
@@ -460,15 +972,46 @@ export default function TenantBrowsePage(): ReactElement {
                 <X size={13} aria-hidden="true" />
               </button>
             ))}
-            <button
-              type="button"
-              onClick={clearFilters}
-              className="inline-flex items-center gap-1.5 px-2 py-2 font-body text-xs font-bold text-muted hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            >
-              <RotateCcw size={13} aria-hidden="true" />
-              Clear all
-            </button>
+            {isDescribing ? null : (
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="inline-flex items-center gap-1.5 px-2 py-2 font-body text-xs font-bold text-muted hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent md:hidden"
+              >
+                <RotateCcw size={13} aria-hidden="true" />
+                Clear all
+              </button>
+            )}
           </div>
+        ) : null}
+
+        {isDescribing && searchQuery && !propertiesLoading && !propertyError ? (
+          isFallback ? (
+            <p
+              className="mt-3 rounded-lg bg-bg px-4 py-3 font-body text-sm text-muted shadow-sm"
+              role="status"
+            >
+              That description could not be read, so these are keyword matches.
+              Try naming the area, your budget, or the number of bedrooms.
+            </p>
+          ) : interpretationLabels.length > 0 ? (
+            <div
+              className="mt-3 flex flex-wrap items-center gap-2"
+              aria-label="How your search was read"
+            >
+              <span className="font-accent text-xs font-bold uppercase tracking-[0.14em] text-muted">
+                Read as
+              </span>
+              {interpretationLabels.map((label) => (
+                <span
+                  key={label}
+                  className="rounded-full bg-primary/5 px-3 py-1.5 font-body text-xs font-bold text-primary"
+                >
+                  {label}
+                </span>
+              ))}
+            </div>
+          ) : null
         ) : null}
       </section>
 
@@ -483,26 +1026,99 @@ export default function TenantBrowsePage(): ReactElement {
             transition={{ duration: 0.22, ease: "easeOut" }}
           >
             <form
-                  onSubmit={submitSearch}
-              className="pointer-events-auto flex h-12 w-[min(36rem,42vw)] items-center overflow-hidden rounded-full border border-border bg-bg shadow-sm"
+              onSubmit={submitSearch}
+              className="pointer-events-auto flex h-12 w-[min(56rem,calc(100vw-28rem))] min-w-[32rem] items-center overflow-hidden rounded-full border border-primary/10 bg-bg"
             >
               <label className="flex min-w-0 flex-1 items-center gap-2.5 px-5 focus-within:text-primary">
-                <MapPin
+                <SearchInputIcon
                   className="shrink-0 text-muted"
                   size={17}
                   aria-hidden="true"
                 />
                 <span className="sr-only">
-                  Search by location or property name
+                  {isDescribing
+                    ? "Describe the home you want"
+                    : "Search by location or property name"}
                 </span>
                 <input
                   type="search"
                   value={queryInput}
                   onChange={(event) => setQueryInput(event.target.value)}
-                  placeholder="City, area, or property"
+                  placeholder={searchPlaceholder}
+                  maxLength={
+                    isDescribing ? DESCRIBE_QUERY_MAX_LENGTH : undefined
+                  }
                   className="min-w-0 flex-1 bg-transparent font-body text-sm text-primary outline-none placeholder:text-muted"
                 />
               </label>
+              {isDescribing ? null : (
+                <>
+                  <div className="hidden h-8 w-px shrink-0 bg-border xl:block" />
+                  <div className="hidden w-28 shrink-0 px-3 xl:block">
+                    <Select
+                      ariaLabel="Filter by stay type"
+                      value={stayMode}
+                      onValueChange={(value) =>
+                        changeStayMode(value as StayMode)
+                      }
+                      options={STICKY_STAY_MODE_OPTIONS}
+                      className="font-body text-xs font-bold"
+                    />
+                  </div>
+                  {stayMode === "long" ? (
+                    <>
+                      <div className="hidden h-8 w-px shrink-0 bg-border xl:block" />
+                      <div className="hidden w-28 shrink-0 px-3 xl:block">
+                        <Select
+                          ariaLabel="Choose annual or monthly rent"
+                          value={longTermPeriod}
+                          onValueChange={(value) =>
+                            changeLongTermPeriod(value as LongTermPeriod)
+                          }
+                          options={LONG_TERM_PERIOD_OPTIONS}
+                          className="font-body text-xs font-bold"
+                        />
+                      </div>
+                    </>
+                  ) : null}
+                  <div className="hidden h-8 w-px shrink-0 bg-border xl:block" />
+                  <div className="hidden w-36 shrink-0 px-3 xl:block">
+                    <Select
+                      ariaLabel="Filter by price"
+                      disabled={!priceControlsEnabled}
+                      value={priceFilter}
+                      onValueChange={(value) =>
+                        setPriceFilter(value as PriceFilter)
+                      }
+                      options={stickyPriceOptions}
+                      className="font-body text-xs font-bold"
+                    />
+                  </div>
+                  <div className="hidden h-8 w-px shrink-0 bg-border xl:block" />
+                  <div className="hidden w-32 shrink-0 px-3 xl:block">
+                    <Select
+                      ariaLabel="Filter by bedrooms"
+                      value={bedroomFilter}
+                      onValueChange={(value) =>
+                        setBedroomFilter(value as BedroomFilter)
+                      }
+                      options={STICKY_BEDROOM_OPTIONS}
+                      className="font-body text-xs font-bold"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsSearchSheetOpen(true)}
+                    className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-primary transition-colors hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    aria-label="Open listing filters"
+                  >
+                    <SlidersHorizontal size={17} aria-hidden="true" />
+                    {appliedFilters.length > 0 ? (
+                      <span className="absolute right-0.5 top-0.5 h-2 w-2 rounded-full bg-accent" />
+                    ) : null}
+                  </button>
+                </>
+              )}
               <button
                 type="submit"
                 className="mr-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent text-primary transition-colors duration-200 ease-in-out hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
@@ -515,74 +1131,54 @@ export default function TenantBrowsePage(): ReactElement {
         ) : null}
       </AnimatePresence>
 
-      {activeActivities.length > 0 ? (
-        <section className="mt-8" aria-labelledby="tenant-activity-heading">
-          <div className="mb-3 flex items-center justify-between gap-4">
-            <h2
-              id="tenant-activity-heading"
-              className="font-body text-xs font-bold uppercase tracking-[0.18em] text-muted"
-            >
-              Your Activity
-            </h2>
-            {remainingActivityCount > 0 ? (
-              <Link
-                href="/tenant/bookings"
-                className="font-body text-xs font-bold text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-              >
-                +{remainingActivityCount} more
-              </Link>
-            ) : null}
-          </div>
-
-          <div className="grid gap-3 lg:grid-cols-3">
-            {visibleActivities.map((activity) => (
-              <Link
-                key={`${activity.activityType}-${activity.title}`}
-                href="/tenant/bookings"
-                className="group grid min-w-0 grid-cols-[4.5rem_1fr_auto] items-center gap-3 rounded-lg bg-bg p-3 shadow-sm transition-all duration-200 ease-in-out hover:-translate-y-0.5 hover:bg-surface-soft hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-              >
-                <span className="relative h-16 overflow-hidden rounded-lg bg-surface-soft">
-                  <Image
-                    src={activity.image}
-                    alt={activity.title}
-                    fill
-                    sizes="72px"
-                    className="object-cover transition-transform duration-200 group-hover:scale-[1.03]"
-                  />
-                </span>
-                <span className="min-w-0">
-                  <span className="block truncate font-body text-sm font-bold text-primary">
-                    {activity.title}
-                  </span>
-                  <StatusBadge tone={TENANT_STATUS_TONES[activity.status]} size="sm" className="mt-2">
-                    {activity.status}
-                  </StatusBadge>
-                </span>
-                <span className="font-body text-sm font-bold text-primary">View</span>
-              </Link>
-            ))}
-          </div>
-        </section>
-      ) : null}
+      <ActivityFeed role="tenant" title="Your activity" limit={3} />
 
       <section className="mt-10" aria-labelledby="property-feed-heading">
         <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="font-accent text-xs font-bold uppercase tracking-[0.25em] text-primary">
-              Verified rental homes
-            </p>
-            <h2 id="property-feed-heading" className="mt-2 font-display text-3xl font-bold text-primary">
+            <h2
+              id="property-feed-heading"
+              className="font-display text-2xl font-bold text-primary"
+            >
               Homes available now
             </h2>
           </div>
-          <p className="font-body text-sm text-muted" aria-live="polite">
-            {resultLabel}
-          </p>
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            <p className="font-body text-sm text-muted" aria-live="polite">
+              {resultLabel}
+            </p>
+            {!isDescribing && appliedFilters.length > 0 ? (
+              <button
+                type="button"
+                onClick={() => void saveSearch()}
+                disabled={isSavingSearch}
+                className="inline-flex min-h-10 items-center gap-2 rounded-full border border-primary/20 px-4 font-body text-sm font-bold text-primary hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60"
+              >
+                {isSavingSearch ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : null}
+                Save search and get alerts
+              </button>
+            ) : null}
+            {isDescribing ? null : (
+              <div className="min-w-44 rounded-xl border border-border bg-bg px-3 py-2 shadow-sm">
+                <Select
+                  ariaLabel="Sort listings"
+                  value={sort}
+                  onValueChange={(value) => setSort(value as SortOption)}
+                  options={sortOptions}
+                  className="font-body text-sm font-bold"
+                />
+              </div>
+            )}
+          </div>
         </div>
 
         {propertyError ? (
           <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-red-500/30 bg-bg px-4 py-3">
-            <p className="font-body text-sm font-bold text-red-700">{propertyError}</p>
+            <p className="font-body text-sm font-bold text-red-700">
+              {propertyError}
+            </p>
             <button
               type="button"
               onClick={() => setRetryKey((current) => current + 1)}
@@ -603,34 +1199,37 @@ export default function TenantBrowsePage(): ReactElement {
             {[0, 1, 2, 3, 4, 5].map((item) => (
               <article
                 key={item}
-                className="overflow-hidden rounded-xl bg-bg shadow-sm"
+                className="overflow-hidden rounded-xl border border-border bg-bg shadow-sm"
                 aria-hidden="true"
               >
-                <div className="relative aspect-video bg-primary/10">
+                <div className="relative aspect-video bg-skeleton-strong">
                   <span className="absolute left-3 top-3 h-7 w-20 rounded-full bg-bg/80" />
                   <span className="absolute right-3 top-3 h-10 w-10 rounded-full bg-bg/80" />
                 </div>
                 <div className="p-5 sm:p-6">
-                  <div className="h-7 w-3/4 rounded-full bg-surface-soft" />
-                  <div className="mt-4 h-4 w-1/2 rounded-full bg-surface-soft" />
-                  <div className="mt-5 h-6 w-2/5 rounded-full bg-primary/10" />
+                  <div className="h-7 w-3/4 rounded-full bg-skeleton" />
+                  <div className="mt-4 h-4 w-1/2 rounded-full bg-skeleton" />
+                  <div className="mt-5 h-6 w-2/5 rounded-full bg-skeleton" />
                   <div className="mt-5 flex gap-3">
-                    <div className="h-5 w-28 rounded-full bg-surface-soft" />
-                    <div className="h-5 w-28 rounded-full bg-surface-soft" />
+                    <div className="h-5 w-28 rounded-full bg-skeleton" />
+                    <div className="h-5 w-28 rounded-full bg-skeleton" />
                   </div>
-                  <div className="mt-6 h-4 w-24 rounded-full bg-primary/10" />
+                  <div className="mt-6 h-4 w-24 rounded-full bg-skeleton" />
                 </div>
               </article>
             ))}
           </div>
-        ) : visibleProperties.length === 0 ? (
+        ) : properties.length === 0 ? (
           <div className="flex min-h-72 flex-col items-center justify-center rounded-xl bg-bg px-6 py-12 text-center shadow-sm">
             <span className="flex h-14 w-14 items-center justify-center rounded-full bg-surface-soft text-primary">
               <SearchX size={24} aria-hidden="true" />
             </span>
-            <h3 className="mt-5 font-display text-2xl font-bold text-primary">No matching homes</h3>
+            <h3 className="mt-5 font-display text-2xl font-bold text-primary">
+              No matching homes
+            </h3>
             <p className="mt-2 max-w-md font-body text-sm leading-6 text-muted">
-              Try a nearby area or remove a filter to see more available rentals.
+              Try a nearby area or remove a filter to see more available
+              rentals.
             </p>
             {appliedFilters.length > 0 ? (
               <button
@@ -644,12 +1243,16 @@ export default function TenantBrowsePage(): ReactElement {
           </div>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-            {visibleProperties.map((property) => (
+            {properties.map((property) => (
               <PropertyCard
                 key={property.id}
                 id={property.id}
+                publicId={property.publicId}
+                slug={property.slug}
                 name={property.title}
-                location={[property.location.area, property.location.city].filter(Boolean).join(", ")}
+                location={[property.location.area, property.location.city]
+                  .filter(Boolean)
+                  .join(", ")}
                 price={property.price}
                 listingType={property.status}
                 bedrooms={property.bedrooms}
@@ -657,8 +1260,9 @@ export default function TenantBrowsePage(): ReactElement {
                 imageUrl={property.images[0]}
                 featured={false}
                 verified={property.verified}
+                availableUnitCount={property.availableUnitCount}
                 isSaved={savedIds.has(property.id)}
-                isSaving={savingIds.has(property.id)}
+                isSaving={isSavedLoading || savingIds.has(property.id)}
                 onSaveToggle={() => void toggleSavedListing(property)}
               />
             ))}
@@ -672,7 +1276,9 @@ export default function TenantBrowsePage(): ReactElement {
             disabled={isLoadingMore}
             className="mx-auto mt-10 flex items-center gap-2 rounded-full bg-primary px-6 py-3.5 font-body text-sm font-bold text-white transition-colors hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-70"
           >
-            {isLoadingMore ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : null}
+            {isLoadingMore ? (
+              <Loader2 size={16} className="animate-spin" aria-hidden="true" />
+            ) : null}
             {isLoadingMore ? "Loading homes" : "Load more homes"}
           </button>
         ) : null}
@@ -683,90 +1289,209 @@ export default function TenantBrowsePage(): ReactElement {
           {isSearchSheetOpen ? (
             <>
               <motion.div
-                className="fixed inset-0 z-[100] bg-black/40 md:hidden"
+                className="modal-backdrop fixed inset-0 z-[100]"
                 initial={reduceMotion ? false : { opacity: 0 }}
                 animate={reduceMotion ? undefined : { opacity: 1 }}
                 exit={reduceMotion ? undefined : { opacity: 0 }}
                 transition={{ duration: 0.3, ease: "easeOut" }}
                 onClick={() => setIsSearchSheetOpen(false)}
               />
-              <motion.div
-                ref={dialogRef}
-                role="dialog"
-                aria-modal="true"
-                aria-label="Search listings"
-                className="fixed inset-x-0 bottom-0 z-[110] flex max-h-[90vh] flex-col rounded-t-xl bg-bg shadow-xl md:hidden"
-                initial={reduceMotion ? false : { y: "100%" }}
-                animate={reduceMotion ? undefined : { y: 0 }}
-                exit={reduceMotion ? undefined : { y: "100%" }}
-                transition={{ duration: 0.3, ease: "easeOut" }}
-              >
-                <div className="mx-auto mt-3 h-1 w-10 rounded-full bg-border" />
-                <div className="flex items-center justify-between border-b border-border px-5 py-4">
-                  <h2 className="font-display text-xl font-bold text-primary">Search and filter</h2>
-                  <button
-                    type="button"
-                    onClick={() => setIsSearchSheetOpen(false)}
-                    className="flex h-9 w-9 items-center justify-center rounded-full text-muted hover:bg-primary/10 hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                    aria-label="Close search"
-                  >
-                    <X size={18} aria-hidden="true" />
-                  </button>
-                </div>
+              <div className="pointer-events-none fixed inset-0 z-[110] flex items-end md:items-center md:justify-center md:p-6">
+                <motion.div
+                  ref={dialogRef}
+                  role="dialog"
+                  aria-modal="true"
+                  aria-label="Search listings"
+                  className="pointer-events-auto flex max-h-[90vh] w-full flex-col rounded-t-xl bg-bg shadow-xl md:max-w-xl md:rounded-xl"
+                  initial={reduceMotion ? false : { opacity: 0, y: 32 }}
+                  animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+                  exit={reduceMotion ? undefined : { opacity: 0, y: 32 }}
+                  transition={{ duration: 0.25, ease: "easeOut" }}
+                >
+                  <div className="mx-auto mt-3 h-1 w-10 rounded-full bg-border md:hidden" />
+                  <div className="flex items-center justify-between border-b border-border px-5 py-4">
+                    <h2 className="font-display text-xl font-bold text-primary">
+                      Search and filter
+                    </h2>
+                    <button
+                      type="button"
+                      onClick={() => setIsSearchSheetOpen(false)}
+                      className="flex h-9 w-9 items-center justify-center rounded-full text-muted hover:bg-primary/10 hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                      aria-label="Close search"
+                    >
+                      <X size={18} aria-hidden="true" />
+                    </button>
+                  </div>
 
-                <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-5">
-                  <label className="block">
-                    <span className="mb-2 block font-body text-xs font-bold uppercase tracking-[0.14em] text-muted">Location</span>
-                    <div className="flex items-center gap-3 rounded-lg bg-surface-soft px-4 py-4 focus-within:ring-2 focus-within:ring-accent">
-                      <MapPin size={18} className="text-muted" aria-hidden="true" />
-                      <input
-                        type="search"
-                        value={queryInput}
-                        onChange={(event) => setQueryInput(event.target.value)}
-                        placeholder="City, area, or property"
-                        className="min-w-0 flex-1 bg-transparent font-body text-base text-primary outline-none placeholder:text-muted"
-                      />
+                  <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-5">
+                    <div
+                      className="grid grid-cols-2 gap-1 rounded-xl bg-surface-soft p-1"
+                      role="tablist"
+                      aria-label="Search style"
+                    >
+                      {SEARCH_MODES.map((mode) => {
+                        const active = searchMode === mode.id;
+
+                        return (
+                          <button
+                            key={mode.id}
+                            type="button"
+                            role="tab"
+                            aria-selected={active}
+                            onClick={() => changeSearchMode(mode.id)}
+                            className={`min-h-11 rounded-lg px-2 font-body text-sm font-bold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                              active
+                                ? "bg-primary text-white shadow-sm"
+                                : "text-muted hover:text-primary"
+                            }`}
+                          >
+                            {mode.label}
+                          </button>
+                        );
+                      })}
                     </div>
-                  </label>
 
-                  {[
-                    { label: "City", value: city, options: cityOptions, change: setCity },
-                    { label: "Monthly price", value: priceFilter, options: PRICE_OPTIONS, change: (value: string) => setPriceFilter(value as PriceFilter) },
-                    { label: "Bedrooms", value: bedroomFilter, options: BEDROOM_OPTIONS, change: (value: string) => setBedroomFilter(value as BedroomFilter) },
-                    { label: "Sort by", value: sort, options: SORT_OPTIONS, change: (value: string) => setSort(value as SortOption) },
-                  ].map((field) => (
-                    <label key={field.label} className="block">
-                      <span className="mb-2 block font-body text-xs font-bold uppercase tracking-[0.14em] text-muted">{field.label}</span>
-                      <div className="rounded-lg bg-surface-soft px-4 py-4">
-                        <Select
-                          ariaLabel={field.label}
-                          value={field.value}
-                          onValueChange={field.change}
-                          options={field.options}
+                    <label className="block">
+                      <span className="mb-2 block font-body text-xs font-bold uppercase tracking-[0.14em] text-muted">
+                        {isDescribing ? "Describe the home" : "Location"}
+                      </span>
+                      <div className="flex items-center gap-3 rounded-lg bg-surface-soft px-4 py-4 focus-within:ring-2 focus-within:ring-accent">
+                        <SearchInputIcon
+                          size={18}
+                          className="text-muted"
+                          aria-hidden="true"
+                        />
+                        <input
+                          type="search"
+                          value={queryInput}
+                          onChange={(event) =>
+                            setQueryInput(event.target.value)
+                          }
+                          placeholder={searchPlaceholder}
+                          maxLength={
+                            isDescribing ? DESCRIBE_QUERY_MAX_LENGTH : undefined
+                          }
+                          className="min-w-0 flex-1 bg-transparent font-body text-base text-primary outline-none placeholder:text-muted"
                         />
                       </div>
                     </label>
-                  ))}
-                </div>
 
-                <div className="grid grid-cols-[auto_1fr] gap-3 border-t border-border bg-bg px-5 py-4">
-                  <button
-                    type="button"
-                    onClick={clearFilters}
-                    className="rounded-full px-4 py-3 font-body text-sm font-bold text-muted hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                  >
-                    Clear
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => submitSearch()}
-                    className="flex items-center justify-center gap-2 rounded-full bg-accent px-6 py-3 font-body text-sm font-bold text-primary hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                  >
-                    <Search size={16} aria-hidden="true" />
-                    Show {visibleProperties.length} homes
-                  </button>
-                </div>
-              </motion.div>
+                    {isDescribing ? null : (
+                      <>
+                        <div>
+                          <span className="mb-2 block font-body text-xs font-bold uppercase tracking-[0.14em] text-muted">
+                            Kind of stay
+                          </span>
+                          <div
+                            className="grid grid-cols-3 gap-1 rounded-xl bg-surface-soft p-1"
+                            role="tablist"
+                            aria-label="Kind of stay"
+                          >
+                            {STAY_MODES.map((mode) => {
+                              const active = stayMode === mode.id;
+
+                              return (
+                                <button
+                                  key={mode.id}
+                                  type="button"
+                                  role="tab"
+                                  aria-selected={active}
+                                  onClick={() => changeStayMode(mode.id)}
+                                  className={`min-h-11 rounded-lg px-2 font-body text-sm font-bold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                                    active
+                                      ? "bg-primary text-white shadow-sm"
+                                      : "text-muted hover:text-primary"
+                                  }`}
+                                >
+                                  {mode.label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {stayMode === "long" ? (
+                          <label className="block">
+                            <span className="mb-2 block font-body text-xs font-bold uppercase tracking-[0.14em] text-muted">
+                              Price period
+                            </span>
+                            <div className="rounded-lg bg-surface-soft px-4 py-4">
+                              <Select
+                                ariaLabel="Choose annual or monthly rent"
+                                value={longTermPeriod}
+                                onValueChange={(value) =>
+                                  changeLongTermPeriod(value as LongTermPeriod)
+                                }
+                                options={LONG_TERM_PERIOD_OPTIONS}
+                              />
+                            </div>
+                          </label>
+                        ) : null}
+
+                        {[
+                          {
+                            label: "Price",
+                            value: priceFilter,
+                            options: priceOptions,
+                            disabled: !priceControlsEnabled,
+                            change: (value: string) =>
+                              setPriceFilter(value as PriceFilter),
+                          },
+                          {
+                            label: "Bedrooms",
+                            value: bedroomFilter,
+                            options: BEDROOM_OPTIONS,
+                            disabled: false,
+                            change: (value: string) =>
+                              setBedroomFilter(value as BedroomFilter),
+                          },
+                          {
+                            label: "Sort by",
+                            value: sort,
+                            options: sortOptions,
+                            disabled: false,
+                            change: (value: string) =>
+                              setSort(value as SortOption),
+                          },
+                        ].map((field) => (
+                          <label key={field.label} className="block">
+                            <span className="mb-2 block font-body text-xs font-bold uppercase tracking-[0.14em] text-muted">
+                              {field.label}
+                            </span>
+                            <div className="rounded-lg bg-surface-soft px-4 py-4">
+                              <Select
+                                ariaLabel={field.label}
+                                value={field.value}
+                                onValueChange={field.change}
+                                options={field.options}
+                                disabled={field.disabled}
+                              />
+                            </div>
+                          </label>
+                        ))}
+                      </>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-[auto_1fr] gap-3 border-t border-border bg-bg px-5 py-4">
+                    <button
+                      type="button"
+                      onClick={clearFilters}
+                      className="rounded-full px-4 py-3 font-body text-sm font-bold text-muted hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    >
+                      Clear
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => submitSearch()}
+                      className="flex items-center justify-center gap-2 rounded-full bg-accent px-6 py-3 font-body text-sm font-bold text-primary hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    >
+                      <Search size={16} aria-hidden="true" />
+                      {isDescribing ? "Search" : `Show ${totalItems} homes`}
+                    </button>
+                  </div>
+                </motion.div>
+              </div>
             </>
           ) : null}
         </AnimatePresence>

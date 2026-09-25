@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactElement } from "react";
+import { useEffect, useRef, useState, type ReactElement } from "react";
 import {
   CalendarDays,
   ChevronRight,
@@ -17,11 +17,30 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import ChatThread from "@/components/chat/ChatThread";
+import { propertyPath } from "@/lib/publicIds";
 import PropertyPrice from "@/components/property/PropertyPrice";
 import { IconTile } from "@/components/ui/icon-tile";
-import { StatusBadge, type StatusBadgeProps } from "@/components/ui/status-badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  StatusBadge,
+  type StatusBadgeProps,
+} from "@/components/ui/status-badge";
 import { useToast } from "@/components/ui/toast";
-import { getMyBookings, type Booking, type BookingStatus } from "@/lib/bookings";
+import BookingPaymentPanel from "@/components/tenant/BookingPaymentPanel";
+import MaintenanceReportDialog from "@/components/tenant/MaintenanceReportDialog";
+import TenancyRecordsDialog from "@/components/tenancy/TenancyRecordsDialog";
+import {
+  getMyBookings,
+  getCurrentBooking,
+  type Booking,
+  type BookingStatus,
+} from "@/lib/bookings";
+import {
+  getMyMaintenanceRequests,
+  getTenancyDocuments,
+  type MaintenanceRequest,
+  type TenancyDocument,
+} from "@/lib/tenancy";
 import {
   type ChatPartyRole,
   getConversationId,
@@ -52,17 +71,10 @@ const STATUS_TONES: Record<
 };
 
 const STATUS_LABELS: Record<BookingStatus, string> = {
-  PENDING: "Pending confirmation",
-  CONFIRMED: "Active tenancy",
+  PENDING: "Waiting for host",
+  CONFIRMED: "Accepted",
   COMPLETED: "Completed",
   CANCELLED: "Cancelled",
-};
-
-const BOOKING_PRIORITY: Record<BookingStatus, number> = {
-  CONFIRMED: 0,
-  PENDING: 1,
-  COMPLETED: 2,
-  CANCELLED: 3,
 };
 
 // === Helpers
@@ -76,7 +88,19 @@ function formatDate(value: string): string {
 }
 
 function formatStayDates(booking: Booking): string {
-  return `${formatDate(booking.startDate)} to ${formatDate(booking.endDate)}`;
+  if (booking.bookingKind === "RENTAL_REQUEST" || !booking.endDate) {
+    if (booking.tenancyStartDate) {
+      return `Moving in ${formatDate(booking.tenancyStartDate)}`;
+    }
+
+    return booking.preferredMoveInDate
+      ? `Preferred move-in ${formatDate(booking.preferredMoveInDate)}`
+      : "Move-in date is flexible";
+  }
+
+  return booking.startDate
+    ? `${formatDate(booking.startDate)} to ${formatDate(booking.endDate)}`
+    : "Move-in date is flexible";
 }
 
 function formatRelativeTime(value: string | null): string {
@@ -104,31 +128,162 @@ function getHostRole(booking: Booking): ChatPartyRole {
   return booking.host?.role === "AGENT" ? "Agent" : "Landlord";
 }
 
+// === Components
+
+function TenantHomeSkeleton(): ReactElement {
+  return (
+    <div role="status" aria-label="Loading your home" aria-busy="true">
+      <section className="grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(20rem,0.75fr)]">
+        <article className="overflow-hidden rounded-2xl border border-border bg-bg shadow-sm">
+          <Skeleton className="h-64 rounded-none bg-skeleton-strong sm:h-80" />
+          <div className="p-6 sm:p-8">
+            <div className="grid gap-4 sm:grid-cols-3">
+              {[0, 1, 2].map((item) => (
+                <div
+                  key={item}
+                  className="rounded-xl border border-border bg-surface-soft p-4"
+                >
+                  <Skeleton className="h-5 w-5 rounded-md" />
+                  <Skeleton className="mt-4 h-3 w-20" />
+                  <Skeleton className="mt-3 h-5 w-28 max-w-full" />
+                </div>
+              ))}
+            </div>
+            <div className="mt-6 flex gap-3">
+              <Skeleton className="h-11 w-36 rounded-full" />
+              <Skeleton className="h-11 w-36 rounded-full" />
+            </div>
+          </div>
+        </article>
+
+        <div className="grid content-start gap-5">
+          {[0, 1].map((item) => (
+            <article
+              key={item}
+              className="rounded-2xl border border-border bg-bg p-6 shadow-sm"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <Skeleton className="h-12 w-12 rounded-xl" />
+                <Skeleton className="h-7 w-28 rounded-full" />
+              </div>
+              <Skeleton className="mt-6 h-3 w-32" />
+              <Skeleton className="mt-4 h-8 w-40" />
+              <Skeleton className="mt-4 h-4 w-full" />
+              <Skeleton className="mt-2 h-4 w-3/4" />
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="mt-6 grid gap-6 lg:grid-cols-2">
+        {[0, 1].map((item) => (
+          <article
+            key={item}
+            className="rounded-2xl border border-border bg-bg p-6 shadow-sm sm:p-7"
+          >
+            <div className="flex items-start gap-4">
+              <Skeleton className="h-14 w-14 shrink-0 rounded-xl" />
+              <div className="min-w-0 flex-1">
+                <Skeleton className="h-3 w-28" />
+                <Skeleton className="mt-3 h-7 w-40 max-w-full" />
+              </div>
+            </div>
+            <Skeleton className="mt-6 h-4 w-full" />
+            <Skeleton className="mt-3 h-4 w-4/5" />
+            <Skeleton className="mt-6 h-11 w-36 rounded-full" />
+          </article>
+        ))}
+      </section>
+      <span className="sr-only">Loading your home</span>
+    </div>
+  );
+}
+
 // === Component
+
+const DOCUMENT_TYPE_LABELS: Record<TenancyDocument["type"], string> = {
+  LEASE_AGREEMENT: "Lease agreement",
+  INVENTORY_REPORT: "Inventory report",
+  MOVE_IN_REPORT: "Move-in report",
+  MOVE_OUT_REPORT: "Move-out report",
+  RECEIPT: "Receipt",
+  OTHER: "Document",
+};
+
+const REPAIR_STATUS_LABELS: Record<MaintenanceRequest["status"], string> = {
+  OPEN: "Reported",
+  ACKNOWLEDGED: "Seen by host",
+  IN_PROGRESS: "Being fixed",
+  RESOLVED: "Fixed",
+  CLOSED: "Closed",
+  CANCELLED: "Withdrawn",
+};
+
+const REPAIR_TONES: Record<
+  MaintenanceRequest["status"],
+  StatusBadgeProps["tone"]
+> = {
+  OPEN: "accent",
+  ACKNOWLEDGED: "accent",
+  IN_PROGRESS: "primary",
+  RESOLVED: "primary",
+  CLOSED: "neutral",
+  CANCELLED: "neutral",
+};
 
 export default function TenantBookingsPage(): ReactElement {
   const { notify } = useToast();
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [primaryBooking, setPrimaryBooking] = useState<Booking | null>(null);
+  const [nextHistoryCursor, setNextHistoryCursor] = useState<string | null>(
+    null,
+  );
+  const [historyError, setHistoryError] = useState("");
+  const [isHistoryLoading, setIsHistoryLoading] = useState(false);
+  const historyGenerationRef = useRef(0);
+  const historyRequestRef = useRef<AbortController | null>(null);
   const [activeThread, setActiveThread] = useState<ActiveChatThread | null>(
     null,
   );
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [retryKey, setRetryKey] = useState(0);
+  const [documents, setDocuments] = useState<TenancyDocument[]>([]);
+  const [repairs, setRepairs] = useState<MaintenanceRequest[]>([]);
+  const [loadedTenancyKey, setLoadedTenancyKey] = useState<string | null>(null);
+  const [isReportOpen, setIsReportOpen] = useState(false);
+  const [recordsBookingId, setRecordsBookingId] = useState<number | null>(null);
+  const [tenancyRefreshKey, setTenancyRefreshKey] = useState(0);
+  // Taken when the bookings arrive, so deadlines are read against one moment
+  const [now, setNow] = useState(0);
   const currentUser = getCurrentChatUser();
 
   useEffect(() => {
     let active = true;
+    historyGenerationRef.current++;
+    const controller = new AbortController();
 
     const loadBookings = async (): Promise<void> => {
       setIsLoading(true);
       setLoadError("");
-      const result = await getMyBookings();
+      setIsHistoryLoading(false);
+      const [home, result] = await Promise.all([
+        getCurrentBooking(controller.signal),
+        getMyBookings({ cursor: "", size: 20 }, controller.signal),
+      ]);
 
       if (!active) return;
 
-      setBookings(result.data);
-      setLoadError(result.message ?? "");
+      setNow(Date.now());
+      setPrimaryBooking(home.data);
+      setBookings(
+        Array.from(
+          new Map(result.data.map((booking) => [booking.id, booking])).values(),
+        ),
+      );
+      setNextHistoryCursor(result.nextCursor ?? null);
+      setHistoryError(result.message ?? "");
+      setLoadError(home.message ?? "");
       setIsLoading(false);
     };
 
@@ -136,28 +291,58 @@ export default function TenantBookingsPage(): ReactElement {
 
     return () => {
       active = false;
+      controller.abort();
+      historyRequestRef.current?.abort();
+      historyRequestRef.current = null;
     };
   }, [retryKey]);
 
-  const sortedBookings = useMemo(
-    () =>
-      [...bookings].sort((left, right) => {
-        const priorityDifference =
-          BOOKING_PRIORITY[left.status] - BOOKING_PRIORITY[right.status];
-
-        if (priorityDifference !== 0) return priorityDifference;
-
-        return (
-          new Date(right.createdAt ?? right.startDate).getTime() -
-          new Date(left.createdAt ?? left.startDate).getTime()
-        );
-      }),
-    [bookings],
+  const loadHistory = async (): Promise<void> => {
+    if (historyRequestRef.current || (!nextHistoryCursor && !historyError))
+      return;
+    const generation = historyGenerationRef.current;
+    const controller = new AbortController();
+    historyRequestRef.current = controller;
+    setIsHistoryLoading(true);
+    const result = await getMyBookings(
+      { cursor: nextHistoryCursor ?? "", size: 20 },
+      controller.signal,
+    );
+    if (
+      controller.signal.aborted ||
+      generation !== historyGenerationRef.current
+    )
+      return;
+    historyRequestRef.current = null;
+    setIsHistoryLoading(false);
+    setHistoryError(result.message ?? "");
+    if (result.message) return;
+    setBookings((current) =>
+      Array.from(
+        new Map(
+          [...current, ...result.data].map((booking) => [booking.id, booking]),
+        ).values(),
+      ),
+    );
+    setNextHistoryCursor(result.nextCursor ?? null);
+  };
+  const primaryBookingId = primaryBooking?.id ?? null;
+  const tenancyLoadKey =
+    primaryBookingId === null
+      ? null
+      : `${primaryBookingId}:${tenancyRefreshKey}`;
+  const isTenancyLoading =
+    tenancyLoadKey !== null && loadedTenancyKey !== tenancyLoadKey;
+  // Repairs still waiting on the host, which is what the tenant cares about
+  const openRepairs = repairs.filter(
+    (repair) =>
+      repair.status !== "CLOSED" &&
+      repair.status !== "CANCELLED" &&
+      repair.status !== "RESOLVED",
   );
-  const primaryBooking = sortedBookings[0] ?? null;
   const bookingHistory = primaryBooking
-    ? sortedBookings.filter((booking) => booking.id !== primaryBooking.id)
-    : [];
+    ? bookings.filter((booking) => booking.id !== primaryBooking.id)
+    : bookings;
   const hostName = primaryBooking?.host?.name ?? "Property host";
   const hostInitials = hostName
     .split(" ")
@@ -181,31 +366,51 @@ export default function TenantBookingsPage(): ReactElement {
     });
   };
 
-  const showUnavailableNotice = (feature: "documents" | "maintenance"): void => {
-    notify({
-      title:
-        feature === "documents"
-          ? "Lease documents are not available yet"
-          : "Maintenance reporting is not available yet",
-      description:
-        feature === "documents"
-          ? "Documents will appear here when lease document support is connected."
-          : "Contact your landlord or agent directly if you need help with the property.",
-      variant: "error",
+  useEffect(() => {
+    if (primaryBookingId === null || tenancyLoadKey === null) {
+      return;
+    }
+
+    let active = true;
+
+    void Promise.all([
+      getTenancyDocuments(primaryBookingId),
+      getMyMaintenanceRequests(primaryBookingId),
+    ]).then(([documentResult, repairResult]) => {
+      if (!active) {
+        return;
+      }
+
+      setDocuments(documentResult.data);
+      setRepairs(repairResult.data);
+      setLoadedTenancyKey(tenancyLoadKey);
     });
+
+    return () => {
+      active = false;
+    };
+  }, [primaryBookingId, tenancyLoadKey]);
+
+  const openLatestDocument = (): void => {
+    const latest = documents[0];
+
+    if (!latest) {
+      notify({
+        title: "No documents yet",
+        description: `${hostName} has not added any paperwork to this tenancy.`,
+        variant: "error",
+      });
+      return;
+    }
+
+    window.open(latest.downloadUrl, "_blank", "noopener,noreferrer");
   };
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-surface-soft px-5 py-8 sm:px-8 lg:px-10 lg:py-10 xl:px-14">
       <div className="mx-auto max-w-[90rem]">
-        {isLoading ? (
-          <div className="grid animate-pulse gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(20rem,0.75fr)]">
-            <div className="h-[34rem] rounded-2xl bg-bg" />
-            <div className="grid gap-5">
-              <div className="h-64 rounded-2xl bg-bg" />
-              <div className="h-64 rounded-2xl bg-bg" />
-            </div>
-          </div>
+        {isLoading || isTenancyLoading ? (
+          <TenantHomeSkeleton />
         ) : loadError ? (
           <section className="flex min-h-80 flex-col items-center justify-center rounded-2xl border border-red-500/20 bg-bg px-6 py-12 text-center shadow-sm">
             <IconTile tone="neutral" size="lg" shape="circle">
@@ -272,6 +477,11 @@ export default function TenantBookingsPage(): ReactElement {
                         <MapPin size={16} aria-hidden="true" />
                         {primaryBooking.propertyAddress}
                       </p>
+                      {primaryBooking.unitLabel ? (
+                        <p className="mt-2 font-body text-sm font-semibold text-white">
+                          Your home: {primaryBooking.unitLabel}
+                        </p>
+                      ) : null}
                     </div>
                   </div>
                 </div>
@@ -284,7 +494,13 @@ export default function TenantBookingsPage(): ReactElement {
                         Starts
                       </p>
                       <p className="mt-2 font-body text-sm font-bold text-primary">
-                        {formatDate(primaryBooking.startDate)}
+                        {primaryBooking.tenancyStartDate
+                          ? formatDate(primaryBooking.tenancyStartDate)
+                          : primaryBooking.startDate
+                            ? formatDate(primaryBooking.startDate)
+                            : primaryBooking.preferredMoveInDate
+                              ? formatDate(primaryBooking.preferredMoveInDate)
+                              : "Flexible"}
                       </p>
                     </div>
                     <div className="rounded-xl bg-surface-soft p-4">
@@ -293,7 +509,9 @@ export default function TenantBookingsPage(): ReactElement {
                         Ends
                       </p>
                       <p className="mt-2 font-body text-sm font-bold text-primary">
-                        {formatDate(primaryBooking.endDate)}
+                        {primaryBooking.endDate
+                          ? formatDate(primaryBooking.endDate)
+                          : "No fixed end date"}
                       </p>
                     </div>
                     <div className="rounded-xl bg-surface-soft p-4">
@@ -309,7 +527,11 @@ export default function TenantBookingsPage(): ReactElement {
 
                   <div className="mt-6 flex flex-wrap gap-3">
                     <Link
-                      href={`/property/${primaryBooking.propertyId}`}
+                      href={propertyPath({
+                        id: primaryBooking.propertyId,
+                        publicId: primaryBooking.propertyPublicId,
+                        slug: primaryBooking.propertySlug,
+                      })}
                       className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-primary px-5 py-2.5 font-body text-sm font-bold text-white transition-colors hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                     >
                       View property
@@ -329,26 +551,43 @@ export default function TenantBookingsPage(): ReactElement {
               </article>
 
               <div className="grid content-start gap-5">
-                <article className="rounded-2xl border border-border bg-bg p-6 shadow-sm">
-                  <div className="flex items-start justify-between gap-4">
-                    <IconTile tone="primary" size="lg">
-                      <CircleDollarSign size={21} />
+                <BookingPaymentPanel
+                  booking={primaryBooking}
+                  now={now}
+                  onChanged={(updated) =>
+                    setBookings((current) =>
+                      current.map((item) =>
+                        item.id === updated.id ? updated : item,
+                      ),
+                    )
+                  }
+                />
+
+                {primaryBooking.status === "CONFIRMED" ||
+                primaryBooking.status === "COMPLETED" ? (
+                  <article className="rounded-2xl border border-border bg-bg p-6 shadow-sm">
+                    <IconTile tone="accent" size="lg">
+                      <ShieldCheck size={21} />
                     </IconTile>
-                    <StatusBadge tone={STATUS_TONES[primaryBooking.status]}>
-                      {STATUS_LABELS[primaryBooking.status]}
-                    </StatusBadge>
-                  </div>
-                  <p className="mt-6 font-accent text-xs font-bold uppercase tracking-[0.22em] text-accent-alt">
-                    Payment overview
-                  </p>
-                  <p className="mt-3 font-display text-3xl font-bold text-primary">
-                    <PropertyPrice value={primaryBooking.totalPrice} />
-                  </p>
-                  <p className="mt-3 font-body text-sm leading-6 text-muted">
-                    This is the total amount recorded for this booking. Detailed
-                    rent schedules and receipts are not available yet.
-                  </p>
-                </article>
+                    <h2 className="mt-6 font-display text-2xl font-bold text-primary">
+                      {primaryBooking.bookingKind === "SHORT_STAY"
+                        ? "Condition reports"
+                        : "Agreement and condition reports"}
+                    </h2>
+                    <p className="mt-3 font-body text-sm leading-6 text-muted">
+                      {primaryBooking.bookingKind === "SHORT_STAY"
+                        ? "Record the state of the place when you arrive and leave, with photos."
+                        : "Sign your tenancy agreement, and record the state of the home with photos when you move in and out. Deposit claims are decided from these."}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setRecordsBookingId(primaryBooking.id)}
+                      className="mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-primary px-5 font-body text-sm font-bold text-white transition-colors hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    >
+                      Open records
+                    </button>
+                  </article>
+                ) : null}
 
                 <article className="rounded-2xl border border-border bg-bg p-6 shadow-sm">
                   <div className="flex items-center justify-between gap-4">
@@ -357,10 +596,10 @@ export default function TenantBookingsPage(): ReactElement {
                     </IconTile>
                     <button
                       type="button"
-                      onClick={() => showUnavailableNotice("documents")}
+                      onClick={openLatestDocument}
                       className="font-body text-xs font-bold text-primary hover:text-accent-alt focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                     >
-                      View documents
+                      {documents.length > 0 ? "Open latest" : "View documents"}
                     </button>
                   </div>
                   <h2 className="mt-6 font-display text-2xl font-bold text-primary">
@@ -369,15 +608,42 @@ export default function TenantBookingsPage(): ReactElement {
                   <p className="mt-3 font-body text-sm leading-6 text-muted">
                     {formatStayDates(primaryBooking)}
                   </p>
-                  <div className="mt-5 rounded-xl bg-surface-soft p-4">
-                    <p className="font-body text-sm font-bold text-primary">
-                      No lease document available
-                    </p>
-                    <p className="mt-1 font-body text-xs leading-5 text-muted">
-                      Uploaded agreements will appear here when document support
-                      is connected.
-                    </p>
-                  </div>
+                  {documents.length === 0 ? (
+                    <div className="mt-5 rounded-xl bg-surface-soft p-4">
+                      <p className="font-body text-sm font-bold text-primary">
+                        No documents yet
+                      </p>
+                      <p className="mt-1 font-body text-xs leading-5 text-muted">
+                        {hostName} adds the agreement and any reports here.
+                      </p>
+                    </div>
+                  ) : (
+                    <ul className="mt-5 space-y-2">
+                      {documents.slice(0, 4).map((document) => (
+                        <li key={document.id}>
+                          <a
+                            href={document.downloadUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-between gap-3 rounded-xl bg-surface-soft p-4 transition-colors hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                          >
+                            <span className="min-w-0">
+                              <span className="block truncate font-body text-sm font-bold text-primary">
+                                {document.name}
+                              </span>
+                              <span className="mt-1 block font-body text-xs text-muted">
+                                {DOCUMENT_TYPE_LABELS[document.type]}
+                              </span>
+                            </span>
+                            <FileText
+                              size={16}
+                              className="shrink-0 text-muted"
+                            />
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </article>
               </div>
             </section>
@@ -400,21 +666,49 @@ export default function TenantBookingsPage(): ReactElement {
                   </div>
                   <button
                     type="button"
-                    onClick={() => showUnavailableNotice("maintenance")}
+                    onClick={() => setIsReportOpen(true)}
                     className="min-h-10 rounded-full border border-primary/20 px-4 py-2 font-body text-sm font-bold text-primary transition-colors hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                   >
                     Report an issue
                   </button>
                 </div>
-                <div className="mt-6 rounded-xl bg-surface-soft px-5 py-6">
-                  <p className="font-body text-sm font-bold text-primary">
-                    Maintenance requests are not connected yet
-                  </p>
-                  <p className="mt-2 font-body text-sm leading-6 text-muted">
-                    Until reporting is available here, contact {hostName} for
-                    help with your home.
-                  </p>
-                </div>
+                {openRepairs.length === 0 ? (
+                  <div className="mt-6 rounded-xl bg-surface-soft px-5 py-6">
+                    <p className="font-body text-sm font-bold text-primary">
+                      Nothing outstanding
+                    </p>
+                    <p className="mt-2 font-body text-sm leading-6 text-muted">
+                      Report anything that needs fixing and {hostName} is told
+                      straight away.
+                    </p>
+                  </div>
+                ) : (
+                  <ul className="mt-6 space-y-3">
+                    {openRepairs.slice(0, 3).map((repair) => (
+                      <li
+                        key={repair.id}
+                        className="rounded-xl bg-surface-soft px-5 py-4"
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <p className="font-body text-sm font-bold text-primary">
+                            {repair.title}
+                          </p>
+                          <StatusBadge
+                            size="sm"
+                            tone={REPAIR_TONES[repair.status]}
+                          >
+                            {REPAIR_STATUS_LABELS[repair.status]}
+                          </StatusBadge>
+                        </div>
+                        {repair.hostNote ? (
+                          <p className="mt-2 font-body text-sm leading-6 text-muted">
+                            {hostName}: {repair.hostNote}
+                          </p>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </article>
 
               <article className="rounded-2xl border border-border bg-bg p-6 shadow-sm sm:p-7">
@@ -455,66 +749,128 @@ export default function TenantBookingsPage(): ReactElement {
                   className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-accent px-5 py-2.5 font-body text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <MessageCircle size={16} aria-hidden="true" />
-                  Message {primaryBooking.host ? hostName.split(" ")[0] : "host"}
+                  Message{" "}
+                  {primaryBooking.host ? hostName.split(" ")[0] : "host"}
                 </button>
               </article>
             </section>
-
-            {bookingHistory.length > 0 ? (
-              <section className="mt-10 overflow-hidden rounded-2xl border border-border bg-bg shadow-sm">
-                <div className="border-b border-border px-6 py-6 sm:px-7">
-                  <p className="font-accent text-xs font-bold uppercase tracking-[0.22em] text-accent-alt">
-                    Rental history
-                  </p>
-                  <h2 className="mt-2 font-display text-3xl font-bold text-primary">
-                    Other bookings
-                  </h2>
-                </div>
-                <div>
-                  {bookingHistory.map((booking, index) => (
-                    <Link
-                      key={booking.id}
-                      href={`/property/${booking.propertyId}`}
-                      className="grid gap-4 border-b border-border p-5 transition-colors last:border-b-0 hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent sm:grid-cols-[5rem_1fr_auto] sm:items-center sm:px-7"
-                    >
-                      <span className="relative h-20 overflow-hidden rounded-xl bg-surface-soft">
-                        <Image
-                          src={coverImage(booking, index + 1)}
-                          alt=""
-                          fill
-                          sizes="80px"
-                          className="object-cover"
-                        />
-                      </span>
-                      <span className="min-w-0">
-                        <span className="block truncate font-body text-base font-bold text-primary">
-                          {booking.propertyTitle}
-                        </span>
-                        <span className="mt-1 block font-body text-sm text-muted">
-                          {formatStayDates(booking)}
-                        </span>
-                        <span className="mt-2 block font-body text-xs font-medium text-muted">
-                          Updated {formatRelativeTime(booking.createdAt)}
-                        </span>
-                      </span>
-                      <span className="flex items-center justify-between gap-3 sm:justify-end">
-                        <StatusBadge tone={STATUS_TONES[booking.status]}>
-                          {STATUS_LABELS[booking.status]}
-                        </StatusBadge>
-                        <ChevronRight
-                          size={18}
-                          className="text-muted"
-                          aria-hidden="true"
-                        />
-                      </span>
-                    </Link>
-                  ))}
-                </div>
-              </section>
-            ) : null}
           </>
         )}
+        {!isLoading &&
+        !loadError &&
+        (bookingHistory.length > 0 || historyError || nextHistoryCursor) ? (
+          <section
+            className="mt-10 overflow-hidden rounded-2xl border border-border bg-bg shadow-sm"
+            aria-label="Booking history"
+          >
+            <div className="border-b border-border px-6 py-6 sm:px-7">
+              <h2 className="font-display text-2xl font-bold text-primary">
+                Other bookings
+              </h2>
+              <p className="mt-2 font-body text-sm text-muted">
+                Your requests and previous tenancies
+              </p>
+            </div>
+            {bookingHistory.map((booking, index) => (
+              <Link
+                key={booking.id}
+                href={propertyPath({
+                  id: booking.propertyId,
+                  publicId: booking.propertyPublicId,
+                  slug: booking.propertySlug,
+                })}
+                className="grid gap-4 border-b border-border p-5 transition-colors hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent sm:grid-cols-[5rem_1fr_auto] sm:items-center sm:px-7"
+              >
+                <span className="relative h-20 overflow-hidden rounded-xl bg-surface-soft">
+                  <Image
+                    src={coverImage(booking, index + 1)}
+                    alt=""
+                    fill
+                    sizes="80px"
+                    className="object-cover"
+                  />
+                </span>
+                <span className="min-w-0">
+                  <span className="block truncate font-body text-base font-bold text-primary">
+                    {booking.propertyTitle}
+                  </span>
+                  <span className="mt-1 block font-body text-sm text-muted">
+                    {formatStayDates(booking)}
+                  </span>
+                  {booking.unitLabel ? (
+                    <span className="mt-1 block font-body text-xs font-semibold text-primary">
+                      {booking.unitLabel}
+                    </span>
+                  ) : null}
+                  <span className="mt-2 block font-body text-xs text-muted">
+                    Updated {formatRelativeTime(booking.createdAt)}
+                  </span>
+                </span>
+                <StatusBadge tone={STATUS_TONES[booking.status]}>
+                  {STATUS_LABELS[booking.status]}
+                </StatusBadge>
+              </Link>
+            ))}
+            {historyError ? (
+              <p
+                role="alert"
+                className="px-6 py-3 font-body text-sm text-red-700"
+              >
+                {historyError}
+              </p>
+            ) : null}
+            {nextHistoryCursor || historyError ? (
+              <button
+                type="button"
+                disabled={isHistoryLoading}
+                onClick={() => void loadHistory()}
+                className="flex min-h-12 w-full items-center justify-center gap-2 px-6 py-3 font-body text-sm font-bold text-primary hover:bg-surface-soft focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60"
+              >
+                {isHistoryLoading ? (
+                  <Clock3
+                    size={16}
+                    className="animate-spin"
+                    aria-hidden="true"
+                  />
+                ) : null}
+                {isHistoryLoading
+                  ? "Loading bookings"
+                  : historyError
+                    ? "Retry loading bookings"
+                    : "Load older bookings"}
+              </button>
+            ) : null}
+          </section>
+        ) : null}
       </div>
+
+      <TenancyRecordsDialog
+        bookingId={recordsBookingId}
+        onClose={() => setRecordsBookingId(null)}
+        propertyTitle={
+          primaryBooking?.id === recordsBookingId
+            ? primaryBooking.propertyTitle
+            : (bookings.find((item) => item.id === recordsBookingId)
+                ?.propertyTitle ?? "")
+        }
+        showAgreement={
+          (primaryBooking?.id === recordsBookingId
+            ? primaryBooking
+            : bookings.find((item) => item.id === recordsBookingId)
+          )?.bookingKind !== "SHORT_STAY"
+        }
+        viewer="tenant"
+      />
+
+      {primaryBookingId !== null ? (
+        <MaintenanceReportDialog
+          bookingId={primaryBookingId}
+          onClose={() => setIsReportOpen(false)}
+          onReported={() => setTenancyRefreshKey((current) => current + 1)}
+          open={isReportOpen}
+          propertyTitle={primaryBooking?.propertyTitle ?? "your home"}
+        />
+      ) : null}
 
       <ChatThread
         conversationId={activeThread?.conversationId ?? null}

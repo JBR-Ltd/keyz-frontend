@@ -12,12 +12,9 @@ import {
   Star,
 } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
-import { getMyBookings, type Booking } from "@/lib/bookings";
-import {
-  getReviewsIWrote,
-  submitReview,
-  type Review,
-} from "@/lib/reviews";
+import RatingsPageSkeleton from "@/components/reviews/RatingsPageSkeleton";
+import { getAllMyBookings, type Booking } from "@/lib/bookings";
+import { getReviewsIWrote, submitReview, type Review } from "@/lib/reviews";
 
 const PROMPTS = [
   "Was the listing accurate?",
@@ -27,6 +24,15 @@ const PROMPTS = [
 
 function formatScore(value: number): string {
   return value.toFixed(1);
+}
+
+/** Whether this person already reviewed the stay. Older reviews carry no booking, only the listing. */
+function hasReviewed(reviews: Review[], booking: Booking): boolean {
+  return reviews.some((review) =>
+    review.bookingId != null
+      ? review.bookingId === booking.id
+      : review.propertyId === booking.propertyId,
+  );
 }
 
 export default function TenantRatingsPage(): ReactElement {
@@ -44,7 +50,7 @@ export default function TenantRatingsPage(): ReactElement {
     const load = async (): Promise<void> => {
       const [reviewResult, bookingResult] = await Promise.all([
         getReviewsIWrote(),
-        getMyBookings(),
+        getAllMyBookings(),
       ]);
 
       if (!active) {
@@ -53,6 +59,7 @@ export default function TenantRatingsPage(): ReactElement {
 
       setReviews(reviewResult.data);
       setBookings(bookingResult.data);
+      if (bookingResult.message) notify({ title: "Bookings could not be loaded", description: bookingResult.message, variant: "error" });
       setIsLoading(false);
     };
 
@@ -61,7 +68,7 @@ export default function TenantRatingsPage(): ReactElement {
     return () => {
       active = false;
     };
-  }, []);
+  }, [notify]);
 
   const averageGiven = useMemo(() => {
     if (reviews.length === 0) {
@@ -75,19 +82,14 @@ export default function TenantRatingsPage(): ReactElement {
   }, [reviews]);
 
   /** A stay is reviewable once it is complete and has not been reviewed yet. */
-  const reviewableStay = useMemo(() => {
-    const reviewedPropertyIds = new Set(
-      reviews.map((review) => review.propertyId),
-    );
-
-    return (
+  const reviewableStay = useMemo(
+    () =>
       bookings.find(
         (booking) =>
-          booking.status === "COMPLETED" &&
-          !reviewedPropertyIds.has(booking.propertyId),
-      ) ?? null
-    );
-  }, [bookings, reviews]);
+          booking.status === "COMPLETED" && !hasReviewed(reviews, booking),
+      ) ?? null,
+    [bookings, reviews],
+  );
 
   const handleSubmit = async (): Promise<void> => {
     if (!reviewableStay) {
@@ -96,7 +98,7 @@ export default function TenantRatingsPage(): ReactElement {
 
     setIsSending(true);
     const result = await submitReview({
-      propertyId: reviewableStay.propertyId,
+      bookingId: reviewableStay.id,
       rating: score,
       comment: comment.trim(),
     });
@@ -114,18 +116,26 @@ export default function TenantRatingsPage(): ReactElement {
     setReviews((current) => [result.data as Review, ...current]);
     setComment("");
     setScore(5);
-    notify({ title: "Review sent", variant: "success" });
+    notify({
+      title: "Review sent",
+      description:
+        "It stays hidden until your host reviews you too, or the 14-day window closes.",
+      variant: "success",
+    });
   };
 
   const pendingCount = useMemo(
     () =>
       bookings.filter(
         (booking) =>
-          booking.status === "COMPLETED" &&
-          !reviews.some((review) => review.propertyId === booking.propertyId),
+          booking.status === "COMPLETED" && !hasReviewed(reviews, booking),
       ).length,
     [bookings, reviews],
   );
+
+  if (isLoading) {
+    return <RatingsPageSkeleton />;
+  }
 
   return (
     <main className="min-h-screen overflow-x-hidden px-5 py-10 sm:px-8 lg:px-10 lg:py-14 xl:px-14">
@@ -309,6 +319,18 @@ export default function TenantRatingsPage(): ReactElement {
                 <MessageSquareText size={15} />
                 {review.subject?.name ?? "Host"}
               </p>
+              {review.pending ? (
+                <p className="mt-3 rounded-md bg-accent/10 px-3 py-2 font-body text-xs leading-5 text-primary">
+                  Hidden until your host reviews you too, or the review window
+                  closes.
+                </p>
+              ) : null}
+              {review.reply ? (
+                <p className="mt-3 border-l-2 border-accent pl-3 font-body text-sm leading-6 text-muted">
+                  <span className="font-bold text-primary">Host reply: </span>
+                  {review.reply}
+                </p>
+              ) : null}
             </article>
           ))
         )}

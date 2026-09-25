@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 
 type Phase = "draw" | "fillin" | "exit";
 
@@ -64,7 +64,6 @@ function DrawPath({
 export default function LoadingScreen({ onDone }: LoadingScreenProps) {
   const reduceMotion = useReducedMotion();
   const [phase, setPhase] = useState<Phase>("draw");
-  const exitTimeoutRef = useRef<number | null>(null);
 
   useLayoutEffect(() => {
     document.documentElement.style.visibility = "";
@@ -78,20 +77,8 @@ export default function LoadingScreen({ onDone }: LoadingScreenProps) {
     }
   }, [onDone, reduceMotion]);
 
-  useEffect(() => {
-    return () => {
-      if (exitTimeoutRef.current !== null) {
-        window.clearTimeout(exitTimeoutRef.current);
-      }
-    };
-  }, []);
-
   function scheduleExit(): void {
-    if (exitTimeoutRef.current !== null) {
-      return;
-    }
-
-    exitTimeoutRef.current = window.setTimeout(() => setPhase("exit"), 600);
+    setPhase("exit");
   }
 
   function handleDone(): void {

@@ -1,11 +1,22 @@
 "use client";
 
+import { apiRequest } from "@/lib/apiRequest";
 import Script from "next/script";
-import { useCallback, useEffect, useRef, useState, type ReactElement } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactElement,
+} from "react";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/toast";
 import { resolveApiError } from "@/lib/errors";
+import {
+  establishAuthentication,
+  getInstallationId,
+} from "@/lib/authSession";
 
 // === Types
 
@@ -38,26 +49,6 @@ declare global {
 }
 
 // === Helpers
-
-function createDeviceFingerprint(): string {
-  if (typeof window === "undefined") {
-    return "rello-server";
-  }
-
-  const stored = localStorage.getItem("rello_device_fingerprint");
-
-  if (stored) {
-    return stored;
-  }
-
-  const generated =
-    typeof crypto !== "undefined" && "randomUUID" in crypto
-      ? crypto.randomUUID()
-      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-
-  localStorage.setItem("rello_device_fingerprint", generated);
-  return generated;
-}
 
 function isAccountRole(value: unknown): value is AccountRole {
   return value === "AGENT" || value === "LANDLORD" || value === "TENANT";
@@ -93,11 +84,11 @@ export default function GoogleAuthButton({
       setIsSigningIn(true);
 
       try {
-        const result = await fetch("/api/auth/google", {
+        const result = await apiRequest("/api/auth/google", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "X-Device-Fingerprint": createDeviceFingerprint(),
+            "X-Device-Fingerprint": getInstallationId(),
           },
           body: JSON.stringify({
             idToken: response.credential,
@@ -119,16 +110,15 @@ export default function GoogleAuthButton({
         if (
           payload === null ||
           typeof payload !== "object" ||
-          !("accessToken" in payload) ||
-          typeof payload.accessToken !== "string" ||
           !("role" in payload) ||
           !isAccountRole(payload.role)
         ) {
           throw new Error("Google sign-in failed.");
         }
 
-        localStorage.setItem("rello_token", payload.accessToken);
-        localStorage.setItem("rello_role", payload.role);
+        if (!establishAuthentication(payload)) {
+          throw new Error("Google sign-in did not return a valid session.");
+        }
 
         notify({ title: "Signed in with Google", variant: "success" });
 

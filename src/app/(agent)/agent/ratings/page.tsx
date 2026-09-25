@@ -1,5 +1,6 @@
-import ComingSoon from "@/components/dashboard/ComingSoon";
+import type { ReactElement } from "react";
+import HostRatingsBoard from "@/components/reviews/HostRatingsBoard";
 
-export default function AgentRatingsPage() {
-  return <ComingSoon eyebrow="Agent portal" title="Strikes" />;
+export default function AgentRatingsPage(): ReactElement {
+  return <HostRatingsBoard />;
 }

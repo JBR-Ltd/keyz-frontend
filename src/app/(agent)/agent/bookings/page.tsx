@@ -5,7 +5,9 @@ import {
   ArrowRight,
   CalendarDays,
   ChevronRight,
+  ImageOff,
   Inbox,
+  Loader2,
   MapPin,
   Search,
   ShieldCheck,
@@ -15,16 +17,38 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import {
+  useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
-  useSyncExternalStore,
   type ReactElement,
 } from "react";
+import ChatThread from "@/components/chat/ChatThread";
+import TenancyDocumentsDialog from "@/components/tenant/TenancyDocumentsDialog";
+import TenancyRecordsDialog from "@/components/tenancy/TenancyRecordsDialog";
 import PropertyPrice from "@/components/property/PropertyPrice";
 import OverlayPortal from "@/components/ui/OverlayPortal";
 import { IconTile } from "@/components/ui/icon-tile";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { useToast } from "@/components/ui/toast";
+import {
+  getHostBookings,
+  updateBookingStatus,
+  type Booking,
+  type BookingStatus,
+} from "@/lib/bookings";
+import AcceptBookingDialog, {
+  type AcceptDialogMode,
+} from "@/components/bookings/AcceptBookingDialog";
+import CancelBookingDialog from "@/components/bookings/CancelBookingDialog";
+import DepositClaimDialog from "@/components/bookings/DepositClaimDialog";
+import PaymentStatusBadge from "@/components/bookings/PaymentStatusBadge";
+import {
+  describePaymentForHost,
+  moveInLocked,
+  stageFromLifecycle,
+} from "@/lib/bookingPayments";
 import { useDialogFocus } from "@/lib/useDialogFocus";
 
 // === Types
@@ -33,16 +57,25 @@ type TenancyStage = "active" | "past" | "request" | "upcoming";
 type TenancyTab = "all" | TenancyStage;
 
 interface Tenancy {
+  /** The booking behind the row, for the dialogs that act on it. */
+  booking: Booking;
   endDate: string;
+  /** The booking id. Status changes and chat scoping both key off it. */
   id: number;
-  imageUrl: string;
+  imageUrl: string | null;
   monthlyRent: number;
+  /** What the price is for: a year, a month or the whole stay. */
+  priceLabel: string;
   propertyAddress: string;
+  propertyId: number;
   propertyTitle: string;
   stage: TenancyStage;
   startDate: string;
+  status: BookingStatus;
+  tenantId: number | null;
   tenantName: string;
   tenantVerified: boolean;
+  unitLabel: string | null;
 }
 
 interface TabItem {
@@ -51,9 +84,44 @@ interface TabItem {
 }
 
 interface TenancyDrawerProps {
+  isUpdating: boolean;
   onClose: () => void;
+  onMessage: (tenancy: Tenancy) => void;
+  onDocuments: (tenancy: Tenancy) => void;
+  onRecords: (tenancy: Tenancy) => void;
+  now: number;
+  onAccept: (booking: Booking) => void;
+  onCancel: (booking: Booking) => void;
+  onClaimDeposit: (booking: Booking) => void;
+  onChangeMoveIn: (booking: Booking) => void;
+  onStatusChange: (tenancy: Tenancy, status: BookingStatus) => void;
   tenancy: Tenancy | null;
 }
+
+interface AcceptTarget {
+  booking: Booking;
+  mode: AcceptDialogMode;
+}
+
+/** What an agent can do from a tenancy at each stage, and what it sends. */
+interface StageAction {
+  label: string;
+  status: BookingStatus;
+}
+
+const PRIMARY_ACTIONS: Record<TenancyStage, StageAction | null> = {
+  active: { label: "Mark completed", status: "COMPLETED" },
+  past: null,
+  request: { label: "Confirm request", status: "CONFIRMED" },
+  upcoming: null,
+};
+
+const SECONDARY_ACTIONS: Record<TenancyStage, StageAction | null> = {
+  active: null,
+  past: null,
+  request: { label: "Decline", status: "CANCELLED" },
+  upcoming: { label: "Cancel tenancy", status: "CANCELLED" },
+};
 
 // === Constants
 
@@ -65,87 +133,6 @@ const TABS: TabItem[] = [
   { id: "past", label: "Past" },
 ];
 
-const TENANCIES: Tenancy[] = [
-  {
-    endDate: "7 Sep 2027",
-    id: 801,
-    imageUrl:
-      "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=640&h=480&fit=crop&auto=format&q=80",
-    monthlyRent: 950000,
-    propertyAddress: "Maitama, Abuja",
-    propertyTitle: "Maitama Park Apartment",
-    stage: "request",
-    startDate: "8 Sep 2026",
-    tenantName: "Ada Nwosu",
-    tenantVerified: true,
-  },
-  {
-    endDate: "17 Sep 2027",
-    id: 802,
-    imageUrl:
-      "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=640&h=480&fit=crop&auto=format&q=80",
-    monthlyRent: 1750000,
-    propertyAddress: "Victoria Island, Lagos",
-    propertyTitle: "Harbour View Residence",
-    stage: "request",
-    startDate: "18 Sep 2026",
-    tenantName: "Tolu Martins",
-    tenantVerified: true,
-  },
-  {
-    endDate: "23 Sep 2027",
-    id: 803,
-    imageUrl:
-      "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=640&h=480&fit=crop&auto=format&q=80",
-    monthlyRent: 1100000,
-    propertyAddress: "Wuse 2, Abuja",
-    propertyTitle: "Wuse City Apartment",
-    stage: "request",
-    startDate: "24 Sep 2026",
-    tenantName: "David Okoro",
-    tenantVerified: false,
-  },
-  {
-    endDate: "11 Sep 2027",
-    id: 804,
-    imageUrl:
-      "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=640&h=480&fit=crop&auto=format&q=80",
-    monthlyRent: 1200000,
-    propertyAddress: "Lekki Phase 1, Lagos",
-    propertyTitle: "Lekki Garden Maisonette",
-    stage: "upcoming",
-    startDate: "12 Sep 2026",
-    tenantName: "Kelechi Eze",
-    tenantVerified: true,
-  },
-  {
-    endDate: "31 Aug 2027",
-    id: 805,
-    imageUrl:
-      "https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?w=640&h=480&fit=crop&auto=format&q=80",
-    monthlyRent: 850000,
-    propertyAddress: "GRA, Port Harcourt",
-    propertyTitle: "Garden City Townhouse",
-    stage: "active",
-    startDate: "1 Sep 2026",
-    tenantName: "Amaka Obi",
-    tenantVerified: true,
-  },
-  {
-    endDate: "30 Jun 2026",
-    id: 806,
-    imageUrl:
-      "https://images.unsplash.com/photo-1600607688969-a5bfcd646154?w=640&h=480&fit=crop&auto=format&q=80",
-    monthlyRent: 780000,
-    propertyAddress: "Yaba, Lagos",
-    propertyTitle: "Yaba Courtyard Flat",
-    stage: "past",
-    startDate: "1 Jul 2025",
-    tenantName: "Zainab Bello",
-    tenantVerified: true,
-  },
-];
-
 const STAGE_LABELS: Record<TenancyStage, string> = {
   active: "Active",
   past: "Completed",
@@ -153,29 +140,98 @@ const STAGE_LABELS: Record<TenancyStage, string> = {
   upcoming: "Upcoming",
 };
 
-const STAGE_TONES: Record<
-  TenancyStage,
-  "accent" | "neutral" | "primary"
-> = {
+const STAGE_TONES: Record<TenancyStage, "accent" | "neutral" | "primary"> = {
   active: "primary",
   past: "neutral",
   request: "accent",
   upcoming: "primary",
 };
 
-const STAGE_ACTIONS: Record<TenancyStage, string> = {
-  active: "Manage tenancy",
-  past: "View details",
-  request: "Review request",
-  upcoming: "Prepare move-in",
-};
-
 // === Helpers
 
-function countForTab(tab: TenancyTab): number {
+function toDate(value: string): Date {
+  return new Date(`${value}T00:00:00`);
+}
+
+function formatDate(value: string): string {
+  return toDate(value).toLocaleDateString("en-NG", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+/**
+ * Stage is derived from status plus dates rather than stored. A confirmed booking
+ * moves from upcoming to active to past on its own as the dates pass, with no
+ * second source of truth to keep in step.
+ */
+function toStage(booking: Booking): TenancyStage {
+  const fromServer = stageFromLifecycle(booking);
+
+  if (fromServer) {
+    return fromServer;
+  }
+
+  if (booking.status === "PENDING") {
+    return "request";
+  }
+
+  if (booking.status === "CANCELLED" || booking.status === "COMPLETED") {
+    return "past";
+  }
+
+  if (booking.bookingKind === "RENTAL_REQUEST" || !booking.endDate) {
+    return "active";
+  }
+
+  const today = new Date().setHours(0, 0, 0, 0);
+
+  if (booking.startDate && toDate(booking.startDate).getTime() > today) {
+    return "upcoming";
+  }
+
+  return toDate(booking.endDate).getTime() < today ? "past" : "active";
+}
+
+function toTenancy(booking: Booking): Tenancy {
+  return {
+    booking,
+    endDate: booking.endDate
+      ? formatDate(booking.endDate)
+      : "No fixed end date",
+    id: booking.id,
+    imageUrl: booking.propertyImageUrl,
+    monthlyRent: booking.totalPrice,
+    priceLabel:
+      booking.rentalMode === "SHORT_STAY"
+        ? "Stay total"
+        : booking.rentalMode === "MONTHLY"
+          ? "Monthly rent"
+          : "Yearly rent",
+    propertyAddress: booking.propertyAddress,
+    propertyId: booking.propertyId,
+    propertyTitle: booking.propertyTitle,
+    stage: toStage(booking),
+    startDate: booking.tenancyStartDate
+      ? formatDate(booking.tenancyStartDate)
+      : booking.startDate
+        ? formatDate(booking.startDate)
+        : booking.preferredMoveInDate
+          ? formatDate(booking.preferredMoveInDate)
+          : "Flexible move-in",
+    status: booking.status,
+    tenantId: booking.tenant?.id ?? null,
+    tenantName: booking.tenant?.name ?? "Tenant",
+    tenantVerified: booking.tenant?.identityVerified ?? false,
+    unitLabel: booking.unitLabel ?? null,
+  };
+}
+
+function countForTab(tenancies: Tenancy[], tab: TenancyTab): number {
   return tab === "all"
-    ? TENANCIES.length
-    : TENANCIES.filter((tenancy) => tenancy.stage === tab).length;
+    ? tenancies.length
+    : tenancies.filter((tenancy) => tenancy.stage === tab).length;
 }
 
 function matchesQuery(tenancy: Tenancy, query: string): boolean {
@@ -192,37 +248,78 @@ function matchesQuery(tenancy: Tenancy, query: string): boolean {
   ].some((value) => value.toLowerCase().includes(normalizedQuery));
 }
 
-function subscribeToPreviewState(): () => void {
-  return () => undefined;
-}
-
-function getLoadingPreview(): boolean {
-  return new URLSearchParams(window.location.search).get("state") === "loading";
-}
-
-function getServerLoadingPreview(): boolean {
-  return false;
-}
-
 // === Components
 
 function TenanciesSkeleton(): ReactElement {
   return (
     <main
-      className="min-h-screen animate-pulse px-5 py-12 motion-reduce:animate-none sm:px-8 lg:px-10 lg:py-16 xl:px-14"
+      className="min-h-screen animate-pulse overflow-x-hidden px-5 py-12 motion-reduce:animate-none sm:px-8 lg:px-10 lg:py-16 xl:px-14"
       aria-busy="true"
       aria-label="Loading tenancies"
     >
-      <div className="h-12 rounded-lg bg-primary/5" />
-      <div className="mt-7 overflow-hidden rounded-lg bg-bg shadow-sm">
-        <div className="h-14 border-b border-primary/10 bg-surface-soft" />
-        {[0, 1, 2, 3].map((item) => (
-          <div
-            key={item}
-            className="h-28 border-b border-primary/10 last:border-0"
-          />
-        ))}
+      <div className="flex flex-col gap-4 rounded-lg bg-bg p-4 shadow-sm lg:flex-row lg:items-center lg:justify-between">
+        <div className="overflow-hidden">
+          <div className="flex min-w-max gap-2">
+            {["w-20", "w-28", "w-28", "w-24", "w-20"].map((width, index) => (
+              <div
+                key={index}
+                className={`h-11 shrink-0 rounded-full bg-skeleton ${width}`}
+              />
+            ))}
+          </div>
+        </div>
+        <div className="h-12 w-full rounded-full bg-skeleton lg:max-w-xs" />
       </div>
+
+      <div className="mt-7 overflow-hidden rounded-lg border border-border/70 bg-bg shadow-sm">
+        <div className="hidden border-b border-primary/10 bg-surface-soft px-6 py-3 lg:grid lg:grid-cols-[minmax(15rem,1.1fr)_minmax(16rem,1.2fr)_minmax(10rem,0.8fr)_minmax(8rem,0.6fr)_2rem] lg:gap-5">
+          <div className="h-3 w-16 rounded-full bg-skeleton" />
+          <div className="h-3 w-20 rounded-full bg-skeleton" />
+          <div className="h-3 w-28 rounded-full bg-skeleton" />
+          <div className="h-3 w-14 rounded-full bg-skeleton" />
+        </div>
+
+        <div className="divide-y divide-primary/10">
+          {[0, 1, 2].map((item) => (
+            <div
+              key={item}
+              className="relative grid gap-5 p-5 lg:grid-cols-[minmax(15rem,1.1fr)_minmax(16rem,1.2fr)_minmax(10rem,0.8fr)_minmax(8rem,0.6fr)_2rem] lg:items-center lg:px-6"
+            >
+              <div className="flex min-w-0 items-center gap-3 pr-9 lg:pr-0">
+                <div className="h-11 w-11 shrink-0 rounded-full bg-skeleton-strong" />
+                <div className="min-w-0 flex-1">
+                  <div className="h-4 w-32 max-w-full rounded-full bg-skeleton" />
+                  <div className="mt-2 h-3 w-20 rounded-full bg-skeleton" />
+                </div>
+              </div>
+
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="h-13 w-13 shrink-0 rounded-lg bg-skeleton-strong" />
+                <div className="min-w-0 flex-1">
+                  <div className="h-4 w-40 max-w-full rounded-full bg-skeleton" />
+                  <div className="mt-2 h-3 w-48 max-w-full rounded-full bg-skeleton" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 rounded-lg bg-surface-soft p-3 lg:contents">
+                <div>
+                  <div className="h-3 w-20 rounded-full bg-skeleton lg:hidden" />
+                  <div className="mt-2 h-4 w-24 rounded-full bg-skeleton lg:mt-0" />
+                  <div className="mt-2 h-3 w-28 rounded-full bg-skeleton" />
+                  <div className="mt-2 h-3 w-24 rounded-full bg-skeleton" />
+                </div>
+                <div>
+                  <div className="h-3 w-12 rounded-full bg-skeleton lg:hidden" />
+                  <div className="mt-2 h-7 w-24 rounded-full bg-skeleton lg:mt-0" />
+                </div>
+              </div>
+
+              <div className="absolute right-5 top-7 h-5 w-5 rounded-full bg-skeleton lg:static" />
+            </div>
+          ))}
+        </div>
+      </div>
+      <span className="sr-only">Loading tenancies</span>
     </main>
   );
 }
@@ -267,11 +364,24 @@ function EmptyTenancies({
 }
 
 function TenancyDrawer({
+  isUpdating,
   onClose,
+  onDocuments,
+  onRecords,
+  onMessage,
+  now,
+  onAccept,
+  onCancel,
+  onClaimDeposit,
+  onChangeMoveIn,
+  onStatusChange,
   tenancy,
 }: TenancyDrawerProps): ReactElement | null {
   const reduceMotion = useReducedMotion();
   const drawerRef = useDialogFocus<HTMLElement>(tenancy !== null);
+
+  const primaryAction = tenancy ? PRIMARY_ACTIONS[tenancy.stage] : null;
+  const secondaryAction = tenancy ? SECONDARY_ACTIONS[tenancy.stage] : null;
 
   useEffect(() => {
     if (!tenancy) {
@@ -295,7 +405,7 @@ function TenancyDrawer({
           <div className="fixed inset-0 z-[120]">
             <motion.button
               type="button"
-              className="absolute inset-0 bg-primary/45"
+              className="modal-backdrop absolute inset-0"
               aria-label="Close tenancy details"
               onClick={onClose}
               initial={reduceMotion ? false : { opacity: 0 }}
@@ -314,13 +424,19 @@ function TenancyDrawer({
               transition={{ duration: 0.28, ease: "easeOut" }}
             >
               <div className="relative h-52">
-                <Image
-                  src={tenancy.imageUrl}
-                  alt=""
-                  fill
-                  sizes="(max-width: 512px) 100vw, 512px"
-                  className="object-cover"
-                />
+                {tenancy.imageUrl ? (
+                  <Image
+                    src={tenancy.imageUrl}
+                    alt=""
+                    fill
+                    sizes="(max-width: 512px) 100vw, 512px"
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full items-center justify-center bg-surface-soft text-muted">
+                    <ImageOff size={28} aria-hidden="true" />
+                  </div>
+                )}
                 <div className="absolute inset-0 bg-gradient-to-t from-primary/55 to-transparent" />
                 <button
                   type="button"
@@ -352,6 +468,11 @@ function TenancyDrawer({
                   <MapPin size={15} />
                   {tenancy.propertyAddress}
                 </p>
+                {tenancy.unitLabel ? (
+                  <p className="mt-2 font-body text-sm font-semibold text-primary">
+                    Assigned {tenancy.unitLabel}
+                  </p>
+                ) : null}
 
                 <div className="mt-8 grid gap-3 sm:grid-cols-2">
                   <div className="rounded-lg bg-surface-soft p-4">
@@ -372,20 +493,26 @@ function TenancyDrawer({
                   <div className="rounded-lg bg-surface-soft p-4">
                     <WalletCards size={19} className="text-accent-alt" />
                     <p className="mt-3 font-body text-xs font-medium text-muted">
-                      Monthly rent
+                      {tenancy.priceLabel}
                     </p>
                     <p className="mt-1 font-body text-sm font-bold text-primary">
                       <PropertyPrice value={tenancy.monthlyRent} />
                     </p>
-                    <p className="mt-1 font-body text-xs text-muted">
-                      Protected payment
-                    </p>
+                    <PaymentStatusBadge
+                      audience="host"
+                      booking={tenancy.booking}
+                      now={now}
+                      className="mt-2"
+                    />
                   </div>
                 </div>
 
                 <div className="mt-6 rounded-lg border border-primary/10 p-5">
                   <div className="flex items-start gap-3">
-                    <CalendarDays size={19} className="mt-0.5 text-accent-alt" />
+                    <CalendarDays
+                      size={19}
+                      className="mt-0.5 text-accent-alt"
+                    />
                     <div>
                       <p className="font-body text-xs font-medium text-muted">
                         Proposed tenancy period
@@ -397,20 +524,101 @@ function TenancyDrawer({
                   </div>
                 </div>
 
-                <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                <div className="mt-3 rounded-lg border border-primary/10 p-5">
+                  <p className="font-body text-xs font-medium text-muted">
+                    Payment
+                  </p>
+                  <p className="mt-1 font-body text-sm font-bold text-primary">
+                    {describePaymentForHost(tenancy.booking, now)}
+                  </p>
+                </div>
+
+                {tenancy.booking.cancellationReason ? (
+                  <p className="mt-3 rounded-lg bg-surface-soft p-4 font-body text-sm leading-6 text-primary">
+                    Reason given: &ldquo;{tenancy.booking.cancellationReason}
+                    &rdquo;
+                  </p>
+                ) : null}
+
+                <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                  {primaryAction ? (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        primaryAction.status === "CONFIRMED"
+                          ? onAccept(tenancy.booking)
+                          : onStatusChange(tenancy, primaryAction.status)
+                      }
+                      disabled={isUpdating}
+                      className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-full bg-primary px-5 font-body text-sm font-bold text-white hover:bg-primary/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {isUpdating ? (
+                        <Loader2 size={17} className="animate-spin" />
+                      ) : null}
+                      {primaryAction.label}
+                      {isUpdating ? null : <ArrowRight size={17} />}
+                    </button>
+                  ) : null}
                   <button
                     type="button"
-                    className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-full bg-primary px-5 font-body text-sm font-bold text-white hover:bg-primary/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                  >
-                    {STAGE_ACTIONS[tenancy.stage]}
-                    <ArrowRight size={17} />
-                  </button>
-                  <button
-                    type="button"
-                    className="inline-flex min-h-12 items-center justify-center rounded-full border border-primary/15 px-5 font-body text-sm font-bold text-primary hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    onClick={() => onMessage(tenancy)}
+                    disabled={tenancy.tenantId === null}
+                    className="inline-flex min-h-12 items-center justify-center rounded-full border border-primary/15 px-5 font-body text-sm font-bold text-primary hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     Message tenant
                   </button>
+                  {tenancy.stage === "active" || tenancy.stage === "past" ? (
+                    <button
+                      type="button"
+                      onClick={() => onDocuments(tenancy)}
+                      className="inline-flex min-h-12 items-center justify-center rounded-full border border-primary/15 px-5 font-body text-sm font-bold text-primary hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    >
+                      Paperwork
+                    </button>
+                  ) : null}
+                  {tenancy.status === "CONFIRMED" || tenancy.status === "COMPLETED" ? (
+                    <button
+                      type="button"
+                      onClick={() => onRecords(tenancy)}
+                      className="inline-flex min-h-12 items-center justify-center rounded-full border border-primary/15 px-5 font-body text-sm font-bold text-primary hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    >
+                      {tenancy.booking.bookingKind === "SHORT_STAY"
+                        ? "Condition reports"
+                        : "Agreement and reports"}
+                    </button>
+                  ) : null}
+                  {tenancy.status === "CONFIRMED" &&
+                  tenancy.booking.bookingKind !== "SHORT_STAY" &&
+                  !moveInLocked(tenancy.booking) ? (
+                    <button
+                      type="button"
+                      onClick={() => onChangeMoveIn(tenancy.booking)}
+                      className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-primary/15 px-5 font-body text-sm font-bold text-primary hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    >
+                      <CalendarDays size={16} aria-hidden="true" />
+                      Change move-in
+                    </button>
+                  ) : null}
+                  {tenancy.booking.depositStatus === "HELD" &&
+                  tenancy.status === "COMPLETED" ? (
+                    <button
+                      type="button"
+                      onClick={() => onClaimDeposit(tenancy.booking)}
+                      className="inline-flex min-h-12 items-center justify-center rounded-full border border-primary/15 px-5 font-body text-sm font-bold text-primary hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    >
+                      Claim against deposit
+                    </button>
+                  ) : null}
+                  {secondaryAction ? (
+                    <button
+                      type="button"
+                      onClick={() => onCancel(tenancy.booking)}
+                      disabled={isUpdating}
+                      className="inline-flex min-h-12 items-center justify-center rounded-full border border-red-700/25 px-5 font-body text-sm font-bold text-red-700 hover:bg-red-700/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {secondaryAction.label}
+                    </button>
+                  ) : null}
                 </div>
               </div>
             </motion.aside>
@@ -423,23 +631,137 @@ function TenancyDrawer({
 
 export default function AgentBookingsPage(): ReactElement {
   const reduceMotion = useReducedMotion();
+  const { notify } = useToast();
   const [activeTab, setActiveTab] = useState<TenancyTab>("all");
   const [query, setQuery] = useState("");
   const [selectedTenancy, setSelectedTenancy] = useState<Tenancy | null>(null);
-  const loading = useSyncExternalStore(
-    subscribeToPreviewState,
-    getLoadingPreview,
-    getServerLoadingPreview,
+  const [chatTenancy, setChatTenancy] = useState<Tenancy | null>(null);
+  const [recordsTenancy, setRecordsTenancy] = useState<Tenancy | null>(null);
+  const [documentsTenancy, setDocumentsTenancy] = useState<Tenancy | null>(
+    null,
   );
+  const [tenancies, setTenancies] = useState<Tenancy[]>([]);
+  const [loadError, setLoadError] = useState("");
+  const [updatingId, setUpdatingId] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [now, setNow] = useState(0);
+  const [accepting, setAccepting] = useState<AcceptTarget | null>(null);
+  const [cancelling, setCancelling] = useState<Booking | null>(null);
+  const [claiming, setClaiming] = useState<Booking | null>(null);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(0);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const requestGeneration = useRef(0);
+  const paginationGeneration = useRef<number | null>(null);
+  const isMounted = useRef(false);
+  const isRefreshing = useRef(true);
+
+  const load = useCallback(async (): Promise<void> => {
+    const generation = ++requestGeneration.current;
+    paginationGeneration.current = null;
+    isRefreshing.current = true;
+    const result = await getHostBookings({ page: 0, size: 100 });
+
+    if (!isMounted.current || requestGeneration.current !== generation) return;
+
+    setNow(Date.now());
+    setTenancies(result.data.map(toTenancy));
+    setTotal(result.total ?? result.data.length);
+    setPage(0);
+    setLoadError(result.message ?? "");
+    setLoading(false);
+    setIsLoadingMore(false);
+    isRefreshing.current = false;
+  }, []);
+
+  useEffect(() => {
+    isMounted.current = true;
+    void load();
+
+    return () => {
+      isMounted.current = false;
+    };
+  }, [load]);
+
+  const loadMore = async (): Promise<void> => {
+    if (
+      isRefreshing.current ||
+      tenancies.length >= total ||
+      paginationGeneration.current !== null
+    )
+      return;
+    const generation = requestGeneration.current;
+    paginationGeneration.current = generation;
+    setIsLoadingMore(true);
+    const result = await getHostBookings({ page: page + 1, size: 100 });
+
+    if (!isMounted.current || requestGeneration.current !== generation) return;
+    paginationGeneration.current = null;
+    setIsLoadingMore(false);
+
+    if (result.message) {
+      notify({
+        title: "More tenancies could not load",
+        description: result.message,
+        variant: "error",
+      });
+      return;
+    }
+
+    setTenancies((current) => {
+      const known = new Set(current.map((item) => item.id));
+      return [
+        ...current,
+        ...result.data.filter((item) => !known.has(item.id)).map(toTenancy),
+      ];
+    });
+    setTotal(result.total ?? total);
+    setPage((current) => current + 1);
+  };
+
+  const changeStatus = async (
+    tenancy: Tenancy,
+    status: BookingStatus,
+  ): Promise<void> => {
+    setUpdatingId(tenancy.id);
+
+    const result = await updateBookingStatus(tenancy.id, status);
+
+    setUpdatingId(null);
+
+    if (!result.data) {
+      notify({
+        title: "That did not save",
+        description: result.message ?? "Try again in a moment.",
+        variant: "error",
+      });
+      return;
+    }
+
+    setSelectedTenancy(null);
+    notify({
+      title:
+        status === "CONFIRMED"
+          ? "Tenancy confirmed"
+          : status === "COMPLETED"
+            ? "Tenancy completed"
+            : "Tenancy cancelled",
+      variant: "success",
+    });
+
+    // Re-read rather than patching locally: the stage depends on dates as well
+    // as status, and the server is the one that decides both
+    await load();
+  };
 
   const visibleTenancies = useMemo(
     () =>
-      TENANCIES.filter(
+      tenancies.filter(
         (tenancy) =>
           (activeTab === "all" || tenancy.stage === activeTab) &&
           matchesQuery(tenancy, query),
       ),
-    [activeTab, query],
+    [activeTab, query, tenancies],
   );
 
   if (loading) {
@@ -462,7 +784,7 @@ export default function AgentBookingsPage(): ReactElement {
           >
             {TABS.map((tab) => {
               const active = activeTab === tab.id;
-              const count = countForTab(tab.id);
+              const count = countForTab(tenancies, tab.id);
 
               return (
                 <button
@@ -512,8 +834,8 @@ export default function AgentBookingsPage(): ReactElement {
         {visibleTenancies.length === 0 ? (
           <EmptyTenancies query={query} tab={activeTab} />
         ) : (
-          <section className="overflow-hidden rounded-lg bg-bg shadow-sm">
-            <div className="hidden border-b border-primary/10 bg-surface-soft px-6 py-3 font-body text-[11px] font-bold uppercase tracking-[0.14em] text-muted md:grid md:grid-cols-[minmax(15rem,1.1fr)_minmax(16rem,1.2fr)_minmax(10rem,0.8fr)_minmax(8rem,0.6fr)_2rem] md:gap-5">
+          <section className="overflow-hidden rounded-lg border border-border/70 bg-bg shadow-sm">
+            <div className="hidden border-b border-primary/10 bg-surface-soft px-6 py-3 font-body text-[11px] font-bold uppercase tracking-[0.14em] text-muted lg:grid lg:grid-cols-[minmax(15rem,1.1fr)_minmax(16rem,1.2fr)_minmax(10rem,0.8fr)_minmax(8rem,0.6fr)_2rem] lg:gap-5">
               <span>Tenant</span>
               <span>Property</span>
               <span>Tenancy period</span>
@@ -527,9 +849,9 @@ export default function AgentBookingsPage(): ReactElement {
                   key={tenancy.id}
                   type="button"
                   onClick={() => setSelectedTenancy(tenancy)}
-                  className="grid w-full gap-5 p-5 text-left transition-colors hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent md:grid-cols-[minmax(15rem,1.1fr)_minmax(16rem,1.2fr)_minmax(10rem,0.8fr)_minmax(8rem,0.6fr)_2rem] md:items-center md:px-6"
+                  className="relative grid w-full gap-5 p-5 text-left transition-colors hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent lg:grid-cols-[minmax(15rem,1.1fr)_minmax(16rem,1.2fr)_minmax(10rem,0.8fr)_minmax(8rem,0.6fr)_2rem] lg:items-center lg:px-6"
                 >
-                  <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex min-w-0 items-center gap-3 pr-9 lg:pr-0">
                     <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/5 font-display text-sm font-bold text-primary">
                       {tenancy.tenantName
                         .split(" ")
@@ -548,13 +870,19 @@ export default function AgentBookingsPage(): ReactElement {
                   </div>
 
                   <div className="flex min-w-0 items-center gap-3">
-                    <Image
-                      src={tenancy.imageUrl}
-                      alt=""
-                      width={52}
-                      height={52}
-                      className="h-13 w-13 shrink-0 rounded-lg object-cover"
-                    />
+                    {tenancy.imageUrl ? (
+                      <Image
+                        src={tenancy.imageUrl}
+                        alt=""
+                        width={52}
+                        height={52}
+                        className="h-13 w-13 shrink-0 rounded-lg object-cover"
+                      />
+                    ) : (
+                      <span className="flex h-13 w-13 shrink-0 items-center justify-center rounded-lg bg-surface-soft text-muted">
+                        <ImageOff size={18} aria-hidden="true" />
+                      </span>
+                    )}
                     <div className="min-w-0">
                       <p className="truncate font-body text-sm font-bold text-primary">
                         {tenancy.propertyTitle}
@@ -563,23 +891,54 @@ export default function AgentBookingsPage(): ReactElement {
                         <MapPin size={12} />
                         {tenancy.propertyAddress}
                       </p>
+                      {tenancy.unitLabel ? (
+                        <p className="mt-1 font-body text-xs font-semibold text-primary">
+                          {tenancy.unitLabel}
+                        </p>
+                      ) : null}
                     </div>
                   </div>
 
-                  <div>
-                    <p className="font-body text-sm font-bold text-primary">
-                      {tenancy.startDate}
-                    </p>
-                    <p className="mt-1 font-body text-xs text-muted">
-                      <PropertyPrice value={tenancy.monthlyRent} /> monthly
-                    </p>
+                  <div className="grid grid-cols-2 gap-3 rounded-lg bg-surface-soft p-3 lg:contents">
+                    <div>
+                      <p className="font-body text-[10px] font-bold uppercase tracking-[0.12em] text-muted lg:hidden">
+                        Tenancy period
+                      </p>
+                      <p className="mt-1 font-body text-sm font-bold text-primary lg:mt-0">
+                        {tenancy.startDate}
+                      </p>
+                      <p className="mt-1 font-body text-xs text-muted">
+                        to {tenancy.endDate}
+                      </p>
+                      <p className="mt-1 font-body text-xs text-muted">
+                        <PropertyPrice value={tenancy.monthlyRent} />{" "}
+                        {tenancy.priceLabel.toLowerCase()}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="font-body text-[10px] font-bold uppercase tracking-[0.12em] text-muted lg:hidden">
+                        Status
+                      </p>
+                      <StatusBadge
+                        tone={STAGE_TONES[tenancy.stage]}
+                        className="mt-1 lg:mt-0"
+                      >
+                        {STAGE_LABELS[tenancy.stage]}
+                      </StatusBadge>
+                      <PaymentStatusBadge
+                        audience="host"
+                        booking={tenancy.booking}
+                        now={now}
+                        className="mt-2 block w-fit"
+                      />
+                    </div>
                   </div>
 
-                  <StatusBadge tone={STAGE_TONES[tenancy.stage]}>
-                    {STAGE_LABELS[tenancy.stage]}
-                  </StatusBadge>
-
-                  <ChevronRight size={19} className="text-muted" />
+                  <ChevronRight
+                    size={19}
+                    className="absolute right-5 top-7 text-muted lg:static"
+                  />
                 </button>
               ))}
             </div>
@@ -587,9 +946,126 @@ export default function AgentBookingsPage(): ReactElement {
         )}
       </div>
 
+      {loadError ? (
+        <p className="mt-6 rounded-lg border border-red-500/30 bg-bg px-4 py-3 font-body text-sm font-bold text-red-700">
+          {loadError}
+        </p>
+      ) : null}
+
+      <TenancyRecordsDialog
+        bookingId={recordsTenancy?.id ?? null}
+        onClose={() => setRecordsTenancy(null)}
+        propertyTitle={recordsTenancy?.propertyTitle ?? ""}
+        showAgreement={recordsTenancy?.booking.bookingKind !== "SHORT_STAY"}
+        viewer="host"
+      />
+
+      {documentsTenancy ? (
+        <TenancyDocumentsDialog
+          bookingId={documentsTenancy.id}
+          propertyTitle={documentsTenancy.propertyTitle}
+          open
+          onClose={() => setDocumentsTenancy(null)}
+        />
+      ) : null}
+
+      {chatTenancy && chatTenancy.tenantId !== null ? (
+        <ChatThread
+          conversationId={`booking-${chatTenancy.id}`}
+          otherUserId={chatTenancy.tenantId}
+          propertyId={chatTenancy.propertyId}
+          otherPartyName={chatTenancy.tenantName}
+          otherPartyRole="Tenant"
+          propertyName={chatTenancy.propertyTitle}
+          onClose={() => setChatTenancy(null)}
+        />
+      ) : null}
+
+      {!loading && tenancies.length < total ? (
+        <div className="mt-6 text-center">
+          <button
+            type="button"
+            onClick={() => void loadMore()}
+            disabled={isLoadingMore}
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-primary/15 px-5 font-body text-sm font-bold text-primary hover:bg-primary/5 focus-visible:outline focus-visible:outline-accent disabled:cursor-wait disabled:opacity-60"
+          >
+            {isLoadingMore ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : null}
+            Show more tenancies ({total - tenancies.length} more)
+          </button>
+        </div>
+      ) : null}
+
       <TenancyDrawer
-        tenancy={selectedTenancy}
+        isUpdating={updatingId === selectedTenancy?.id}
         onClose={() => setSelectedTenancy(null)}
+        onMessage={(tenancy) => {
+          setSelectedTenancy(null);
+          setChatTenancy(tenancy);
+        }}
+        onDocuments={(tenancy) => {
+          setSelectedTenancy(null);
+          setDocumentsTenancy(tenancy);
+        }}
+        onRecords={(tenancy) => {
+          setSelectedTenancy(null);
+          setRecordsTenancy(tenancy);
+        }}
+        now={now}
+        onAccept={(booking) => {
+          setSelectedTenancy(null);
+          setAccepting({ booking, mode: "accept" });
+        }}
+        onCancel={(booking) => {
+          setSelectedTenancy(null);
+          setCancelling(booking);
+        }}
+        onClaimDeposit={(booking) => {
+          setSelectedTenancy(null);
+          setClaiming(booking);
+        }}
+        onChangeMoveIn={(booking) => {
+          setSelectedTenancy(null);
+          setAccepting({ booking, mode: "move-in" });
+        }}
+        onStatusChange={(tenancy, status) => void changeStatus(tenancy, status)}
+        tenancy={selectedTenancy}
+      />
+
+      <AcceptBookingDialog
+        key={
+          accepting ? `${accepting.mode}-${accepting.booking.id}` : "no-accept"
+        }
+        booking={accepting?.booking ?? null}
+        mode={accepting?.mode ?? "accept"}
+        onClose={() => setAccepting(null)}
+        onSaved={() => {
+          setAccepting(null);
+          void load();
+        }}
+      />
+
+      <DepositClaimDialog
+        key={claiming ? `claim-${claiming.id}` : "no-claim"}
+        booking={claiming}
+        onClose={() => setClaiming(null)}
+        onClaimed={() => {
+          setClaiming(null);
+          void load();
+        }}
+      />
+
+      <CancelBookingDialog
+        key={cancelling ? `cancel-${cancelling.id}` : "no-cancel"}
+        actor="host"
+        booking={cancelling}
+        now={now}
+        onClose={() => setCancelling(null)}
+        onDone={() => {
+          setCancelling(null);
+          void load();
+        }}
       />
     </motion.main>
   );

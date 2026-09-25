@@ -1,5 +1,8 @@
 "use client";
 
+import { getBrowserSessionMarker } from "@/lib/authSession";
+
+import { apiRequest } from "@/lib/apiRequest";
 import { resolveApiError } from "@/lib/errors";
 
 // === Types
@@ -56,12 +59,12 @@ export function readDeviceLocation(): Promise<CaptureFix | null> {
 
 // === Submission
 
-function getAccessToken(): string {
-  return localStorage.getItem("rello_token") ?? "";
+function getSessionMarker(): string {
+  return getBrowserSessionMarker();
 }
 
 async function dataUrlToBlob(dataUrl: string): Promise<Blob> {
-  const response = await fetch(dataUrl);
+  const response = await apiRequest(dataUrl);
 
   if (!response.ok) {
     throw new Error("The photo could not be prepared for upload.");
@@ -74,7 +77,7 @@ export async function submitPropertyProof(
   propertyId: number,
   capture: ProofCapture,
 ): Promise<ProofSubmissionResult> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
 
   if (!token) {
     return {
@@ -85,18 +88,22 @@ export async function submitPropertyProof(
 
   try {
     const formData = new FormData();
-    formData.append("proofImage", await dataUrlToBlob(capture.dataUrl), capture.name);
+    formData.append(
+      "proofImage",
+      await dataUrlToBlob(capture.dataUrl),
+      capture.name,
+    );
 
     if (capture.fix) {
       formData.append("capturedLatitude", String(capture.fix.latitude));
       formData.append("capturedLongitude", String(capture.fix.longitude));
     }
 
-    const response = await fetch(
+    const response = await apiRequest(
       `/api/verification/property/verify?propertyId=${propertyId}`,
       {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {},
         body: formData,
       },
     );
@@ -106,7 +113,81 @@ export async function submitPropertyProof(
     if (!response.ok) {
       return {
         success: false,
-        message: resolveApiError(payload, "This listing could not be verified."),
+        message: resolveApiError(
+          payload,
+          "This listing could not be verified.",
+        ),
+      };
+    }
+
+    return {
+      success: true,
+      message: "Your listing is verified and now live.",
+    };
+  } catch {
+    return {
+      success: false,
+      message: "Unable to reach the verification server right now.",
+    };
+  }
+}
+
+// === Utility bill
+
+/**
+ * What the bill reader accepts. A clear phone photo of a paper bill works as well
+ * as the PDF a provider emails.
+ */
+export const UTILITY_BILL_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "application/pdf",
+];
+
+/** The OCR provider reads documents sent inline only up to this size. */
+export const UTILITY_BILL_MAX_BYTES = 5 * 1024 * 1024;
+
+/**
+ * Verifies a listing from a utility bill, for when the location check cannot work
+ * at the property.
+ *
+ * The server reads the bill and approves the listing only when both the host's
+ * verified name and the listing address appear on it.
+ */
+export async function submitUtilityBill(
+  propertyId: number,
+  bill: File,
+): Promise<ProofSubmissionResult> {
+  const token = getSessionMarker();
+
+  if (!token) {
+    return {
+      success: false,
+      message: "Your session has expired. Log in again.",
+    };
+  }
+
+  try {
+    const formData = new FormData();
+    formData.append("utilityBill", bill, bill.name);
+
+    const response = await apiRequest(
+      `/api/verification/property/verify-bill?propertyId=${propertyId}`,
+      {
+        method: "POST",
+        headers: {},
+        body: formData,
+      },
+    );
+    const payload: unknown = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      return {
+        success: false,
+        message: resolveApiError(
+          payload,
+          "That bill could not verify this listing.",
+        ),
       };
     }
 

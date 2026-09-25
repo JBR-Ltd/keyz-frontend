@@ -1,9 +1,9 @@
 "use client";
 
 import type { ReactElement, ReactNode } from "react";
+import UserAvatar from "@/components/ui/user-avatar";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
-  ChevronDown,
   House,
   LoaderCircle,
   LogOut,
@@ -12,6 +12,8 @@ import {
   Settings,
   ShieldCheck,
   UserRound,
+  BellRing,
+  ReceiptText,
   X,
 } from "lucide-react";
 import Image from "next/image";
@@ -262,12 +264,13 @@ export default function TenantSidebar({
   return (
     <>
       <header className="sticky top-0 z-50 border-b border-border bg-bg">
-        <div className="mx-auto flex h-20 w-full max-w-[96rem] items-center gap-4 px-4 sm:px-6 lg:px-8">
+        <div className="relative mx-auto flex h-20 w-full max-w-[96rem] items-center gap-4 px-4 sm:px-6 lg:px-8">
           <TenantLogo />
 
-          <div className="relative hidden h-20 min-w-0 flex-1 items-center justify-center lg:flex">
+          <div className="hidden min-w-0 flex-1 lg:block" />
+          <div className="absolute left-1/2 top-0 hidden h-20 -translate-x-1/2 lg:block">
             <motion.div
-              className={`absolute inset-y-0 flex items-stretch justify-center ${
+              className={`flex h-full items-stretch justify-center ${
                 isHeaderSearchVisible ? "pointer-events-none" : ""
               }`}
               animate={{
@@ -284,7 +287,7 @@ export default function TenantSidebar({
             </motion.div>
           </div>
 
-          <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
+          <div className="ml-auto flex shrink-0 items-center gap-1">
             {actions}
 
             <div className="relative hidden lg:block">
@@ -294,26 +297,22 @@ export default function TenantSidebar({
                 onClick={() => setIsProfileOpen((current) => !current)}
                 aria-haspopup="menu"
                 aria-expanded={isProfileOpen}
-                className={`flex min-h-11 items-center gap-2 rounded-full p-1.5 pr-2 font-body text-sm text-primary transition-all duration-200 ease-in-out hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                aria-label="Open account menu"
+                title="Account menu"
+                className={`flex h-10 w-10 items-center justify-center rounded-full text-primary transition-all duration-200 ease-in-out hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                   isAccountActive ? "bg-primary/5" : ""
                 }`}
               >
-                <span className="relative flex h-8 w-8 items-center justify-center rounded-full bg-primary font-body text-xs font-bold text-white">
-                  {profileInitials}
+                <UserAvatar
+                  avatarUrl={user?.avatarUrl}
+                  className="h-8 w-8 text-xs"
+                  initials={profileInitials}
+                  sizes="32px"
+                >
                   {showVerificationAction ? (
                     <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-accent ring-2 ring-bg" />
                   ) : null}
-                </span>
-                <span className="hidden max-w-28 truncate font-bold xl:block">
-                  {profileName}
-                </span>
-                <ChevronDown
-                  size={16}
-                  className={`text-muted transition-transform ${
-                    isProfileOpen ? "rotate-180" : ""
-                  }`}
-                  aria-hidden="true"
-                />
+                </UserAvatar>
               </button>
 
               <AnimatePresence>
@@ -333,6 +332,24 @@ export default function TenantSidebar({
                       show={showVerificationAction}
                       verifiedStepCount={verifiedStepCount}
                     />
+                    <Link
+                      href="/tenant/saved-searches"
+                      role="menuitem"
+                      onClick={() => setIsProfileOpen(false)}
+                      className="flex items-center gap-3 rounded-lg px-4 py-3 font-body text-sm font-medium text-primary transition-colors hover:bg-primary/5"
+                    >
+                      <BellRing size={17} strokeWidth={1.9} />
+                      Saved searches
+                    </Link>
+                    <Link
+                      href="/tenant/statement"
+                      role="menuitem"
+                      onClick={() => setIsProfileOpen(false)}
+                      className="flex items-center gap-3 rounded-lg px-4 py-3 font-body text-sm font-medium text-primary transition-colors hover:bg-primary/5"
+                    >
+                      <ReceiptText size={17} strokeWidth={1.9} />
+                      Statement
+                    </Link>
                     <Link
                       href="/tenant/profile"
                       role="menuitem"
@@ -390,7 +407,7 @@ export default function TenantSidebar({
               <motion.button
                 type="button"
                 aria-label="Close navigation"
-                className="fixed inset-0 z-[100] bg-black/40 lg:hidden"
+                className="modal-backdrop fixed inset-0 z-[100] lg:hidden"
                 onClick={() => setIsMobileOpen(false)}
                 initial={reduceMotion ? false : { opacity: 0 }}
                 animate={reduceMotion ? undefined : { opacity: 1 }}
@@ -428,12 +445,16 @@ export default function TenantSidebar({
 
                 <div className="border-t border-border p-5">
                   <div className="mb-4 flex items-center gap-3">
-                    <span className="relative flex h-11 w-11 items-center justify-center rounded-full bg-primary font-body text-sm font-bold text-white">
-                      {profileInitials}
+                    <UserAvatar
+                      avatarUrl={user?.avatarUrl}
+                      className="h-11 w-11 text-sm"
+                      initials={profileInitials}
+                      sizes="44px"
+                    >
                       {showVerificationAction ? (
                         <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-accent ring-2 ring-bg" />
                       ) : null}
-                    </span>
+                    </UserAvatar>
                     <span className="min-w-0">
                       <span className="block truncate font-body text-sm font-bold text-primary">
                         {profileName}
@@ -449,6 +470,22 @@ export default function TenantSidebar({
                     show={showVerificationAction}
                     verifiedStepCount={verifiedStepCount}
                   />
+                  <Link
+                    href="/tenant/saved-searches"
+                    onClick={() => setIsMobileOpen(false)}
+                    className="flex min-h-11 items-center gap-3 rounded-lg px-3 font-body text-sm font-medium text-primary transition-colors hover:bg-primary/5"
+                  >
+                    <BellRing size={17} />
+                    Saved searches
+                  </Link>
+                  <Link
+                    href="/tenant/statement"
+                    onClick={() => setIsMobileOpen(false)}
+                    className="flex min-h-11 items-center gap-3 rounded-lg px-3 font-body text-sm font-medium text-primary transition-colors hover:bg-primary/5"
+                  >
+                    <ReceiptText size={17} />
+                    Statement
+                  </Link>
                   <Link
                     href="/tenant/profile"
                     onClick={() => setIsMobileOpen(false)}

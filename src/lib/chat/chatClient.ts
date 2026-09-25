@@ -1,12 +1,30 @@
 "use client";
 
+import { getBrowserSessionMarker } from "@/lib/authSession";
+
+import { apiRequest } from "@/lib/apiRequest";
 import { resolveApiError } from "@/lib/errors";
 
 // === Types
 
 export type ChatPartyRole = "ADMIN" | "AGENT" | "LANDLORD" | "TENANT";
 
+export type ChatAttachmentType = "PROPERTY" | "TOUR" | "FLOOR_PLAN";
+
+/** A shared listing, tour or floor plan, as the server copied it when it was sent. */
+export interface ChatAttachment {
+  /** The listing for PROPERTY and TOUR, the floor for FLOOR_PLAN. */
+  id: number;
+  imageUrl: string | null;
+  /** The listing the card links to, whatever was shared. */
+  propertyId: number;
+  subtitle: string | null;
+  title: string;
+  type: ChatAttachmentType;
+}
+
 export interface ServerChatMessage {
+  attachment?: ChatAttachment | null;
   content: string;
   id: number;
   read: boolean;
@@ -61,25 +79,24 @@ function unwrap(payload: unknown): unknown {
     : null;
 }
 
-function getAccessToken(): string {
-  return localStorage.getItem("rello_token") ?? "";
+function getSessionMarker(): string {
+  return getBrowserSessionMarker();
 }
 
 async function request(
   path: string,
   init?: RequestInit,
 ): Promise<{ ok: boolean; payload: unknown }> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
 
   if (!token) {
     return { ok: false, payload: null };
   }
 
-  const response = await fetch(path, {
+  const response = await apiRequest(path, {
     ...init,
     headers: {
       ...(init?.headers ?? {}),
-      Authorization: `Bearer ${token}`,
     },
   });
 
@@ -146,16 +163,27 @@ export async function getConversation(
   }
 }
 
+/**
+ * Sends words, a share, or both. A share may go with no words: the server writes
+ * a line for the thread list and builds the card from the listing.
+ */
 export async function sendChatMessage(
   receiverId: number,
   content: string,
   propertyId?: number,
+  attachment?: { id: number; type: ChatAttachmentType },
 ): Promise<ChatResult<ServerChatMessage | null>> {
   try {
     const { ok, payload } = await request("/api/chat/send", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ receiverId, content, propertyId }),
+      body: JSON.stringify({
+        receiverId,
+        content,
+        propertyId,
+        attachmentType: attachment?.type,
+        attachmentId: attachment?.id,
+      }),
     });
 
     if (!ok) {

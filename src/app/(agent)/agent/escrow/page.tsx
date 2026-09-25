@@ -1,5 +1,6 @@
-import ComingSoon from "@/components/dashboard/ComingSoon";
+import type { ReactElement } from "react";
+import EscrowLedger from "@/components/escrow/EscrowLedger";
 
-export default function AgentEscrowPage() {
-  return <ComingSoon eyebrow="Agent portal" title="Payouts" />;
+export default function AgentEscrowPage(): ReactElement {
+  return <EscrowLedger />;
 }

@@ -1,17 +1,21 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactElement } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
   Clock3,
+  FileText,
   Loader2,
+  Paperclip,
   Scale,
   ShieldAlert,
 } from "lucide-react";
 import { Select } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import {
+  addDisputeEvidence,
   escalateDispute,
   getMyDisputes,
   openDispute,
@@ -19,11 +23,7 @@ import {
   type Dispute,
   type DisputeStatus,
 } from "@/lib/disputes";
-import {
-  getHostBookings,
-  getMyBookings,
-  type Booking,
-} from "@/lib/bookings";
+import { getAllHostBookings, getAllMyBookings, type Booking } from "@/lib/bookings";
 
 interface DisputeBoardProps {
   /** Whose bookings to offer when opening a case. */
@@ -60,6 +60,8 @@ export default function DisputeBoard({
   const [loadError, setLoadError] = useState("");
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const evidenceInputRef = useRef<HTMLInputElement>(null);
 
   const [newBookingId, setNewBookingId] = useState("");
   const [reason, setReason] = useState("");
@@ -72,7 +74,7 @@ export default function DisputeBoard({
     const load = async (): Promise<void> => {
       const [disputeResult, bookingResult] = await Promise.all([
         getMyDisputes(),
-        perspective === "host" ? getHostBookings() : getMyBookings(),
+        perspective === "host" ? getAllHostBookings() : getAllMyBookings(),
       ]);
 
       if (!active) {
@@ -81,7 +83,7 @@ export default function DisputeBoard({
 
       setDisputes(disputeResult.data);
       setBookings(bookingResult.data);
-      setLoadError(disputeResult.message ?? "");
+      setLoadError(disputeResult.message ?? bookingResult.message ?? "");
       setIsLoading(false);
     };
 
@@ -99,7 +101,9 @@ export default function DisputeBoard({
       CLOSED: [],
     };
 
-    disputes.forEach((dispute) => grouped[laneFor(dispute.status)].push(dispute));
+    disputes.forEach((dispute) =>
+      grouped[laneFor(dispute.status)].push(dispute),
+    );
 
     return grouped;
   }, [disputes]);
@@ -198,6 +202,35 @@ export default function DisputeBoard({
     });
   };
 
+  const uploadEvidence = async (dispute: Dispute, file: File | undefined): Promise<void> => {
+    if (!file) {
+      return;
+    }
+
+    setIsUploading(true);
+    const result = await addDisputeEvidence(dispute.id, file);
+    setIsUploading(false);
+
+    if (evidenceInputRef.current) {
+      evidenceInputRef.current.value = "";
+    }
+
+    if (!result.data) {
+      notify({
+        title: "File not added",
+        description: result.message ?? "Try again in a moment.",
+        variant: "error",
+      });
+      return;
+    }
+
+    const updated = result.data;
+    setDisputes((current) =>
+      current.map((item) => (item.id === updated.id ? updated : item)),
+    );
+    notify({ title: "Evidence added", variant: "success" });
+  };
+
   const needsAction = lanes.OPEN.length;
 
   return (
@@ -211,8 +244,8 @@ export default function DisputeBoard({
             Disputes
           </h1>
           <p className="mt-4 max-w-2xl font-body text-base leading-7 text-muted">
-            Opening a case freezes the money on that booking until it is settled.
-            Rello decides any case both sides cannot close themselves.
+            Opening a case freezes the money on that booking until it is
+            settled. Rello decides any case both sides cannot close themselves.
           </p>
         </div>
         {needsAction > 0 ? (
@@ -246,7 +279,18 @@ export default function DisputeBoard({
               </div>
               <div className="mt-5 space-y-4">
                 {isLoading ? (
-                  <p className="font-body text-sm text-muted">Loading...</p>
+                  Array.from({ length: 2 }, (_, index) => (
+                    <div
+                      key={`loading-${lane}-${index + 1}`}
+                      className="rounded-lg bg-[var(--color-bg)] p-5 shadow-sm"
+                      aria-hidden="true"
+                    >
+                      <Skeleton className="h-4 w-20" />
+                      <Skeleton className="mt-4 h-5 w-4/5" />
+                      <Skeleton className="mt-3 h-4 w-full" />
+                      <Skeleton className="mt-6 h-8 w-full" />
+                    </div>
+                  ))
                 ) : lanes[lane].length === 0 ? (
                   <p className="font-body text-sm text-muted">Nothing here.</p>
                 ) : (
@@ -299,6 +343,47 @@ export default function DisputeBoard({
                   {selected.detail}
                 </p>
               ) : null}
+
+              <div className="mt-5 rounded-lg bg-surface-soft p-4 shadow-sm">
+                <p className="font-body text-sm font-bold text-primary">
+                  Evidence ({selected.evidenceUrls.length} of 10)
+                </p>
+                {selected.evidenceUrls.length > 0 ? (
+                  <ul className="mt-3 grid gap-2">
+                    {selected.evidenceUrls.map((url, index) => (
+                      <li key={url}>
+                        <a
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 font-body text-sm text-primary underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                        >
+                          <FileText size={14} aria-hidden="true" className="text-accent-alt" />
+                          File {index + 1}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="mt-2 font-body text-xs leading-5 text-muted">
+                    Photos of the problem, messages, receipts or a condition report make a case far easier to decide.
+                  </p>
+                )}
+                {selected.status === "OPEN" || selected.status === "UNDER_REVIEW" ? (
+                  <label className="mt-3 inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-full border border-primary/20 px-4 font-body text-xs font-bold text-primary hover:bg-primary/5 focus-within:ring-2 focus-within:ring-accent">
+                    {isUploading ? <Loader2 size={14} className="animate-spin" /> : <Paperclip size={14} aria-hidden="true" />}
+                    Add a photo or PDF
+                    <input
+                      ref={evidenceInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,application/pdf"
+                      disabled={isUploading || selected.evidenceUrls.length >= 10}
+                      onChange={(event) => void uploadEvidence(selected, event.target.files?.[0])}
+                      className="sr-only"
+                    />
+                  </label>
+                ) : null}
+              </div>
 
               {selected.resolutionNote ? (
                 <p className="mt-4 rounded-lg bg-accent/10 p-4 font-body text-sm leading-6 text-primary shadow-sm">
@@ -360,11 +445,17 @@ export default function DisputeBoard({
             </p>
 
             {disputableBookings.length === 0 ? (
-              <p className="mt-3 font-body text-sm leading-6 text-muted">
-                {isLoading
-                  ? "Loading your bookings..."
-                  : "No bookings are eligible for a dispute right now."}
-              </p>
+              isLoading ? (
+                <div role="status" aria-label="Loading eligible bookings">
+                  <Skeleton className="mt-4 h-12 w-full" />
+                  <Skeleton className="mt-3 h-12 w-full" />
+                  <span className="sr-only">Loading eligible bookings</span>
+                </div>
+              ) : (
+                <p className="mt-3 font-body text-sm leading-6 text-muted">
+                  No bookings are eligible for a dispute right now.
+                </p>
+              )
             ) : (
               <div className="mt-4 grid gap-4">
                 <Select

@@ -2,13 +2,10 @@
 
 import { useEffect, useState, type ReactElement } from "react";
 import { Clock3, Loader2, Scale, ShieldCheck, UserRound } from "lucide-react";
+import { CardListSkeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import { StatusBadge } from "@/components/ui/status-badge";
-import {
-  getDisputeQueue,
-  resolveDispute,
-  type AdminResult,
-} from "@/lib/admin";
+import { getDisputeQueue, resolveDispute, type AdminResult } from "@/lib/admin";
 import type { Dispute } from "@/lib/disputes";
 
 type Outcome = "RESOLVED_FOR_TENANT" | "RESOLVED_FOR_HOST";
@@ -39,10 +36,7 @@ export default function AdminDisputesPage(): ReactElement {
     };
   }, []);
 
-  const decide = async (
-    dispute: Dispute,
-    outcome: Outcome,
-  ): Promise<void> => {
+  const decide = async (dispute: Dispute, outcome: Outcome): Promise<void> => {
     setBusyId(dispute.id);
     const result = await resolveDispute(
       dispute.id,
@@ -91,9 +85,7 @@ export default function AdminDisputesPage(): ReactElement {
       ) : null}
 
       {isLoading ? (
-        <p className="py-16 text-center font-body text-sm text-muted">
-          Loading the queue...
-        </p>
+        <CardListSkeleton count={4} label="Loading dispute queue" />
       ) : queue.length === 0 ? (
         <div className="rounded-lg bg-surface-soft p-10 text-center shadow-sm">
           <ShieldCheck size={26} className="mx-auto text-accent-alt" />
@@ -120,9 +112,7 @@ export default function AdminDisputesPage(): ReactElement {
                         dispute.status === "UNDER_REVIEW" ? "accent" : "neutral"
                       }
                     >
-                      {dispute.status === "UNDER_REVIEW"
-                        ? "Escalated"
-                        : "Open"}
+                      {dispute.status === "UNDER_REVIEW" ? "Escalated" : "Open"}
                     </StatusBadge>
                   </div>
                   <h2 className="mt-3 font-display text-2xl font-bold text-primary">
@@ -140,10 +130,13 @@ export default function AdminDisputesPage(): ReactElement {
                   <span className="flex items-center gap-2">
                     <Clock3 size={15} className="text-primary/60" />
                     {dispute.createdAt
-                      ? new Date(dispute.createdAt).toLocaleDateString("en-NG", {
-                          day: "numeric",
-                          month: "short",
-                        })
+                      ? new Date(dispute.createdAt).toLocaleDateString(
+                          "en-NG",
+                          {
+                            day: "numeric",
+                            month: "short",
+                          },
+                        )
                       : "Recently"}
                   </span>
                 </div>

@@ -3,6 +3,9 @@
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   Bookmark,
+  CalendarClock,
+  FileSpreadsheet,
+  Flag,
   CalendarDays,
   ChevronRight,
   Landmark,
@@ -12,8 +15,10 @@ import {
   Menu,
   Scale,
   Settings,
+  ShieldAlert,
   ShieldCheck,
   Star,
+  Wrench,
   X,
 } from "lucide-react";
 import Image from "next/image";
@@ -21,21 +26,23 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { SyntheticEvent, useEffect, useRef, useState } from "react";
 import OverlayPortal from "@/components/ui/OverlayPortal";
+import UserAvatar from "@/components/ui/user-avatar";
 import { logOutAccount, useAuthenticatedUser } from "@/lib/account";
 import { useDialogFocus } from "@/lib/useDialogFocus";
 import relloLogoMark from "../../../public/rello-logo-cropped.svg";
 
-const AGENT_NAV_ITEMS = [
+const HOST_NAV_ITEMS = [
   { label: "Dashboard", slug: "dashboard", icon: LayoutDashboard },
   { label: "My Listings", slug: "saved-listings", icon: Bookmark },
   { label: "Bookings", slug: "bookings", icon: CalendarDays },
+  { label: "Viewings", slug: "viewings", icon: CalendarClock },
+  { label: "Repairs", slug: "maintenance", icon: Wrench },
 ];
 
-const LANDLORD_NAV_ITEMS = [
-  { label: "Dashboard", slug: "dashboard", icon: LayoutDashboard },
-  { label: "My Listings", slug: "saved-listings", icon: Bookmark },
-  { label: "Bookings", slug: "bookings", icon: CalendarDays },
-];
+// Landlords and agents run the same day to day, so they get the same navigation
+const AGENT_NAV_ITEMS = HOST_NAV_ITEMS;
+
+const LANDLORD_NAV_ITEMS = HOST_NAV_ITEMS;
 
 const ADMIN_NAV_ITEMS = [
   { label: "Dashboard", slug: "dashboard", icon: LayoutDashboard },
@@ -43,13 +50,17 @@ const ADMIN_NAV_ITEMS = [
   { label: "Verifications", slug: "verifications", icon: ShieldCheck },
   { label: "Bookings", slug: "bookings", icon: CalendarDays },
   { label: "Escrow", slug: "escrow", icon: Landmark },
+  { label: "Risk", slug: "risk", icon: ShieldAlert },
+  { label: "Reports", slug: "reports", icon: Flag },
+  { label: "Compliance", slug: "compliance", icon: FileSpreadsheet },
   { label: "Ratings", slug: "ratings", icon: Star },
 ];
 
+/** Shown only until the signed-in profile arrives, so it names nobody. */
 const ROLE_PROFILES = {
-  landlord: { name: "Chinedu Okafor", initials: "CO" },
-  agent: { name: "Tomi Adeyemi", initials: "TA" },
-  admin: { name: "Admin User", initials: "AU" },
+  landlord: { name: "Your account", initials: "" },
+  agent: { name: "Your account", initials: "" },
+  admin: { name: "Your account", initials: "" },
 };
 
 const PROFILE_MENU_WIDTH = 224;
@@ -394,13 +405,12 @@ function RoleProfileCard({
             : "border-l-2 border-transparent bg-bg text-primary hover:bg-primary/5 hover:shadow-sm"
         }`}
       >
-        <span
-          className={`flex items-center justify-center rounded-lg bg-primary font-body text-sm font-bold text-white ${
-            isCollapsed ? "h-10 w-10" : "h-12 w-12"
-          }`}
-        >
-          {profileInitials}
-        </span>
+        <UserAvatar
+          avatarUrl={user?.avatarUrl}
+          className={`rounded-lg text-sm ${isCollapsed ? "h-10 w-10" : "h-12 w-12"}`}
+          initials={profileInitials}
+          sizes="48px"
+        />
         <span
           className={`min-w-0 overflow-hidden transition-all duration-300 ease-in-out ${
             isCollapsed
@@ -570,7 +580,7 @@ export default function RoleSidebar({
               <motion.button
                 type="button"
                 aria-label="Close navigation"
-                className="fixed inset-0 z-[100] bg-black/40 lg:hidden"
+                className="modal-backdrop fixed inset-0 z-[100] lg:hidden"
                 onClick={() => setIsOpen(false)}
                 initial={reduceMotion ? false : { opacity: 0 }}
                 animate={reduceMotion ? undefined : { opacity: 1 }}

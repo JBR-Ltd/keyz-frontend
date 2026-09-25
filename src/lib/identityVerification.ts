@@ -1,5 +1,8 @@
 "use client";
 
+import { getBrowserSessionMarker } from "@/lib/authSession";
+
+import { apiRequest } from "@/lib/apiRequest";
 import { resolveApiError } from "@/lib/errors";
 
 // === Types
@@ -26,6 +29,7 @@ export interface VerificationStatus {
   payoutAccountLast4?: string | null;
   payoutAccountName?: string | null;
   payoutBankCode?: string | null;
+  payoutBankName?: string | null;
   /** NOT_STARTED or APPROVED. */
   payoutStatus?: string | null;
 }
@@ -37,8 +41,8 @@ export interface IdentityResult<TValue> {
 
 // === Helpers
 
-function getAccessToken(): string {
-  return localStorage.getItem("rello_token") ?? "";
+function getSessionMarker(): string {
+  return getBrowserSessionMarker();
 }
 
 function unwrap(payload: unknown): unknown {
@@ -48,7 +52,7 @@ function unwrap(payload: unknown): unknown {
 }
 
 async function dataUrlToBlob(dataUrl: string): Promise<Blob> {
-  const response = await fetch(dataUrl);
+  const response = await apiRequest(dataUrl);
 
   if (!response.ok) {
     throw new Error("The selfie could not be prepared for upload.");
@@ -63,15 +67,15 @@ async function dataUrlToBlob(dataUrl: string): Promise<Blob> {
 export async function getVerificationStatus(): Promise<
   IdentityResult<VerificationStatus | null>
 > {
-  const token = getAccessToken();
+  const token = getSessionMarker();
 
   if (!token) {
     return { data: null, message: "Log in to see your verification status." };
   }
 
   try {
-    const response = await fetch("/api/verification/status", {
-      headers: { Authorization: `Bearer ${token}` },
+    const response = await apiRequest("/api/verification/status", {
+      headers: {},
     });
     const payload: unknown = await response.json().catch(() => null);
 
@@ -97,7 +101,7 @@ export async function verifyIdentityNumber(
   check: "nin" | "bvn",
   value: string,
 ): Promise<IdentityResult<boolean>> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
 
   if (!token) {
     return { data: false, message: "Your session has expired. Log in again." };
@@ -105,9 +109,9 @@ export async function verifyIdentityNumber(
 
   try {
     const query = new URLSearchParams({ [check]: value });
-    const response = await fetch(
+    const response = await apiRequest(
       `/api/verification/dojah/${check}?${query.toString()}`,
-      { method: "POST", headers: { Authorization: `Bearer ${token}` } },
+      { method: "POST", headers: {} },
     );
 
     if (response.ok) {
@@ -128,7 +132,7 @@ export async function verifyIdentityNumber(
 export async function verifySelfie(
   selfieDataUrl: string,
 ): Promise<IdentityResult<boolean>> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
 
   if (!token) {
     return { data: false, message: "Your session has expired. Log in again." };
@@ -138,9 +142,9 @@ export async function verifySelfie(
     const formData = new FormData();
     formData.append("selfie", await dataUrlToBlob(selfieDataUrl), "selfie.jpg");
 
-    const response = await fetch("/api/verification/dojah/selfie", {
+    const response = await apiRequest("/api/verification/dojah/selfie", {
       method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {},
       body: formData,
     });
 
@@ -170,7 +174,7 @@ export async function submitAgentVerification(
   selfieDataUrl: string,
   position?: { latitude: number; longitude: number } | null,
 ): Promise<IdentityResult<boolean>> {
-  const token = getAccessToken();
+  const token = getSessionMarker();
 
   if (!token) {
     return { data: false, message: "Your session has expired. Log in again." };
@@ -187,9 +191,9 @@ export async function submitAgentVerification(
       formData.append("longitude", String(position.longitude));
     }
 
-    const response = await fetch("/api/verification/agent", {
+    const response = await apiRequest("/api/verification/agent", {
       method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {},
       body: formData,
     });
 
@@ -214,12 +218,20 @@ export async function submitAgentVerification(
  */
 export async function submitLandlordVerification(
   nin: string,
+  bvn: string,
   selfieDataUrl: string,
 ): Promise<IdentityResult<boolean>> {
   const ninResult = await verifyIdentityNumber("nin", nin);
 
   if (!ninResult.data) {
     return ninResult;
+  }
+
+  // Stops at the first failure, so the reason shown names the check that failed
+  const bvnResult = await verifyIdentityNumber("bvn", bvn);
+
+  if (!bvnResult.data) {
+    return bvnResult;
   }
 
   return verifySelfie(selfieDataUrl);

@@ -1,18 +1,29 @@
+import { rejectCrossSiteMutation } from "@/app/api/_csrf";
+import { requestIdHeader } from "@/app/api/_requestId";
+import { getSessionToken } from "@/app/api/_session";
+
 const API_BASE_URL = process.env.API_BASE_URL;
 const VERIFICATION_TIMEOUT_MS = 90000;
 
 /** Multipart, so the body is forwarded as bytes rather than text. */
 export async function POST(request: Request): Promise<Response> {
+  const rejected = rejectCrossSiteMutation(request);
+
+  if (rejected) return rejected;
   if (!API_BASE_URL) {
     return Response.json(
-      { success: false, message: "API_BASE_URL is not configured.", data: null },
+      {
+        success: false,
+        message: "API_BASE_URL is not configured.",
+        data: null,
+      },
       { status: 500 },
     );
   }
 
-  const authorization = request.headers.get("Authorization");
+  const token = await getSessionToken();
 
-  if (!authorization?.startsWith("Bearer ")) {
+  if (!token) {
     return Response.json(
       {
         success: false,
@@ -36,7 +47,7 @@ export async function POST(request: Request): Promise<Response> {
       {
         method: "POST",
         headers: {
-          Authorization: authorization,
+          Authorization: `Bearer ${token}`,
           ...(contentType ? { "Content-Type": contentType } : {}),
         },
         body: await request.arrayBuffer(),
@@ -51,6 +62,7 @@ export async function POST(request: Request): Promise<Response> {
       headers: {
         "Content-Type":
           response.headers.get("Content-Type") ?? "application/json",
+        ...requestIdHeader(response),
       },
     });
   } catch {

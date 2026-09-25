@@ -77,11 +77,13 @@ export default function HostListingsView({
 
   useEffect(() => {
     let active = true;
+    let generation = 0;
 
     const loadListings = async (): Promise<void> => {
+      const requestGeneration = ++generation;
       const result = await getHostListings(role);
 
-      if (!active) {
+      if (!active || generation !== requestGeneration) {
         return;
       }
 
@@ -298,6 +300,11 @@ export default function HostListingsView({
                     <p className="mt-2 truncate font-body text-sm text-muted">
                       {listing.area}, {listing.city}
                     </p>
+                    <p className="mt-2 font-body text-xs font-medium text-muted">
+                      {(listing.availableUnitCount ?? listing.unitCount) === 1
+                        ? "1 unit available"
+                        : `${listing.availableUnitCount ?? listing.unitCount} of ${listing.unitCount} units available`}
+                    </p>
                     <p className="mt-4 font-display text-2xl font-bold text-primary">
                       <PropertyPrice
                         value={listing.price}
@@ -306,12 +313,18 @@ export default function HostListingsView({
                     </p>
                   </div>
                 </Link>
-                <div className="border-t border-border px-5 py-4">
+                <div className="flex flex-wrap gap-3 border-t border-border px-5 py-4">
                   <Link
                     href={`${createHref}?draft=${listing.id}`}
                     className="inline-flex min-h-10 items-center justify-center rounded-full border border-primary/20 px-4 py-2 font-body text-xs font-bold text-primary transition-colors hover:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                   >
-                    Edit listing
+                    Edit details
+                  </Link>
+                  <Link
+                    href={`/${role}/listings/${listing.id}`}
+                    className="inline-flex min-h-10 items-center justify-center rounded-full border border-primary/20 px-4 py-2 font-body text-xs font-bold text-primary transition-colors hover:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  >
+                    Photos and dates
                   </Link>
                 </div>
               </article>

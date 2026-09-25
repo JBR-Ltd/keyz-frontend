@@ -76,7 +76,7 @@ export default function TenantVerificationGate({
           {showGate ? (
             <motion.div
               ref={dialogRef}
-              className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
+              className="modal-backdrop fixed inset-0 z-[100] flex items-center justify-center p-4"
               initial={reduceMotion ? false : { opacity: 0 }}
               animate={reduceMotion ? undefined : { opacity: 1 }}
               exit={reduceMotion ? undefined : { opacity: 0 }}
