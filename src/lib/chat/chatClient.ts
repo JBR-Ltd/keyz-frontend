@@ -18,6 +18,12 @@ export interface ChatAttachment {
   imageUrl: string | null;
   /** The listing the card links to, whatever was shared. */
   propertyId: number;
+  /**
+   * The listing's opaque public id, when the server carries it. Prefer this
+   * for the card's link; fall back to propertyId when it is absent. Optional
+   * because older messages predate the field.
+   */
+  publicId?: string | null;
   subtitle: string | null;
   title: string;
   type: ChatAttachmentType;
@@ -166,12 +172,17 @@ export async function getConversation(
 /**
  * Sends words, a share, or both. A share may go with no words: the server writes
  * a line for the thread list and builds the card from the listing.
+ *
+ * The optional publicId travels with the attachment so the recipient's card
+ * can link with the opaque identifier instead of the numeric one. Older
+ * servers ignore the field; newer ones store it and echo it back on the
+ * ChatAttachment.
  */
 export async function sendChatMessage(
   receiverId: number,
   content: string,
   propertyId?: number,
-  attachment?: { id: number; type: ChatAttachmentType },
+  attachment?: { id: number; type: ChatAttachmentType; publicId?: string },
 ): Promise<ChatResult<ServerChatMessage | null>> {
   try {
     const { ok, payload } = await request("/api/chat/send", {
@@ -183,6 +194,7 @@ export async function sendChatMessage(
         propertyId,
         attachmentType: attachment?.type,
         attachmentId: attachment?.id,
+        attachmentPublicId: attachment?.publicId,
       }),
     });
 

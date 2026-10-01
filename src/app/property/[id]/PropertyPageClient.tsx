@@ -38,7 +38,7 @@ import OverlayPortal from "@/components/ui/OverlayPortal";
 import MessageHostButton from "@/components/property/MessageHostButton";
 import ReportDialog from "@/components/reports/ReportDialog";
 import PropertyPrice from "@/components/property/PropertyPrice";
-import PropertyTourViewer from "@/components/property/PropertyTourViewer";
+import PropertyTourEmbed from "@/components/property/PropertyTourEmbed";
 import TenantVerificationGate from "@/components/tenant/TenantVerificationGate";
 import VerifiedBadge from "@/components/ui/VerifiedBadge";
 import { canonicalSegment, hostPath } from "@/lib/publicIds";
@@ -1055,10 +1055,21 @@ export default function PropertyPageClient({
               </>
             ) : null}
 
-            {!hasTour && /^\d+$/.test(property.id) ? (
+            {!hasTour && property.publicId ? (
               <>
                 <div className="my-6 border-t border-border" />
-                <PropertyTourViewer propertyId={Number(property.id)} />
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                  <h2 className="font-display text-xl font-bold text-primary">
+                    Virtual tour
+                  </h2>
+                  <Link
+                    href={`/tours/${property.publicId}`}
+                    className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-primary/20 px-4 font-body text-sm font-bold text-primary transition-all duration-200 ease-in-out hover:border-accent hover:bg-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  >
+                    View full tour
+                  </Link>
+                </div>
+                <PropertyTourEmbed publicId={property.publicId} />
               </>
             ) : null}
 

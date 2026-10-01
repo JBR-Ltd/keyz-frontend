@@ -1,0 +1,449 @@
+// src/components/tour/RoomDoorEditor.tsx
+//
+// The panel below the pin board when a pin is selected.
+//
+// Two views:
+//   Compact  — a linked door at rest. Shows what it is linked to, with
+//              Edit connection and (if the target is not captured) a
+//              Capture next button.
+//   Picker   — for a draft, an unlinked door, or a saved door that the
+//              host has chosen to edit. Offers Link, Save and link, and
+//              leads outside.
+//
+// Entering the picker via Edit connection also tells the parent that this
+// door may now be dragged on the board. Leaving edit mode (Keep current
+// target, or selecting a different pin) turns dragging back off.
+
+"use client";
+
+import type { ReactElement } from "react";
+import { useState } from "react";
+import { ArrowRight, Loader2, Move, Pencil } from "lucide-react";
+import { ROOM_TYPES } from "@/lib/tourConstants";
+import type { Door, DoorKind, Room, WallSide } from "@/lib/types/tour";
+
+export interface CreateAndLinkInput {
+  roomName: string;
+  roomType: string;
+  doorContext: {
+    wallSide: WallSide;
+    alongWallPercent: number;
+    kind: DoorKind;
+  };
+}
+
+interface RoomDoorEditorProps {
+  door: Door | null;
+  isDraft: boolean;
+  isSaving: boolean;
+  availableRooms: Room[];
+  allRooms: Room[];
+  /** Resolve true when the link was saved so the editor can leave edit mode. */
+  onLinkExistingRoom: (roomId: number) => void | Promise<boolean | void>;
+  onCreateAndLinkNewRoom: (input: CreateAndLinkInput) => void;
+  onCaptureLinkedRoom: (roomId: number) => void;
+  onLinkOutside: () => void | Promise<boolean | void>;
+  onKindChange: (kind: DoorKind) => void;
+  onNudge: (wallSide: WallSide) => void;
+  onEditModeChange?: (isEditing: boolean) => void;
+  onConfirmDraft: () => void;
+  onDismiss: () => void;
+}
+
+const QUICK_WALLS: WallSide[] = ["TOP", "RIGHT", "BOTTOM", "LEFT"];
+const WALL_LABELS: Record<WallSide, string> = {
+  TOP: "N",
+  RIGHT: "E",
+  BOTTOM: "S",
+  LEFT: "W",
+};
+
+export default function RoomDoorEditor({
+  door,
+  isDraft,
+  isSaving,
+  availableRooms,
+  allRooms,
+  onLinkExistingRoom,
+  onCreateAndLinkNewRoom,
+  onCaptureLinkedRoom,
+  onLinkOutside,
+  onKindChange,
+  onNudge,
+  onEditModeChange,
+  onConfirmDraft,
+  onDismiss,
+}: RoomDoorEditorProps): ReactElement | null {
+  const [selectedRoomId, setSelectedRoomId] = useState<string>("");
+  const [newRoomName, setNewRoomName] = useState("");
+  const [newRoomType, setNewRoomType] = useState<string>(ROOM_TYPES[0]);
+  const [isEditingTarget, setIsEditingTargetRaw] = useState(false);
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [isLinkingExisting, setIsLinkingExisting] = useState(false);
+
+  const setIsEditingTarget = (value: boolean): void => {
+    setIsEditingTargetRaw(value);
+    onEditModeChange?.(value);
+  };
+
+  if (!door) {
+    return null;
+  }
+
+  const isLinked = Boolean(door.leadsToRoomId || door.leadsToLabel);
+  const isOpening = door.kind === "OPENING";
+  const targetName = door.leadsToRoomName ?? door.leadsToLabel ?? null;
+  const targetRoom =
+    door.leadsToRoomId !== null
+      ? allRooms.find((r) => r.id === door.leadsToRoomId) ?? null
+      : null;
+  const targetNotCaptured =
+    targetRoom !== null && targetRoom.status !== "ready";
+
+  const showPicker = isDraft || !isLinked || isEditingTarget;
+
+  // Collapse whitespace and ignore case, so "master  bedroom" matches
+  // "Master Bedroom".
+  const normalise = (value: string): string =>
+    value.trim().replace(/\s+/g, " ").toLowerCase();
+  const typedKey = normalise(newRoomName);
+  const existingMatch =
+    typedKey.length > 0
+      ? allRooms.find((room) => normalise(room.roomName) === typedKey) ?? null
+      : null;
+  const matchIsPickable =
+    existingMatch !== null &&
+    availableRooms.some((room) => room.id === existingMatch.id);
+
+  // The red line under the input. Tells the host WHY the name is rejected
+  // and, when the room can be linked, points at the dropdown above.
+  let duplicateMessage: string | null = null;
+  if (existingMatch) {
+    if (existingMatch.id === door.roomId) {
+      duplicateMessage = `"${existingMatch.roomName}" is the room you are in right now.`;
+    } else if (matchIsPickable) {
+      duplicateMessage = `"${existingMatch.roomName}" already exists on this floor. Pick it from the list above instead of creating it again.`;
+    } else {
+      duplicateMessage = `"${existingMatch.roomName}" already exists and is already linked to another door in this room.`;
+    }
+  }
+
+  const handleSaveAndLink = (): void => {
+    const trimmed = newRoomName.trim();
+    if (!trimmed) {
+      setNameError("Give the room a name first.");
+      return;
+    }
+    if (duplicateMessage) {
+      setNameError(duplicateMessage);
+      return;
+    }
+    if (!door.wallSide) {
+      setNameError("Pin the door to a wall first.");
+      return;
+    }
+    setNameError(null);
+    onCreateAndLinkNewRoom({
+      roomName: trimmed,
+      roomType: newRoomType,
+      doorContext: {
+        wallSide: door.wallSide,
+        alongWallPercent: door.alongWallPercent ?? 50,
+        kind: door.kind,
+      },
+    });
+  };
+
+  const handleLinkExisting = async (): Promise<void> => {
+    if (!selectedRoomId) return;
+    setIsLinkingExisting(true);
+    try {
+      const result = await onLinkExistingRoom(Number(selectedRoomId));
+      // A saved door that was being edited returns to the compact
+      // "Linked to X" view once the link has been saved.
+      if (result !== false && !isDraft) setIsEditingTarget(false);
+    } finally {
+      setIsLinkingExisting(false);
+    }
+  };
+
+  const handleLinkOutside = async (): Promise<void> => {
+    const result = await onLinkOutside();
+    if (result !== false && !isDraft) setIsEditingTarget(false);
+  };
+
+  const handleCaptureLinked = (): void => {
+    if (targetRoom) onCaptureLinkedRoom(targetRoom.id);
+  };
+
+  const handleNameChange = (value: string): void => {
+    setNewRoomName(value);
+    if (nameError) setNameError(null);
+  };
+
+  return (
+    <section className="mt-5 rounded-xl border border-border bg-bg p-5 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="font-body text-[11px] font-bold uppercase tracking-[0.18em] text-muted">
+            {door.isFixed ? "Entry pin" : "Door"}
+          </p>
+          <h3 className="mt-1 font-display text-lg font-bold text-primary">
+            {isLinked && !showPicker
+              ? `Through to ${targetName}`
+              : "What is through this door?"}
+          </h3>
+        </div>
+        <button
+          type="button"
+          onClick={onDismiss}
+          className="rounded-full border border-border px-3 py-1.5 font-body text-xs font-medium text-muted transition-colors hover:bg-surface-soft"
+        >
+          Close
+        </button>
+      </div>
+
+      {door.isFixed ? (
+        <p className="mt-4 font-body text-sm leading-6 text-muted">
+          This pin is fixed to the wall you walked in through, so it cannot
+          be dragged. It records the way back to{" "}
+          <strong className="text-primary">
+            {door.leadsToRoomName ?? door.leadsToLabel ?? "the previous room"}
+          </strong>
+          .
+        </p>
+      ) : (
+        <>
+          <label className="mt-4 flex items-start gap-3 rounded-lg border border-border bg-surface-soft/40 px-3 py-3">
+            <input
+              type="checkbox"
+              checked={isOpening}
+              onChange={(event) =>
+                onKindChange(event.target.checked ? "OPENING" : "DOOR")
+              }
+              className="mt-0.5 h-4 w-4 accent-[var(--color-primary)]"
+            />
+            <span className="font-body text-sm leading-5 text-primary">
+              This is an open archway with no door leaf, not a closed door.
+            </span>
+          </label>
+
+          {!showPicker && isLinked ? (
+            <div className="mt-4 space-y-3 rounded-lg border border-border bg-surface-soft/40 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="font-body text-sm text-primary">
+                  Linked to <strong>{targetName}</strong>.
+                  {targetNotCaptured ? (
+                    <span className="ml-1 text-muted">
+                      Not captured yet.
+                    </span>
+                  ) : null}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setIsEditingTarget(true)}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-bg px-3 py-1.5 font-body text-xs font-bold text-primary transition-colors hover:border-accent hover:bg-accent/10"
+                >
+                  <Pencil size={12} aria-hidden="true" />
+                  Edit connection
+                </button>
+              </div>
+
+              <p className="flex items-start gap-2 font-body text-[11px] leading-5 text-muted">
+                <Move size={12} className="mt-0.5 shrink-0" aria-hidden="true" />
+                To move this pin on the board, open Edit connection. The pin
+                stays put while it is at rest so a stray touch cannot shift
+                it.
+              </p>
+
+              {targetNotCaptured && targetRoom ? (
+                <button
+                  type="button"
+                  onClick={handleCaptureLinked}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-accent px-5 py-2.5 font-body text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-white"
+                >
+                  Capture {targetRoom.roomName} next
+                  <ArrowRight size={14} aria-hidden="true" />
+                </button>
+              ) : null}
+            </div>
+          ) : (
+            <div className="mt-4 space-y-4">
+              {availableRooms.length > 0 ? (
+                <div>
+                  <p className="font-body text-xs font-bold uppercase tracking-wider text-muted">
+                    Link to an existing room
+                  </p>
+                  <div className="mt-2 flex gap-2">
+                    <select
+                      value={selectedRoomId}
+                      onChange={(event) =>
+                        setSelectedRoomId(event.target.value)
+                      }
+                      className="min-h-11 flex-1 rounded-lg border border-border bg-bg px-3 font-body text-sm text-primary outline-none focus:border-accent focus:ring-2 focus:ring-accent/30"
+                    >
+                      <option value="">Pick a room…</option>
+                      {availableRooms.map((room) => (
+                        <option key={room.id} value={room.id}>
+                          {room.roomName}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      disabled={!selectedRoomId || isSaving || isLinkingExisting}
+                      onClick={() => void handleLinkExisting()}
+                      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-primary px-5 font-body text-sm font-bold text-white transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      {isLinkingExisting ? (
+                        <>
+                          <Loader2
+                            size={14}
+                            className="animate-spin"
+                            aria-hidden="true"
+                          />
+                          Linking…
+                        </>
+                      ) : (
+                        "Link"
+                      )}
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+
+              <div>
+                <p className="font-body text-xs font-bold uppercase tracking-wider text-muted">
+                  Or name a new room to link now, capture later
+                </p>
+                <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                  <input
+                    type="text"
+                    value={newRoomName}
+                    onChange={(event) =>
+                      handleNameChange(event.target.value)
+                    }
+                    placeholder="e.g. Master Bedroom"
+                    aria-invalid={Boolean(nameError || duplicateMessage)}
+                    className={[
+                      "min-h-11 flex-1 rounded-lg border bg-bg px-3 font-body text-sm text-primary outline-none focus:ring-2",
+                      nameError || duplicateMessage
+                        ? "border-red-400 focus:border-red-400 focus:ring-red-400/30"
+                        : "border-border focus:border-accent focus:ring-accent/30",
+                    ].join(" ")}
+                  />
+                  <select
+                    value={newRoomType}
+                    onChange={(event) => setNewRoomType(event.target.value)}
+                    className="min-h-11 rounded-lg border border-border bg-bg px-3 font-body text-sm text-primary outline-none focus:border-accent focus:ring-2 focus:ring-accent/30"
+                  >
+                    {ROOM_TYPES.map((type) => (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    disabled={isSaving || Boolean(duplicateMessage)}
+                    onClick={handleSaveAndLink}
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-accent px-5 font-body text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-white disabled:cursor-wait disabled:opacity-60"
+                  >
+                    {isSaving ? (
+                      <>
+                        <Loader2
+                          size={14}
+                          className="animate-spin"
+                          aria-hidden="true"
+                        />
+                        Saving…
+                      </>
+                    ) : (
+                      "Save and link"
+                    )}
+                  </button>
+                </div>
+
+                {duplicateMessage || nameError ? (
+                  <p
+                    role="alert"
+                    className="mt-2 font-body text-xs font-medium text-red-700"
+                  >
+                    {duplicateMessage ?? nameError}
+                    {existingMatch && matchIsPickable ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedRoomId(String(existingMatch.id));
+                          setNewRoomName("");
+                          setNameError(null);
+                        }}
+                        className="ml-2 font-bold underline underline-offset-2 hover:text-red-900"
+                      >
+                        Select it
+                      </button>
+                    ) : null}
+                  </p>
+                ) : null}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => void handleLinkOutside()}
+                disabled={isSaving || isLinkingExisting}
+                className="w-full rounded-full border border-border bg-bg px-5 py-2.5 font-body text-sm font-bold text-primary transition-colors hover:bg-surface-soft disabled:cursor-wait disabled:opacity-50"
+              >
+                It leads outside or to the compound
+              </button>
+
+              {!isDraft && isLinked ? (
+                <button
+                  type="button"
+                  onClick={() => setIsEditingTarget(false)}
+                  className="w-full rounded-full border border-border bg-bg px-5 py-2.5 font-body text-sm font-bold text-primary transition-colors hover:bg-surface-soft"
+                >
+                  Keep the current target
+                </button>
+              ) : null}
+            </div>
+          )}
+
+          {showPicker ? (
+            <div className="mt-5 border-t border-border pt-4">
+              <p className="font-body text-xs font-bold uppercase tracking-wider text-muted">
+                Nudge the pin
+              </p>
+              <div className="mt-2 grid grid-cols-4 gap-2">
+                {QUICK_WALLS.map((wall) => (
+                  <button
+                    key={wall}
+                    type="button"
+                    onClick={() => onNudge(wall)}
+                    className={[
+                      "min-h-10 rounded-md border font-body text-xs font-bold transition-colors",
+                      door.wallSide === wall
+                        ? "border-primary bg-primary text-white"
+                        : "border-border bg-bg text-primary hover:border-accent",
+                    ].join(" ")}
+                  >
+                    {WALL_LABELS[wall]}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </>
+      )}
+
+      {isDraft && !isLinked ? (
+        <button
+          type="button"
+          disabled
+          className="mt-5 inline-flex min-h-11 w-full items-center justify-center rounded-full bg-accent px-6 py-2.5 font-body text-sm font-bold text-primary opacity-40"
+        >
+          Answer where this door leads to save it
+        </button>
+      ) : null}
+    </section>
+  );
+}

@@ -14,13 +14,29 @@ import { useAuthenticatedUser } from "@/lib/account";
 import type { ChatAttachmentType } from "@/lib/chat/chatClient";
 import { getPropertyPortfolio } from "@/lib/hostListings";
 import { getSavedListings } from "@/lib/savedListings";
-import { getPropertyTour, type TourFloorWithRooms } from "@/lib/tour";
+import { getPublicTour } from "@/lib/api/tours";
+import type { PublicTourFloor } from "@/lib/types/tour";
+
+/**
+ * Extended callback. attachmentId is the numeric id the chat backend keys
+ * off. publicId is optional; when the caller forwards it, the recipient's
+ * card can link with the opaque identifier instead of the numeric one.
+ * Callers that don't care about the third argument keep working unchanged.
+ */
+type ShareFn = (
+  type: ChatAttachmentType,
+  attachmentId: number,
+  publicId?: string,
+) => Promise<boolean>;
 
 interface ChatShareMenuProps {
-  /** Resolves true once the share is sent, which closes the menu. */
-  onShare: (type: ChatAttachmentType, attachmentId: number) => Promise<boolean>;
-  /** The listing this thread is about, when it is about one. */
+  onShare: ShareFn;
   propertyId?: number;
+  /**
+   * The thread's listing public id. Optional. Used to build public links and
+   * to enumerate floors via the anonymous bundle.
+   */
+  tourPublicId?: string;
 }
 
 type MenuView = "root" | "floors" | "listings";
@@ -28,23 +44,21 @@ type MenuView = "root" | "floors" | "listings";
 interface ListingChoice {
   id: number;
   title: string;
+  publicId?: string;
 }
 
-/**
- * Shares a listing, its tour, or a floor plan into the conversation.
- *
- * Offers the thread's own listing first, because that is nearly always what is
- * being talked about. Only verified listings are offered from elsewhere: the server
- * refuses the rest, since the other person has to be able to open what they get.
- */
+/** Shape the portfolio and saved-listings clients might carry. */
+type MaybePublic = { publicId?: string };
+
 export default function ChatShareMenu({
   onShare,
   propertyId,
+  tourPublicId,
 }: ChatShareMenuProps): ReactElement {
   const { user } = useAuthenticatedUser();
   const [isOpen, setIsOpen] = useState(false);
   const [view, setView] = useState<MenuView>("root");
-  const [floors, setFloors] = useState<TourFloorWithRooms[] | null>(null);
+  const [floors, setFloors] = useState<PublicTourFloor[] | null>(null);
   const [listings, setListings] = useState<ListingChoice[] | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const isHost = user?.role === "LANDLORD" || user?.role === "AGENT";
@@ -52,35 +66,64 @@ export default function ChatShareMenu({
   const openListings = async (): Promise<void> => {
     setView("listings");
 
-    if (listings !== null) {
-      return;
-    }
+    if (listings !== null) return;
 
     if (isHost) {
       const result = await getPropertyPortfolio();
+      const rows = (result.data?.properties ?? []) as Array<{
+        id: number;
+        title: string;
+        verified: boolean;
+      } & MaybePublic>;
 
       setListings(
-        (result.data?.properties ?? [])
-          .filter((property) => property.verified && property.id !== propertyId)
-          .map((property) => ({ id: property.id, title: property.title })),
+        rows
+          .filter((p) => p.verified && p.id !== propertyId)
+          .map((p) => ({
+            id: p.id,
+            title: p.title,
+            publicId: p.publicId,
+          })),
       );
       return;
     }
 
     const saved = await getSavedListings();
+    const rows = saved.data as Array<{
+      id: number;
+      title: string;
+      verified: boolean;
+    } & MaybePublic>;
 
     setListings(
-      saved.data
-        .filter((property) => property.verified && property.id !== propertyId)
-        .map((property) => ({ id: property.id, title: property.title })),
+      rows
+        .filter((p) => p.verified && p.id !== propertyId)
+        .map((p) => ({
+          id: p.id,
+          title: p.title,
+          publicId: p.publicId,
+        })),
     );
   };
 
-  const openFloors = async (threadPropertyId: number): Promise<void> => {
+  const openFloors = async (): Promise<void> => {
     setView("floors");
 
-    if (floors === null) {
-      setFloors(await getPropertyTour(threadPropertyId));
+    if (floors !== null) return;
+
+    const reference =
+      tourPublicId ?? (propertyId !== undefined ? String(propertyId) : null);
+
+    if (!reference) {
+      setFloors([]);
+      return;
+    }
+
+    try {
+      const tour = await getPublicTour(reference);
+      setFloors(tour.floors);
+    } catch {
+      setFloors([]);
     }
   };
 
@@ -89,9 +132,7 @@ export default function ChatShareMenu({
       setIsOpen(false);
       return;
     }
-
     setIsOpen(true);
-
     if (propertyId === undefined) {
       void openListings();
     } else {
@@ -103,11 +144,11 @@ export default function ChatShareMenu({
     key: string,
     type: ChatAttachmentType,
     attachmentId: number,
+    publicId?: string,
   ): Promise<void> => {
     setBusyKey(key);
-    const sent = await onShare(type, attachmentId);
+    const sent = await onShare(type, attachmentId, publicId);
     setBusyKey(null);
-
     if (sent) {
       setIsOpen(false);
       setView("root");
@@ -152,21 +193,21 @@ export default function ChatShareMenu({
       <Building2 size={16} aria-hidden="true" />,
       "This listing",
       "The home this chat is about",
-      () => void share("listing", "PROPERTY", threadPropertyId),
+      () => void share("listing", "PROPERTY", threadPropertyId, tourPublicId),
     ),
     option(
       "tour",
       <Video size={16} aria-hidden="true" />,
       "Its tour",
       "The walkthrough or 3D tour",
-      () => void share("tour", "TOUR", threadPropertyId),
+      () => void share("tour", "TOUR", threadPropertyId, tourPublicId),
     ),
     option(
       "floors",
       <Layers size={16} aria-hidden="true" />,
       "A floor plan",
       "Pick a floor from the tour",
-      () => void openFloors(threadPropertyId),
+      () => void openFloors(),
     ),
     option(
       "others",
@@ -258,7 +299,12 @@ export default function ChatShareMenu({
                           ? "1 room"
                           : `${floor.rooms.length} rooms`,
                         () =>
-                          void share(`floor-${floor.id}`, "FLOOR_PLAN", floor.id),
+                          void share(
+                            `floor-${floor.id}`,
+                            "FLOOR_PLAN",
+                            floor.id,
+                            tourPublicId,
+                          ),
                       ),
                     )
               : null}
@@ -279,7 +325,12 @@ export default function ChatShareMenu({
                         listing.title,
                         "Share this listing",
                         () =>
-                          void share(`listing-${listing.id}`, "PROPERTY", listing.id),
+                          void share(
+                            `listing-${listing.id}`,
+                            "PROPERTY",
+                            listing.id,
+                            listing.publicId,
+                          ),
                       ),
                     )
               : null}
