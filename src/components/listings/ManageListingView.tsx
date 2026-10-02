@@ -7,9 +7,8 @@ import {
   useState,
   type ReactElement,
 } from "react";
-import Image from "next/image";
 import Link from "next/link";
-import { propertyPath } from "@/lib/publicIds";
+import Image from "next/image";
 import {
   ArrowLeft,
   Building2,
@@ -24,6 +23,7 @@ import { DateRangePicker } from "@/components/ui/date-picker";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
+import TourSummaryPanel from "@/components/tour/TourSummaryPanel";
 import {
   blockDates,
   getPropertyAvailability,
@@ -111,19 +111,31 @@ export default function ManageListingView({
       getBackendPropertyById(propertyId),
       getGallery(numericId),
       getPropertyUnits(numericId),
-    ]).then(([listing, gallery, propertyUnits]) => {
-      if (!active) {
-        return;
-      }
+    ])
+      .then(([listing, gallery, propertyUnits]) => {
+        if (!active) return;
 
-      setProperty(listing.data);
-      setPhotos(gallery.data);
-      setUnits(propertyUnits.data);
-      setUnitsError(propertyUnits.message ?? "");
-      setUnitsLoading(false);
-      setLoadError(listing.message ?? gallery.message ?? "");
-      setIsLoading(false);
-    });
+        setProperty(listing.data ?? null);
+        setPhotos(gallery.data ?? []);
+        setUnits(propertyUnits.data ?? []);
+        setUnitsError(propertyUnits.message ?? "");
+        setLoadError(listing.message ?? gallery.message ?? "");
+      })
+      .catch((error: unknown) => {
+        if (!active) return;
+
+        setLoadError(
+          error instanceof Error
+            ? error.message
+            : "Could not load this listing. Try again in a moment.",
+        );
+      })
+      .finally(() => {
+        if (!active) return;
+
+        setUnitsLoading(false);
+        setIsLoading(false);
+      });
 
     return () => {
       active = false;
@@ -322,7 +334,7 @@ export default function ManageListingView({
         {property ? (
           property.verified ? (
             <Link
-              href={propertyPath(property)}
+              href={`/property/${property.id}`}
               className="mt-4 inline-flex font-body text-sm font-medium text-accent-alt transition-all duration-200 ease-in-out hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             >
               View the public page
@@ -447,6 +459,39 @@ export default function ManageListingView({
                 ))}
               </ul>
             )}
+          </section>
+
+          <section>
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h2 className="font-display text-2xl font-bold text-primary">
+            Virtual tour
+          </h2>
+          <p className="mt-2 max-w-2xl font-body text-sm text-muted">
+            Capture rooms in 360°, pin the doors, and publish a walkable tour
+            renters can explore before they book.
+          </p>
+        </div>
+      </div>
+              <div className="flex flex-wrap gap-2">
+                <Link
+                  href={`/${role}/listings/${propertyId}/rooms`}
+                  className="inline-flex min-h-11 items-center gap-2 rounded-full border border-primary/20 bg-bg px-5 font-body text-sm font-bold text-primary transition-all duration-200 ease-in-out hover:border-accent hover:bg-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                >
+                  Track rooms
+                </Link>
+                <Link
+                  href={property?.publicId ? `/tours/${property.publicId}` : `/tours/${numericId}`}
+                  target="_blank"
+                  className="inline-flex min-h-11 items-center gap-2 rounded-full bg-accent px-5 font-body text-sm font-bold text-primary transition-all duration-200 ease-in-out hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                >
+                  Open full tour
+                  <span aria-hidden="true">→</span>
+                </Link>
+              </div>
+            </div>
+            <TourSummaryPanel propertyId={numericId} role={role} />
           </section>
 
           <section>

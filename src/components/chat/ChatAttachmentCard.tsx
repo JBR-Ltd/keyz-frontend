@@ -38,12 +38,11 @@ const DEFAULT_TEXT_PREFIXES: Record<ChatAttachmentType, string> = {
 export function attachmentHref(attachment: ChatAttachment): string {
   switch (attachment.type) {
     case "TOUR":
-      return `/property/${attachment.propertyId}#virtual-tour`;
+      return `/tours/${attachment.publicId ?? attachment.propertyId}`;
     case "FLOOR_PLAN":
-      // The tour viewer reads ?floor= and opens on that floor
-      return `/property/${attachment.propertyId}?floor=${attachment.id}#virtual-tour`;
+      return `/tours/${attachment.publicId ?? attachment.propertyId}/floor-plan?floor=${attachment.id}`;
     default:
-      return `/property/${attachment.propertyId}`;
+      return `/property/${attachment.publicId ?? attachment.propertyId}`;
   }
 }
 

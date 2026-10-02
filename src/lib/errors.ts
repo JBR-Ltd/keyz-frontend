@@ -1,8 +1,11 @@
+// src/lib/errors.ts
+
 // === Types
 
 /**
- * Mirrors ErrorCode on the backend. Codes are the contract; the wording below is ours.
- * Never rename a member without changing the enum in the backend to match.
+ * Mirrors ErrorCode on the backend. Codes are the contract; the wording
+ * below is ours. Never rename a member without changing the enum in the
+ * backend to match.
  */
 export type ApiErrorCode =
   | "INVALID_CREDENTIALS"
@@ -28,6 +31,16 @@ export type ApiErrorCode =
   | "LISTING_BILL_MISMATCH"
   | "BOOKING_DATES_INVALID"
   | "REVIEW_REQUIRES_COMPLETED_STAY"
+  // Virtual tour
+  | "TOUR_PANORAMA_REJECTED"
+  | "TOUR_PANORAMA_TOO_LARGE"
+  | "TOUR_VALIDATOR_UNAVAILABLE"
+  | "TOUR_DOOR_FIXED"
+  | "TOUR_DOOR_CROSS_FLOOR"
+  | "TOUR_DOOR_DUPLICATE"
+  | "TOUR_PLAN_INVALID"
+  | "TOUR_NOT_PUBLISHABLE"
+  // Generic
   | "NOT_FOUND"
   | "FORBIDDEN"
   | "VALIDATION_FAILED"
@@ -37,17 +50,14 @@ export type ApiErrorCode =
 export interface ApiErrorPayload {
   code?: ApiErrorCode;
   message?: string;
+  data?: unknown;
+  success?: boolean;
 }
 
 // === Copy
 
 const GENERIC_MESSAGE = "Something went wrong. Try again in a moment.";
 
-/**
- * One sentence per code, in the interface's own voice: what happened, and what to do.
- * Where the backend computes a detail we cannot know here (a distance, a field name),
- * its message is preferred over these and this acts as the floor.
- */
 const ERROR_COPY: Record<ApiErrorCode, string> = {
   INVALID_CREDENTIALS: "Incorrect login credentials. Check your email and password and try again.",
   EMAIL_NOT_VERIFIED: "Verify your email address before logging in. Check your inbox for the code.",
@@ -76,6 +86,15 @@ const ERROR_COPY: Record<ApiErrorCode, string> = {
   BOOKING_DATES_INVALID: "Choose an end date that comes after the start date.",
   REVIEW_REQUIRES_COMPLETED_STAY: "You can review a property once your stay is complete.",
 
+  TOUR_PANORAMA_REJECTED: "That photo was not accepted. Read the reason above and try again.",
+  TOUR_PANORAMA_TOO_LARGE: "That image is too large. Photos up to 25 MB are accepted.",
+  TOUR_VALIDATOR_UNAVAILABLE: "The image check is offline right now. Try again in a moment.",
+  TOUR_DOOR_FIXED: "The entry door cannot be moved, relinked or removed.",
+  TOUR_DOOR_CROSS_FLOOR: "Doors can only link two rooms on the same floor.",
+  TOUR_DOOR_DUPLICATE: "This room already has a door to that room.",
+  TOUR_PLAN_INVALID: "That floor plan is not valid. Check for overlapping or unplaced rooms.",
+  TOUR_NOT_PUBLISHABLE: "This tour is not ready to publish yet. Check the blockers above.",
+
   NOT_FOUND: "We could not find that.",
   FORBIDDEN: "You do not have access to this.",
   VALIDATION_FAILED: "Check the highlighted fields and try again.",
@@ -95,9 +114,10 @@ export function isApiErrorPayload(value: unknown): value is ApiErrorPayload {
 
 /**
  * Turns whatever the API returned into a sentence worth showing someone.
- * Prefers the backend message when it carries a known code, because those are
- * already written for humans and may include a computed detail. Anything without a
- * recognised code is treated as untrusted internal text and never shown.
+ * Prefers the backend message when it carries a known code, because those
+ * are already written for humans and may include a computed detail. Anything
+ * without a recognised code is treated as untrusted internal text and never
+ * shown.
  */
 export function resolveApiError(
   payload: unknown,
@@ -110,11 +130,14 @@ export function resolveApiError(
   const code = "code" in payload ? payload.code : undefined;
 
   if (!isApiErrorCode(code)) {
+    // No code but a message: use it only if it looks user-facing.
+    const message = "message" in payload ? payload.message : undefined;
+    if (typeof message === "string" && message.trim() && message.length < 300) {
+      return message;
+    }
     return fallback;
   }
 
-  // A rejected field says exactly what is wrong; the envelope message is "Validation
-  // failed", which leaves someone re-reading a form with no idea which box to fix.
   const fieldReasons = collectFieldReasons(
     "data" in payload ? payload.data : undefined,
   );

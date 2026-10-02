@@ -249,6 +249,7 @@ export default function ChatThread({
   const handleShare = async (
     type: ChatAttachmentType,
     attachmentId: number,
+    publicId?: string,
   ): Promise<boolean> => {
     if (otherUserId === null) {
       return false;
@@ -257,6 +258,7 @@ export default function ChatThread({
     const result = await sendChatMessage(otherUserId, "", propertyId, {
       type,
       id: attachmentId,
+      publicId,
     });
 
     if (!result.data) {
