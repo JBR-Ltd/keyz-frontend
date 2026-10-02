@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { ArrowLeft, ArrowRight, Flag, Loader2, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Flag, X } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -10,6 +10,7 @@ import {
   type ReactElement,
 } from "react";
 import OverlayPortal from "@/components/ui/OverlayPortal";
+import { AsyncButtonContent } from "@/components/ui/async-button-content";
 import { useToast } from "@/components/ui/toast";
 import {
   submitReport,
@@ -334,14 +335,16 @@ export default function ReportDialog({
                     type="button"
                     onClick={() => void send()}
                     disabled={isSending}
+                    aria-busy={isSending}
                     className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-primary px-5 font-body text-sm font-bold text-white transition-colors hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-60"
                   >
-                    {isSending ? (
-                      <Loader2 size={15} className="animate-spin" />
-                    ) : (
+                    <AsyncButtonContent
+                      isPending={isSending}
+                      pendingLabel="Submitting report…"
+                    >
                       <Flag size={15} aria-hidden="true" />
-                    )}
-                    Send report
+                      Send report
+                    </AsyncButtonContent>
                   </button>
                 </div>
               )}

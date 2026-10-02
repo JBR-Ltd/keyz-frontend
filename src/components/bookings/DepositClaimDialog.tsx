@@ -1,11 +1,12 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Loader2, Scale, X } from "lucide-react";
+import { Scale, X } from "lucide-react";
 import { useEffect, useState, type ReactElement } from "react";
 import PropertyPrice from "@/components/property/PropertyPrice";
 import OverlayPortal from "@/components/ui/OverlayPortal";
 import { useToast } from "@/components/ui/toast";
+import { AsyncButtonContent } from "@/components/ui/async-button-content";
 import type { Booking } from "@/lib/bookings";
 import { claimDeposit } from "@/lib/escrow";
 import { useDialogFocus } from "@/lib/useDialogFocus";
@@ -61,7 +62,9 @@ export default function DepositClaimDialog({
     const claimed = Number(amount);
 
     if (!Number.isFinite(claimed) || claimed <= 0 || claimed > held) {
-      setError(`Claim between ₦1 and the ₦${held.toLocaleString("en-NG")} held.`);
+      setError(
+        `Claim between ₦1 and the ₦${held.toLocaleString("en-NG")} held.`,
+      );
       return;
     }
 
@@ -73,9 +76,9 @@ export default function DepositClaimDialog({
     setIsSaving(true);
     setError("");
 
-    const result = await claimDeposit(booking.id, claimed, note);
-
-    setIsSaving(false);
+    const result = await claimDeposit(booking.id, claimed, note).finally(() =>
+      setIsSaving(false),
+    );
 
     if (!result.data) {
       setError(result.message ?? "That claim could not be recorded.");
@@ -176,8 +179,8 @@ export default function DepositClaimDialog({
 
               <p className="mt-4 flex gap-3 rounded-xl bg-surface-soft p-4 font-body text-sm leading-6 text-muted">
                 <Scale size={20} className="mt-0.5 shrink-0 text-accent-alt" />
-                Rello decides this, not you and not the tenant. The deposit stays
-                held until then, and fair wear and tear is not damage.
+                Rello decides this, not you and not the tenant. The deposit
+                stays held until then, and fair wear and tear is not damage.
               </p>
 
               {error ? (
@@ -193,10 +196,15 @@ export default function DepositClaimDialog({
                 type="button"
                 onClick={() => void submit()}
                 disabled={isSaving}
+                aria-busy={isSaving}
                 className="mt-6 inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-full bg-primary px-6 font-body text-sm font-bold text-white transition-colors hover:bg-primary/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-60"
               >
-                {isSaving ? <Loader2 size={18} className="animate-spin" /> : null}
-                Send claim to Rello
+                <AsyncButtonContent
+                  isPending={isSaving}
+                  pendingLabel="Submitting deposit claim…"
+                >
+                  Send claim to Rello
+                </AsyncButtonContent>
               </button>
             </div>
           </motion.div>

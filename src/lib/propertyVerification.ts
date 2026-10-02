@@ -26,6 +26,22 @@ export interface ProofSubmissionResult {
   success: boolean;
 }
 
+export type PropertyVerificationState =
+  | "NOT_SUBMITTED"
+  | "PENDING_REVIEW"
+  | "REJECTED"
+  | "VERIFIED";
+
+export interface PropertyVerificationResult {
+  listingVerified: boolean;
+  message: string;
+  method: "GEOTAGGED_PHOTO" | "LEGACY" | "UTILITY_BILL" | null;
+  propertyId: number;
+  rejectionReason: string | null;
+  state: PropertyVerificationState;
+  verificationId: number | null;
+}
+
 // === Geolocation
 
 const GEOLOCATION_TIMEOUT_MS = 20000;
@@ -157,11 +173,16 @@ export const UTILITY_BILL_MAX_BYTES = 5 * 1024 * 1024;
 export async function submitUtilityBill(
   propertyId: number,
   bill: File,
-): Promise<ProofSubmissionResult> {
+): Promise<{
+  data: PropertyVerificationResult | null;
+  message: string;
+  success: boolean;
+}> {
   const token = getSessionMarker();
 
   if (!token) {
     return {
+      data: null,
       success: false,
       message: "Your session has expired. Log in again.",
     };
@@ -183,6 +204,7 @@ export async function submitUtilityBill(
 
     if (!response.ok) {
       return {
+        data: null,
         success: false,
         message: resolveApiError(
           payload,
@@ -191,14 +213,66 @@ export async function submitUtilityBill(
       };
     }
 
-    return {
-      success: true,
-      message: "Your listing is verified and now live.",
-    };
+    const data = unwrapVerificationResult(payload);
+    return data
+      ? { data, success: true, message: data.message }
+      : {
+          data: null,
+          success: false,
+          message: "The verification server returned an invalid response.",
+        };
   } catch {
     return {
+      data: null,
       success: false,
       message: "Unable to reach the verification server right now.",
     };
   }
+}
+
+export async function getPropertyVerificationStatus(
+  propertyId: number,
+): Promise<{ data: PropertyVerificationResult | null; message: string }> {
+  try {
+    const response = await apiRequest(
+      `/api/verification/property/${propertyId}/status`,
+    );
+    const payload: unknown = await response.json().catch(() => null);
+    const data = unwrapVerificationResult(payload);
+
+    if (!response.ok || !data) {
+      return {
+        data: null,
+        message: resolveApiError(
+          payload,
+          "The verification status could not be loaded.",
+        ),
+      };
+    }
+
+    return { data, message: "" };
+  } catch {
+    return {
+      data: null,
+      message: "The verification status could not be loaded.",
+    };
+  }
+}
+
+function unwrapVerificationResult(
+  payload: unknown,
+): PropertyVerificationResult | null {
+  if (
+    payload === null ||
+    typeof payload !== "object" ||
+    !("data" in payload) ||
+    payload.data === null ||
+    typeof payload.data !== "object" ||
+    !("state" in payload.data) ||
+    typeof payload.data.state !== "string"
+  ) {
+    return null;
+  }
+
+  return payload.data as PropertyVerificationResult;
 }

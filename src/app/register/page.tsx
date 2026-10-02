@@ -2,13 +2,14 @@
 
 import { apiRequest } from "@/lib/apiRequest";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { EyeIcon, EyeOffIcon, Loader2 } from "lucide-react";
+import { EyeIcon, EyeOffIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { SubmitHandler, useForm } from "react-hook-form";
 import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
+import { AsyncButtonContent } from "@/components/ui/async-button-content";
 import { useToast } from "@/components/ui/toast";
 import { resolveApiError } from "@/lib/errors";
 import { getInstallationId } from "@/lib/authSession";
@@ -441,30 +442,18 @@ export default function RegisterPage() {
               <motion.button
                 type="submit"
                 disabled={isSubmitting}
+                aria-busy={isSubmitting}
                 className="mt-3 inline-flex min-h-14 w-full items-center justify-center rounded-full bg-accent px-5 py-4 font-body text-base font-medium text-primary transition-all duration-200 ease-in-out hover:scale-[1.01] hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-70"
                 initial={fieldInitial}
-                animate={
-                  isSubmitting && !reduceMotion
-                    ? { opacity: [1, 0.7, 1], y: 0 }
-                    : fieldAnimate
-                }
-                transition={
-                  isSubmitting && !reduceMotion
-                    ? { duration: 1, repeat: Infinity, ease: "easeInOut" }
-                    : { duration: 0.4, delay: 0.72, ease: "easeOut" }
-                }
+                animate={fieldAnimate}
+                transition={{ duration: 0.4, delay: 0.72, ease: "easeOut" }}
               >
-                {isSubmitting ? (
-                  <span className="inline-flex items-center gap-2">
-                    <Loader2
-                      className="h-4 w-4 animate-spin"
-                      aria-hidden="true"
-                    />
-                    Creating account...
-                  </span>
-                ) : (
-                  "Create account"
-                )}
+                <AsyncButtonContent
+                  isPending={isSubmitting}
+                  pendingLabel="Registering…"
+                >
+                  Create account
+                </AsyncButtonContent>
               </motion.button>
             </form>
 

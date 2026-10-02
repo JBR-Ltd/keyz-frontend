@@ -1,9 +1,10 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Loader2, ShieldCheck, X } from "lucide-react";
+import { ShieldCheck, X } from "lucide-react";
 import { useEffect, useState, type ReactElement } from "react";
 import OverlayPortal from "@/components/ui/OverlayPortal";
+import { AsyncButtonContent } from "@/components/ui/async-button-content";
 import { DatePicker } from "@/components/ui/date-picker";
 import { useToast } from "@/components/ui/toast";
 import { saveComplianceProfile } from "@/lib/compliance";
@@ -212,12 +213,15 @@ export default function ComplianceDetailsDialog({
                 type="button"
                 onClick={() => void save()}
                 disabled={isSaving}
+                aria-busy={isSaving}
                 className="mt-6 inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-full bg-primary px-6 font-body text-sm font-bold text-white transition-colors hover:bg-primary/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-60"
               >
-                {isSaving ? (
-                  <Loader2 size={18} className="animate-spin" />
-                ) : null}
-                Save and continue
+                <AsyncButtonContent
+                  isPending={isSaving}
+                  pendingLabel="Saving compliance details…"
+                >
+                  Save and continue
+                </AsyncButtonContent>
               </button>
             </div>
           </motion.div>

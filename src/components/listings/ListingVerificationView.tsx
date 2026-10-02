@@ -5,7 +5,6 @@ import Link from "next/link";
 import { propertyPath } from "@/lib/publicIds";
 import {
   ArrowLeft,
-  CheckCircle2,
   CircleAlert,
   FileText,
   Loader2,
@@ -13,16 +12,18 @@ import {
   UploadCloud,
 } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
+import { AsyncButtonContent } from "@/components/ui/async-button-content";
 import { useAuthenticatedUser } from "@/lib/account";
 import {
   getBackendPropertyById,
   type BackendProperty,
 } from "@/lib/hostListings";
 import {
+  getPropertyVerificationStatus,
   submitUtilityBill,
   UTILITY_BILL_MAX_BYTES,
   UTILITY_BILL_TYPES,
-  type ProofSubmissionResult,
+  type PropertyVerificationResult,
 } from "@/lib/propertyVerification";
 
 interface ListingVerificationViewProps {
@@ -57,18 +58,24 @@ export default function ListingVerificationView({
   const [bill, setBill] = useState<File | null>(null);
   const [fileError, setFileError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [result, setResult] = useState<ProofSubmissionResult | null>(null);
+  const [verification, setVerification] =
+    useState<PropertyVerificationResult | null>(null);
+  const [submissionError, setSubmissionError] = useState("");
 
   useEffect(() => {
     let active = true;
 
-    void getBackendPropertyById(propertyId).then((response) => {
-      if (!active) {
-        return;
-      }
+    void Promise.all([
+      getBackendPropertyById(propertyId),
+      getPropertyVerificationStatus(Number(propertyId)),
+    ]).then(([propertyResponse, verificationResponse]) => {
+      if (!active) return;
 
-      setProperty(response.data);
-      setLoadError(response.message ?? "");
+      setProperty(propertyResponse.data);
+      setVerification(verificationResponse.data);
+      setLoadError(
+        propertyResponse.message ?? verificationResponse.message ?? "",
+      );
       setIsLoading(false);
     });
 
@@ -78,7 +85,7 @@ export default function ListingVerificationView({
   }, [propertyId]);
 
   const chooseFile = (file: File | null): void => {
-    setResult(null);
+    setSubmissionError("");
 
     if (!file) {
       setBill(null);
@@ -112,14 +119,20 @@ export default function ListingVerificationView({
     setIsSubmitting(true);
     const outcome = await submitUtilityBill(Number(propertyId), bill);
     setIsSubmitting(false);
-    setResult(outcome);
+    setSubmissionError(outcome.success ? "" : outcome.message);
 
-    if (outcome.success) {
+    if (outcome.data) {
+      setVerification(outcome.data);
       setProperty((current) =>
-        current ? { ...current, verified: true } : current,
+        current
+          ? { ...current, verified: outcome.data?.listingVerified ?? false }
+          : current,
       );
       notify({
-        title: "Listing verified",
+        title:
+          outcome.data.state === "VERIFIED"
+            ? "Listing verified"
+            : "Sent for review",
         description: outcome.message,
         variant: "success",
       });
@@ -128,7 +141,9 @@ export default function ListingVerificationView({
 
   const hostName = user ? `${user.firstName} ${user.lastName}`.trim() : "";
   const manageHref = `/${role}/listings/${propertyId}`;
-  const alreadyVerified = property?.verified === true && !result?.success;
+  const alreadyVerified =
+    property?.verified === true || verification?.state === "VERIFIED";
+  const pendingReview = verification?.state === "PENDING_REVIEW";
 
   return (
     <main className="min-h-screen overflow-x-hidden px-5 py-12 sm:px-8 lg:px-10 lg:py-16 xl:px-14">
@@ -163,9 +178,33 @@ export default function ListingVerificationView({
           aria-busy="true"
           aria-label="Loading the listing"
         />
-      ) : !property ? null : alreadyVerified ? (
+      ) : !property ? null : pendingReview ? (
+        <section
+          className="max-w-2xl rounded-lg bg-surface-soft p-8 shadow-sm"
+          aria-live="polite"
+        >
+          <Loader2 size={28} className="text-accent-alt" aria-hidden="true" />
+          <h2 className="mt-4 font-display text-2xl font-bold text-primary">
+            Your bill is under review
+          </h2>
+          <p className="mt-2 font-body text-sm leading-6 text-muted">
+            We received the evidence for {property.title}. A reviewer will check
+            the legal owner and address before the listing goes live.
+          </p>
+          <Link
+            href={manageHref}
+            className="mt-5 inline-flex font-body text-sm font-bold text-accent-alt transition-colors hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          >
+            Return to the listing
+          </Link>
+        </section>
+      ) : alreadyVerified ? (
         <section className="max-w-2xl rounded-lg bg-surface-soft p-8 shadow-sm">
-          <ShieldCheck size={26} className="text-accent-alt" aria-hidden="true" />
+          <ShieldCheck
+            size={26}
+            className="text-accent-alt"
+            aria-hidden="true"
+          />
           <h2 className="mt-4 font-display text-2xl font-bold text-primary">
             This listing is already verified
           </h2>
@@ -179,33 +218,6 @@ export default function ListingVerificationView({
             View the public page
           </Link>
         </section>
-      ) : result?.success ? (
-        <section
-          className="max-w-2xl rounded-lg bg-surface-soft p-8 shadow-sm"
-          aria-live="polite"
-        >
-          <CheckCircle2 size={28} className="text-accent-alt" aria-hidden="true" />
-          <h2 className="mt-4 font-display text-2xl font-bold text-primary">
-            Verified and live
-          </h2>
-          <p className="mt-2 font-body text-sm leading-6 text-muted">
-            The bill matched, so {property.title} now shows to tenants.
-          </p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Link
-              href={propertyPath(property)}
-              className="inline-flex min-h-11 items-center rounded bg-primary px-5 font-accent text-xs font-bold uppercase tracking-[0.16em] text-white transition-all duration-200 ease-in-out hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            >
-              See it live
-            </Link>
-            <Link
-              href={manageHref}
-              className="inline-flex min-h-11 items-center rounded px-5 font-accent text-xs font-bold uppercase tracking-[0.16em] text-primary shadow-sm transition-all duration-200 ease-in-out hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            >
-              Manage the listing
-            </Link>
-          </div>
-        </section>
       ) : (
         <div className="grid max-w-5xl gap-8 lg:grid-cols-[1fr_1.2fr]">
           <section className="rounded-lg bg-surface-soft p-6 shadow-sm sm:p-7">
@@ -215,10 +227,14 @@ export default function ListingVerificationView({
             <dl className="mt-5 grid gap-4">
               <div>
                 <dt className="font-accent text-xs font-bold uppercase tracking-[0.16em] text-muted">
-                  Your name, as verified
+                  {role === "agent"
+                    ? "Legal owner's verified name"
+                    : "Your verified name"}
                 </dt>
                 <dd className="mt-1 font-body text-base font-bold text-primary">
-                  {hostName || "The name on your verified account"}
+                  {role === "agent"
+                    ? "The owner named on the management mandate"
+                    : hostName || "The name on your verified account"}
                 </dd>
               </div>
               <div>
@@ -232,9 +248,15 @@ export default function ListingVerificationView({
             </dl>
             <p className="mt-5 font-body text-sm leading-6 text-muted">
               An electricity, water, waste or internet bill all work. Both must
-              be readable on the page: a bill in someone else&apos;s name, or for a
-              different address, will not verify this listing.
+              be readable on the page: a bill in someone else&apos;s name, or
+              for a different address, may require manual review.
             </p>
+            {verification?.state === "REJECTED" ? (
+              <p className="mt-4 rounded-lg bg-red-700/5 p-4 font-body text-sm leading-6 text-red-700">
+                {verification.rejectionReason ??
+                  "The previous submission was rejected. Upload a corrected bill to try again."}
+              </p>
+            ) : null}
           </section>
 
           <section className="rounded-lg bg-[var(--color-bg)] p-6 shadow-sm sm:p-7">
@@ -246,9 +268,17 @@ export default function ListingVerificationView({
               }`}
             >
               {bill ? (
-                <FileText size={28} className="text-accent-alt" aria-hidden="true" />
+                <FileText
+                  size={28}
+                  className="text-accent-alt"
+                  aria-hidden="true"
+                />
               ) : (
-                <UploadCloud size={28} className="text-accent-alt" aria-hidden="true" />
+                <UploadCloud
+                  size={28}
+                  className="text-accent-alt"
+                  aria-hidden="true"
+                />
               )}
               <span className="font-body text-sm font-bold text-primary">
                 {bill ? bill.name : "Choose the bill"}
@@ -263,7 +293,9 @@ export default function ListingVerificationView({
                 type="file"
                 accept={UTILITY_BILL_TYPES.join(",")}
                 disabled={isSubmitting}
-                onChange={(event) => chooseFile(event.target.files?.[0] ?? null)}
+                onChange={(event) =>
+                  chooseFile(event.target.files?.[0] ?? null)
+                }
                 className="sr-only"
               />
             </label>
@@ -274,15 +306,19 @@ export default function ListingVerificationView({
               </p>
             ) : null}
 
-            {result && !result.success ? (
+            {submissionError ? (
               <div
                 className="mt-4 flex gap-3 rounded-lg bg-red-700/5 p-4"
                 role="alert"
               >
-                <CircleAlert size={18} className="mt-0.5 shrink-0 text-red-700" aria-hidden="true" />
+                <CircleAlert
+                  size={18}
+                  className="mt-0.5 shrink-0 text-red-700"
+                  aria-hidden="true"
+                />
                 <div>
                   <p className="font-body text-sm font-bold text-red-700">
-                    {result.message}
+                    {submissionError}
                   </p>
                   <p className="mt-1 font-body text-sm leading-6 text-muted">
                     Check the name matches your verified name and the address
@@ -297,17 +333,22 @@ export default function ListingVerificationView({
               type="button"
               onClick={() => void submit()}
               disabled={!bill || isSubmitting}
+              aria-busy={isSubmitting}
               className="mt-6 flex min-h-12 w-full items-center justify-center gap-2 rounded bg-primary px-5 font-accent text-xs font-bold uppercase tracking-[0.16em] text-white transition-all duration-200 ease-in-out hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isSubmitting ? (
-                <Loader2 size={15} className="animate-spin" aria-hidden="true" />
-              ) : (
+              <AsyncButtonContent
+                isPending={isSubmitting}
+                pendingLabel="Submitting bill for verification…"
+              >
                 <ShieldCheck size={15} aria-hidden="true" />
-              )}
-              {isSubmitting ? "Reading the bill" : "Verify listing"}
+                Verify listing
+              </AsyncButtonContent>
             </button>
             {isSubmitting ? (
-              <p className="mt-3 text-center font-body text-xs text-muted" aria-live="polite">
+              <p
+                className="mt-3 text-center font-body text-xs text-muted"
+                aria-live="polite"
+              >
                 This can take up to a minute.
               </p>
             ) : null}

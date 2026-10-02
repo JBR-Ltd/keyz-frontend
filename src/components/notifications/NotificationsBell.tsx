@@ -4,7 +4,14 @@ import { getBrowserSessionMarker } from "@/lib/authSession";
 
 import { Bell, CheckCheck, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState, type ReactElement } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactElement,
+} from "react";
+import { AsyncButtonContent } from "@/components/ui/async-button-content";
 import { useToast } from "@/components/ui/toast";
 import {
   getNotifications,
@@ -18,7 +25,10 @@ import {
 const UNREAD_POLL_MS = 30000;
 
 function formatWhen(value: string, now: number): string {
-  const minutes = Math.max(1, Math.round((now - new Date(value).getTime()) / 60000));
+  const minutes = Math.max(
+    1,
+    Math.round((now - new Date(value).getTime()) / 60000),
+  );
 
   if (minutes < 60) {
     return `${minutes}m`;
@@ -36,9 +46,10 @@ function formatWhen(value: string, now: number): string {
     return `${days}d`;
   }
 
-  return new Intl.DateTimeFormat("en-NG", { month: "short", day: "numeric" }).format(
-    new Date(value),
-  );
+  return new Intl.DateTimeFormat("en-NG", {
+    month: "short",
+    day: "numeric",
+  }).format(new Date(value));
 }
 
 export default function NotificationsBell(): ReactElement {
@@ -60,6 +71,7 @@ export default function NotificationsBell(): ReactElement {
   const [error, setError] = useState("");
   const [olderError, setOlderError] = useState("");
   const [isReading, setIsReading] = useState(false);
+  const [readingId, setReadingId] = useState<number | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [now, setNow] = useState(0);
 
@@ -69,8 +81,12 @@ export default function NotificationsBell(): ReactElement {
     const token = getBrowserSessionMarker();
     const count = await getUnreadNotificationCount();
 
-    if (mountedRef.current && version === countVersionRef.current
-        && token === getBrowserSessionMarker() && count !== null) {
+    if (
+      mountedRef.current &&
+      version === countVersionRef.current &&
+      token === getBrowserSessionMarker() &&
+      count !== null
+    ) {
       setUnread(count);
     }
   }, []);
@@ -108,13 +124,21 @@ export default function NotificationsBell(): ReactElement {
     const token = getBrowserSessionMarker();
 
     void getNotifications("", controller.signal).then((result) => {
-      if (controller.signal.aborted || session !== sessionRef.current || token !== getBrowserSessionMarker()) {
+      if (
+        controller.signal.aborted ||
+        session !== sessionRef.current ||
+        token !== getBrowserSessionMarker()
+      ) {
         return;
       }
 
       setNow(Date.now());
       if (!result.message) {
-        setItems(Array.from(new Map(result.data.items.map((item) => [item.id, item])).values()));
+        setItems(
+          Array.from(
+            new Map(result.data.items.map((item) => [item.id, item])).values(),
+          ),
+        );
         setNextCursor(result.data.nextCursor);
       }
       setError(result.message ?? "");
@@ -166,7 +190,12 @@ export default function NotificationsBell(): ReactElement {
   };
 
   const loadOlder = async (): Promise<void> => {
-    if (!nextCursor || isLoading || readingRef.current || olderRequestRef.current) {
+    if (
+      !nextCursor ||
+      isLoading ||
+      readingRef.current ||
+      olderRequestRef.current
+    ) {
       return;
     }
 
@@ -178,8 +207,13 @@ export default function NotificationsBell(): ReactElement {
     setOlderError("");
     const result = await getNotifications(nextCursor, controller.signal);
 
-    if (controller.signal.aborted || !mountedRef.current
-        || session !== sessionRef.current || token !== getBrowserSessionMarker()) return;
+    if (
+      controller.signal.aborted ||
+      !mountedRef.current ||
+      session !== sessionRef.current ||
+      token !== getBrowserSessionMarker()
+    )
+      return;
     olderRequestRef.current = null;
     setIsLoadingMore(false);
     if (result.message) {
@@ -204,18 +238,28 @@ export default function NotificationsBell(): ReactElement {
       readingRef.current = true;
       countVersionRef.current++;
       setIsReading(true);
+      setReadingId(notification.id);
       const saved = await markNotificationRead(notification.id);
       if (!mountedRef.current) return;
       readingRef.current = false;
       setIsReading(false);
+      setReadingId(null);
       if (token !== getBrowserSessionMarker()) return;
       if (saved) {
         setUnread((count) => Math.max(0, count - 1));
         if (session === sessionRef.current) {
-          setItems((current) => current.map((item) => item.id === notification.id ? { ...item, read: true } : item));
+          setItems((current) =>
+            current.map((item) =>
+              item.id === notification.id ? { ...item, read: true } : item,
+            ),
+          );
         }
       } else {
-        notify({ title: "Could not mark notification read", description: "It remains unread. Please try again.", variant: "error" });
+        notify({
+          title: "Could not mark notification read",
+          description: "It remains unread. Please try again.",
+          variant: "error",
+        });
       }
       void refreshUnread();
     }
@@ -244,7 +288,11 @@ export default function NotificationsBell(): ReactElement {
         setItems((current) => current.map((item) => ({ ...item, read: true })));
       }
     } else {
-      notify({ title: "Could not mark notifications read", description: "They remain unread. Please try again.", variant: "error" });
+      notify({
+        title: "Could not mark notifications read",
+        description: "They remain unread. Please try again.",
+        variant: "error",
+      });
     }
     void refreshUnread();
   };
@@ -256,7 +304,9 @@ export default function NotificationsBell(): ReactElement {
         type="button"
         onClick={toggle}
         className="relative flex h-10 w-10 items-center justify-center rounded-full text-primary transition-all duration-200 ease-in-out hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-        aria-label={unread > 0 ? `Notifications, ${unread} unread` : "Notifications"}
+        aria-label={
+          unread > 0 ? `Notifications, ${unread} unread` : "Notifications"
+        }
         aria-haspopup="true"
         aria-expanded={isOpen}
       >
@@ -285,9 +335,15 @@ export default function NotificationsBell(): ReactElement {
                 onClick={() => void readAll()}
                 disabled={isReading || isLoadingMore}
                 className="inline-flex items-center gap-1.5 rounded font-body text-xs font-bold text-accent-alt hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60"
+                aria-busy={isReading}
               >
-                {isReading ? <Loader2 size={14} className="animate-spin" aria-hidden="true" /> : <CheckCheck size={14} aria-hidden="true" />}
-                Mark all read
+                <AsyncButtonContent
+                  isPending={isReading}
+                  pendingLabel="Marking all read…"
+                >
+                  <CheckCheck size={14} aria-hidden="true" />
+                  Mark all read
+                </AsyncButtonContent>
               </button>
             ) : null}
           </div>
@@ -324,12 +380,23 @@ export default function NotificationsBell(): ReactElement {
                       type="button"
                       onClick={() => void open(item)}
                       disabled={isReading || isLoadingMore}
-                      className="grid w-full grid-cols-[0.5rem_minmax(0,1fr)_auto] gap-3 px-4 py-3 text-left transition-colors hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent disabled:opacity-60"
+                      aria-busy={readingId === item.id}
                     >
-                      <span
-                        className={`mt-1.5 h-2 w-2 rounded-full ${item.read ? "bg-transparent" : "bg-accent"}`}
-                        aria-hidden="true"
-                      />
+                      {readingId === item.id ? (
+                        <Loader2
+                          size={12}
+                          className="mt-1 animate-spin"
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        <span
+                          className={`mt-1.5 h-2 w-2 rounded-full ${item.read ? "bg-transparent" : "bg-accent"}`}
+                          aria-hidden="true"
+                        />
+                      )}
+                      {readingId === item.id ? (
+                        <span className="sr-only">Opening notification…</span>
+                      ) : null}
                       <span className="min-w-0">
                         <span
                           className={`block font-body text-sm text-primary ${item.read ? "font-medium" : "font-bold"}`}
@@ -344,13 +411,22 @@ export default function NotificationsBell(): ReactElement {
                       </span>
                       <span className="font-body text-[11px] font-bold text-muted">
                         {now ? formatWhen(item.createdAt, now) : ""}
-                        {item.read ? null : <span className="sr-only"> unread</span>}
+                        {item.read ? null : (
+                          <span className="sr-only"> unread</span>
+                        )}
                       </span>
                     </button>
                   </li>
                 ))}
               </ul>
-              {olderError ? <p role="alert" className="px-4 py-3 font-body text-xs text-red-700">{olderError}</p> : null}
+              {olderError ? (
+                <p
+                  role="alert"
+                  className="px-4 py-3 font-body text-xs text-red-700"
+                >
+                  {olderError}
+                </p>
+              ) : null}
               {nextCursor ? (
                 <button
                   type="button"
@@ -358,8 +434,15 @@ export default function NotificationsBell(): ReactElement {
                   disabled={isLoadingMore || isReading}
                   className="flex w-full items-center justify-center gap-2 border-t border-border px-4 py-3 font-body text-xs font-bold text-primary hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent disabled:opacity-60"
                 >
-                  {isLoadingMore ? <Loader2 size={13} className="animate-spin" /> : null}
-                  {olderError ? "Retry loading older" : "Load older"}
+                  <AsyncButtonContent
+                    isPending={isLoadingMore}
+                    pendingLabel="Loading older notifications…"
+                  >
+                    {olderError
+                      ? "Retry loading older notifications"
+                      : "Load older notifications"}
+                  </AsyncButtonContent>
+                  aria-busy={isLoadingMore}
                 </button>
               ) : null}
             </div>

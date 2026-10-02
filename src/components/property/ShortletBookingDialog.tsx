@@ -1,10 +1,11 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { CalendarDays, Loader2, Minus, Plus, Users, X } from "lucide-react";
+import { CalendarDays, Minus, Plus, Users, X } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactElement } from "react";
 import ShortletDateRangeCalendar from "@/components/property/ShortletDateRangeCalendar";
 import OverlayPortal from "@/components/ui/OverlayPortal";
+import { AsyncButtonContent } from "@/components/ui/async-button-content";
 import { useToast } from "@/components/ui/toast";
 import {
   getPropertyAvailability,
@@ -310,16 +311,19 @@ export default function ShortletBookingDialog({
                   isQuoting ||
                   isSubmitting
                 }
+                aria-busy={isQuoting || isSubmitting}
                 className="fixed inset-x-5 bottom-[max(1.25rem,env(safe-area-inset-bottom))] z-10 inline-flex min-h-14 items-center justify-center gap-2 rounded-full bg-accent px-6 font-body text-sm font-bold text-primary shadow-lg transition-colors hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-60 sm:static sm:mt-6 sm:w-full sm:shadow-none"
               >
-                {isQuoting || isSubmitting ? (
-                  <Loader2 size={18} className="animate-spin" />
-                ) : null}
-                {isQuoting
-                  ? "Checking price"
-                  : isSubmitting
-                    ? "Sending request"
-                    : "Request to book"}
+                <AsyncButtonContent
+                  isPending={isQuoting || isSubmitting}
+                  pendingLabel={
+                    isQuoting
+                      ? "Checking price…"
+                      : "Submitting booking request…"
+                  }
+                >
+                  Request to book
+                </AsyncButtonContent>
               </button>
             </div>
           </motion.div>

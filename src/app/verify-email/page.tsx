@@ -2,7 +2,6 @@
 
 import { apiRequest } from "@/lib/apiRequest";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -16,6 +15,7 @@ import { SubmitHandler, useForm } from "react-hook-form";
 import AuthInput from "@/components/auth/AuthInput";
 import AuthSplitLayout from "@/components/auth/AuthSplitLayout";
 import { isAccountRole } from "@/components/auth/RoleGuard";
+import { AsyncButtonContent } from "@/components/ui/async-button-content";
 import { useToast } from "@/components/ui/toast";
 import { resolveApiError } from "@/lib/errors";
 import { establishAuthentication } from "@/lib/authSession";
@@ -364,15 +364,15 @@ export default function VerifyEmailPage() {
                     type="button"
                     onClick={() => void handleResend()}
                     disabled={isResending}
+                    aria-busy={isResending}
                     className="inline-flex items-center gap-2 rounded font-body text-sm font-medium text-muted underline-offset-4 transition-all duration-200 ease-in-out hover:text-primary hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-70"
                   >
-                    {isResending ? (
-                      <Loader2
-                        className="h-3.5 w-3.5 animate-spin"
-                        aria-hidden="true"
-                      />
-                    ) : null}
-                    {isResending ? "Sending a new code" : "Send a new code"}
+                    <AsyncButtonContent
+                      isPending={isResending}
+                      pendingLabel="Sending new code…"
+                    >
+                      Send a new code
+                    </AsyncButtonContent>
                   </button>
                 </div>
               </fieldset>
@@ -381,29 +381,17 @@ export default function VerifyEmailPage() {
                 type="submit"
                 disabled={isSubmitting}
                 className="inline-flex min-h-14 w-full items-center justify-center bg-primary px-5 py-4 font-body text-base font-bold text-white transition-all duration-200 ease-in-out hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-70"
+                aria-busy={isSubmitting}
                 whileTap={reduceMotion ? undefined : { scale: 0.98 }}
-                animate={
-                  isSubmitting && !reduceMotion
-                    ? { opacity: [1, 0.6, 1] }
-                    : { opacity: 1 }
-                }
-                transition={
-                  isSubmitting && !reduceMotion
-                    ? { duration: 1, repeat: Infinity, ease: "easeInOut" }
-                    : { duration: 0.2 }
-                }
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.2 }}
               >
-                {isSubmitting ? (
-                  <span className="inline-flex items-center gap-2">
-                    <Loader2
-                      className="h-4 w-4 animate-spin"
-                      aria-hidden="true"
-                    />
-                    Please wait...
-                  </span>
-                ) : (
-                  "Verify Email"
-                )}
+                <AsyncButtonContent
+                  isPending={isSubmitting}
+                  pendingLabel="Verifying email…"
+                >
+                  Verify Email
+                </AsyncButtonContent>
               </motion.button>
             </form>
 

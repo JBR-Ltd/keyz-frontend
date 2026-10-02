@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, type ReactElement, type ReactNode } from "react";
-import { Check, FileText, Loader2, MapPin, ShieldCheck, X } from "lucide-react";
+import { Check, FileText, MapPin, ShieldCheck, X } from "lucide-react";
+import { AsyncButtonContent } from "@/components/ui/async-button-content";
 import { CardListSkeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useToast } from "@/components/ui/toast";
@@ -21,6 +22,7 @@ type ReviewKind = "kyb" | "property";
 
 interface DecisionState {
   busyKey: string | null;
+  busyAction: "approve" | "reject" | null;
   reason: string;
   rejectingKey: string | null;
 }
@@ -39,6 +41,7 @@ export default function AdminVerificationsPage(): ReactElement {
   const [loadError, setLoadError] = useState("");
   const [decision, setDecision] = useState<DecisionState>({
     busyKey: null,
+    busyAction: null,
     reason: "",
     rejectingKey: null,
   });
@@ -72,14 +75,23 @@ export default function AdminVerificationsPage(): ReactElement {
     const key = rowKey(kind, id);
     const reason = decision.reason.trim();
 
-    setDecision((current) => ({ ...current, busyKey: key }));
+    setDecision((current) => ({
+      ...current,
+      busyKey: key,
+      busyAction: approved ? "approve" : "reject",
+    }));
 
-    const result =
+    const result = await (
       kind === "kyb"
-        ? await decideKyb(id, approved, reason)
-        : await decidePropertyVerification(id, approved, reason);
-
-    setDecision((current) => ({ ...current, busyKey: null }));
+        ? decideKyb(id, approved, reason)
+        : decidePropertyVerification(id, approved, reason)
+    ).finally(() => {
+      setDecision((current) => ({
+        ...current,
+        busyKey: null,
+        busyAction: null,
+      }));
+    });
 
     if (!result.data) {
       notify({
@@ -96,7 +108,12 @@ export default function AdminVerificationsPage(): ReactElement {
       setPropertyQueue((current) => current.filter((item) => item.id !== id));
     }
 
-    setDecision({ busyKey: null, reason: "", rejectingKey: null });
+    setDecision({
+      busyKey: null,
+      busyAction: null,
+      reason: "",
+      rejectingKey: null,
+    });
     notify({
       title: approved ? "Approved" : "Rejected",
       variant: "success",
@@ -139,6 +156,8 @@ export default function AdminVerificationsPage(): ReactElement {
     const key = rowKey(kind, id);
     const isBusy = decision.busyKey === key;
     const isRejecting = decision.rejectingKey === key;
+    const isApproving = isBusy && decision.busyAction === "approve";
+    const isRejectingDecision = isBusy && decision.busyAction === "reject";
 
     return (
       <div className="flex flex-wrap gap-3">
@@ -148,18 +167,25 @@ export default function AdminVerificationsPage(): ReactElement {
           disabled={isBusy}
           className="flex items-center gap-2 rounded bg-primary px-5 py-3 font-accent text-xs font-bold uppercase tracking-[0.16em] text-white transition-all duration-200 ease-in-out hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-70"
         >
-          {isBusy ? (
-            <Loader2 size={15} className="animate-spin" />
-          ) : (
+          aria-busy={isApproving}
+          <AsyncButtonContent
+            isPending={isApproving}
+            pendingLabel="Approving verification…"
+          >
             <Check size={15} />
-          )}
-          Approve
+            Approve
+          </AsyncButtonContent>
         </button>
         <button
           type="button"
           onClick={() => {
             if (!isRejecting) {
-              setDecision({ busyKey: null, reason: "", rejectingKey: key });
+              setDecision({
+                busyKey: null,
+                busyAction: null,
+                reason: "",
+                rejectingKey: key,
+              });
               return;
             }
 
@@ -170,8 +196,14 @@ export default function AdminVerificationsPage(): ReactElement {
           }
           className="flex items-center gap-2 rounded px-5 py-3 font-accent text-xs font-bold uppercase tracking-[0.16em] text-primary shadow-sm transition-all duration-200 ease-in-out hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-70"
         >
-          <X size={15} />
-          {isRejecting ? "Confirm rejection" : "Reject"}
+          <AsyncButtonContent
+            isPending={isRejectingDecision}
+            pendingLabel="Rejecting verification…"
+          >
+            <X size={15} />
+            {isRejecting ? "Confirm rejection" : "Reject"}
+          </AsyncButtonContent>
+          aria-busy={isRejectingDecision}
         </button>
       </div>
     );
@@ -308,20 +340,48 @@ export default function AdminVerificationsPage(): ReactElement {
                       {submission.propertyTitle ?? "Untitled listing"}
                     </h3>
                   </div>
-                  <p className="mt-2 font-body text-sm text-muted">
-                    {submission.owner?.name ?? "Unknown owner"} ·{" "}
-                    {submission.owner?.role ?? "Host"} · listing #
-                    {submission.propertyId ?? "unknown"}
-                  </p>
+                  <dl className="mt-3 grid gap-1 font-body text-sm text-muted">
+                    <div className="flex gap-2">
+                      <dt className="font-bold text-primary">Legal owner:</dt>
+                      <dd>{submission.owner?.name ?? "Unknown"}</dd>
+                    </div>
+                    <div className="flex gap-2">
+                      <dt className="font-bold text-primary">
+                        Listing manager:
+                      </dt>
+                      <dd>{submission.manager?.name ?? "Unknown"}</dd>
+                    </div>
+                    <div className="flex gap-2">
+                      <dt className="font-bold text-primary">Method:</dt>
+                      <dd>
+                        {submission.method?.replaceAll("_", " ") ?? "Legacy"}
+                      </dd>
+                    </div>
+                  </dl>
                   {submission.propertyAddress ? (
                     <p className="mt-1 font-body text-sm text-muted">
                       {submission.propertyAddress}
                     </p>
                   ) : null}
+                  <p className="mt-3 font-body text-xs text-muted">
+                    Name match:{" "}
+                    {submission.nameMatched === null
+                      ? "Not available"
+                      : submission.nameMatched
+                        ? "Yes"
+                        : "No"}
+                    {" · "}Address match:{" "}
+                    {submission.addressMatchRatio === null
+                      ? "Not available"
+                      : `${Math.round(submission.addressMatchRatio * 100)}%`}
+                    {submission.submittedAt
+                      ? ` · Submitted ${new Date(submission.submittedAt).toLocaleString()}`
+                      : ""}
+                  </p>
                   <div className="mt-4 flex flex-wrap gap-4">
-                    {submission.proofOfOwnershipUrl ? (
+                    {submission.proofAvailable ? (
                       <a
-                        href={submission.proofOfOwnershipUrl}
+                        href={`/api/admin/property-verifications/${submission.id}/proof`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-2 font-body text-sm font-medium text-accent-alt transition-all duration-200 ease-in-out hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"

@@ -1,9 +1,10 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { ArrowLeft, CalendarDays, Check, Loader2, X } from "lucide-react";
+import { ArrowLeft, CalendarDays, Check, X } from "lucide-react";
 import { useEffect, useState, type ReactElement } from "react";
 import OverlayPortal from "@/components/ui/OverlayPortal";
+import { AsyncButtonContent } from "@/components/ui/async-button-content";
 import { DatePicker } from "@/components/ui/date-picker";
 import { useToast } from "@/components/ui/toast";
 import { createRentalRequest, type MoveInPreference } from "@/lib/bookings";
@@ -321,16 +322,17 @@ export default function RentalRequestDialog({
                   step === "details" ? continueToReview : () => void submit()
                 }
                 disabled={isSubmitting}
+                aria-busy={isSubmitting}
                 className="mt-6 inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-full bg-accent px-6 font-body text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-60"
               >
-                {isSubmitting ? (
-                  <Loader2 size={18} className="animate-spin" />
-                ) : null}
-                {step === "details"
-                  ? "Review request"
-                  : isSubmitting
-                    ? "Sending request"
+                <AsyncButtonContent
+                  isPending={isSubmitting}
+                  pendingLabel="Submitting rental request…"
+                >
+                  {step === "details"
+                    ? "Review request"
                     : "Send rental request"}
+                </AsyncButtonContent>
               </button>
             </div>
           </motion.div>

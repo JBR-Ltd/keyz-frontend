@@ -44,15 +44,21 @@ export interface KybSubmission {
 }
 
 export interface PropertyVerificationSubmission {
+  addressMatchRatio: number | null;
   id: number;
   latitude: number | null;
   longitude: number | null;
+  manager: PartySummary | null;
+  method: string | null;
+  nameMatched: boolean | null;
   owner: PartySummary | null;
-  proofOfOwnershipUrl: string | null;
+  proofAvailable: boolean;
   propertyAddress: string | null;
   propertyId: number | null;
   propertyTitle: string | null;
   rejectionReason: string | null;
+  reviewReason: string | null;
+  submittedAt: string | null;
   status: string;
 }
 

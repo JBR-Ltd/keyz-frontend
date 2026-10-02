@@ -15,14 +15,14 @@
 //     doors produce none
 
 import { describe, expect, it } from "vitest";
-import { computeLayout } from "@/lib/tour/floorPlanLayout";
+import { computeLayout } from "../floorPlanLayout";
 import type {
   CompassDirection,
   Door,
   Room,
   SizeBucket,
   WallSide,
-} from "@/lib/types/tour";
+} from "../../types/tour";
 
 // ---------------------------------------------------------------------------
 // Fixture builders

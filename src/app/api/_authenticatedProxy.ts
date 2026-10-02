@@ -86,6 +86,8 @@ export async function proxyAuthenticatedRequest({
             response.headers.get("Content-Type") ?? "application/octet-stream",
           "Content-Disposition": contentDisposition,
           "Cache-Control": response.headers.get("Cache-Control") ?? "no-store",
+          "X-Content-Type-Options":
+            response.headers.get("X-Content-Type-Options") ?? "nosniff",
           ...requestIdHeader(response),
         },
       });

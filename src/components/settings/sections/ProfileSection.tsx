@@ -16,6 +16,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRef, useState, type ReactElement } from "react";
 import { useToast } from "@/components/ui/toast";
+import { AsyncButtonContent } from "@/components/ui/async-button-content";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   updateProfile,
@@ -149,8 +150,9 @@ export default function ProfileSection(): ReactElement {
     }
 
     setIsSaving(true);
-    const result = await updateProfile(edit);
-    setIsSaving(false);
+    const result = await updateProfile(edit).finally(() => {
+      setIsSaving(false);
+    });
 
     if (!result.success) {
       notify({
@@ -419,10 +421,15 @@ export default function ProfileSection(): ReactElement {
               type="button"
               onClick={() => void save()}
               disabled={isSaving}
+              aria-busy={isSaving}
               className="flex min-h-12 items-center gap-2 rounded-full bg-accent px-6 py-3 font-body text-sm font-medium text-primary transition-all duration-200 ease-in-out hover:scale-[1.02] hover:bg-primary hover:text-white hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-70"
             >
-              {isSaving ? <Loader2 size={16} className="animate-spin" /> : null}
-              Save changes
+              <AsyncButtonContent
+                isPending={isSaving}
+                pendingLabel="Saving profile…"
+              >
+                Save changes
+              </AsyncButtonContent>
             </button>
             <button
               type="button"

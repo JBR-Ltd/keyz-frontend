@@ -2,7 +2,7 @@
 
 import { apiRequest } from "@/lib/apiRequest";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { EyeIcon, EyeOffIcon, Loader2 } from "lucide-react";
+import { EyeIcon, EyeOffIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -10,6 +10,7 @@ import { useEffect, useState } from "react";
 import { SubmitHandler, useForm } from "react-hook-form";
 import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
 import { isAccountRole } from "@/components/auth/RoleGuard";
+import { AsyncButtonContent } from "@/components/ui/async-button-content";
 import { useToast } from "@/components/ui/toast";
 import { resolveApiError } from "@/lib/errors";
 import { establishAuthentication, getInstallationId } from "@/lib/authSession";
@@ -377,9 +378,15 @@ export default function LoginPage() {
                   type="button"
                   onClick={() => void submitCode()}
                   disabled={isVerifying || code.trim().length < 6}
+                  aria-busy={isVerifying}
                   className="min-h-14 rounded-full bg-primary px-6 font-body text-sm font-bold text-white transition-all duration-200 ease-in-out hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {isVerifying ? "Checking..." : "Finish signing in"}
+                  <AsyncButtonContent
+                    isPending={isVerifying}
+                    pendingLabel="Verifying code…"
+                  >
+                    Finish signing in
+                  </AsyncButtonContent>
                 </button>
 
                 <button
@@ -516,32 +523,20 @@ export default function LoginPage() {
               <motion.button
                 type="submit"
                 disabled={isSubmitting || isNavigating}
+                aria-busy={isSubmitting || isNavigating}
                 className="mt-3 inline-flex min-h-14 w-full items-center justify-center rounded-full bg-accent px-5 py-4 font-body text-base font-medium text-primary transition-all duration-200 ease-in-out hover:scale-[1.01] hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-70"
                 initial={fieldInitial}
-                animate={
-                  (isSubmitting || isNavigating) && !reduceMotion
-                    ? { opacity: [1, 0.7, 1], y: 0 }
-                    : fieldAnimate
-                }
-                transition={
-                  (isSubmitting || isNavigating) && !reduceMotion
-                    ? { duration: 1, repeat: Infinity, ease: "easeInOut" }
-                    : { duration: 0.4, delay: 0.56, ease: "easeOut" }
-                }
+                animate={fieldAnimate}
+                transition={{ duration: 0.4, delay: 0.56, ease: "easeOut" }}
               >
-                {isSubmitting || isNavigating ? (
-                  <span className="inline-flex items-center gap-2">
-                    <Loader2
-                      className="h-4 w-4 animate-spin"
-                      aria-hidden="true"
-                    />
-                    {isNavigating
-                      ? "Taking you to your dashboard..."
-                      : "Logging in..."}
-                  </span>
-                ) : (
-                  "Log in"
-                )}
+                <AsyncButtonContent
+                  isPending={isSubmitting || isNavigating}
+                  pendingLabel={
+                    isNavigating ? "Opening dashboard…" : "Logging in…"
+                  }
+                >
+                  Log in
+                </AsyncButtonContent>
               </motion.button>
             </form>
 

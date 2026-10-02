@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  CircleDollarSign,
-  Loader2,
-  LockKeyhole,
-  ReceiptText,
-} from "lucide-react";
+import { CircleDollarSign, LockKeyhole, ReceiptText } from "lucide-react";
 import Link from "next/link";
 import { useState, type ReactElement } from "react";
 import CancelBookingDialog from "@/components/bookings/CancelBookingDialog";
@@ -14,6 +9,7 @@ import InstalmentPlanSection from "@/components/tenant/InstalmentPlanSection";
 import PaymentStatusBadge from "@/components/bookings/PaymentStatusBadge";
 import PropertyPrice from "@/components/property/PropertyPrice";
 import { IconTile } from "@/components/ui/icon-tile";
+import { AsyncButtonContent } from "@/components/ui/async-button-content";
 import { useToast } from "@/components/ui/toast";
 import type { Booking } from "@/lib/bookings";
 import {
@@ -192,7 +188,9 @@ export default function BookingPaymentPanel({
           <div className="flex items-baseline justify-between gap-4">
             <dt className="text-muted">Rent</dt>
             <dd className="text-primary">
-              <PropertyPrice value={booking.totalPrice - booking.depositAmount} />
+              <PropertyPrice
+                value={booking.totalPrice - booking.depositAmount}
+              />
             </dd>
           </div>
           <div className="flex items-baseline justify-between gap-4">
@@ -216,9 +214,7 @@ export default function BookingPaymentPanel({
       <h2 className="mt-4 font-body text-base font-bold text-primary">
         {copy.heading}
       </h2>
-      <p className="mt-2 font-body text-sm leading-6 text-muted">
-        {copy.body}
-      </p>
+      <p className="mt-2 font-body text-sm leading-6 text-muted">{copy.body}</p>
 
       <div className="mt-6 grid gap-3">
         {stage === "due" ? (
@@ -226,20 +222,26 @@ export default function BookingPaymentPanel({
             type="button"
             onClick={() => void pay()}
             disabled={isStarting}
+            aria-busy={isStarting}
             className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-accent px-5 font-body text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-60"
           >
-            {isStarting ? (
-              <Loader2 size={17} className="animate-spin" />
-            ) : (
+            <AsyncButtonContent
+              isPending={isStarting}
+              pendingLabel="Opening secure checkout…"
+            >
               <LockKeyhole size={16} aria-hidden="true" />
-            )}
-            {isStarting ? "Opening secure checkout" : "Pay securely with Paystack"}
+              Pay securely with Paystack
+            </AsyncButtonContent>
           </button>
         ) : null}
 
         {showsReceipt ? (
           <Link
-            href={booking.escrowId ? `/receipts/payment/${booking.escrowId}` : "/tenant/escrow"}
+            href={
+              booking.escrowId
+                ? `/receipts/payment/${booking.escrowId}`
+                : "/tenant/escrow"
+            }
             className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full border border-primary/20 px-5 font-body text-sm font-bold text-primary transition-colors hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             <ReceiptText size={16} aria-hidden="true" />

@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, type ReactElement } from "react";
-import { Download, Loader2 } from "lucide-react";
+import { Download } from "lucide-react";
+import { AsyncButtonContent } from "@/components/ui/async-button-content";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useToast } from "@/components/ui/toast";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -72,8 +73,9 @@ export default function DataExportPanel(): ReactElement {
 
   const request = async (): Promise<void> => {
     setIsRequesting(true);
-    const result = await requestDataExport();
-    setIsRequesting(false);
+    const result = await requestDataExport().finally(() => {
+      setIsRequesting(false);
+    });
 
     if (!result.success) {
       notify({
@@ -124,14 +126,16 @@ export default function DataExportPanel(): ReactElement {
             type="button"
             onClick={() => void request()}
             disabled={isRequesting || pending}
+            aria-busy={isRequesting}
             className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-primary/30 px-5 py-2.5 font-body text-sm font-bold text-primary transition-all duration-200 ease-in-out hover:border-primary hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isRequesting ? (
-              <Loader2 size={17} className="animate-spin" />
-            ) : (
-              <Download size={17} />
-            )}
-            {pending ? "Being prepared" : "Request a copy"}
+            <AsyncButtonContent
+              isPending={isRequesting}
+              pendingLabel="Requesting data export…"
+            >
+              <Download size={17} aria-hidden="true" />
+              {pending ? "Being prepared" : "Request a copy"}
+            </AsyncButtonContent>
           </button>
         </div>
       </div>

@@ -1,8 +1,9 @@
 "use client";
 
-import { AlertTriangle, Loader2, Scale, ShieldCheck } from "lucide-react";
+import { AlertTriangle, Scale, ShieldCheck } from "lucide-react";
 import { useEffect, useRef, useState, type ReactElement } from "react";
 import PropertyPrice from "@/components/property/PropertyPrice";
+import { AsyncButtonContent } from "@/components/ui/async-button-content";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useToast } from "@/components/ui/toast";
 import {
@@ -71,7 +72,7 @@ export default function AdminRiskPage(): ReactElement {
   const [claims, setClaims] = useState<EscrowEntry[]>([]);
   const [notes, setNotes] = useState<Record<number, string>>({});
   const [splits, setSplits] = useState<Record<number, string>>({});
-  const [busyId, setBusyId] = useState<number | null>(null);
+  const [busyKey, setBusyKey] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
@@ -238,9 +239,10 @@ export default function AdminRiskPage(): ReactElement {
       return;
     }
 
-    setBusyId(flag.id);
-    const result = await reviewRiskFlag(flag.id, status, note);
-    setBusyId(null);
+    setBusyKey(`flag:${flag.id}:${status}`);
+    const result = await reviewRiskFlag(flag.id, status, note).finally(() =>
+      setBusyKey(null),
+    );
 
     if (!result.data) {
       notify({
@@ -282,9 +284,10 @@ export default function AdminRiskPage(): ReactElement {
       return;
     }
 
-    setBusyId(claim.id);
-    const result = await settleDeposit(claim.id, entered, note);
-    setBusyId(null);
+    setBusyKey(`claim:${claim.id}:settle`);
+    const result = await settleDeposit(claim.id, entered, note).finally(() =>
+      setBusyKey(null),
+    );
 
     if (!result.data) {
       notify({
@@ -417,22 +420,35 @@ export default function AdminRiskPage(): ReactElement {
                     <button
                       type="button"
                       onClick={() => void review(flag, "CLEARED")}
-                      disabled={busyId === flag.id}
+                      disabled={
+                        busyKey?.startsWith(`flag:${flag.id}:`) ?? false
+                      }
+                      aria-busy={busyKey === `flag:${flag.id}:CLEARED`}
                       className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-primary/15 px-4 font-body text-sm font-bold text-primary hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-60"
                     >
-                      {busyId === flag.id ? (
-                        <Loader2 size={15} className="animate-spin" />
-                      ) : null}
-                      Clear
+                      <AsyncButtonContent
+                        isPending={busyKey === `flag:${flag.id}:CLEARED`}
+                        pendingLabel="Clearing risk flag…"
+                      >
+                        Clear
+                      </AsyncButtonContent>
                     </button>
                     <button
                       type="button"
                       onClick={() => void review(flag, "ESCALATED")}
-                      disabled={busyId === flag.id}
+                      disabled={
+                        busyKey?.startsWith(`flag:${flag.id}:`) ?? false
+                      }
+                      aria-busy={busyKey === `flag:${flag.id}:ESCALATED`}
                       className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-red-700 px-4 font-body text-sm font-bold text-white hover:bg-red-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-60"
                     >
-                      <AlertTriangle size={15} />
-                      Escalate
+                      <AsyncButtonContent
+                        isPending={busyKey === `flag:${flag.id}:ESCALATED`}
+                        pendingLabel="Escalating risk flag…"
+                      >
+                        <AlertTriangle size={15} />
+                        Escalate
+                      </AsyncButtonContent>
                     </button>
                   </div>
                 ) : (
@@ -450,15 +466,16 @@ export default function AdminRiskPage(): ReactElement {
           <button
             type="button"
             disabled={isLoadingMoreFlags}
+            aria-busy={isLoadingMoreFlags}
             onClick={() => void loadMoreFlags()}
             className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-primary/15 px-5 font-body text-sm font-bold text-primary hover:bg-primary/5 focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60"
           >
-            {isLoadingMoreFlags ? (
-              <Loader2 size={16} className="animate-spin" aria-hidden="true" />
-            ) : null}
-            {isLoadingMoreFlags
-              ? "Loading flags"
-              : `Load more flags (${flagTotal - flags.length} remaining)`}
+            <AsyncButtonContent
+              isPending={isLoadingMoreFlags}
+              pendingLabel="Loading more risk flags…"
+            >
+              {`Load more flags (${flagTotal - flags.length} remaining)`}
+            </AsyncButtonContent>
           </button>
         ) : null}
       </section>
@@ -559,13 +576,16 @@ export default function AdminRiskPage(): ReactElement {
                   <button
                     type="button"
                     onClick={() => void settle(claim)}
-                    disabled={busyId === claim.id}
+                    disabled={busyKey === `claim:${claim.id}:settle`}
+                    aria-busy={busyKey === `claim:${claim.id}:settle`}
                     className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-primary px-5 font-body text-sm font-bold text-white hover:bg-primary/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-60"
                   >
-                    {busyId === claim.id ? (
-                      <Loader2 size={15} className="animate-spin" />
-                    ) : null}
-                    Settle
+                    <AsyncButtonContent
+                      isPending={busyKey === `claim:${claim.id}:settle`}
+                      pendingLabel="Settling deposit claim…"
+                    >
+                      Settle
+                    </AsyncButtonContent>
                   </button>
                 </div>
               </li>
@@ -579,12 +599,13 @@ export default function AdminRiskPage(): ReactElement {
             onClick={() => void loadMoreClaims()}
             className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-primary/15 px-5 font-body text-sm font-bold text-primary hover:bg-primary/5 focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60"
           >
-            {isLoadingMoreClaims ? (
-              <Loader2 size={16} className="animate-spin" aria-hidden="true" />
-            ) : null}
-            {isLoadingMoreClaims
-              ? "Loading claims"
-              : `Load more claims (${claimTotal - claims.length} remaining)`}
+            aria-busy={isLoadingMoreClaims}
+            <AsyncButtonContent
+              isPending={isLoadingMoreClaims}
+              pendingLabel="Loading more deposit claims…"
+            >
+              {`Load more claims (${claimTotal - claims.length} remaining)`}
+            </AsyncButtonContent>
           </button>
         ) : null}
       </section>

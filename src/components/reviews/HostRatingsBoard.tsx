@@ -7,13 +7,13 @@ import { useEffect, useMemo, useState, type ReactElement } from "react";
 import {
   Award,
   CheckCircle2,
-  Loader2,
   MessageSquareText,
   PenLine,
   Send,
   Sparkles,
   Star,
 } from "lucide-react";
+import { AsyncButtonContent } from "@/components/ui/async-button-content";
 import { useToast } from "@/components/ui/toast";
 import RatingsPageSkeleton from "@/components/reviews/RatingsPageSkeleton";
 import { getAllHostBookings, type Booking } from "@/lib/bookings";
@@ -74,7 +74,12 @@ export default function HostRatingsBoard(): ReactElement {
       setReviews(reviewResult.data);
       setWritten(writtenResult.data);
       setBookings(bookingResult.data);
-      if (bookingResult.message) notify({ title: "Bookings could not be loaded", description: bookingResult.message, variant: "error" });
+      if (bookingResult.message)
+        notify({
+          title: "Bookings could not be loaded",
+          description: bookingResult.message,
+          variant: "error",
+        });
       setIsLoading(false);
     };
 
@@ -114,8 +119,9 @@ export default function HostRatingsBoard(): ReactElement {
     }
 
     setIsReplying(true);
-    const result = await replyToReview(review.id, text);
-    setIsReplying(false);
+    const result = await replyToReview(review.id, text).finally(() =>
+      setIsReplying(false),
+    );
 
     if (!result.data) {
       notify({
@@ -146,8 +152,7 @@ export default function HostRatingsBoard(): ReactElement {
       bookingId: reviewableStay.id,
       rating: score,
       comment: comment.trim(),
-    });
-    setIsSending(false);
+    }).finally(() => setIsSending(false));
 
     if (!result.data) {
       notify({
@@ -330,13 +335,15 @@ export default function HostRatingsBoard(): ReactElement {
                 onClick={() => void handleSubmit()}
                 disabled={isSending}
                 className="mt-8 flex w-full items-center justify-center gap-2 rounded bg-primary px-5 py-4 font-accent text-xs font-bold uppercase tracking-[0.16em] text-white transition-all duration-200 ease-in-out hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-70"
+                aria-busy={isSending}
               >
-                {isSending ? (
-                  <Loader2 size={16} className="animate-spin" />
-                ) : (
+                <AsyncButtonContent
+                  isPending={isSending}
+                  pendingLabel="Submitting review…"
+                >
                   <Send size={16} />
-                )}
-                Submit review
+                  Submit review
+                </AsyncButtonContent>
               </button>
             </>
           ) : (
@@ -412,11 +419,14 @@ export default function HostRatingsBoard(): ReactElement {
                       onClick={() => void handleReply(review)}
                       disabled={isReplying || !replyText.trim()}
                       className="inline-flex items-center gap-2 rounded bg-primary px-4 py-2 font-accent text-[11px] font-bold uppercase tracking-[0.14em] text-white transition-colors hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60"
+                      aria-busy={isReplying}
                     >
-                      {isReplying ? (
-                        <Loader2 size={13} className="animate-spin" />
-                      ) : null}
-                      Post reply
+                      <AsyncButtonContent
+                        isPending={isReplying}
+                        pendingLabel="Posting reply…"
+                      >
+                        Post reply
+                      </AsyncButtonContent>
                     </button>
                     <button
                       type="button"

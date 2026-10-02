@@ -1,9 +1,10 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Loader2, X } from "lucide-react";
+import { X } from "lucide-react";
 import { useEffect, useState, type ReactElement } from "react";
 import OverlayPortal from "@/components/ui/OverlayPortal";
+import { AsyncButtonContent } from "@/components/ui/async-button-content";
 import { Select } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
 import { useDialogFocus } from "@/lib/useDialogFocus";
@@ -221,10 +222,15 @@ export default function MaintenanceReportDialog({
               type="button"
               onClick={() => void submit()}
               disabled={isSubmitting}
+              aria-busy={isSubmitting}
               className="mt-6 inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-full bg-accent px-6 font-body text-sm font-bold text-primary transition-all duration-200 ease-in-out hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isSubmitting ? <Loader2 size={17} className="animate-spin" /> : null}
-              Send report
+              <AsyncButtonContent
+                isPending={isSubmitting}
+                pendingLabel="Submitting maintenance request…"
+              >
+                Send report
+              </AsyncButtonContent>
             </button>
           </motion.div>
         </div>

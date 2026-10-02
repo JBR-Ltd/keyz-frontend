@@ -3,6 +3,7 @@
 import { useEffect, useState, type ReactElement } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Phone, PhoneOff } from "lucide-react";
+import { AsyncButtonContent } from "@/components/ui/async-button-content";
 import OverlayPortal from "@/components/ui/OverlayPortal";
 import {
   acceptCall,
@@ -24,7 +25,9 @@ const POLL_MS = 8000;
 export default function IncomingCallWatcher(): ReactElement | null {
   const reduceMotion = useReducedMotion();
   const [call, setCall] = useState<CallSession | null>(null);
-  const [isBusy, setIsBusy] = useState(false);
+  const [busyAction, setBusyAction] = useState<"answer" | "decline" | null>(
+    null,
+  );
   /** Ids already answered or declined, so a stale poll cannot re-ring them. */
   const [handled, setHandled] = useState<number[]>([]);
 
@@ -67,9 +70,8 @@ export default function IncomingCallWatcher(): ReactElement | null {
       return;
     }
 
-    setIsBusy(true);
-    const result = await acceptCall(call.id);
-    setIsBusy(false);
+    setBusyAction("answer");
+    const result = await acceptCall(call.id).finally(() => setBusyAction(null));
     setHandled((current) => [...current, call.id]);
     setCall(null);
 
@@ -83,9 +85,8 @@ export default function IncomingCallWatcher(): ReactElement | null {
       return;
     }
 
-    setIsBusy(true);
-    await rejectCall(call.id);
-    setIsBusy(false);
+    setBusyAction("decline");
+    await rejectCall(call.id).finally(() => setBusyAction(null));
     setHandled((current) => [...current, call.id]);
     setCall(null);
   };
@@ -123,20 +124,32 @@ export default function IncomingCallWatcher(): ReactElement | null {
             <button
               type="button"
               onClick={() => void answer()}
-              disabled={isBusy}
+              disabled={busyAction !== null}
+              aria-busy={busyAction === "answer"}
               className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-full bg-accent font-body text-sm font-bold text-primary transition-all duration-200 ease-in-out hover:brightness-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-white disabled:opacity-70"
             >
-              <Phone size={17} aria-hidden="true" />
-              Answer
+              <AsyncButtonContent
+                isPending={busyAction === "answer"}
+                pendingLabel="Answering call…"
+              >
+                <Phone size={17} aria-hidden="true" />
+                Answer
+              </AsyncButtonContent>
             </button>
             <button
               type="button"
               onClick={() => void decline()}
-              disabled={isBusy}
+              disabled={busyAction !== null}
+              aria-busy={busyAction === "decline"}
               className="flex min-h-12 items-center justify-center gap-2 rounded-full border border-white/30 px-5 font-body text-sm font-bold text-white transition-all duration-200 ease-in-out hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white disabled:opacity-70"
             >
-              <PhoneOff size={17} aria-hidden="true" />
-              Decline
+              <AsyncButtonContent
+                isPending={busyAction === "decline"}
+                pendingLabel="Declining call…"
+              >
+                <PhoneOff size={17} aria-hidden="true" />
+                Decline
+              </AsyncButtonContent>
             </button>
           </div>
         </motion.div>

@@ -41,20 +41,24 @@ import {
   type HostDashboardSummary,
 } from "@/lib/dashboard";
 import {
+  DRAFT_ID_PREFIX,
   getPropertyPortfolio,
   type BackendProperty,
   type PropertyPortfolio,
 } from "@/lib/hostListings";
+import { getDrafts, type PropertyDraft } from "@/lib/propertyDrafts";
 import { useAuthenticatedUser } from "@/lib/account";
 import { useHostVerification } from "@/lib/hostVerification";
 
 // === Types
 
-type DashboardViewState = "empty" | "error" | "loading" | "populated";
+type DashboardViewState = "auto" | "empty" | "error" | "loading" | "populated";
+type DashboardMode = "error" | "loading" | "onboarding" | "operational";
 type AttentionTone = "neutral" | "urgent" | "warning";
 type PropertyStatus = "Live" | "Needs attention" | "Occupied";
 type PropertyVerification = "Pending" | "Verified";
 type TenancyStatus = "Available" | "Move-in scheduled" | "Occupied";
+type OnboardingMilestoneStatus = "complete" | "current" | "upcoming";
 
 interface AttentionItem {
   actionLabel: string;
@@ -88,8 +92,20 @@ interface SummaryItem {
   value: number | string;
 }
 
-interface EmptyDashboardProps {
+interface FirstTimeDashboardProps {
+  drafts: PropertyDraft[];
+  error: string;
+  firstName?: string;
   identityVerified: boolean;
+  onRetry: () => void;
+  properties: BackendProperty[];
+  summary: HostDashboardSummary | null;
+}
+
+interface OnboardingMilestone {
+  desktopLabel: string;
+  mobileLabel: string;
+  status: OnboardingMilestoneStatus;
 }
 
 // === Constants
@@ -171,11 +187,11 @@ function getDashboardViewState(): DashboardViewState {
     "state",
   );
 
-  return isDashboardViewState(requestedState) ? requestedState : "populated";
+  return isDashboardViewState(requestedState) ? requestedState : "auto";
 }
 
 function getServerDashboardViewState(): DashboardViewState {
-  return "populated";
+  return "auto";
 }
 
 function formatStayDates(booking: Booking): string {
@@ -367,7 +383,7 @@ function getSummaryItems(summary: HostDashboardSummary | null): SummaryItem[] {
     {
       label: "Live homes",
       source: "portfolio",
-      value: String(summary?.listings.live ?? 0).padStart(2, "0"),
+      value: String(summary?.listings.live ?? 0),
       detail: "Published and visible",
       icon: Building2,
       tone: "primary",
@@ -375,7 +391,7 @@ function getSummaryItems(summary: HostDashboardSummary | null): SummaryItem[] {
     {
       label: "Tenancy requests",
       source: "bookings",
-      value: String(pendingRequests).padStart(2, "0"),
+      value: String(pendingRequests),
       detail: pendingRequests ? "Waiting for a response" : "Nothing waiting",
       icon: FileCheck2,
       tone: "accent",
@@ -383,7 +399,7 @@ function getSummaryItems(summary: HostDashboardSummary | null): SummaryItem[] {
     {
       label: "Upcoming move-ins",
       source: "bookings",
-      value: String(upcomingStays).padStart(2, "0"),
+      value: String(upcomingStays),
       detail: upcomingStays ? "Confirmed handovers" : "None scheduled",
       icon: CalendarCheck2,
       tone: "neutral",
@@ -426,50 +442,247 @@ function getUpcomingBookings(bookings: Booking[], now: number): Booking[] {
 
 // === Components
 
-function EmptyDashboard({
-  identityVerified,
-}: EmptyDashboardProps): ReactElement {
+function DashboardBootstrapSkeleton(): ReactElement {
   return (
-    <section className="grid min-h-[65vh] place-items-center rounded-lg bg-surface-soft px-6 py-16 text-center shadow-sm">
-      <div className="max-w-xl">
-        <IconTile
-          size="lg"
-          shape="circle"
-          tone="accent"
-          className="mx-auto h-20 w-20"
-        >
-          <Building2 size={64} />
-        </IconTile>
-        <p className="mt-6 font-accent text-xs font-bold uppercase tracking-[0.25em] text-accent-alt">
-          Start your portfolio
-        </p>
-        <h1 className="mt-3 font-display text-4xl font-bold text-primary sm:text-5xl">
-          Your first home starts here.
-        </h1>
-        <p className="mx-auto mt-4 max-w-md font-body text-base leading-7 text-muted">
-          Add a property and submit it for verification before accepting
-          tenants.
-        </p>
-        <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-          {!identityVerified ? (
-            <Link
-              href="/landlord/verify"
-              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-primary/20 bg-bg px-6 font-body text-sm font-bold text-primary hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+    <main
+      className="min-h-screen px-5 py-14 sm:px-8 lg:px-10 lg:py-20 xl:px-14"
+      aria-busy="true"
+    >
+      <div className="mx-auto w-full max-w-4xl animate-pulse text-center motion-reduce:animate-none">
+        <div className="mx-auto h-3 w-36 rounded-full bg-skeleton" />
+
+        <div className="relative mt-12 grid grid-cols-3">
+          <div className="absolute left-[16.667%] right-[16.667%] top-5 h-px bg-skeleton" />
+          {Array.from({ length: 3 }, (_, index) => (
+            <div
+              key={index}
+              className="relative z-10 flex flex-col items-center"
             >
-              Verify your identity
-              <ArrowRight size={17} />
-            </Link>
-          ) : null}
-          <Link
-            href="/landlord/listings/create"
-            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-primary px-6 font-body text-sm font-bold text-white shadow-sm hover:bg-primary/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-          >
-            <Plus size={17} />
-            Add a property
-          </Link>
+              <div className="h-10 w-10 rounded-full bg-skeleton-strong" />
+              <div className="mt-3 h-3 w-20 max-w-[80%] rounded-full bg-skeleton" />
+            </div>
+          ))}
         </div>
+
+        <div className="mx-auto mt-14 h-3 w-20 rounded-full bg-skeleton" />
+        <div className="mx-auto mt-5 h-10 w-[32rem] max-w-full rounded-lg bg-skeleton-strong" />
+        <div className="mx-auto mt-4 h-4 w-[26rem] max-w-full rounded-full bg-skeleton" />
+        <div className="mx-auto mt-8 h-12 w-48 rounded-full bg-skeleton-strong" />
       </div>
-    </section>
+      <span className="sr-only">Loading your landlord dashboard</span>
+    </main>
+  );
+}
+
+function FirstTimeDashboard({
+  drafts,
+  error,
+  firstName,
+  identityVerified,
+  onRetry,
+  properties,
+  summary,
+}: FirstTimeDashboardProps): ReactElement {
+  if (error) {
+    return (
+      <main className="grid min-h-[70vh] place-items-center px-5 py-14 text-center sm:px-8">
+        <section className="w-full max-w-xl">
+          <IconTile size="lg" shape="circle" tone="accent" className="mx-auto">
+            <AlertCircle size={28} aria-hidden="true" />
+          </IconTile>
+          <h1 className="mt-6 font-display text-3xl font-bold text-primary">
+            Your dashboard could not be loaded
+          </h1>
+          <p className="mx-auto mt-3 max-w-md font-body text-sm leading-6 text-muted">
+            {error}
+          </p>
+          <button
+            type="button"
+            onClick={onRetry}
+            className="mt-7 inline-flex min-h-12 items-center justify-center rounded-full bg-primary px-6 font-body text-sm font-bold text-white transition-colors hover:bg-primary/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          >
+            Try again
+          </button>
+        </section>
+      </main>
+    );
+  }
+
+  const latestDraft = drafts.reduce<PropertyDraft | null>((latest, draft) => {
+    if (!latest) return draft;
+    return new Date(draft.updatedAt).getTime() >
+      new Date(latest.updatedAt).getTime()
+      ? draft
+      : latest;
+  }, null);
+  const hasPublishedListing =
+    (summary?.listings.total ?? properties.length) > 0;
+  const hasLiveListing =
+    (summary?.listings.live ??
+      properties.filter((property) => property.verified).length) > 0;
+  const propertyAwaitingVerification = properties.find(
+    (property) => !property.verified,
+  );
+  const draftHref = latestDraft
+    ? `/landlord/listings/create?draft=${DRAFT_ID_PREFIX}${latestDraft.id}`
+    : "/landlord/listings/create";
+  const propertyVerificationHref = propertyAwaitingVerification
+    ? `/landlord/listings/${propertyAwaitingVerification.id}/verify`
+    : "/landlord/saved-listings";
+  const currentStep = identityVerified ? 3 : 2;
+  const primaryAction = !identityVerified
+    ? {
+        description:
+          "A quick identity check helps tenants know they are dealing with a trusted host.",
+        href: "/landlord/verify",
+        label: "Verify your identity",
+        title: "Let’s confirm it’s you",
+      }
+    : !hasPublishedListing
+      ? {
+          description: latestDraft
+            ? `Your listing is ${latestDraft.completionPercent}% complete and ready for you to continue.`
+            : "Share the details tenants need to understand and trust your home.",
+          href: draftHref,
+          label: latestDraft ? "Continue your listing" : "Create your listing",
+          title: latestDraft
+            ? "Finish your first listing"
+            : "Add your first home",
+        }
+      : {
+          description:
+            "Confirm your right to list this property so it can become visible to tenants.",
+          href: propertyVerificationHref,
+          label: "Verify your property",
+          title: "One last check before your home goes live",
+        };
+  const secondaryActionLabel = latestDraft
+    ? `Continue your listing, ${latestDraft.completionPercent}% complete`
+    : "Start a private listing";
+  const milestones: OnboardingMilestone[] = [
+    {
+      desktopLabel: "Account created",
+      mobileLabel: "Account",
+      status: "complete",
+    },
+    {
+      desktopLabel: "Identity check",
+      mobileLabel: "Identity",
+      status: identityVerified ? "complete" : "current",
+    },
+    {
+      desktopLabel: "Publish your home",
+      mobileLabel: "Publish",
+      status: hasLiveListing
+        ? "complete"
+        : identityVerified
+          ? "current"
+          : "upcoming",
+    },
+  ];
+
+  return (
+    <main className="min-h-screen px-5 py-14 sm:px-8 lg:px-10 lg:py-20 xl:px-14">
+      <div className="mx-auto w-full max-w-4xl text-center">
+        <header>
+          <p className="font-accent text-xs font-bold uppercase tracking-[0.24em] text-accent-alt">
+            Welcome to Rello{firstName ? `, ${firstName}` : ""}
+          </p>
+        </header>
+
+        <nav className="mt-11" aria-label="Landlord setup progress">
+          <ol className="relative grid grid-cols-3">
+            {milestones.map((milestone, index) => {
+              const isComplete = milestone.status === "complete";
+              const isCurrent = milestone.status === "current";
+              const nextMilestone = milestones[index + 1];
+              const connectorComplete =
+                nextMilestone?.status === "complete" ||
+                nextMilestone?.status === "current";
+
+              return (
+                <li
+                  key={milestone.desktopLabel}
+                  className="relative flex min-w-0 flex-col items-center"
+                  aria-current={isCurrent ? "step" : undefined}
+                >
+                  {nextMilestone ? (
+                    <span
+                      className={`absolute left-1/2 top-5 h-px w-full ${
+                        connectorComplete ? "bg-accent" : "bg-border"
+                      }`}
+                      aria-hidden="true"
+                    />
+                  ) : null}
+                  <span
+                    className={`relative z-10 flex h-10 w-10 items-center justify-center rounded-full border font-body text-sm font-bold ${
+                      isComplete
+                        ? "border-primary bg-primary text-white"
+                        : isCurrent
+                          ? "border-accent bg-accent text-primary shadow-[0_0_0_5px_rgba(211,154,52,0.12)]"
+                          : "border-border bg-bg text-muted"
+                    }`}
+                    aria-hidden="true"
+                  >
+                    {isComplete ? <CheckCircle2 size={19} /> : index + 1}
+                  </span>
+                  <span className="mt-3 font-body text-xs font-semibold text-primary sm:text-sm">
+                    <span className="sm:hidden">{milestone.mobileLabel}</span>
+                    <span className="hidden sm:inline">
+                      {milestone.desktopLabel}
+                    </span>
+                  </span>
+                  <span className="sr-only">
+                    {isComplete
+                      ? "Completed"
+                      : isCurrent
+                        ? "Current step"
+                        : "Upcoming"}
+                  </span>
+                </li>
+              );
+            })}
+          </ol>
+        </nav>
+
+        <section className="mx-auto mt-14 max-w-3xl" aria-live="polite">
+          <p className="font-body text-xs font-bold uppercase tracking-[0.18em] text-accent-alt">
+            Step {currentStep} of 3
+          </p>
+          <h1 className="mt-4 font-display text-3xl font-bold leading-tight text-primary sm:text-4xl lg:text-5xl">
+            {primaryAction.title}
+          </h1>
+          <p className="mx-auto mt-4 max-w-xl font-body text-base leading-7 text-muted">
+            {primaryAction.description}
+          </p>
+          <Link
+            href={primaryAction.href}
+            className="mt-8 inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-primary px-7 font-body text-sm font-bold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-primary/90 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-accent motion-reduce:transform-none motion-reduce:transition-none"
+          >
+            {primaryAction.label}
+            <ArrowRight size={17} aria-hidden="true" />
+          </Link>
+
+          {!identityVerified ? (
+            <div className="mt-6 flex flex-col items-center justify-center gap-2 font-body text-sm sm:flex-row sm:gap-3">
+              <span className="text-muted">
+                Your draft stays private until you publish.
+              </span>
+              <span className="hidden text-border sm:inline" aria-hidden="true">
+                •
+              </span>
+              <Link
+                href={draftHref}
+                className="inline-flex min-h-11 items-center gap-1.5 font-bold text-primary underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                {secondaryActionLabel}
+                <ArrowRight size={15} aria-hidden="true" />
+              </Link>
+            </div>
+          ) : null}
+        </section>
+      </div>
+    </main>
   );
 }
 
@@ -480,7 +693,11 @@ export default function LandlordDashboardPage(): ReactElement {
     getDashboardViewState,
     getServerDashboardViewState,
   );
-  const { isLoading: isAccountLoading, user } = useAuthenticatedUser();
+  const {
+    error: accountError,
+    isLoading: isAccountLoading,
+    user,
+  } = useAuthenticatedUser();
   const { isLoading: isVerificationLoading, snapshot: verification } =
     useHostVerification();
   // Skeletons appear only if loading outlasts a moment, so a fast response does
@@ -494,12 +711,15 @@ export default function LandlordDashboardPage(): ReactElement {
   }, []);
 
   const [portfolio, setPortfolio] = useState<PropertyPortfolio | null>(null);
+  const [drafts, setDrafts] = useState<PropertyDraft[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [escrow, setEscrow] = useState<EscrowEntry[]>([]);
   const [isPortfolioLoading, setIsPortfolioLoading] = useState(true);
+  const [isDraftsLoading, setIsDraftsLoading] = useState(true);
   const [isBookingsLoading, setIsBookingsLoading] = useState(true);
   const [isEscrowLoading, setIsEscrowLoading] = useState(true);
   const [portfolioError, setPortfolioError] = useState("");
+  const [draftsError, setDraftsError] = useState("");
   const [bookingsError, setBookingsError] = useState("");
   const [escrowError, setEscrowError] = useState("");
   // Captured when the data lands rather than read during render: Date.now() in a
@@ -511,37 +731,20 @@ export default function LandlordDashboardPage(): ReactElement {
   const [summaryReloadKey, setSummaryReloadKey] = useState(0);
   const [loadedSummaryKey, setLoadedSummaryKey] = useState(-1);
 
+  const shouldLoadOnboardingData =
+    requestedViewState === "empty" || summary?.listings.live === 0;
+  const shouldLoadOperationalData =
+    requestedViewState === "populated" || (summary?.listings.live ?? 0) > 0;
+
   useEffect(() => {
     let active = true;
 
     void getPropertyPortfolio().then((result) => {
-      if (!active) {
-        return;
-      }
+      if (!active) return;
 
       setPortfolio(result.data);
       setPortfolioError(result.data ? "" : (result.message ?? ""));
       setIsPortfolioLoading(false);
-    });
-
-    void getHostBookings().then((result) => {
-      if (!active) {
-        return;
-      }
-
-      setBookings(result.data);
-      setBookingsError(result.message ?? "");
-      setIsBookingsLoading(false);
-    });
-
-    void getMyEscrow().then((result) => {
-      if (!active) {
-        return;
-      }
-
-      setEscrow(result.data);
-      setEscrowError(result.message ?? "");
-      setIsEscrowLoading(false);
     });
 
     return () => {
@@ -551,8 +754,10 @@ export default function LandlordDashboardPage(): ReactElement {
 
   useEffect(() => {
     let active = true;
+
     void getHostDashboardSummary().then((result) => {
       if (!active) return;
+
       setSummary(result.data);
       setSummaryError(
         result.message ??
@@ -561,10 +766,65 @@ export default function LandlordDashboardPage(): ReactElement {
       setIsSummaryLoading(false);
       setLoadedSummaryKey(summaryReloadKey);
     });
+
     return () => {
       active = false;
     };
   }, [summaryReloadKey]);
+
+  useEffect(() => {
+    if (!shouldLoadOnboardingData) return;
+
+    let active = true;
+
+    void getDrafts().then((result) => {
+      if (!active) return;
+
+      setDrafts(result.data);
+      setDraftsError(result.message ?? "");
+      setIsDraftsLoading(false);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [shouldLoadOnboardingData]);
+
+  useEffect(() => {
+    if (!shouldLoadOperationalData) return;
+
+    let active = true;
+
+    void getHostBookings().then((result) => {
+      if (!active) return;
+
+      setBookings(result.data);
+      setBookingsError(result.message ?? "");
+      setIsBookingsLoading(false);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [shouldLoadOperationalData]);
+
+  useEffect(() => {
+    if (!shouldLoadOperationalData) return;
+
+    let active = true;
+
+    void getMyEscrow().then((result) => {
+      if (!active) return;
+
+      setEscrow(result.data);
+      setEscrowError(result.message ?? "");
+      setIsEscrowLoading(false);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [shouldLoadOperationalData]);
 
   const verified = verification?.identity.status === "approved";
   const portfolioProperties = useMemo(
@@ -621,12 +881,87 @@ export default function LandlordDashboardPage(): ReactElement {
   const attentionError = forceError
     ? "Action items could not be loaded."
     : ([portfolioError, bookingsError, escrowError].find(Boolean) ?? "");
-  const showEmpty = requestedViewState === "empty";
-  if (showEmpty) {
+  const forceOnboarding = requestedViewState === "empty";
+  const forceOperational = requestedViewState === "populated";
+  const initialSummaryPending =
+    summary === null &&
+    !summaryError &&
+    (isSummaryLoading || loadedSummaryKey !== summaryReloadKey);
+  const dashboardMode: DashboardMode = forceLoading
+    ? "loading"
+    : forceError
+      ? "error"
+      : forceOnboarding
+        ? "onboarding"
+        : forceOperational
+          ? "operational"
+          : initialSummaryPending
+            ? "loading"
+            : summaryError || summary === null
+              ? "error"
+              : summary.listings.live === 0
+                ? "onboarding"
+                : "operational";
+  const onboardingBusy =
+    dashboardMode === "onboarding" &&
+    !forceOnboarding &&
+    (isAccountLoading ||
+      isVerificationLoading ||
+      isDraftsLoading ||
+      isPortfolioLoading);
+  const operationalBusy =
+    dashboardMode === "operational" &&
+    (isAccountLoading ||
+      isVerificationLoading ||
+      isPortfolioLoading ||
+      isBookingsLoading ||
+      isEscrowLoading ||
+      summary === null);
+  const onboardingError = forceError
+    ? "Your landlord setup could not be loaded."
+    : ([
+        accountError,
+        !isVerificationLoading && verification === null
+          ? "Your verification status could not be loaded."
+          : "",
+        summaryError,
+        portfolioError,
+        draftsError,
+      ].find(Boolean) ?? "");
+
+  if (dashboardMode === "loading" || onboardingBusy || operationalBusy) {
+    return <DashboardBootstrapSkeleton />;
+  }
+
+  if (dashboardMode === "error") {
     return (
-      <main className="min-h-screen px-5 py-12 sm:px-8 lg:px-10 lg:py-16 xl:px-14">
-        <EmptyDashboard identityVerified={verified} />
-      </main>
+      <FirstTimeDashboard
+        drafts={[]}
+        error={
+          forceError
+            ? "Your landlord dashboard could not be loaded."
+            : summaryError || "Your landlord dashboard could not be loaded."
+        }
+        firstName={user?.firstName}
+        identityVerified={false}
+        onRetry={() => window.location.reload()}
+        properties={[]}
+        summary={null}
+      />
+    );
+  }
+
+  if (dashboardMode === "onboarding") {
+    return (
+      <FirstTimeDashboard
+        drafts={forceOnboarding ? [] : drafts}
+        error={forceOnboarding ? "" : onboardingError}
+        firstName={user?.firstName}
+        identityVerified={forceOnboarding ? false : verified}
+        onRetry={() => window.location.reload()}
+        properties={forceOnboarding ? [] : portfolioProperties}
+        summary={forceOnboarding ? null : summary}
+      />
     );
   }
   return (

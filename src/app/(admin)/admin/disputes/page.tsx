@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, type ReactElement } from "react";
-import { Clock3, Loader2, Scale, ShieldCheck, UserRound } from "lucide-react";
+import { Clock3, Scale, ShieldCheck, UserRound } from "lucide-react";
+import { AsyncButtonContent } from "@/components/ui/async-button-content";
 import { CardListSkeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -16,7 +17,7 @@ export default function AdminDisputesPage(): ReactElement {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [notes, setNotes] = useState<Record<number, string>>({});
-  const [busyId, setBusyId] = useState<number | null>(null);
+  const [busyKey, setBusyKey] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -37,13 +38,12 @@ export default function AdminDisputesPage(): ReactElement {
   }, []);
 
   const decide = async (dispute: Dispute, outcome: Outcome): Promise<void> => {
-    setBusyId(dispute.id);
+    setBusyKey(`${dispute.id}:${outcome}`);
     const result = await resolveDispute(
       dispute.id,
       outcome,
       notes[dispute.id]?.trim() ?? "",
-    );
-    setBusyId(null);
+    ).finally(() => setBusyKey(null));
 
     if (!result.data) {
       notify({
@@ -170,24 +170,32 @@ export default function AdminDisputesPage(): ReactElement {
                 <button
                   type="button"
                   onClick={() => void decide(dispute, "RESOLVED_FOR_TENANT")}
-                  disabled={busyId === dispute.id}
+                  disabled={busyKey?.startsWith(`${dispute.id}:`) ?? false}
+                  aria-busy={busyKey === `${dispute.id}:RESOLVED_FOR_TENANT`}
                   className="flex items-center gap-2 rounded bg-primary px-5 py-3 font-accent text-xs font-bold uppercase tracking-[0.16em] text-white transition-all duration-200 ease-in-out hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-70"
                 >
-                  {busyId === dispute.id ? (
-                    <Loader2 size={15} className="animate-spin" />
-                  ) : (
+                  <AsyncButtonContent
+                    isPending={busyKey === `${dispute.id}:RESOLVED_FOR_TENANT`}
+                    pendingLabel="Refunding tenant…"
+                  >
                     <Scale size={15} />
-                  )}
-                  Refund the tenant
+                    Refund the tenant
+                  </AsyncButtonContent>
                 </button>
                 <button
                   type="button"
                   onClick={() => void decide(dispute, "RESOLVED_FOR_HOST")}
-                  disabled={busyId === dispute.id}
+                  disabled={busyKey?.startsWith(`${dispute.id}:`) ?? false}
+                  aria-busy={busyKey === `${dispute.id}:RESOLVED_FOR_HOST`}
                   className="flex items-center gap-2 rounded px-5 py-3 font-accent text-xs font-bold uppercase tracking-[0.16em] text-primary shadow-sm transition-all duration-200 ease-in-out hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-70"
                 >
-                  <Scale size={15} />
-                  Pay the host
+                  <AsyncButtonContent
+                    isPending={busyKey === `${dispute.id}:RESOLVED_FOR_HOST`}
+                    pendingLabel="Paying host…"
+                  >
+                    <Scale size={15} />
+                    Pay the host
+                  </AsyncButtonContent>
                 </button>
               </div>
             </article>

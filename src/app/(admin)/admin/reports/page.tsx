@@ -4,6 +4,7 @@ import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState, type ReactElement } from "react";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { AsyncButtonContent } from "@/components/ui/async-button-content";
 import { useToast } from "@/components/ui/toast";
 import {
   getAdminReports,
@@ -37,7 +38,7 @@ export default function AdminReportsPage(): ReactElement {
   const [filter, setFilter] = useState<AdminReport["status"] | "ALL">("OPEN");
   const [reports, setReports] = useState<AdminReport[]>([]);
   const [notes, setNotes] = useState<Record<number, string>>({});
-  const [busyId, setBusyId] = useState<number | null>(null);
+  const [busyKey, setBusyKey] = useState<string | null>(null);
   const [loadedRequestKey, setLoadedRequestKey] = useState("");
   const [error, setError] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
@@ -102,9 +103,10 @@ export default function AdminReportsPage(): ReactElement {
       return;
     }
 
-    setBusyId(report.id);
-    const result = await reviewReport(report.id, status, note);
-    setBusyId(null);
+    setBusyKey(`${report.id}:${status}`);
+    const result = await reviewReport(report.id, status, note).finally(() =>
+      setBusyKey(null),
+    );
 
     if (!result.data) {
       notify({
@@ -255,18 +257,30 @@ export default function AdminReportsPage(): ReactElement {
                     <button
                       type="button"
                       onClick={() => void decide(report, "ACTIONED")}
-                      disabled={busyId === report.id}
+                      disabled={busyKey?.startsWith(`${report.id}:`) ?? false}
+                      aria-busy={busyKey === `${report.id}:ACTIONED`}
                       className="min-h-10 rounded-full bg-primary px-4 font-body text-sm font-bold text-white hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60"
                     >
-                      Actioned
+                      <AsyncButtonContent
+                        isPending={busyKey === `${report.id}:ACTIONED`}
+                        pendingLabel="Marking report actioned…"
+                      >
+                        Actioned
+                      </AsyncButtonContent>
                     </button>
                     <button
                       type="button"
                       onClick={() => void decide(report, "DISMISSED")}
-                      disabled={busyId === report.id}
+                      disabled={busyKey?.startsWith(`${report.id}:`) ?? false}
+                      aria-busy={busyKey === `${report.id}:DISMISSED`}
                       className="min-h-10 rounded-full border border-primary/20 px-4 font-body text-sm font-bold text-primary hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60"
                     >
-                      Dismiss
+                      <AsyncButtonContent
+                        isPending={busyKey === `${report.id}:DISMISSED`}
+                        pendingLabel="Dismissing report…"
+                      >
+                        Dismiss
+                      </AsyncButtonContent>
                     </button>
                   </div>
                 </div>

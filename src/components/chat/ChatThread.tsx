@@ -229,8 +229,9 @@ export default function ChatThread({
     }
 
     setIsCalling(true);
-    const result = await startCall(otherUserId, propertyId);
-    setIsCalling(false);
+    const result = await startCall(otherUserId, propertyId).finally(() => {
+      setIsCalling(false);
+    });
 
     if (result.data === null) {
       setLoadError(result.message ?? "That call could not be started.");
@@ -495,9 +496,21 @@ export default function ChatThread({
                 <button
                   type="submit"
                   className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent text-primary transition-all duration-200 ease-in-out hover:bg-primary hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                  aria-label="Send message"
+                  disabled={sendingIds.length > 0 || !draft.trim()}
+                  aria-busy={sendingIds.length > 0}
+                  aria-label={
+                    sendingIds.length > 0 ? "Sending message" : "Send message"
+                  }
                 >
-                  <Send size={17} aria-hidden="true" />
+                  {sendingIds.length > 0 ? (
+                    <Loader2
+                      size={17}
+                      className="animate-spin"
+                      aria-hidden="true"
+                    />
+                  ) : (
+                    <Send size={17} aria-hidden="true" />
+                  )}
                 </button>
               </div>
             </form>

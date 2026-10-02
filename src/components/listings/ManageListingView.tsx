@@ -19,6 +19,7 @@ import {
   Trash2,
 } from "lucide-react";
 import BackButton from "@/components/navigation/BackButton";
+import { AsyncButtonContent } from "@/components/ui/async-button-content";
 import { DateRangePicker } from "@/components/ui/date-picker";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -89,7 +90,7 @@ export default function ManageListingView({
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [isUploading, setIsUploading] = useState(false);
-  const [busyPhotoId, setBusyPhotoId] = useState<number | null>(null);
+  const [busyPhotoKey, setBusyPhotoKey] = useState<string | null>(null);
   const [busyBlockId, setBusyBlockId] = useState<number | null>(null);
   const [isBlocking, setIsBlocking] = useState(false);
   const [units, setUnits] = useState<PropertyUnit[]>([]);
@@ -198,9 +199,10 @@ export default function ManageListingView({
   };
 
   const removePhoto = async (photo: GalleryImage): Promise<void> => {
-    setBusyPhotoId(photo.id);
-    const result = await deleteGalleryImage(numericId, photo.id);
-    setBusyPhotoId(null);
+    setBusyPhotoKey(`${photo.id}:remove`);
+    const result = await deleteGalleryImage(numericId, photo.id).finally(() =>
+      setBusyPhotoKey(null),
+    );
 
     if (!result.data) {
       notify({
@@ -216,13 +218,14 @@ export default function ManageListingView({
 
   /** The cover is what every search result shows, so it is worth a single click. */
   const makeCover = async (photo: GalleryImage): Promise<void> => {
-    setBusyPhotoId(photo.id);
+    setBusyPhotoKey(`${photo.id}:cover`);
     const order = [
       photo.id,
       ...photos.filter((item) => item.id !== photo.id).map((item) => item.id),
     ];
-    const result = await reorderGallery(numericId, order);
-    setBusyPhotoId(null);
+    const result = await reorderGallery(numericId, order).finally(() =>
+      setBusyPhotoKey(null),
+    );
 
     if (result.data.length === 0) {
       notify({
@@ -244,8 +247,7 @@ export default function ManageListingView({
       blockStart,
       blockEnd,
       blockReason.trim(),
-    );
-    setIsBlocking(false);
+    ).finally(() => setIsBlocking(false));
 
     if (result.data === null) {
       notify({
@@ -265,8 +267,9 @@ export default function ManageListingView({
 
   const unblock = async (range: UnavailableRange): Promise<void> => {
     setBusyBlockId(range.id);
-    const result = await unblockDates(numericId, range.id);
-    setBusyBlockId(null);
+    const result = await unblockDates(numericId, range.id).finally(() =>
+      setBusyBlockId(null),
+    );
 
     if (!result.data) {
       notify({
@@ -288,8 +291,9 @@ export default function ManageListingView({
       numericId,
       unit.publicId,
       unit.status === "AVAILABLE" ? "UNAVAILABLE" : "AVAILABLE",
-    );
-    setBusyUnitId(null);
+    ).finally(() => {
+      setBusyUnitId(null);
+    });
 
     if (!result.data) {
       notify({
@@ -445,14 +449,18 @@ export default function ManageListingView({
                       <button
                         type="button"
                         disabled={busyUnitId === unit.publicId}
+                        aria-busy={busyUnitId === unit.publicId}
                         onClick={() => void toggleUnitAvailability(unit)}
                         className="inline-flex min-h-9 items-center rounded-full border border-primary/20 px-3 font-body text-xs font-bold text-primary transition-colors hover:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-60"
                       >
-                        {busyUnitId === unit.publicId
-                          ? "Saving..."
-                          : unit.status === "AVAILABLE"
+                        <AsyncButtonContent
+                          isPending={busyUnitId === unit.publicId}
+                          pendingLabel="Updating unit status…"
+                        >
+                          {unit.status === "AVAILABLE"
                             ? "Mark unavailable"
                             : "Make available"}
+                        </AsyncButtonContent>
                       </button>
                     )}
                   </li>
@@ -563,21 +571,36 @@ export default function ManageListingView({
                         <button
                           type="button"
                           onClick={() => void makeCover(photo)}
-                          disabled={busyPhotoId === photo.id}
+                          disabled={
+                            busyPhotoKey?.startsWith(`${photo.id}:`) ?? false
+                          }
+                          aria-busy={busyPhotoKey === `${photo.id}:cover`}
                           className="inline-flex items-center gap-1.5 font-body text-xs font-bold text-primary transition-all duration-200 ease-in-out hover:text-accent-alt focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-60"
                         >
-                          <Star size={13} aria-hidden="true" />
-                          Make it the cover
+                          <AsyncButtonContent
+                            isPending={busyPhotoKey === `${photo.id}:cover`}
+                            pendingLabel="Updating cover photo…"
+                          >
+                            <Star size={13} aria-hidden="true" />
+                            Make it the cover
+                          </AsyncButtonContent>
                         </button>
                       )}
                       <button
                         type="button"
                         onClick={() => void removePhoto(photo)}
-                        disabled={busyPhotoId === photo.id}
-                        aria-label="Remove this photo"
+                        disabled={
+                          busyPhotoKey?.startsWith(`${photo.id}:`) ?? false
+                        }
+                        aria-busy={busyPhotoKey === `${photo.id}:remove`}
+                        aria-label={
+                          busyPhotoKey === `${photo.id}:remove`
+                            ? "Removing this photo"
+                            : "Remove this photo"
+                        }
                         className="inline-flex h-8 w-8 items-center justify-center rounded-full text-red-700 transition-all duration-200 ease-in-out hover:bg-red-700/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-60"
                       >
-                        {busyPhotoId === photo.id ? (
+                        {busyPhotoKey === `${photo.id}:remove` ? (
                           <Loader2 size={14} className="animate-spin" />
                         ) : (
                           <Trash2 size={14} aria-hidden="true" />
@@ -632,12 +655,14 @@ export default function ManageListingView({
                 disabled={isBlocking || !blockStart || !blockEnd}
                 className="flex min-h-12 items-center justify-center gap-2 rounded bg-primary px-5 font-accent text-xs font-bold uppercase tracking-[0.16em] text-white transition-all duration-200 ease-in-out hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {isBlocking ? (
-                  <Loader2 size={15} className="animate-spin" />
-                ) : (
+                aria-busy={isBlocking}
+                <AsyncButtonContent
+                  isPending={isBlocking}
+                  pendingLabel="Closing selected dates…"
+                >
                   <CalendarOff size={15} aria-hidden="true" />
-                )}
-                Close these dates
+                  Close these dates
+                </AsyncButtonContent>
               </button>
             </div>
 
@@ -689,9 +714,15 @@ export default function ManageListingView({
                             type="button"
                             onClick={() => void unblock(range)}
                             disabled={busyBlockId === range.id}
+                            aria-busy={busyBlockId === range.id}
                             className="shrink-0 font-body text-xs font-bold text-accent-alt transition-all duration-200 ease-in-out hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-60"
                           >
-                            Reopen
+                            <AsyncButtonContent
+                              isPending={busyBlockId === range.id}
+                              pendingLabel="Reopening dates…"
+                            >
+                              Reopen
+                            </AsyncButtonContent>
                           </button>
                         </li>
                       ))}

@@ -1,10 +1,11 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { AlertTriangle, Check, Loader2, X } from "lucide-react";
+import { AlertTriangle, Check, X } from "lucide-react";
 import { useEffect, useState, type ReactElement } from "react";
 import PropertyPrice from "@/components/property/PropertyPrice";
 import OverlayPortal from "@/components/ui/OverlayPortal";
+import { AsyncButtonContent } from "@/components/ui/async-button-content";
 import { useToast } from "@/components/ui/toast";
 import { updateBookingStatus, type Booking } from "@/lib/bookings";
 import { hasBegun, type PaymentAudience } from "@/lib/bookingPayments";
@@ -136,9 +137,7 @@ export default function CancelBookingDialog({
 
     const result = await updateBookingStatus(booking.id, "CANCELLED", {
       reason: message.slice(0, 500),
-    });
-
-    setIsSaving(false);
+    }).finally(() => setIsSaving(false));
 
     if (!result.data) {
       setError(result.message ?? "That did not go through. Try again.");
@@ -268,7 +267,9 @@ export default function CancelBookingDialog({
 
                   {paid ? (
                     <p className="mt-4 rounded-xl bg-surface-soft p-4 font-body text-sm leading-6 text-primary">
-                      {actor === "tenant" ? "Your payment of " : `${otherParty}'s payment of `}
+                      {actor === "tenant"
+                        ? "Your payment of "
+                        : `${otherParty}'s payment of `}
                       <span className="font-bold">
                         <PropertyPrice value={booking.totalPrice} />
                       </span>{" "}
@@ -311,11 +312,14 @@ export default function CancelBookingDialog({
                     onClick={() => void submit()}
                     disabled={isSaving}
                     className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-red-700 px-5 font-body text-sm font-bold text-white hover:bg-red-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-60"
+                    aria-busy={isSaving}
                   >
-                    {isSaving ? (
-                      <Loader2 size={16} className="animate-spin" />
-                    ) : null}
-                    {TITLES[kind]}
+                    <AsyncButtonContent
+                      isPending={isSaving}
+                      pendingLabel={`${TITLES[kind]}…`}
+                    >
+                      {TITLES[kind]}
+                    </AsyncButtonContent>
                   </button>
                 )}
               </div>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useState, type ReactElement } from "react";
 import PropertyPrice from "@/components/property/PropertyPrice";
 import { useToast } from "@/components/ui/toast";
+import { AsyncButtonContent } from "@/components/ui/async-button-content";
 import {
   deleteSavedSearch,
   getSavedSearches,
@@ -49,7 +50,7 @@ export default function SavedSearchesPage(): ReactElement {
   const [searches, setSearches] = useState<SavedSearch[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
-  const [busyId, setBusyId] = useState<number | null>(null);
+  const [busyKey, setBusyKey] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -70,11 +71,10 @@ export default function SavedSearchesPage(): ReactElement {
   }, []);
 
   const toggleAlerts = async (search: SavedSearch): Promise<void> => {
-    setBusyId(search.id);
+    setBusyKey(`${search.id}:alerts`);
     const result = await updateSavedSearch(search.id, {
       alerts: !search.alerts,
-    });
-    setBusyId(null);
+    }).finally(() => setBusyKey(null));
 
     if (!result.data) {
       notify({
@@ -92,9 +92,10 @@ export default function SavedSearchesPage(): ReactElement {
   };
 
   const remove = async (search: SavedSearch): Promise<void> => {
-    setBusyId(search.id);
-    const result = await deleteSavedSearch(search.id);
-    setBusyId(null);
+    setBusyKey(`${search.id}:delete`);
+    const result = await deleteSavedSearch(search.id).finally(() =>
+      setBusyKey(null),
+    );
 
     if (!result.data) {
       notify({
@@ -190,26 +191,46 @@ export default function SavedSearchesPage(): ReactElement {
                 <button
                   type="button"
                   onClick={() => void toggleAlerts(search)}
-                  disabled={busyId === search.id}
+                  disabled={busyKey?.startsWith(`${search.id}:`) ?? false}
+                  aria-busy={busyKey === `${search.id}:alerts`}
                   aria-pressed={search.alerts}
                   className="inline-flex min-h-10 items-center gap-2 rounded-full border border-primary/20 px-4 font-body text-sm font-bold text-primary hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60"
                 >
-                  {search.alerts ? (
-                    <Bell size={14} aria-hidden="true" />
-                  ) : (
-                    <BellOff size={14} aria-hidden="true" />
-                  )}
-                  {search.alerts ? "Alerts on" : "Alerts off"}
+                  <AsyncButtonContent
+                    isPending={busyKey === `${search.id}:alerts`}
+                    pendingLabel={
+                      search.alerts
+                        ? "Turning alerts off…"
+                        : "Turning alerts on…"
+                    }
+                  >
+                    {search.alerts ? (
+                      <Bell size={14} aria-hidden="true" />
+                    ) : (
+                      <BellOff size={14} aria-hidden="true" />
+                    )}
+                    {search.alerts ? "Alerts on" : "Alerts off"}
+                  </AsyncButtonContent>
                 </button>
                 <button
                   type="button"
                   onClick={() => void remove(search)}
-                  disabled={busyId === search.id}
-                  aria-label={`Delete ${search.name}`}
+                  disabled={busyKey?.startsWith(`${search.id}:`) ?? false}
+                  aria-busy={busyKey === `${search.id}:delete`}
+                  aria-label={
+                    busyKey === `${search.id}:delete`
+                      ? `Deleting ${search.name}`
+                      : `Delete ${search.name}`
+                  }
                   className="inline-flex min-h-10 items-center gap-2 rounded-full px-3 font-body text-sm font-bold text-muted hover:text-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60"
                 >
-                  <Trash2 size={14} aria-hidden="true" />
-                  Delete
+                  <AsyncButtonContent
+                    isPending={busyKey === `${search.id}:delete`}
+                    pendingLabel="Deleting saved search…"
+                  >
+                    <Trash2 size={14} aria-hidden="true" />
+                    Delete
+                  </AsyncButtonContent>
                 </button>
               </div>
             </li>

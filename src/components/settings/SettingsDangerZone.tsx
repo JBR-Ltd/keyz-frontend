@@ -15,19 +15,22 @@ const ACTION_CONTENT: Record<
     title: string;
     description: string;
     confirmLabel: string;
+    pendingLabel: string;
   }
 > = {
   deactivate: {
     title: "Deactivate account?",
     description:
-      "Your listings leave the public feed and every device is signed out. "
-      + "Nothing is deleted, and signing in again brings it all back.",
+      "Your listings leave the public feed and every device is signed out. " +
+      "Nothing is deleted, and signing in again brings it all back.",
     confirmLabel: "Deactivate account",
+    pendingLabel: "Deactivating account…",
   },
   delete: {
     title: "Delete account?",
     description: "This permanently removes your profile and account data.",
     confirmLabel: "Delete account",
+    pendingLabel: "Deleting account…",
   },
 };
 
@@ -53,10 +56,11 @@ export default function SettingsDangerZone() {
     const deactivating = pendingAction === "deactivate";
 
     setIsWorking(true);
-    const result = deactivating
-      ? await deactivateAccount()
-      : await deleteAccount();
-    setIsWorking(false);
+    const result = await (
+      deactivating ? deactivateAccount() : deleteAccount()
+    ).finally(() => {
+      setIsWorking(false);
+    });
 
     notify({
       title: result.success
@@ -115,6 +119,9 @@ export default function SettingsDangerZone() {
         isLoading={isWorking}
         onCancel={() => setPendingAction(null)}
         onConfirm={handleConfirm}
+        pendingLabel={
+          pendingContent?.pendingLabel ?? "Processing account action…"
+        }
       />
     </div>
   );

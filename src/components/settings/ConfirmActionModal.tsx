@@ -1,9 +1,10 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { AlertTriangle, LoaderCircle, X } from "lucide-react";
+import { AlertTriangle, X } from "lucide-react";
 import { ReactElement, useEffect } from "react";
 import OverlayPortal from "@/components/ui/OverlayPortal";
+import { AsyncButtonContent } from "@/components/ui/async-button-content";
 import { useDialogFocus } from "@/lib/useDialogFocus";
 
 interface AccountActionModalProps {
@@ -19,6 +20,7 @@ interface ConfirmModalProps {
   title: string;
   description: string;
   confirmLabel: string;
+  pendingLabel: string;
   isLoading?: boolean;
   onCancel: () => void;
   onConfirm: () => void;
@@ -155,12 +157,15 @@ export default function ConfirmActionModal({
                       type="button"
                       onClick={props.onConfirm}
                       disabled={props.isLoading}
+                      aria-busy={props.isLoading}
                       className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-red-700 px-5 py-3 font-body text-sm font-medium text-white transition-all duration-200 ease-in-out hover:scale-[1.02] hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 disabled:cursor-wait disabled:opacity-70"
                     >
-                      {props.isLoading ? (
-                        <LoaderCircle className="animate-spin" size={18} />
-                      ) : null}
-                      {props.isLoading ? "Working" : props.confirmLabel}
+                      <AsyncButtonContent
+                        isPending={Boolean(props.isLoading)}
+                        pendingLabel={props.pendingLabel}
+                      >
+                        {props.confirmLabel}
+                      </AsyncButtonContent>
                     </button>
                   </div>
                 )}

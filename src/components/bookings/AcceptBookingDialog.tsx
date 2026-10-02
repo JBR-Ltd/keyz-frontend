@@ -1,11 +1,12 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { CalendarDays, Loader2, ShieldCheck, UserRound, X } from "lucide-react";
+import { CalendarDays, ShieldCheck, UserRound, X } from "lucide-react";
 import { useEffect, useState, type ReactElement } from "react";
 import MoveInDateCalendar from "@/components/bookings/MoveInDateCalendar";
 import PropertyPrice from "@/components/property/PropertyPrice";
 import OverlayPortal from "@/components/ui/OverlayPortal";
+import { AsyncButtonContent } from "@/components/ui/async-button-content";
 import { useToast } from "@/components/ui/toast";
 import {
   recordMoveInDate,
@@ -121,16 +122,15 @@ export default function AcceptBookingDialog({
     setIsSaving(true);
     setError("");
 
-    const result =
+    const result = await (
       mode === "move-in"
-        ? await recordMoveInDate(booking.id, moveInDate)
-        : await updateBookingStatus(
+        ? recordMoveInDate(booking.id, moveInDate)
+        : updateBookingStatus(
             booking.id,
             "CONFIRMED",
             isRental ? { moveInDate } : {},
-          );
-
-    setIsSaving(false);
+          )
+    ).finally(() => setIsSaving(false));
 
     if (!result.data) {
       setError(result.message ?? "That did not save. Try again.");
@@ -310,14 +310,21 @@ export default function AcceptBookingDialog({
                 type="button"
                 onClick={() => void save()}
                 disabled={isSaving}
+                aria-busy={isSaving}
                 className="mt-6 inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-full bg-primary px-6 font-body text-sm font-bold text-white transition-colors hover:bg-primary/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-60"
               >
-                {isSaving ? (
-                  <Loader2 size={18} className="animate-spin" />
-                ) : null}
-                {mode === "move-in"
-                  ? "Save move-in date"
-                  : "Accept and ask for payment"}
+                <AsyncButtonContent
+                  isPending={isSaving}
+                  pendingLabel={
+                    mode === "move-in"
+                      ? "Saving move-in date…"
+                      : "Accepting booking…"
+                  }
+                >
+                  {mode === "move-in"
+                    ? "Save move-in date"
+                    : "Accept and ask for payment"}
+                </AsyncButtonContent>
               </button>
             </div>
           </motion.div>

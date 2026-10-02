@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, type ReactElement } from "react";
-import { Loader2, MonitorSmartphone } from "lucide-react";
+import { MonitorSmartphone } from "lucide-react";
+import { AsyncButtonContent } from "@/components/ui/async-button-content";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
@@ -46,8 +47,9 @@ export default function LoginSessionsPanel(): ReactElement {
 
   const end = async (session: LoginSession): Promise<void> => {
     setBusyId(session.id);
-    const result = await endSession(session.id);
-    setBusyId(null);
+    const result = await endSession(session.id).finally(() => {
+      setBusyId(null);
+    });
 
     if (!result.success) {
       notify({
@@ -64,8 +66,9 @@ export default function LoginSessionsPanel(): ReactElement {
 
   const endOthers = async (): Promise<void> => {
     setIsEndingOthers(true);
-    const result = await endOtherSessions();
-    setIsEndingOthers(false);
+    const result = await endOtherSessions().finally(() => {
+      setIsEndingOthers(false);
+    });
 
     if (!result.success) {
       notify({
@@ -99,13 +102,16 @@ export default function LoginSessionsPanel(): ReactElement {
           <button
             type="button"
             onClick={() => void endOthers()}
+            aria-busy={isEndingOthers}
             disabled={isEndingOthers}
             className="flex min-h-12 items-center justify-center gap-2 rounded-full border border-primary/30 px-6 py-3 font-body text-sm font-medium text-primary transition-all duration-200 ease-in-out hover:scale-[1.02] hover:bg-primary/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-60"
           >
-            {isEndingOthers ? (
-              <Loader2 size={16} className="animate-spin" />
-            ) : null}
-            Sign out the others
+            <AsyncButtonContent
+              isPending={isEndingOthers}
+              pendingLabel="Signing out other devices…"
+            >
+              Sign out the others
+            </AsyncButtonContent>
           </button>
         ) : null}
       </div>
@@ -169,9 +175,15 @@ export default function LoginSessionsPanel(): ReactElement {
                   type="button"
                   onClick={() => void end(session)}
                   disabled={busyId === session.id}
+                  aria-busy={busyId === session.id}
                   className="shrink-0 font-body text-xs font-bold text-accent-alt transition-all duration-200 ease-in-out hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-60"
                 >
-                  {busyId === session.id ? "Signing out..." : "Sign out"}
+                  <AsyncButtonContent
+                    isPending={busyId === session.id}
+                    pendingLabel="Signing out device…"
+                  >
+                    Sign out
+                  </AsyncButtonContent>
                 </button>
               )}
             </li>

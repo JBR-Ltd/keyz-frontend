@@ -28,6 +28,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import BackButton from "@/components/navigation/BackButton";
+import { AsyncButtonContent } from "@/components/ui/async-button-content";
 import { Select, toSelectOptions } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
@@ -2149,21 +2150,17 @@ export default function CreateListingForm({
                     type="button"
                     onClick={() => void handleSaveDraft()}
                     disabled={isSavingDraft || isSubmitting}
+                    aria-busy={isSavingDraft}
                     className="inline-flex min-h-12 flex-1 items-center justify-center rounded-full border border-primary/20 bg-transparent px-4 py-3 font-body text-sm font-bold text-primary transition-all duration-200 hover:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none sm:px-6"
                   >
-                    {isSavingDraft ? (
-                      <span className="inline-flex items-center gap-2">
-                        <Loader2
-                          className="h-4 w-4 animate-spin"
-                          aria-hidden="true"
-                        />
-                        Saving...
-                      </span>
-                    ) : draftId ? (
-                      "Update Draft"
-                    ) : (
-                      "Save as Draft"
-                    )}
+                    <AsyncButtonContent
+                      isPending={isSavingDraft}
+                      pendingLabel={
+                        draftId ? "Updating draft…" : "Saving draft…"
+                      }
+                    >
+                      {draftId ? "Update Draft" : "Save as Draft"}
+                    </AsyncButtonContent>
                   </button>
 
                   {listingStep === "review" ? (
@@ -2171,6 +2168,7 @@ export default function CreateListingForm({
                       type="submit"
                       aria-disabled={!canSubmit || isSubmitting}
                       disabled={isSubmitting}
+                      aria-busy={isSubmitting}
                       className={cn(
                         "inline-flex min-h-12 flex-1 items-center justify-center rounded-full px-5 py-3 font-body text-sm font-bold transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none sm:px-7",
                         canSubmit
@@ -2178,17 +2176,12 @@ export default function CreateListingForm({
                           : "bg-border text-muted",
                       )}
                     >
-                      {isSubmitting ? (
-                        <span className="inline-flex items-center gap-2">
-                          <Loader2
-                            className="h-4 w-4 animate-spin"
-                            aria-hidden="true"
-                          />
-                          Creating listing...
-                        </span>
-                      ) : (
-                        "Submit Listing"
-                      )}
+                      <AsyncButtonContent
+                        isPending={isSubmitting}
+                        pendingLabel="Creating listing…"
+                      >
+                        Submit Listing
+                      </AsyncButtonContent>
                     </button>
                   ) : (
                     <button
@@ -2650,42 +2643,32 @@ export default function CreateListingForm({
                 onClick={() => void handleSaveDraft()}
                 disabled={isSavingDraft || isSubmitting}
                 className="inline-flex min-h-12 items-center justify-center rounded-full border border-primary/30 bg-bg px-6 py-3 font-body text-sm font-bold text-primary transition-all duration-200 ease-in-out hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-60"
+                aria-busy={isSavingDraft}
               >
-                {isSavingDraft ? (
-                  <span className="inline-flex items-center gap-2">
-                    <Loader2
-                      className="h-4 w-4 animate-spin"
-                      aria-hidden="true"
-                    />
-                    Saving...
-                  </span>
-                ) : draftId ? (
-                  "Update Draft"
-                ) : (
-                  "Save as Draft"
-                )}
+                <AsyncButtonContent
+                  isPending={isSavingDraft}
+                  pendingLabel={draftId ? "Updating draft…" : "Saving draft…"}
+                >
+                  {draftId ? "Update Draft" : "Save as Draft"}
+                </AsyncButtonContent>
               </button>
               <button
                 type="submit"
                 aria-disabled={!canSubmit || isSubmitting}
                 disabled={isSubmitting}
+                aria-busy={isSubmitting}
                 className={`inline-flex min-h-12 items-center justify-center rounded-full px-7 py-3 font-body text-sm font-bold transition-all duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-60 ${
                   canSubmit
                     ? "bg-accent text-primary hover:bg-primary hover:text-white"
                     : "bg-border text-muted"
                 }`}
               >
-                {isSubmitting ? (
-                  <span className="inline-flex items-center gap-2">
-                    <Loader2
-                      className="h-4 w-4 animate-spin"
-                      aria-hidden="true"
-                    />
-                    Creating listing...
-                  </span>
-                ) : (
-                  "Submit Listing"
-                )}
+                <AsyncButtonContent
+                  isPending={isSubmitting}
+                  pendingLabel="Creating listing…"
+                >
+                  Submit Listing
+                </AsyncButtonContent>
               </button>
             </div>
           </footer>

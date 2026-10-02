@@ -16,7 +16,7 @@ import {
   opposite,
   sharedWallPercent,
   type PlacedRoom,
-} from "@/lib/tour/floorPlanEdges";
+} from "../floorPlanEdges";
 
 function placed(
   roomId: number,

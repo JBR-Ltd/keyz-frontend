@@ -1,9 +1,9 @@
 "use client";
 
-import { LoaderCircle } from "lucide-react";
 import { FormEvent, useState, type ReactElement } from "react";
 import LoginSessionsPanel from "@/components/settings/LoginSessionsPanel";
 import SettingsDangerZone from "@/components/settings/SettingsDangerZone";
+import { AsyncButtonContent } from "@/components/ui/async-button-content";
 import { useToast } from "@/components/ui/toast";
 import {
   changeAccountPassword,
@@ -26,7 +26,9 @@ export default function SecuritySection(): ReactElement {
   const [twoFactorOverride, setTwoFactorOverride] = useState<boolean | null>(
     null,
   );
-  const [twoFactorBusy, setTwoFactorBusy] = useState(false);
+  const [twoFactorBusy, setTwoFactorBusy] = useState<
+    "" | "confirm" | "disable" | "send"
+  >("");
   /** Set while a code is outstanding: the challenge it belongs to. */
   const [pendingReference, setPendingReference] = useState("");
   const [code, setCode] = useState("");
@@ -36,9 +38,10 @@ export default function SecuritySection(): ReactElement {
   const twoFactorOn = twoFactorOverride ?? user?.twoFactorEnabled ?? false;
 
   const sendCode = async (): Promise<void> => {
-    setTwoFactorBusy(true);
-    const result = await startTwoFactorSetup();
-    setTwoFactorBusy(false);
+    setTwoFactorBusy("send");
+    const result = await startTwoFactorSetup().finally(() => {
+      setTwoFactorBusy("");
+    });
 
     if (!result.success) {
       notify({
@@ -59,9 +62,12 @@ export default function SecuritySection(): ReactElement {
   };
 
   const confirmCode = async (): Promise<void> => {
-    setTwoFactorBusy(true);
-    const result = await enableTwoFactor(pendingReference, code.trim());
-    setTwoFactorBusy(false);
+    setTwoFactorBusy("confirm");
+    const result = await enableTwoFactor(pendingReference, code.trim()).finally(
+      () => {
+        setTwoFactorBusy("");
+      },
+    );
 
     if (!result.success) {
       notify({
@@ -79,9 +85,10 @@ export default function SecuritySection(): ReactElement {
   };
 
   const turnOff = async (): Promise<void> => {
-    setTwoFactorBusy(true);
-    const result = await disableTwoFactor(password);
-    setTwoFactorBusy(false);
+    setTwoFactorBusy("disable");
+    const result = await disableTwoFactor(password).finally(() => {
+      setTwoFactorBusy("");
+    });
     setPassword("");
 
     if (!result.success) {
@@ -121,8 +128,12 @@ export default function SecuritySection(): ReactElement {
     }
 
     setIsChangingPassword(true);
-    const result = await changeAccountPassword(oldPassword, newPassword);
-    setIsChangingPassword(false);
+    const result = await changeAccountPassword(
+      oldPassword,
+      newPassword,
+    ).finally(() => {
+      setIsChangingPassword(false);
+    });
 
     notify({
       title: result.success ? "Password changed" : "Password not changed",
@@ -212,13 +223,16 @@ export default function SecuritySection(): ReactElement {
               <div className="flex flex-wrap gap-3 md:col-span-3">
                 <button
                   type="submit"
+                  aria-busy={isChangingPassword}
                   disabled={isChangingPassword}
                   className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-body text-sm font-medium text-white transition-all duration-200 ease-in-out hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-70"
                 >
-                  {isChangingPassword ? (
-                    <LoaderCircle className="animate-spin" size={18} />
-                  ) : null}
-                  {isChangingPassword ? "Changing password" : "Save password"}
+                  <AsyncButtonContent
+                    isPending={isChangingPassword}
+                    pendingLabel="Changing password…"
+                  >
+                    Save password
+                  </AsyncButtonContent>
                 </button>
                 <button
                   type="button"
@@ -247,7 +261,8 @@ export default function SecuritySection(): ReactElement {
             </div>
             <button
               type="button"
-              disabled={twoFactorBusy || !user}
+              disabled={Boolean(twoFactorBusy) || !user}
+              aria-busy={twoFactorBusy === "send"}
               onClick={() => {
                 if (twoFactorOn) {
                   setIsTurningOff((current) => !current);
@@ -262,10 +277,12 @@ export default function SecuritySection(): ReactElement {
                   : "bg-primary/10 text-primary"
               }`}
             >
-              {twoFactorBusy ? (
-                <LoaderCircle size={16} className="animate-spin" />
-              ) : null}
-              {twoFactorOn ? "Turn it off" : "Turn it on"}
+              <AsyncButtonContent
+                isPending={twoFactorBusy === "send"}
+                pendingLabel="Sending verification code…"
+              >
+                {twoFactorOn ? "Turn it off" : "Turn it on"}
+              </AsyncButtonContent>
             </button>
           </div>
 
@@ -286,10 +303,16 @@ export default function SecuritySection(): ReactElement {
               <button
                 type="button"
                 onClick={() => void confirmCode()}
-                disabled={twoFactorBusy || code.trim().length < 6}
+                disabled={Boolean(twoFactorBusy) || code.trim().length < 6}
+                aria-busy={twoFactorBusy === "confirm"}
                 className="min-h-12 rounded-full bg-primary px-6 py-3 font-body text-sm font-bold text-white transition-all duration-200 ease-in-out hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Confirm
+                <AsyncButtonContent
+                  isPending={twoFactorBusy === "confirm"}
+                  pendingLabel="Enabling two step sign-in…"
+                >
+                  Confirm
+                </AsyncButtonContent>
               </button>
             </div>
           ) : null}
@@ -312,10 +335,16 @@ export default function SecuritySection(): ReactElement {
               <button
                 type="button"
                 onClick={() => void turnOff()}
-                disabled={twoFactorBusy || password.length === 0}
+                disabled={Boolean(twoFactorBusy) || password.length === 0}
+                aria-busy={twoFactorBusy === "disable"}
                 className="min-h-12 rounded-full border border-red-700/25 px-6 py-3 font-body text-sm font-bold text-red-700 transition-all duration-200 ease-in-out hover:bg-red-700/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Turn it off
+                <AsyncButtonContent
+                  isPending={twoFactorBusy === "disable"}
+                  pendingLabel="Disabling two step sign-in…"
+                >
+                  Turn it off
+                </AsyncButtonContent>
               </button>
             </div>
           ) : null}

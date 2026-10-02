@@ -1,15 +1,8 @@
 "use client";
 
 import { useEffect, useState, type ReactElement } from "react";
-import {
-  CalendarClock,
-  Check,
-  Loader2,
-  MapPin,
-  Monitor,
-  Video,
-  X,
-} from "lucide-react";
+import { CalendarClock, Check, MapPin, Monitor, Video, X } from "lucide-react";
+import { AsyncButtonContent } from "@/components/ui/async-button-content";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { CardListSkeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
@@ -55,7 +48,7 @@ export default function HostViewingsView(): ReactElement {
   const [viewings, setViewings] = useState<Viewing[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
-  const [busyId, setBusyId] = useState<number | null>(null);
+  const [busyKey, setBusyKey] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -79,9 +72,10 @@ export default function HostViewingsView(): ReactElement {
     viewing: Viewing,
     status: ViewingStatus,
   ): Promise<void> => {
-    setBusyId(viewing.id);
-    const result = await decideViewing(viewing.id, status);
-    setBusyId(null);
+    setBusyKey(`${viewing.id}:${status}`);
+    const result = await decideViewing(viewing.id, status).finally(() =>
+      setBusyKey(null),
+    );
 
     if (result.data === null) {
       notify({
@@ -111,9 +105,10 @@ export default function HostViewingsView(): ReactElement {
   // The room only opens for a confirmed virtual viewing, so the link is fetched
   // at the moment it is clicked rather than held on the page
   const openRoom = async (viewing: Viewing): Promise<void> => {
-    setBusyId(viewing.id);
-    const result = await joinViewing(viewing.id);
-    setBusyId(null);
+    setBusyKey(`${viewing.id}:ROOM`);
+    const result = await joinViewing(viewing.id).finally(() =>
+      setBusyKey(null),
+    );
 
     if (result.data === null) {
       notify({
@@ -223,24 +218,38 @@ export default function HostViewingsView(): ReactElement {
                             <button
                               type="button"
                               onClick={() => void decide(viewing, "CONFIRMED")}
-                              disabled={busyId === viewing.id}
+                              disabled={
+                                busyKey?.startsWith(`${viewing.id}:`) ?? false
+                              }
+                              aria-busy={busyKey === `${viewing.id}:CONFIRMED`}
                               className="flex items-center gap-2 rounded bg-primary px-5 py-3 font-accent text-xs font-bold uppercase tracking-[0.16em] text-white transition-all duration-200 ease-in-out hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-70"
                             >
-                              {busyId === viewing.id ? (
-                                <Loader2 size={15} className="animate-spin" />
-                              ) : (
+                              <AsyncButtonContent
+                                isPending={
+                                  busyKey === `${viewing.id}:CONFIRMED`
+                                }
+                                pendingLabel="Confirming viewing…"
+                              >
                                 <Check size={15} aria-hidden="true" />
-                              )}
-                              Confirm
+                                Confirm
+                              </AsyncButtonContent>
                             </button>
                             <button
                               type="button"
                               onClick={() => void decide(viewing, "DECLINED")}
-                              disabled={busyId === viewing.id}
+                              disabled={
+                                busyKey?.startsWith(`${viewing.id}:`) ?? false
+                              }
+                              aria-busy={busyKey === `${viewing.id}:DECLINED`}
                               className="flex items-center gap-2 rounded px-5 py-3 font-accent text-xs font-bold uppercase tracking-[0.16em] text-primary shadow-sm transition-all duration-200 ease-in-out hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-70"
                             >
-                              <X size={15} aria-hidden="true" />
-                              Decline
+                              <AsyncButtonContent
+                                isPending={busyKey === `${viewing.id}:DECLINED`}
+                                pendingLabel="Declining viewing…"
+                              >
+                                <X size={15} aria-hidden="true" />
+                                Decline
+                              </AsyncButtonContent>
                             </button>
                           </>
                         ) : null}
@@ -251,24 +260,38 @@ export default function HostViewingsView(): ReactElement {
                               <button
                                 type="button"
                                 onClick={() => void openRoom(viewing)}
-                                disabled={busyId === viewing.id}
+                                disabled={
+                                  busyKey?.startsWith(`${viewing.id}:`) ?? false
+                                }
+                                aria-busy={busyKey === `${viewing.id}:ROOM`}
                                 className="flex items-center gap-2 rounded bg-primary px-5 py-3 font-accent text-xs font-bold uppercase tracking-[0.16em] text-white transition-all duration-200 ease-in-out hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-70"
                               >
-                                {busyId === viewing.id ? (
-                                  <Loader2 size={15} className="animate-spin" />
-                                ) : (
+                                <AsyncButtonContent
+                                  isPending={busyKey === `${viewing.id}:ROOM`}
+                                  pendingLabel="Opening viewing room…"
+                                >
                                   <Video size={15} aria-hidden="true" />
-                                )}
-                                Open the room
+                                  Open the room
+                                </AsyncButtonContent>
                               </button>
                             ) : null}
                             <button
                               type="button"
                               onClick={() => void decide(viewing, "COMPLETED")}
-                              disabled={busyId === viewing.id}
+                              disabled={
+                                busyKey?.startsWith(`${viewing.id}:`) ?? false
+                              }
+                              aria-busy={busyKey === `${viewing.id}:COMPLETED`}
                               className="flex items-center gap-2 rounded px-5 py-3 font-accent text-xs font-bold uppercase tracking-[0.16em] text-primary shadow-sm transition-all duration-200 ease-in-out hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-70"
                             >
-                              Mark as done
+                              <AsyncButtonContent
+                                isPending={
+                                  busyKey === `${viewing.id}:COMPLETED`
+                                }
+                                pendingLabel="Completing viewing…"
+                              >
+                                Mark as done
+                              </AsyncButtonContent>
                             </button>
                           </>
                         ) : null}

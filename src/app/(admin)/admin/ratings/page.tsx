@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useState, type ReactElement } from "react";
-import { EyeOff, Loader2, RotateCcw, Star, Trash2 } from "lucide-react";
+import { EyeOff, RotateCcw, Star, Trash2 } from "lucide-react";
+import { AsyncButtonContent } from "@/components/ui/async-button-content";
 import AdminQueueShell from "@/components/admin/AdminQueueShell";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useToast } from "@/components/ui/toast";
@@ -54,7 +55,7 @@ export default function AdminRatingsPage(): ReactElement {
   const { notify } = useToast();
   const search = useAdminSearch<ModeratedReview>(searchReviews);
   const { replaceItem, setStatus } = search;
-  const [busyId, setBusyId] = useState<number | null>(null);
+  const [busyKey, setBusyKey] = useState<string | null>(null);
   /** The review whose takedown reason is being written, and what to do with it. */
   const [pending, setPending] = useState<{
     id: number;
@@ -71,9 +72,12 @@ export default function AdminRatingsPage(): ReactElement {
     review: ModeratedReview,
     status: ReviewModerationStatus,
   ): Promise<void> => {
-    setBusyId(review.id);
-    const result = await moderateReview(review.id, status, reason.trim());
-    setBusyId(null);
+    setBusyKey(`${review.id}:${status}`);
+    const result = await moderateReview(
+      review.id,
+      status,
+      reason.trim(),
+    ).finally(() => setBusyKey(null));
 
     if (result.data === null) {
       notify({
@@ -134,7 +138,7 @@ export default function AdminRatingsPage(): ReactElement {
     >
       {search.items.map((review) => {
         const isPublished = review.status === "PUBLISHED";
-        const isBusy = busyId === review.id;
+        const isBusy = busyKey?.startsWith(`${review.id}:`) ?? false;
         const awaitingReason = pending?.id === review.id;
 
         return (
@@ -215,16 +219,18 @@ export default function AdminRatingsPage(): ReactElement {
                         pending.status === "HIDDEN" &&
                         reason.trim().length === 0)
                     }
+                    aria-busy={busyKey === `${review.id}:HIDDEN`}
                     className="flex items-center gap-2 rounded bg-primary px-5 py-3 font-accent text-xs font-bold uppercase tracking-[0.16em] text-white transition-all duration-200 ease-in-out hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-70"
                   >
-                    {isBusy ? (
-                      <Loader2 size={15} className="animate-spin" />
-                    ) : (
+                    <AsyncButtonContent
+                      isPending={busyKey === `${review.id}:HIDDEN`}
+                      pendingLabel="Hiding review…"
+                    >
                       <EyeOff size={15} aria-hidden="true" />
-                    )}
-                    {pending?.id === review.id && pending.status === "HIDDEN"
-                      ? "Confirm hide"
-                      : "Hide"}
+                      {pending?.id === review.id && pending.status === "HIDDEN"
+                        ? "Confirm hide"
+                        : "Hide"}
+                    </AsyncButtonContent>
                   </button>
                   <button
                     type="button"
@@ -235,12 +241,18 @@ export default function AdminRatingsPage(): ReactElement {
                         pending.status === "REMOVED" &&
                         reason.trim().length === 0)
                     }
+                    aria-busy={busyKey === `${review.id}:REMOVED`}
                     className="flex items-center gap-2 rounded px-5 py-3 font-accent text-xs font-bold uppercase tracking-[0.16em] text-red-700 shadow-sm transition-all duration-200 ease-in-out hover:bg-red-700/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-70"
                   >
-                    <Trash2 size={15} aria-hidden="true" />
-                    {pending?.id === review.id && pending.status === "REMOVED"
-                      ? "Confirm removal"
-                      : "Remove"}
+                    <AsyncButtonContent
+                      isPending={busyKey === `${review.id}:REMOVED`}
+                      pendingLabel="Removing review…"
+                    >
+                      <Trash2 size={15} aria-hidden="true" />
+                      {pending?.id === review.id && pending.status === "REMOVED"
+                        ? "Confirm removal"
+                        : "Remove"}
+                    </AsyncButtonContent>
                   </button>
                 </>
               ) : (
@@ -249,13 +261,15 @@ export default function AdminRatingsPage(): ReactElement {
                   onClick={() => void decide(review, "PUBLISHED")}
                   disabled={isBusy}
                   className="flex items-center gap-2 rounded bg-primary px-5 py-3 font-accent text-xs font-bold uppercase tracking-[0.16em] text-white transition-all duration-200 ease-in-out hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-70"
+                  aria-busy={busyKey === `${review.id}:PUBLISHED`}
                 >
-                  {isBusy ? (
-                    <Loader2 size={15} className="animate-spin" />
-                  ) : (
+                  <AsyncButtonContent
+                    isPending={busyKey === `${review.id}:PUBLISHED`}
+                    pendingLabel="Restoring review…"
+                  >
                     <RotateCcw size={15} aria-hidden="true" />
-                  )}
-                  Put it back
+                    Put it back
+                  </AsyncButtonContent>
                 </button>
               )}
             </div>

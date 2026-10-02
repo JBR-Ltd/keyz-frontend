@@ -36,6 +36,7 @@ import { TouchEvent, useEffect, useRef, useState } from "react";
 import BackButton from "@/components/navigation/BackButton";
 import OverlayPortal from "@/components/ui/OverlayPortal";
 import MessageHostButton from "@/components/property/MessageHostButton";
+import { AsyncButtonContent } from "@/components/ui/async-button-content";
 import ReportDialog from "@/components/reports/ReportDialog";
 import PropertyPrice from "@/components/property/PropertyPrice";
 import PropertyTourEmbed from "@/components/property/PropertyTourEmbed";
@@ -517,10 +518,11 @@ export default function PropertyPageClient({
     }
 
     setIsSaving(true);
-    const result = isSaved
-      ? await removeSavedListing(Number(property.id))
-      : await saveListing(Number(property.id));
-    setIsSaving(false);
+    const result = await (
+      isSaved
+        ? removeSavedListing(Number(property.id))
+        : saveListing(Number(property.id))
+    ).finally(() => setIsSaving(false));
 
     if (!result.data) {
       notify({
@@ -607,20 +609,28 @@ export default function PropertyPageClient({
                 aria-pressed={isSaved}
                 className="inline-flex min-h-10 items-center gap-2 rounded-full border border-border bg-bg px-4 font-body text-sm font-bold text-primary transition-all duration-200 ease-in-out hover:border-primary/30 hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-70"
               >
-                {isSavedLoading || isSaving ? (
+                aria-busy={isSaving}
+                {isSavedLoading ? (
                   <Loader2
                     size={16}
                     className="animate-spin"
                     aria-hidden="true"
                   />
                 ) : (
-                  <Heart
-                    size={16}
-                    fill={isSaved ? "currentColor" : "none"}
-                    aria-hidden="true"
-                  />
+                  <AsyncButtonContent
+                    isPending={isSaving}
+                    pendingLabel={
+                      isSaved ? "Removing saved home…" : "Saving home…"
+                    }
+                  >
+                    <Heart
+                      size={16}
+                      fill={isSaved ? "currentColor" : "none"}
+                      aria-hidden="true"
+                    />
+                    {isSaved ? "Saved" : "Save"}
+                  </AsyncButtonContent>
                 )}
-                {isSaved ? "Saved" : "Save"}
               </button>
             ) : null}
           </div>
@@ -760,7 +770,16 @@ export default function PropertyPageClient({
                     type="button"
                     onClick={() => void handleSaveToggle()}
                     disabled={isSavedLoading || isSaving}
-                    aria-label={isSaved ? "Remove from saved homes" : "Save this property"}
+                    aria-label={
+                      isSaving
+                        ? isSaved
+                          ? "Removing from saved homes"
+                          : "Saving this property"
+                        : isSaved
+                          ? "Remove from saved homes"
+                          : "Save this property"
+                    }
+                    aria-busy={isSaving}
                     aria-pressed={isSaved}
                     className="flex h-11 w-11 items-center justify-center rounded-full border border-white/70 bg-bg/95 text-primary shadow-sm backdrop-blur-sm transition-colors hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-70"
                   >
