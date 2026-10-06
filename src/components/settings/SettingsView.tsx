@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, type ReactElement } from "react";
 import SettingsStatStrip from "@/components/settings/SettingsStatStrip";
 import SettingsTabBar from "@/components/settings/SettingsTabBar";
 import NotificationsSection from "@/components/settings/sections/NotificationsSection";
@@ -12,6 +12,10 @@ import ProfileSection from "@/components/settings/sections/ProfileSection";
 import SecuritySection from "@/components/settings/sections/SecuritySection";
 import { SettingsSectionId } from "@/components/settings/types";
 
+interface SettingsViewProps {
+  initialSection?: SettingsSectionId;
+}
+
 const SECTION_COMPONENTS = {
   profile: ProfileSection,
   security: SecuritySection,
@@ -20,10 +24,12 @@ const SECTION_COMPONENTS = {
   privacy: PrivacySection,
 } satisfies Record<SettingsSectionId, React.ComponentType>;
 
-export default function SettingsView() {
+export default function SettingsView({
+  initialSection = "profile",
+}: SettingsViewProps): ReactElement {
   const pathname = usePathname();
   const [activeSection, setActiveSection] =
-    useState<SettingsSectionId>("profile");
+    useState<SettingsSectionId>(initialSection);
   const reduceMotion = useReducedMotion();
   const ActiveSection = SECTION_COMPONENTS[activeSection];
   const role = pathname.split("/")[1] as
@@ -32,7 +38,7 @@ export default function SettingsView() {
     | "agent"
     | "admin";
 
-  const showSection = (section: SettingsSectionId) => {
+  const showSection = (section: SettingsSectionId): void => {
     setActiveSection(section);
   };
 

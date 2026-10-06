@@ -74,7 +74,6 @@ export default function DashboardShell({
         saveTenantVerificationState({
           nin: result.data.ninVerified ? "verified" : "not_started",
           bvn: result.data.bvnVerified ? "verified" : "not_started",
-          selfie: result.data.selfieVerified ? "verified" : "not_started",
         });
       }
 

@@ -164,6 +164,45 @@ export async function verifySelfie(
 }
 
 /**
+ * Tenant identity numbers are checked together. The backend records neither
+ * value unless both checks pass, so the client must keep this request atomic.
+ */
+export async function submitTenantVerification(
+  nin: string,
+  bvn: string,
+): Promise<IdentityResult<boolean>> {
+  const token = getSessionMarker();
+
+  if (!token) {
+    return { data: false, message: "Your session has expired. Log in again." };
+  }
+
+  try {
+    const query = new URLSearchParams({ nin, bvn });
+    const response = await apiRequest(
+      `/api/verification/tenant?${query.toString()}`,
+      { method: "POST", headers: {} },
+    );
+
+    if (response.ok) {
+      return { data: true };
+    }
+
+    const payload: unknown = await response.json().catch(() => null);
+
+    return {
+      data: false,
+      message: resolveApiError(
+        payload,
+        "Your identity could not be confirmed.",
+      ),
+    };
+  } catch {
+    return { data: false, message: "We could not reach the identity service." };
+  }
+}
+
+/**
  * The agent path: NIN, BVN and selfie in one request. The backend runs all three
  * and records nothing unless every one passes, so an agent cannot end up partly
  * verified across separate calls.

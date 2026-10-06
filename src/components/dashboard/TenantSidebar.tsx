@@ -152,7 +152,7 @@ function VerificationMenuCard({
           </span>
           <span className="mt-1 block font-body text-[11px] leading-4 text-muted">
             {verifiedStepCount > 0
-              ? `${verifiedStepCount} of 3 completed`
+              ? `${verifiedStepCount} of 2 completed`
               : "Required to book"}
           </span>
         </span>

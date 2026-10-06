@@ -14,6 +14,7 @@ import {
   useEffect,
 } from "react";
 import { CheckCircle2, X, XCircle } from "lucide-react";
+import { usePathname } from "next/navigation";
 
 type ToastVariant = "success" | "error";
 
@@ -36,6 +37,13 @@ interface ToastItemProps {
 }
 
 const ToastContext = createContext<ToastContextValue | null>(null);
+const standaloneToastRoutes = new Set([
+  "/forgot-password",
+  "/login",
+  "/register",
+  "/reset-password",
+  "/verify-email",
+]);
 
 function getToastDuration(toast: Toast): number {
   if (toast.variant === "error") {
@@ -129,7 +137,7 @@ function ToastItem({ dismiss, toast }: ToastItemProps): ReactElement {
       animate={{ opacity: 1, scale: 1, y: 0 }}
       exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.98, y: -6 }}
       transition={{ duration: reduceMotion ? 0.12 : 0.2, ease: "easeOut" }}
-      className={`flex items-start gap-3 rounded-xl border border-border/70 border-l-[3px] bg-bg p-3.5 shadow-lg ${
+      className={`pointer-events-auto grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-3 rounded-2xl border border-border/70 border-l-[3px] bg-bg p-4 shadow-[0_18px_50px_rgba(0,47,73,0.16)] ${
         isSuccess ? "border-l-accent-alt" : "border-l-red-700"
       }`}
       role="status"
@@ -148,13 +156,13 @@ function ToastItem({ dismiss, toast }: ToastItemProps): ReactElement {
       onBlurCapture={handleBlur}
     >
       <span
-        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
+        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
           isSuccess ? "bg-accent/20 text-primary" : "bg-red-700/10 text-red-700"
         }`}
       >
         <Icon size={17} aria-hidden="true" />
       </span>
-      <div className="min-w-0 flex-1 py-0.5">
+      <div className="min-w-0 py-0.5">
         <p className="font-body text-sm font-bold leading-5 text-primary">
           {toast.title}
         </p>
@@ -166,7 +174,7 @@ function ToastItem({ dismiss, toast }: ToastItemProps): ReactElement {
       </div>
       <button
         type="button"
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-muted transition-colors duration-200 ease-in-out hover:bg-primary/5 hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        className="-mr-1 -mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted transition-colors duration-200 ease-in-out hover:bg-primary/5 hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         onClick={() => dismiss(toast.id)}
         aria-label="Dismiss notification"
       >
@@ -182,6 +190,8 @@ export function ToastProvider({
   children: ReactNode;
 }): ReactElement {
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const pathname = usePathname();
+  const usesStandaloneLayout = standaloneToastRoutes.has(pathname);
 
   const dismiss = useCallback((id: string) => {
     setToasts((current) => current.filter((toast) => toast.id !== id));
@@ -208,7 +218,9 @@ export function ToastProvider({
     <ToastContext.Provider value={value}>
       {children}
       <div
-        className="fixed left-4 right-4 top-4 z-[140] grid gap-3 sm:left-auto sm:right-6 sm:top-20 sm:w-full sm:max-w-sm"
+        className={`pointer-events-none fixed left-4 right-4 z-[140] grid gap-3 sm:left-auto sm:right-6 sm:w-[22rem] sm:max-w-[calc(100vw-3rem)] ${
+          usesStandaloneLayout ? "top-4 sm:top-5" : "top-24 sm:top-24"
+        }`}
         aria-live="polite"
         aria-atomic="true"
         aria-relevant="additions"

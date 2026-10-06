@@ -29,7 +29,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import BackButton from "@/components/navigation/BackButton";
 import { AsyncButtonContent } from "@/components/ui/async-button-content";
-import { Select, toSelectOptions } from "@/components/ui/select";
+import { CityCombobox } from "@/components/ui/city-combobox";
+import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import {
@@ -178,8 +179,6 @@ const AMENITIES = [
   "Air Conditioning",
   "Furnished",
 ];
-
-const CITIES = ["Lagos", "Abuja", "Port Harcourt", "Other"];
 
 const LISTING_STEPS: ListingStepOption[] = [
   { id: "basics", label: "Basics" },
@@ -538,17 +537,13 @@ export default function CreateListingForm({
   const [mandatesLoading, setMandatesLoading] = useState(role === "agent");
   // Rentals only for now, for landlords and agents alike. Sale reopens with the backend flag.
   const listingType: PropertyListingStatus = "FOR_RENT";
-  const typeLabel = "Rental listing";
-  const typeHelper =
-    role === "agent"
-      ? "You are listing this rental on the owner's behalf."
-      : "Your account is set up for rental listings.";
   const priceLabel = PRICE_LABELS[values.rentalMode];
   const isShortStay = values.rentalMode === "SHORT_STAY";
   const canSubmit = !hasErrors(validateForm(values, photos, role));
   const listingStepIndex = LISTING_STEPS.findIndex(
     (step) => step.id === listingStep,
   );
+  const showGuidedSummary = listingStepIndex >= 3;
   const coverPhoto = photos[0];
 
   useEffect(() => {
@@ -1219,9 +1214,9 @@ export default function CreateListingForm({
 
   if (experience === "guided") {
     return (
-      <main className="min-h-screen overflow-x-clip px-5 pb-0 pt-12 sm:px-8 lg:px-10 lg:pt-16 xl:px-14">
+      <main className="min-h-screen overflow-x-clip px-5 pb-0 pt-8 sm:px-8 lg:px-10 lg:pt-10 xl:px-14">
         <div className="mx-auto max-w-7xl">
-          <header className="pb-8">
+          <header className="pb-4">
             {listingStepIndex > 0 ? (
               <button
                 type="button"
@@ -1241,19 +1236,19 @@ export default function CreateListingForm({
               </BackButton>
             )}
 
-            <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <p className="font-accent text-xs font-bold uppercase tracking-[0.3em] text-primary">
                   {draftId ? "Editing Draft" : "New Listing"}
                 </p>
-                <h1 className="mt-4 font-display text-3xl font-bold leading-tight text-primary">
+                <h1 className="mt-3 font-display text-3xl font-bold leading-tight text-primary">
                   {draftId ? "Continue your listing" : "Create your listing"}
                 </h1>
-                <p className="mt-3 max-w-2xl font-body text-base leading-7 text-muted">
+                <p className="mt-2 max-w-2xl font-body text-base leading-7 text-muted">
                   Build a complete rental listing one focused step at a time.
                 </p>
               </div>
-              <div className="text-right">
+              <div className="text-left sm:text-right lg:hidden">
                 <p className="font-body text-sm font-bold text-primary">
                   {LISTING_STEPS[listingStepIndex]?.label}
                 </p>
@@ -1286,7 +1281,14 @@ export default function CreateListingForm({
             </p>
           ) : null}
 
-          <div className="mt-8 grid items-start gap-8 lg:grid-cols-[13rem_minmax(0,1fr)] xl:grid-cols-[13rem_minmax(0,44rem)_15rem]">
+          <div
+            className={cn(
+              "mt-6 grid items-start gap-8 lg:grid-cols-[13rem_minmax(0,1fr)]",
+              showGuidedSummary
+                ? "xl:grid-cols-[13rem_minmax(0,44rem)_15rem]"
+                : "xl:grid-cols-[13rem_minmax(0,52rem)] xl:justify-center",
+            )}
+          >
             <aside
               className="sticky top-24 hidden lg:block"
               aria-label="Listing steps"
@@ -1353,7 +1355,7 @@ export default function CreateListingForm({
             >
               <div
                 key={listingStep}
-                className="animate-in fade-in-0 slide-in-from-bottom-2 rounded-2xl border border-border bg-bg p-5 shadow-sm duration-300 motion-reduce:animate-none sm:p-8 lg:p-10"
+                className="animate-in fade-in-0 slide-in-from-bottom-2 rounded-t-2xl border border-b-0 border-border bg-bg p-5 pb-28 duration-300 motion-reduce:animate-none sm:p-8 sm:pb-8"
               >
                 {listingStep === "basics" ? (
                   <section aria-labelledby="guided-listing-basics">
@@ -1371,20 +1373,6 @@ export default function CreateListingForm({
                     </p>
 
                     <div className="mt-6 grid gap-5 sm:grid-cols-2">
-                      <div className="sm:col-span-2">
-                        <p className="font-body text-sm font-bold text-primary">
-                          Listing Type
-                        </p>
-                        <div className="mt-2 flex flex-wrap items-center gap-3 rounded-lg border border-border px-4 py-3">
-                          <span className="rounded-full border border-accent/40 px-3 py-1.5 font-body text-xs font-bold text-primary">
-                            {typeLabel}
-                          </span>
-                          <span className="font-body text-sm text-muted">
-                            {typeHelper}
-                          </span>
-                        </div>
-                      </div>
-
                       {renderListingPartiesAndUnits()}
 
                       <label className="sm:col-span-2">
@@ -1452,28 +1440,35 @@ export default function CreateListingForm({
                     </p>
 
                     <div className="mt-6 grid gap-5 sm:grid-cols-2">
-                      <label>
-                        <span className="font-body text-sm font-bold text-primary">
+                      <div>
+                        <label
+                          htmlFor="guided-listing-city"
+                          className="font-body text-sm font-bold text-primary"
+                        >
                           City{" "}
                           <span className="font-normal text-muted">
                             (required)
                           </span>
-                        </span>
-                        <Select
+                        </label>
+                        <CityCombobox
+                          id="guided-listing-city"
                           value={values.city}
                           onValueChange={(city) => updateValue("city", city)}
                           className={INPUT_CLASS_NAME}
                           invalid={Boolean(errors.city)}
-                          ariaLabel="City"
-                          placeholder="Select a city"
-                          options={toSelectOptions(CITIES)}
+                          describedBy={
+                            errors.city ? "guided-listing-city-error" : undefined
+                          }
                         />
                         {errors.city ? (
-                          <span className="mt-2 block font-body text-sm font-medium text-red-700">
+                          <span
+                            id="guided-listing-city-error"
+                            className="mt-2 block font-body text-sm font-medium text-red-700"
+                          >
                             {errors.city}
                           </span>
                         ) : null}
-                      </label>
+                      </div>
 
                       <label>
                         <span className="font-body text-sm font-bold text-primary">
@@ -2124,7 +2119,7 @@ export default function CreateListingForm({
                 ) : null}
               </div>
 
-              <footer className="sticky bottom-0 z-20 mt-6 rounded-t-2xl border border-border bg-bg/95 p-4 shadow-[0_-12px_32px_rgba(3,58,78,0.08)] backdrop-blur-sm">
+              <footer className="sticky bottom-0 z-20 rounded-b-2xl border border-border bg-bg p-4 shadow-[0_-8px_24px_rgba(3,58,78,0.08)] sm:static sm:shadow-none">
                 <div className="flex items-center gap-3">
                   <button
                     type="button"
@@ -2136,7 +2131,7 @@ export default function CreateListingForm({
                     Back
                   </button>
 
-                  <p className="mr-auto hidden text-center font-body text-xs text-muted lg:block">
+                  <p className="mr-auto hidden text-center font-body text-xs font-medium text-primary/70 lg:block">
                     {isSavingDraft
                       ? "Saving draft..."
                       : isDirty
@@ -2197,40 +2192,42 @@ export default function CreateListingForm({
               </footer>
             </form>
 
-            <aside className="sticky top-24 hidden rounded-2xl border border-border bg-bg p-5 xl:block">
-              <p className="font-body text-xs font-bold uppercase tracking-[0.16em] text-muted">
-                Listing summary
-              </p>
-              <h2 className="mt-3 line-clamp-2 font-display text-lg font-bold text-primary">
-                {values.title || "Untitled rental"}
-              </h2>
-              <p className="mt-2 font-body text-sm text-muted">
-                {[values.area, values.city].filter(Boolean).join(", ") ||
-                  "Location not added"}
-              </p>
-              <p className="mt-4 font-display text-lg font-bold text-primary">
-                {formatPreviewPrice(values.price, values.rentalMode)}
-              </p>
-              <div className="mt-5 border-t border-border pt-5">
-                <p className="font-body text-xs text-muted">
-                  {photos.length} photo{photos.length === 1 ? "" : "s"} added
+            {showGuidedSummary ? (
+              <aside className="sticky top-24 hidden rounded-2xl border border-border bg-bg p-5 xl:block">
+                <p className="font-body text-xs font-bold uppercase tracking-[0.16em] text-muted">
+                  Listing summary
                 </p>
-                <p className="mt-2 font-body text-xs text-muted">
-                  {values.amenities.length} amenit
-                  {values.amenities.length === 1 ? "y" : "ies"} selected
+                <h2 className="mt-3 line-clamp-2 font-display text-lg font-bold text-primary">
+                  {values.title || "Untitled rental"}
+                </h2>
+                <p className="mt-2 font-body text-sm text-muted">
+                  {[values.area, values.city].filter(Boolean).join(", ") ||
+                    "Location not added"}
                 </p>
-                <p className="mt-2 flex items-center gap-2 font-body text-xs text-muted">
-                  <CircleCheck
-                    size={14}
-                    className="text-accent-alt"
-                    aria-hidden="true"
-                  />
-                  {proofCapture
-                    ? "Verification photo ready"
-                    : "Verification can be completed later"}
+                <p className="mt-4 font-display text-lg font-bold text-primary">
+                  {formatPreviewPrice(values.price, values.rentalMode)}
                 </p>
-              </div>
-            </aside>
+                <div className="mt-5 border-t border-border pt-5">
+                  <p className="font-body text-xs text-muted">
+                    {photos.length} photo{photos.length === 1 ? "" : "s"} added
+                  </p>
+                  <p className="mt-2 font-body text-xs text-muted">
+                    {values.amenities.length} amenit
+                    {values.amenities.length === 1 ? "y" : "ies"} selected
+                  </p>
+                  <p className="mt-2 flex items-center gap-2 font-body text-xs text-muted">
+                    <CircleCheck
+                      size={14}
+                      className="text-accent-alt"
+                      aria-hidden="true"
+                    />
+                    {proofCapture
+                      ? "Verification photo ready"
+                      : "Verification can be completed later"}
+                  </p>
+                </div>
+              </aside>
+            ) : null}
           </div>
         </div>
       </main>
@@ -2268,20 +2265,6 @@ export default function CreateListingForm({
                 description="Start with the information people use to understand the property."
               />
               <div className="grid gap-5 sm:grid-cols-2">
-                <div className="sm:col-span-2">
-                  <p className="font-body text-sm font-bold text-primary">
-                    Property Type
-                  </p>
-                  <div className="mt-2 flex flex-wrap items-center gap-3 rounded-lg border border-border bg-surface-soft px-4 py-3">
-                    <span className="inline-flex rounded-full bg-primary px-3 py-1.5 font-body text-xs font-bold text-white">
-                      {typeLabel}
-                    </span>
-                    <span className="font-body text-sm text-muted">
-                      {typeHelper}
-                    </span>
-                  </div>
-                </div>
-
                 {renderListingPartiesAndUnits()}
 
                 <label className="sm:col-span-2">
@@ -2366,25 +2349,32 @@ export default function CreateListingForm({
                 description="Give interested parties enough context while keeping the exact address private."
               />
               <div className="grid gap-5 sm:grid-cols-2">
-                <label>
-                  <span className="font-body text-sm font-bold text-primary">
+                <div>
+                  <label
+                    htmlFor="classic-listing-city"
+                    className="font-body text-sm font-bold text-primary"
+                  >
                     City
-                  </span>
-                  <Select
+                  </label>
+                  <CityCombobox
+                    id="classic-listing-city"
                     value={values.city}
                     onValueChange={(city) => updateValue("city", city)}
                     className={INPUT_CLASS_NAME}
                     invalid={Boolean(errors.city)}
-                    ariaLabel="City"
-                    placeholder="Select a city"
-                    options={toSelectOptions(CITIES)}
+                    describedBy={
+                      errors.city ? "classic-listing-city-error" : undefined
+                    }
                   />
                   {errors.city ? (
-                    <span className="mt-2 block font-body text-sm font-medium text-red-700">
+                    <span
+                      id="classic-listing-city-error"
+                      className="mt-2 block font-body text-sm font-medium text-red-700"
+                    >
                       {errors.city}
                     </span>
                   ) : null}
-                </label>
+                </div>
 
                 <label>
                   <span className="font-body text-sm font-bold text-primary">

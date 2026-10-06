@@ -1,10 +1,10 @@
 import { Suspense } from "react";
-import HostIdentityVerificationFlow from "@/components/verification/HostIdentityVerificationFlow";
+import IdentityVerificationFlow from "@/components/verification/IdentityVerificationFlow";
 
 export default function LandlordIdentityVerificationPage() {
   return (
     <Suspense fallback={null}>
-      <HostIdentityVerificationFlow role="landlord" />
+      <IdentityVerificationFlow role="landlord" />
     </Suspense>
   );
 }

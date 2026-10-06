@@ -165,9 +165,9 @@ export default function AdminVerificationsPage(): ReactElement {
           type="button"
           onClick={() => void decide(kind, id, true)}
           disabled={isBusy}
+          aria-busy={isApproving}
           className="flex items-center gap-2 rounded bg-primary px-5 py-3 font-accent text-xs font-bold uppercase tracking-[0.16em] text-white transition-all duration-200 ease-in-out hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-70"
         >
-          aria-busy={isApproving}
           <AsyncButtonContent
             isPending={isApproving}
             pendingLabel="Approving verification…"
@@ -194,6 +194,7 @@ export default function AdminVerificationsPage(): ReactElement {
           disabled={
             isBusy || (isRejecting && decision.reason.trim().length === 0)
           }
+          aria-busy={isRejectingDecision}
           className="flex items-center gap-2 rounded px-5 py-3 font-accent text-xs font-bold uppercase tracking-[0.16em] text-primary shadow-sm transition-all duration-200 ease-in-out hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-70"
         >
           <AsyncButtonContent
@@ -203,7 +204,6 @@ export default function AdminVerificationsPage(): ReactElement {
             <X size={15} />
             {isRejecting ? "Confirm rejection" : "Reject"}
           </AsyncButtonContent>
-          aria-busy={isRejectingDecision}
         </button>
       </div>
     );

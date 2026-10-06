@@ -15,6 +15,7 @@ import {
   Dumbbell,
   Heart,
   Home,
+  Images,
   Loader2,
   MapPin,
   Ruler,
@@ -52,6 +53,9 @@ import {
 } from "@/lib/savedListings";
 import { useDialogFocus } from "@/lib/useDialogFocus";
 import { useToast } from "@/components/ui/toast";
+import { useAuthentication } from "@/components/auth/AuthProvider";
+import type { AccountRole } from "@/lib/authSession";
+import relloLogoMark from "../../../../public/rello-logo-cropped.svg";
 
 const BookingRequestDialog = dynamic(
   () => import("@/components/property/BookingRequestDialog"),
@@ -93,6 +97,12 @@ interface GalleryImage {
   index: number;
 }
 
+interface PropertyNavigation {
+  homeHref: string;
+  links: Array<{ href: string; label: string }>;
+  portalLabel: string;
+}
+
 const AMENITY_ICONS = {
   wifi: Wifi,
   parking: CircleParking,
@@ -110,6 +120,124 @@ const AMENITY_ICONS = {
 
 function formatHostRole(role: PropertyDetail["host"]["role"]): string {
   return role === "LANDLORD" ? "Landlord" : "Agent";
+}
+
+function formatCount(value: number, singular: string, plural: string): string {
+  return `${value} ${value === 1 ? singular : plural}`;
+}
+
+function getRentalPeriodLabel(
+  rentalMode: PropertyDetail["rentalMode"],
+): string {
+  if (rentalMode === "SHORT_STAY") return "Price per night";
+  if (rentalMode === "MONTHLY") return "Monthly rent";
+  return "Annual rent";
+}
+
+function getPropertyNavigation(role: AccountRole | null): PropertyNavigation {
+  if (role === "TENANT") {
+    return {
+      homeHref: "/tenant/browse",
+      portalLabel: "Tenant portal",
+      links: [
+        { href: "/tenant/browse", label: "Browse" },
+        { href: "/tenant/bookings", label: "My Home" },
+      ],
+    };
+  }
+
+  if (role === "LANDLORD") {
+    return {
+      homeHref: "/landlord/dashboard",
+      portalLabel: "Landlord portal",
+      links: [
+        { href: "/landlord/dashboard", label: "Dashboard" },
+        { href: "/landlord/saved-listings", label: "My Listings" },
+      ],
+    };
+  }
+
+  if (role === "AGENT") {
+    return {
+      homeHref: "/agent/dashboard",
+      portalLabel: "Agent portal",
+      links: [
+        { href: "/agent/dashboard", label: "Dashboard" },
+        { href: "/agent/saved-listings", label: "My Listings" },
+      ],
+    };
+  }
+
+  if (role === "ADMIN") {
+    return {
+      homeHref: "/admin/dashboard",
+      portalLabel: "Admin portal",
+      links: [
+        { href: "/admin/dashboard", label: "Dashboard" },
+        { href: "/admin/verifications", label: "Verifications" },
+      ],
+    };
+  }
+
+  return {
+    homeHref: "/",
+    portalLabel: "Property marketplace",
+    links: [
+      { href: "/tenant/browse", label: "Browse" },
+      { href: "/login", label: "Log in" },
+    ],
+  };
+}
+
+function PropertyContextHeader(): ReactElement {
+  const authentication = useAuthentication();
+  const navigation = getPropertyNavigation(authentication.user?.role ?? null);
+  const links = authentication.status === "checking" ? [] : navigation.links;
+
+  return (
+    <header className="sticky top-0 z-50 border-b border-border bg-bg/95 backdrop-blur-md">
+      <div className="mx-auto flex h-[4.5rem] w-full max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+        <Link
+          href={navigation.homeHref}
+          className="flex shrink-0 items-center gap-3 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          aria-label={`Rello ${navigation.portalLabel}`}
+        >
+          <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg bg-primary">
+            <Image
+              src={relloLogoMark}
+              alt=""
+              aria-hidden="true"
+              className="h-8 w-8 object-contain"
+              priority
+            />
+          </span>
+          <span className="hidden sm:block">
+            <span className="block font-display text-xl font-bold leading-none text-primary">
+              Rello
+            </span>
+            <span className="mt-1 block font-body text-[9px] font-medium uppercase tracking-[0.16em] text-muted">
+              {navigation.portalLabel}
+            </span>
+          </span>
+        </Link>
+
+        <nav aria-label="Property page navigation">
+          <ul className="flex items-center gap-1 sm:gap-2">
+            {links.map((link) => (
+              <li key={link.href}>
+                <Link
+                  href={link.href}
+                  className="inline-flex min-h-11 items-center rounded-full px-3 font-body text-sm font-bold text-muted transition-colors hover:bg-primary/5 hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent sm:px-4"
+                >
+                  {link.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      </div>
+    </header>
+  );
 }
 
 function getInitials(name: string): string {
@@ -166,14 +294,14 @@ function getOuterCornerClass(
 
 function getMosaicClass(imageCount: number): string {
   if (imageCount === 1) {
-    return "h-[480px] grid-cols-1";
+    return "h-[420px] grid-cols-1";
   }
 
   if (imageCount === 2) {
-    return "h-[480px] grid-cols-2";
+    return "h-[420px] grid-cols-2";
   }
 
-  return "h-[480px] grid-cols-[minmax(0,3fr)_minmax(0,2fr)]";
+  return "h-[420px] grid-cols-[minmax(0,3fr)_minmax(0,2fr)]";
 }
 
 function getSideGridClass(imageCount: number): string {
@@ -182,10 +310,14 @@ function getSideGridClass(imageCount: number): string {
   }
 
   if (imageCount === 4) {
-    return "grid-rows-3";
+    return "grid-cols-2 grid-rows-2";
   }
 
   return "grid-cols-2 grid-rows-2";
+}
+
+function getSideCellClass(imageCount: number, sideIndex: number): string {
+  return imageCount === 4 && sideIndex === 0 ? "col-span-2" : "";
 }
 
 function getAmenityIcon(amenity: string): typeof Check {
@@ -546,11 +678,21 @@ export default function PropertyPageClient({
   };
 
   if (loadingState === "loading") {
-    return <PropertyDetailSkeleton />;
+    return (
+      <>
+        <PropertyContextHeader />
+        <PropertyDetailSkeleton />
+      </>
+    );
   }
 
   if (!property) {
-    return <PropertyNotFound />;
+    return (
+      <>
+        <PropertyContextHeader />
+        <PropertyNotFound />
+      </>
+    );
   }
 
   const galleryImages: GalleryImage[] = property.images.map((image, index) => ({
@@ -559,9 +701,7 @@ export default function PropertyPageClient({
   }));
   const visibleGalleryImages = galleryImages.slice(0, 5);
   const sideGalleryImages = visibleGalleryImages.slice(1);
-  const remainingPhotoCount = Math.max(property.images.length - 5, 0);
   const mobileThumbnails = galleryImages.slice(1, 5);
-  const mobileRemainingPhotoCount = Math.max(property.images.length - 5, 0);
   const hasTour = Boolean(
     property.tour.videoUrl || property.tour.matterportUrl,
   );
@@ -572,350 +712,33 @@ export default function PropertyPageClient({
       : "Request to rent";
 
   return (
-    <main className="bg-bg pt-6 text-primary">
-      <div className="mx-auto max-w-7xl px-4 py-8 pb-32 sm:px-6 lg:px-8 lg:py-10">
-        <div className="mb-6 hidden items-end justify-between gap-8 lg:flex">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-3">
-              <h1 className="font-display text-4xl font-bold leading-tight text-primary">
-                {property.title}
-              </h1>
-              {property.verified ? <VerifiedBadge size="sm" /> : null}
-            </div>
-            <p className="mt-2 flex items-center gap-2 font-body text-sm text-muted">
-              <MapPin
-                size={16}
-                className="text-accent-alt"
-                aria-hidden="true"
-              />
-              {property.location.area}, {property.location.city}
-            </p>
-          </div>
-
-          <div className="flex shrink-0 items-center gap-2">
-            <button
-              type="button"
-              onClick={() => void handleShare()}
-              className="inline-flex min-h-10 items-center gap-2 rounded-full border border-border bg-bg px-4 font-body text-sm font-bold text-primary transition-all duration-200 ease-in-out hover:border-primary/30 hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            >
-              <Share2 size={16} aria-hidden="true" />
-              Share
-            </button>
-            {/^\d+$/.test(property.id) ? (
-              <button
-                type="button"
-                onClick={() => void handleSaveToggle()}
-                disabled={isSavedLoading || isSaving}
-                aria-pressed={isSaved}
-                className="inline-flex min-h-10 items-center gap-2 rounded-full border border-border bg-bg px-4 font-body text-sm font-bold text-primary transition-all duration-200 ease-in-out hover:border-primary/30 hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-70"
-              >
-                aria-busy={isSaving}
-                {isSavedLoading ? (
-                  <Loader2
-                    size={16}
-                    className="animate-spin"
-                    aria-hidden="true"
-                  />
-                ) : (
-                  <AsyncButtonContent
-                    isPending={isSaving}
-                    pendingLabel={
-                      isSaved ? "Removing saved home…" : "Saving home…"
-                    }
-                  >
-                    <Heart
-                      size={16}
-                      fill={isSaved ? "currentColor" : "none"}
-                      aria-hidden="true"
-                    />
-                    {isSaved ? "Saved" : "Save"}
-                  </AsyncButtonContent>
-                )}
-              </button>
-            ) : null}
-          </div>
-        </div>
-
-        <section aria-label="Property photos">
-          <div
-            className={`hidden gap-1 overflow-hidden rounded-2xl lg:grid ${getMosaicClass(
-              property.images.length,
-            )}`}
+    <>
+      <PropertyContextHeader />
+      <main className="bg-bg text-primary">
+        <div className="mx-auto max-w-7xl px-4 py-6 pb-32 sm:px-6 lg:px-8 lg:py-7">
+          <BackButton
+            fallbackHref="/tenant/browse"
+            roleFallbacks={{
+              ADMIN: "/admin/dashboard",
+              AGENT: "/agent/saved-listings",
+              LANDLORD: "/landlord/saved-listings",
+              TENANT: "/tenant/browse",
+            }}
+            className="mb-4 hidden min-h-11 items-center gap-2 rounded-full font-body text-sm font-bold text-muted transition-colors hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent lg:inline-flex"
           >
-            {visibleGalleryImages[0] ? (
-              <div
-                className={`group relative min-h-0 overflow-hidden bg-surface-soft ${getOuterCornerClass(
-                  visibleGalleryImages.length,
-                  0,
-                  property.images.length,
-                )}`}
-              >
-                <button
-                  type="button"
-                  onClick={() => openLightbox(visibleGalleryImages[0].index)}
-                  className="absolute inset-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
-                  aria-label={`Open ${property.title} photo 1`}
-                >
-                  <Image
-                    src={visibleGalleryImages[0].src}
-                    alt={property.title}
-                    fill
-                    priority
-                    sizes="(min-width: 1024px) 60vw, 100vw"
-                    className="object-cover transition-all duration-300 ease-in-out group-hover:scale-[1.02]"
-                    style={{ objectFit: "cover" }}
-                  />
-                </button>
-                <BackButton
-                  fallbackHref="/tenant/browse"
-                  roleFallbacks={{
-                    AGENT: "/agent/saved-listings",
-                    LANDLORD: "/landlord/saved-listings",
-                  }}
-                  aria-label="Go back"
-                  className="absolute left-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-primary text-white transition-all duration-200 ease-in-out hover:bg-black/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                >
-                  <ArrowLeft size={19} aria-hidden="true" />
-                </BackButton>
-                {property.verified ? (
-                  <span className="absolute right-4 top-4">
-                    <VerifiedBadge />
-                  </span>
-                ) : null}
+            <ArrowLeft size={17} aria-hidden="true" />
+            Back to results
+          </BackButton>
+
+          <div className="mb-5 hidden items-end justify-between gap-8 lg:flex">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-3">
+                <h1 className="font-display text-4xl font-bold leading-tight text-primary">
+                  {property.title}
+                </h1>
+                {property.verified ? <VerifiedBadge size="sm" /> : null}
               </div>
-            ) : null}
-
-            {sideGalleryImages.length > 0 ? (
-              <div
-                className={`grid min-h-0 gap-1 ${getSideGridClass(property.images.length)}`}
-              >
-                {sideGalleryImages.map((image, sideIndex) => {
-                  const cellIndex = sideIndex + 1;
-                  const showMoreOverlay =
-                    cellIndex === visibleGalleryImages.length - 1 &&
-                    remainingPhotoCount > 0;
-
-                  return (
-                    <button
-                      key={image.src}
-                      type="button"
-                      onClick={() => openLightbox(image.index)}
-                      className={`group relative min-h-0 overflow-hidden bg-surface-soft ${getOuterCornerClass(
-                        visibleGalleryImages.length,
-                        cellIndex,
-                        property.images.length,
-                      )}`}
-                      aria-label={`Open ${property.title} photo ${image.index + 1}`}
-                    >
-                      <Image
-                        src={image.src}
-                        alt={`${property.title} photo ${image.index + 1}`}
-                        fill
-                        sizes="(min-width: 1024px) 20vw, 50vw"
-                        className="object-cover transition-all duration-300 ease-in-out group-hover:scale-[1.02]"
-                        style={{ objectFit: "cover" }}
-                      />
-                      {showMoreOverlay ? (
-                        <span className="absolute inset-0 flex items-center justify-center bg-black/50 px-4 text-center font-body text-base font-bold text-white">
-                          +{remainingPhotoCount} more photos
-                        </span>
-                      ) : null}
-                    </button>
-                  );
-                })}
-              </div>
-            ) : null}
-          </div>
-
-          <div className="lg:hidden">
-            <div className="group relative aspect-video w-full overflow-hidden rounded-2xl bg-surface-soft shadow-sm">
-              <button
-                type="button"
-                onClick={() => openLightbox(0)}
-                className="absolute inset-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
-                aria-label={`Open ${property.title} photo 1`}
-              >
-                <Image
-                  src={property.images[0]}
-                  alt={property.title}
-                  fill
-                  priority
-                  sizes="100vw"
-                  className="object-cover transition-all duration-300 ease-in-out group-hover:scale-[1.02]"
-                  style={{ objectFit: "cover" }}
-                />
-              </button>
-              <BackButton
-                fallbackHref="/tenant/browse"
-                roleFallbacks={{
-                  AGENT: "/agent/saved-listings",
-                  LANDLORD: "/landlord/saved-listings",
-                }}
-                aria-label="Go back"
-                className="absolute left-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-primary text-white transition-all duration-200 ease-in-out hover:bg-black/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-              >
-                <ArrowLeft size={19} aria-hidden="true" />
-              </BackButton>
-              <div className="absolute right-4 top-4 z-10 flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => void handleShare()}
-                  aria-label="Share this property"
-                  className="flex h-11 w-11 items-center justify-center rounded-full border border-white/70 bg-bg/95 text-primary shadow-sm backdrop-blur-sm transition-colors hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                >
-                  <Share2 size={18} aria-hidden="true" />
-                </button>
-                {/^[0-9]+$/.test(property.id) ? (
-                  <button
-                    type="button"
-                    onClick={() => void handleSaveToggle()}
-                    disabled={isSavedLoading || isSaving}
-                    aria-label={
-                      isSaving
-                        ? isSaved
-                          ? "Removing from saved homes"
-                          : "Saving this property"
-                        : isSaved
-                          ? "Remove from saved homes"
-                          : "Save this property"
-                    }
-                    aria-busy={isSaving}
-                    aria-pressed={isSaved}
-                    className="flex h-11 w-11 items-center justify-center rounded-full border border-white/70 bg-bg/95 text-primary shadow-sm backdrop-blur-sm transition-colors hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-70"
-                  >
-                    {isSavedLoading || isSaving ? (
-                      <Loader2
-                        size={18}
-                        className="animate-spin"
-                        aria-hidden="true"
-                      />
-                    ) : (
-                      <Heart
-                        size={18}
-                        fill={isSaved ? "currentColor" : "none"}
-                        aria-hidden="true"
-                      />
-                    )}
-                  </button>
-                ) : null}
-              </div>
-              {property.verified ? (
-                <span className="absolute bottom-4 left-4 z-10">
-                  <VerifiedBadge size="sm" />
-                </span>
-              ) : null}
-            </div>
-
-            {mobileThumbnails.length > 0 ? (
-              <div className="mt-3 flex snap-x gap-2 overflow-x-auto pb-2">
-                {mobileThumbnails.map((image, thumbnailIndex) => (
-                  <button
-                    key={image.src}
-                    type="button"
-                    onClick={() => openLightbox(image.index)}
-                    className="relative aspect-[4/3] min-w-28 snap-start overflow-hidden rounded-lg bg-surface-soft"
-                    aria-label={`Open ${property.title} photo ${image.index + 1}`}
-                  >
-                    <Image
-                      src={image.src}
-                      alt={`${property.title} thumbnail ${image.index + 1}`}
-                      fill
-                      sizes="112px"
-                      className="object-cover"
-                      style={{ objectFit: "cover" }}
-                    />
-                    {thumbnailIndex === mobileThumbnails.length - 1 &&
-                    mobileRemainingPhotoCount > 0 ? (
-                      <span className="absolute inset-0 flex items-center justify-center bg-black/55 px-2 font-body text-sm font-bold text-white">
-                        +{mobileRemainingPhotoCount} more
-                      </span>
-                    ) : null}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-          </div>
-        </section>
-
-        <OverlayPortal>
-          <AnimatePresence>
-            {lightboxIndex !== null ? (
-              <motion.div
-                ref={lightboxRef}
-                className="fixed inset-0 z-[110] flex items-center justify-center bg-black px-4 py-6"
-                initial={reduceMotion ? false : { opacity: 0 }}
-                animate={reduceMotion ? undefined : { opacity: 1 }}
-                exit={reduceMotion ? undefined : { opacity: 0 }}
-                role="dialog"
-                aria-modal="true"
-                aria-label="Property photo gallery"
-                onTouchStart={(event) =>
-                  setTouchStartX(event.touches[0].clientX)
-                }
-                onTouchEnd={handleLightboxTouchEnd}
-              >
-                <button
-                  type="button"
-                  onClick={closeLightbox}
-                  aria-label="Close photo gallery"
-                  className="absolute right-4 top-4 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-primary text-white transition-all duration-200 ease-in-out hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                >
-                  <X size={21} aria-hidden="true" />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={showPreviousImage}
-                  aria-label="Previous photo"
-                  className="absolute left-4 top-1/2 z-10 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-primary text-white transition-all duration-200 ease-in-out hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent sm:flex"
-                >
-                  <ArrowLeft size={22} aria-hidden="true" />
-                </button>
-
-                <motion.div
-                  key={lightboxIndex}
-                  className="relative aspect-video max-h-[82vh] w-full max-w-6xl"
-                  initial={reduceMotion ? false : { opacity: 0.7, scale: 0.98 }}
-                  animate={reduceMotion ? undefined : { opacity: 1, scale: 1 }}
-                  exit={
-                    reduceMotion ? undefined : { opacity: 0.7, scale: 0.98 }
-                  }
-                  transition={{ duration: 0.18, ease: "easeOut" }}
-                >
-                  <Image
-                    src={property.images[lightboxIndex]}
-                    alt={`${property.title} photo ${lightboxIndex + 1}`}
-                    fill
-                    sizes="100vw"
-                    className="object-contain"
-                    style={{ objectFit: "contain" }}
-                  />
-                </motion.div>
-
-                <button
-                  type="button"
-                  onClick={showNextImage}
-                  aria-label="Next photo"
-                  className="absolute right-4 top-1/2 z-10 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-primary text-white transition-all duration-200 ease-in-out hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent sm:flex"
-                >
-                  <ArrowRight size={22} aria-hidden="true" />
-                </button>
-
-                <div className="absolute bottom-5 left-1/2 -translate-x-1/2 rounded-full bg-primary px-4 py-2 font-body text-sm font-bold text-white">
-                  {lightboxIndex + 1} / {property.images.length}
-                </div>
-              </motion.div>
-            ) : null}
-          </AnimatePresence>
-        </OverlayPortal>
-
-        <div className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1fr)_23rem] lg:items-start lg:gap-14">
-          <section className="min-w-0">
-            <div className="lg:hidden">
-              <h1 className="font-display text-3xl font-bold leading-tight text-primary">
-                {property.title}
-              </h1>
-              <p className="mt-1 flex items-center gap-2 font-body text-sm text-muted">
+              <p className="mt-2 flex items-center gap-2 font-body text-sm text-muted">
                 <MapPin
                   size={16}
                   className="text-accent-alt"
@@ -923,404 +746,787 @@ export default function PropertyPageClient({
                 />
                 {property.location.area}, {property.location.city}
               </p>
-            </div>
-
-            <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl border border-border/70 bg-surface-soft/50 p-2 font-body text-sm text-muted lg:mt-0 lg:flex lg:flex-wrap lg:items-center lg:gap-4 lg:px-5 lg:py-4">
-              <span className="inline-flex min-h-12 items-center gap-2 rounded-lg bg-bg px-3 lg:min-h-0 lg:rounded-none lg:bg-transparent lg:px-0">
-                <BedDouble
-                  size={17}
-                  className="text-accent-alt"
+              <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 font-body text-sm">
+                <p className="font-bold text-primary">
+                  <PropertyPrice
+                    value={property.price}
+                    listingType={property.status}
+                    rentalMode={property.rentalMode}
+                  />
+                </p>
+                <span
+                  className="h-1 w-1 rounded-full bg-border"
                   aria-hidden="true"
                 />
-                {property.bedrooms} bedrooms
-              </span>
-              <span className="hidden h-4 w-px bg-border lg:block" />
-              <span className="inline-flex min-h-12 items-center gap-2 rounded-lg bg-bg px-3 lg:min-h-0 lg:rounded-none lg:bg-transparent lg:px-0">
-                <Bath
-                  size={17}
-                  className="text-accent-alt"
-                  aria-hidden="true"
-                />
-                {property.bathrooms} bathrooms
-              </span>
-              {property.rentalMode === "SHORT_STAY" &&
-              property.maximumGuests ? (
-                <>
-                  <span className="hidden h-4 w-px bg-border lg:block" />
-                  <span className="inline-flex min-h-12 items-center gap-2 rounded-lg bg-bg px-3 lg:min-h-0 lg:rounded-none lg:bg-transparent lg:px-0">
-                    <Users
-                      size={17}
-                      className="text-accent-alt"
+                <p className="text-muted">
+                  {getRentalPeriodLabel(property.rentalMode)}
+                </p>
+                {property.availableUnitCount > 0 ? (
+                  <>
+                    <span
+                      className="h-1 w-1 rounded-full bg-border"
                       aria-hidden="true"
                     />
-                    Sleeps {property.maximumGuests}
-                  </span>
-                </>
-              ) : null}
-              {property.availableUnitCount > 1 ? (
-                <>
-                  <span className="hidden h-4 w-px bg-border lg:block" />
-                  <span className="inline-flex min-h-12 items-center rounded-lg bg-bg px-3 font-bold text-primary lg:min-h-0 lg:rounded-none lg:bg-transparent lg:px-0">
-                    {property.availableUnitCount} units available
-                  </span>
-                </>
-              ) : null}
-              {property.sqft ? (
-                <>
-                  <span className="hidden h-4 w-px bg-border lg:block" />
-                  <span className="inline-flex min-h-12 items-center gap-2 rounded-lg bg-bg px-3 lg:min-h-0 lg:rounded-none lg:bg-transparent lg:px-0">
-                    <Ruler
-                      size={17}
-                      className="text-accent-alt"
-                      aria-hidden="true"
-                    />
-                    {property.sqft.toLocaleString("en-NG")} sqft
-                  </span>
-                </>
-              ) : null}
+                    <p className="font-medium text-primary">
+                      {formatCount(
+                        property.availableUnitCount,
+                        "unit available",
+                        "units available",
+                      )}
+                    </p>
+                  </>
+                ) : null}
+              </div>
             </div>
 
-            <div className="my-6 border-t border-border" />
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                type="button"
+                onClick={() => void handleShare()}
+                className="inline-flex min-h-10 items-center gap-2 rounded-full border border-border bg-bg px-4 font-body text-sm font-bold text-primary transition-all duration-200 ease-in-out hover:border-primary/30 hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                <Share2 size={16} aria-hidden="true" />
+                Share
+              </button>
+              {/^\d+$/.test(property.id) ? (
+                <button
+                  type="button"
+                  onClick={() => void handleSaveToggle()}
+                  disabled={isSavedLoading || isSaving}
+                  aria-pressed={isSaved}
+                  aria-busy={isSaving}
+                  className="inline-flex min-h-10 items-center gap-2 rounded-full border border-border bg-bg px-4 font-body text-sm font-bold text-primary transition-all duration-200 ease-in-out hover:border-primary/30 hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-70"
+                >
+                  {isSavedLoading ? (
+                    <Loader2
+                      size={16}
+                      className="animate-spin"
+                      aria-hidden="true"
+                    />
+                  ) : (
+                    <AsyncButtonContent
+                      isPending={isSaving}
+                      pendingLabel={
+                        isSaved ? "Removing saved home…" : "Saving home…"
+                      }
+                    >
+                      <Heart
+                        size={16}
+                        fill={isSaved ? "currentColor" : "none"}
+                        aria-hidden="true"
+                      />
+                      {isSaved ? "Saved" : "Save"}
+                    </AsyncButtonContent>
+                  )}
+                </button>
+              ) : null}
+            </div>
+          </div>
 
-            <section>
-              <h2 className="font-display text-xl font-bold text-primary">
-                About this property
-              </h2>
-              <p className="mt-3 font-body text-base leading-relaxed text-muted">
-                {property.description}
-              </p>
-            </section>
+          <section aria-label="Property photos">
+            <div
+              className={`relative hidden gap-1 overflow-hidden rounded-2xl lg:grid ${getMosaicClass(
+                property.images.length,
+              )}`}
+            >
+              {visibleGalleryImages[0] ? (
+                <div
+                  className={`group relative min-h-0 overflow-hidden bg-surface-soft ${getOuterCornerClass(
+                    visibleGalleryImages.length,
+                    0,
+                    property.images.length,
+                  )}`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => openLightbox(visibleGalleryImages[0].index)}
+                    className="absolute inset-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
+                    aria-label={`Open ${property.title} photo 1`}
+                  >
+                    <Image
+                      src={visibleGalleryImages[0].src}
+                      alt={property.title}
+                      fill
+                      priority
+                      sizes="(min-width: 1024px) 60vw, 100vw"
+                      className="object-cover transition-all duration-300 ease-in-out group-hover:scale-[1.02]"
+                      style={{ objectFit: "cover" }}
+                    />
+                  </button>
+                </div>
+              ) : null}
 
-            <div className="my-6 border-t border-border" />
+              {sideGalleryImages.length > 0 ? (
+                <div
+                  className={`grid min-h-0 gap-1 ${getSideGridClass(property.images.length)}`}
+                >
+                {sideGalleryImages.map((image, sideIndex) => {
+                  const cellIndex = sideIndex + 1;
 
-            <section>
-              <h2 className="font-display text-xl font-bold text-primary">
-                What this place offers
-              </h2>
-              {property.amenities.length > 0 ? (
-                <div className="mt-4 grid gap-x-8 gap-y-2 sm:grid-cols-2 xl:grid-cols-3">
-                  {property.amenities.map((amenity) => {
-                    const Icon = getAmenityIcon(amenity);
-
-                    return (
-                      <div
-                        key={amenity}
-                        className="flex min-h-11 items-center gap-3 font-body text-sm text-primary"
+                  return (
+                      <button
+                        key={image.src}
+                        type="button"
+                        onClick={() => openLightbox(image.index)}
+                        className={`group relative min-h-0 overflow-hidden bg-surface-soft ${getOuterCornerClass(
+                          visibleGalleryImages.length,
+                          cellIndex,
+                          property.images.length,
+                        )} ${getSideCellClass(property.images.length, sideIndex)}`}
+                        aria-label={`Open ${property.title} photo ${image.index + 1}`}
                       >
-                        <Icon
-                          size={18}
-                          className="text-accent-alt"
-                          aria-hidden="true"
-                        />
-                        {amenity}
-                      </div>
+                        <Image
+                          src={image.src}
+                          alt={`${property.title} photo ${image.index + 1}`}
+                          fill
+                          sizes="(min-width: 1024px) 20vw, 50vw"
+                        className="object-cover transition-all duration-300 ease-in-out group-hover:scale-[1.02]"
+                        style={{ objectFit: "cover" }}
+                      />
+                    </button>
                     );
                   })}
                 </div>
-              ) : (
-                <p className="mt-3 font-body text-sm text-muted">
-                  Amenities have not been added to this listing yet.
-                </p>
-              )}
-            </section>
+              ) : null}
 
-            {isBookingOpen ? (
-              <BookingRequestDialog
-                hostName={property.host.name}
-                hostRole={hostRole}
-                maximumGuests={property.maximumGuests}
-                minimumNights={property.minimumNights}
-                onClose={() => setIsBookingOpen(false)}
-                open={isBookingOpen}
-                price={property.price}
-                propertyId={property.id}
-                propertyPublicId={property.publicId}
-                propertyTitle={property.title}
-                rentalMode={property.rentalMode}
-              />
-            ) : null}
+              <button
+                type="button"
+                onClick={() => openLightbox(0)}
+                className="absolute bottom-4 right-4 z-10 inline-flex min-h-11 items-center gap-2 rounded-full border border-white/70 bg-bg/95 px-4 font-body text-sm font-bold text-primary shadow-md backdrop-blur-sm transition-colors hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                <Images size={17} aria-hidden="true" />
+                View all{" "}
+                {formatCount(property.images.length, "photo", "photos")}
+              </button>
+            </div>
 
-            {hasTour ? (
-              <>
-                <div className="my-6 border-t border-border" />
-                <section id="virtual-tour" className="scroll-mt-24">
-                  <p className="font-accent text-xs font-bold uppercase tracking-[0.2em] text-accent-alt">
-                    See it for yourself
-                  </p>
-                  <h2 className="mt-2 font-display text-xl font-bold text-primary">
-                    Walk through this home
-                  </h2>
-                  <p className="mt-2 max-w-xl font-body text-sm leading-6 text-muted">
-                    Filmed at the property, so what you see is the home you
-                    would be renting.
-                  </p>
-                  <div className="mt-4 overflow-hidden rounded-2xl bg-surface-soft shadow-sm">
-                    {property.tour.videoUrl ? (
-                      <video
-                        src={property.tour.videoUrl}
-                        className="aspect-video w-full bg-primary object-cover"
-                        controls
-                      />
-                    ) : null}
-                    {!property.tour.videoUrl && property.tour.matterportUrl ? (
-                      <iframe
-                        src={property.tour.matterportUrl}
-                        title={`${property.title} virtual tour`}
-                        className="aspect-video w-full"
-                        allow="fullscreen; xr-spatial-tracking"
-                      />
-                    ) : null}
-                  </div>
-                </section>
-              </>
-            ) : null}
-
-            {!hasTour && property.publicId ? (
-              <>
-                <div className="my-6 border-t border-border" />
-                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                  <h2 className="font-display text-xl font-bold text-primary">
-                    Virtual tour
-                  </h2>
-                  <Link
-                    href={`/tours/${property.publicId}`}
-                    className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-primary/20 px-4 font-body text-sm font-bold text-primary transition-all duration-200 ease-in-out hover:border-accent hover:bg-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            <div className="lg:hidden">
+              <div className="group relative aspect-video w-full overflow-hidden rounded-2xl bg-surface-soft shadow-sm">
+                <button
+                  type="button"
+                  onClick={() => openLightbox(0)}
+                  className="absolute inset-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
+                  aria-label={`Open ${property.title} photo 1`}
+                >
+                  <Image
+                    src={property.images[0]}
+                    alt={property.title}
+                    fill
+                    priority
+                    sizes="100vw"
+                    className="object-cover transition-all duration-300 ease-in-out group-hover:scale-[1.02]"
+                    style={{ objectFit: "cover" }}
+                  />
+                </button>
+                <BackButton
+                  fallbackHref="/tenant/browse"
+                  roleFallbacks={{
+                    ADMIN: "/admin/dashboard",
+                    AGENT: "/agent/saved-listings",
+                    LANDLORD: "/landlord/saved-listings",
+                    TENANT: "/tenant/browse",
+                  }}
+                  aria-label="Go back"
+                  className="absolute left-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-primary text-white transition-all duration-200 ease-in-out hover:bg-black/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                >
+                  <ArrowLeft size={19} aria-hidden="true" />
+                </BackButton>
+                <div className="absolute right-4 top-4 z-10 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void handleShare()}
+                    aria-label="Share this property"
+                    className="flex h-11 w-11 items-center justify-center rounded-full border border-white/70 bg-bg/95 text-primary shadow-sm backdrop-blur-sm transition-colors hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                   >
-                    View full tour
-                  </Link>
-                </div>
-                <PropertyTourEmbed publicId={property.publicId} />
-              </>
-            ) : null}
-
-            <div className="my-6 border-t border-border" />
-
-            <section>
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <h2 className="font-display text-xl font-bold text-primary">
-                  Reviews
-                </h2>
-                {property.reviews.count > 0 ? (
-                  <p className="flex items-center gap-2 font-body text-sm font-bold text-primary">
-                    <Star
-                      size={17}
-                      className="text-accent-alt"
-                      fill="currentColor"
-                    />
-                    {property.reviews.averageRating.toFixed(1)} ·{" "}
-                    {property.reviews.count}{" "}
-                    {property.reviews.count === 1 ? "review" : "reviews"}
-                  </p>
-                ) : null}
-              </div>
-              {property.reviews.count > 0 ? (
-                <div className="mt-4 divide-y divide-border">
-                  {property.reviews.items.map((review) => (
-                    <article
-                      key={review.id}
-                      className="py-5 first:pt-0 last:pb-0"
+                    <Share2 size={18} aria-hidden="true" />
+                  </button>
+                  {/^[0-9]+$/.test(property.id) ? (
+                    <button
+                      type="button"
+                      onClick={() => void handleSaveToggle()}
+                      disabled={isSavedLoading || isSaving}
+                      aria-label={
+                        isSaving
+                          ? isSaved
+                            ? "Removing from saved homes"
+                            : "Saving this property"
+                          : isSaved
+                            ? "Remove from saved homes"
+                            : "Save this property"
+                      }
+                      aria-busy={isSaving}
+                      aria-pressed={isSaved}
+                      className="flex h-11 w-11 items-center justify-center rounded-full border border-white/70 bg-bg/95 text-primary shadow-sm backdrop-blur-sm transition-colors hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-70"
                     >
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div>
-                          <h3 className="font-body text-sm font-bold text-primary">
-                            {review.reviewerName}
-                          </h3>
-                          {review.createdAt ? (
-                            <p className="mt-1 font-body text-xs text-muted">
-                              {formatRelativeDate(review.createdAt)}
-                            </p>
-                          ) : null}
-                        </div>
-                        <p className="flex items-center gap-1 font-body text-sm font-bold text-primary">
-                          <Star
-                            size={15}
-                            className="text-accent-alt"
-                            fill="currentColor"
-                          />
-                          {review.rating.toFixed(1)}
-                        </p>
-                      </div>
-                      <p className="mt-3 font-body text-sm leading-6 text-muted">
-                        {review.comment}
-                      </p>
-                      {review.reply ? (
-                        <p className="mt-3 border-l-2 border-accent pl-3 font-body text-sm leading-6 text-muted">
-                          <span className="font-bold text-primary">
-                            Host reply:{" "}
-                          </span>
-                          {review.reply}
-                        </p>
-                      ) : null}
-                    </article>
+                      {isSavedLoading || isSaving ? (
+                        <Loader2
+                          size={18}
+                          className="animate-spin"
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        <Heart
+                          size={18}
+                          fill={isSaved ? "currentColor" : "none"}
+                          aria-hidden="true"
+                        />
+                      )}
+                    </button>
+                  ) : null}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => openLightbox(0)}
+                  className="absolute bottom-4 right-4 z-10 inline-flex min-h-11 items-center gap-2 rounded-full border border-white/70 bg-bg/95 px-4 font-body text-xs font-bold text-primary shadow-sm backdrop-blur-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                >
+                  <Images size={16} aria-hidden="true" />
+                  View all {property.images.length}
+                </button>
+              </div>
+
+              {mobileThumbnails.length > 0 ? (
+                <div className="mt-3 flex snap-x gap-2 overflow-x-auto pb-2">
+                {mobileThumbnails.map((image) => (
+                    <button
+                      key={image.src}
+                      type="button"
+                      onClick={() => openLightbox(image.index)}
+                      className="relative aspect-[4/3] min-w-28 snap-start overflow-hidden rounded-lg bg-surface-soft"
+                      aria-label={`Open ${property.title} photo ${image.index + 1}`}
+                    >
+                      <Image
+                        src={image.src}
+                        alt={`${property.title} thumbnail ${image.index + 1}`}
+                        fill
+                        sizes="112px"
+                      className="object-cover"
+                      style={{ objectFit: "cover" }}
+                    />
+                  </button>
                   ))}
                 </div>
-              ) : (
-                <p className="mt-3 font-body text-sm text-muted">
-                  No reviews yet.
-                </p>
-              )}
-            </section>
+              ) : null}
+            </div>
           </section>
 
-          <aside className="rounded-2xl border border-border/80 bg-[var(--color-bg)] p-6 shadow-[0_18px_55px_-34px_rgba(1,57,81,0.45)] lg:sticky lg:top-24">
-            <div className="hidden lg:block">
+          <OverlayPortal>
+            <AnimatePresence>
+              {lightboxIndex !== null ? (
+                <motion.div
+                  ref={lightboxRef}
+                  className="fixed inset-0 z-[110] flex items-center justify-center bg-black px-4 py-6"
+                  initial={reduceMotion ? false : { opacity: 0 }}
+                  animate={reduceMotion ? undefined : { opacity: 1 }}
+                  exit={reduceMotion ? undefined : { opacity: 0 }}
+                  role="dialog"
+                  aria-modal="true"
+                  aria-label="Property photo gallery"
+                  onTouchStart={(event) =>
+                    setTouchStartX(event.touches[0].clientX)
+                  }
+                  onTouchEnd={handleLightboxTouchEnd}
+                >
+                  <button
+                    type="button"
+                    onClick={closeLightbox}
+                    aria-label="Close photo gallery"
+                    className="absolute right-4 top-4 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-primary text-white transition-all duration-200 ease-in-out hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  >
+                    <X size={21} aria-hidden="true" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={showPreviousImage}
+                    aria-label="Previous photo"
+                    className="absolute left-4 top-1/2 z-10 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-primary text-white transition-all duration-200 ease-in-out hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent sm:flex"
+                  >
+                    <ArrowLeft size={22} aria-hidden="true" />
+                  </button>
+
+                  <motion.div
+                    key={lightboxIndex}
+                    className="relative aspect-video max-h-[82vh] w-full max-w-6xl"
+                    initial={
+                      reduceMotion ? false : { opacity: 0.7, scale: 0.98 }
+                    }
+                    animate={
+                      reduceMotion ? undefined : { opacity: 1, scale: 1 }
+                    }
+                    exit={
+                      reduceMotion ? undefined : { opacity: 0.7, scale: 0.98 }
+                    }
+                    transition={{ duration: 0.18, ease: "easeOut" }}
+                  >
+                    <Image
+                      src={property.images[lightboxIndex]}
+                      alt={`${property.title} photo ${lightboxIndex + 1}`}
+                      fill
+                      sizes="100vw"
+                      className="object-contain"
+                      style={{ objectFit: "contain" }}
+                    />
+                  </motion.div>
+
+                  <button
+                    type="button"
+                    onClick={showNextImage}
+                    aria-label="Next photo"
+                    className="absolute right-4 top-1/2 z-10 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-primary text-white transition-all duration-200 ease-in-out hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent sm:flex"
+                  >
+                    <ArrowRight size={22} aria-hidden="true" />
+                  </button>
+
+                  <div className="absolute bottom-5 left-1/2 -translate-x-1/2 rounded-full bg-primary px-4 py-2 font-body text-sm font-bold text-white">
+                    {lightboxIndex + 1} / {property.images.length}
+                  </div>
+                </motion.div>
+              ) : null}
+            </AnimatePresence>
+          </OverlayPortal>
+
+          <div className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1fr)_23rem] lg:items-start lg:gap-14">
+            <section className="min-w-0">
+              <div className="lg:hidden">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="font-display text-3xl font-bold leading-tight text-primary">
+                    {property.title}
+                  </h1>
+                  {property.verified ? <VerifiedBadge size="sm" /> : null}
+                </div>
+                <p className="mt-1 flex items-center gap-2 font-body text-sm text-muted">
+                  <MapPin
+                    size={16}
+                    className="text-accent-alt"
+                    aria-hidden="true"
+                  />
+                  {property.location.area}, {property.location.city}
+                </p>
+                <div className="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                  <p className="font-display text-2xl font-bold text-primary">
+                    <PropertyPrice
+                      value={property.price}
+                      listingType={property.status}
+                      rentalMode={property.rentalMode}
+                    />
+                  </p>
+                  <p className="font-body text-sm text-muted">
+                    {getRentalPeriodLabel(property.rentalMode)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 flex flex-wrap items-center gap-y-3 border-y border-border/70 py-4 font-body text-sm text-muted lg:mt-0">
+                <span className="inline-flex min-h-11 items-center gap-2 pr-4">
+                  <BedDouble
+                    size={17}
+                    className="text-accent-alt"
+                    aria-hidden="true"
+                  />
+                  {formatCount(property.bedrooms, "bedroom", "bedrooms")}
+                </span>
+                <span className="h-5 w-px bg-border" aria-hidden="true" />
+                <span className="inline-flex min-h-11 items-center gap-2 px-4">
+                  <Bath
+                    size={17}
+                    className="text-accent-alt"
+                    aria-hidden="true"
+                  />
+                  {formatCount(property.bathrooms, "bathroom", "bathrooms")}
+                </span>
+                {property.rentalMode === "SHORT_STAY" &&
+                property.maximumGuests ? (
+                  <>
+                    <span className="h-5 w-px bg-border" aria-hidden="true" />
+                    <span className="inline-flex min-h-11 items-center gap-2 px-4">
+                      <Users
+                        size={17}
+                        className="text-accent-alt"
+                        aria-hidden="true"
+                      />
+                      Sleeps {property.maximumGuests}
+                    </span>
+                  </>
+                ) : null}
+                {property.availableUnitCount > 0 ? (
+                  <>
+                    <span className="h-5 w-px bg-border" aria-hidden="true" />
+                    <span className="inline-flex min-h-11 items-center px-4 font-bold text-primary">
+                      {formatCount(
+                        property.availableUnitCount,
+                        "unit available",
+                        "units available",
+                      )}
+                    </span>
+                  </>
+                ) : null}
+                {property.sqft ? (
+                  <>
+                    <span className="h-5 w-px bg-border" aria-hidden="true" />
+                    <span className="inline-flex min-h-11 items-center gap-2 px-4">
+                      <Ruler
+                        size={17}
+                        className="text-accent-alt"
+                        aria-hidden="true"
+                      />
+                      {property.sqft.toLocaleString("en-NG")} sqft
+                    </span>
+                  </>
+                ) : null}
+              </div>
+
+              <div className="my-6 border-t border-border" />
+
+              <section>
+                <h2 className="font-display text-xl font-bold text-primary">
+                  About this property
+                </h2>
+                <p className="mt-3 font-body text-base leading-relaxed text-muted">
+                  {property.description}
+                </p>
+              </section>
+
+              <div className="my-6 border-t border-border" />
+
+              <section>
+                <h2 className="font-display text-xl font-bold text-primary">
+                  What this place offers
+                </h2>
+                {property.amenities.length > 0 ? (
+                  <div className="mt-4 grid gap-x-8 gap-y-2 sm:grid-cols-2 xl:grid-cols-3">
+                    {property.amenities.map((amenity) => {
+                      const Icon = getAmenityIcon(amenity);
+
+                      return (
+                        <div
+                          key={amenity}
+                          className="flex min-h-11 items-center gap-3 font-body text-sm text-primary"
+                        >
+                          <Icon
+                            size={18}
+                            className="text-accent-alt"
+                            aria-hidden="true"
+                          />
+                          {amenity}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="mt-3 font-body text-sm text-muted">
+                    Amenities have not been added to this listing yet.
+                  </p>
+                )}
+              </section>
+
+              {isBookingOpen ? (
+                <BookingRequestDialog
+                  hostName={property.host.name}
+                  hostRole={hostRole}
+                  maximumGuests={property.maximumGuests}
+                  minimumNights={property.minimumNights}
+                  onClose={() => setIsBookingOpen(false)}
+                  open={isBookingOpen}
+                  price={property.price}
+                  propertyId={property.id}
+                  propertyPublicId={property.publicId}
+                  propertyTitle={property.title}
+                  rentalMode={property.rentalMode}
+                />
+              ) : null}
+
+              {hasTour ? (
+                <>
+                  <div className="my-6 border-t border-border" />
+                  <section id="virtual-tour" className="scroll-mt-24">
+                    <p className="font-accent text-xs font-bold uppercase tracking-[0.2em] text-accent-alt">
+                      See it for yourself
+                    </p>
+                    <h2 className="mt-2 font-display text-xl font-bold text-primary">
+                      Walk through this home
+                    </h2>
+                    <p className="mt-2 max-w-xl font-body text-sm leading-6 text-muted">
+                      Filmed at the property, so what you see is the home you
+                      would be renting.
+                    </p>
+                    <div className="mt-4 overflow-hidden rounded-2xl bg-surface-soft shadow-sm">
+                      {property.tour.videoUrl ? (
+                        <video
+                          src={property.tour.videoUrl}
+                          className="aspect-video w-full bg-primary object-cover"
+                          controls
+                        />
+                      ) : null}
+                      {!property.tour.videoUrl &&
+                      property.tour.matterportUrl ? (
+                        <iframe
+                          src={property.tour.matterportUrl}
+                          title={`${property.title} virtual tour`}
+                          className="aspect-video w-full"
+                          allow="fullscreen; xr-spatial-tracking"
+                        />
+                      ) : null}
+                    </div>
+                  </section>
+                </>
+              ) : null}
+
+              {!hasTour && property.publicId ? (
+                <>
+                  <div className="my-6 border-t border-border" />
+                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                    <h2 className="font-display text-xl font-bold text-primary">
+                      Virtual tour
+                    </h2>
+                    <Link
+                      href={`/tours/${property.publicId}`}
+                      className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-primary/20 px-4 font-body text-sm font-bold text-primary transition-all duration-200 ease-in-out hover:border-accent hover:bg-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    >
+                      View full tour
+                    </Link>
+                  </div>
+                  <PropertyTourEmbed publicId={property.publicId} />
+                </>
+              ) : null}
+
+              <div className="my-6 border-t border-border" />
+
+              <section>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <h2 className="font-display text-xl font-bold text-primary">
+                    Reviews
+                  </h2>
+                  {property.reviews.count > 0 ? (
+                    <p className="flex items-center gap-2 font-body text-sm font-bold text-primary">
+                      <Star
+                        size={17}
+                        className="text-accent-alt"
+                        fill="currentColor"
+                      />
+                      {property.reviews.averageRating.toFixed(1)} ·{" "}
+                      {property.reviews.count}{" "}
+                      {property.reviews.count === 1 ? "review" : "reviews"}
+                    </p>
+                  ) : null}
+                </div>
+                {property.reviews.count > 0 ? (
+                  <div className="mt-4 divide-y divide-border">
+                    {property.reviews.items.map((review) => (
+                      <article
+                        key={review.id}
+                        className="py-5 first:pt-0 last:pb-0"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div>
+                            <h3 className="font-body text-sm font-bold text-primary">
+                              {review.reviewerName}
+                            </h3>
+                            {review.createdAt ? (
+                              <p className="mt-1 font-body text-xs text-muted">
+                                {formatRelativeDate(review.createdAt)}
+                              </p>
+                            ) : null}
+                          </div>
+                          <p className="flex items-center gap-1 font-body text-sm font-bold text-primary">
+                            <Star
+                              size={15}
+                              className="text-accent-alt"
+                              fill="currentColor"
+                            />
+                            {review.rating.toFixed(1)}
+                          </p>
+                        </div>
+                        <p className="mt-3 font-body text-sm leading-6 text-muted">
+                          {review.comment}
+                        </p>
+                        {review.reply ? (
+                          <p className="mt-3 border-l-2 border-accent pl-3 font-body text-sm leading-6 text-muted">
+                            <span className="font-bold text-primary">
+                              Host reply:{" "}
+                            </span>
+                            {review.reply}
+                          </p>
+                        ) : null}
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-3 font-body text-sm text-muted">
+                    No reviews yet.
+                  </p>
+                )}
+              </section>
+            </section>
+
+            <aside className="rounded-2xl border border-border/80 bg-[var(--color-bg)] p-6 shadow-[0_18px_55px_-34px_rgba(1,57,81,0.45)] lg:sticky lg:top-24">
+              <div className="hidden lg:block">
+                <p className="font-body text-xs font-bold uppercase tracking-[0.16em] text-muted">
+                  {getRentalPeriodLabel(property.rentalMode)}
+                </p>
+                <p className="mt-2 font-display text-3xl font-bold text-primary">
+                  <PropertyPrice
+                    value={property.price}
+                    listingType={property.status}
+                    rentalMode={property.rentalMode}
+                  />
+                </p>
+                {property.availableUnitCount > 0 ? (
+                  <p className="mt-3 font-body text-xs font-bold text-primary">
+                    {formatCount(
+                      property.availableUnitCount,
+                      "unit available",
+                      "units available",
+                    )}
+                  </p>
+                ) : null}
+                {property.rentalMode === "SHORT_STAY" &&
+                property.minimumNights ? (
+                  <p className="mt-2 font-body text-xs text-muted">
+                    Minimum{" "}
+                    {formatCount(property.minimumNights, "night", "nights")}
+                  </p>
+                ) : null}
+                <TenantVerificationGate
+                  intent={property.status === "FOR_RENT" ? "booking" : "offer"}
+                  onVerifiedAction={openPrimaryFlow}
+                >
+                  {(requestAction) => (
+                    <button
+                      type="button"
+                      onClick={requestAction}
+                      className="mt-6 inline-flex min-h-14 w-full items-center justify-center rounded-full bg-accent px-6 py-4 font-body text-sm font-bold text-primary transition-all duration-200 ease-in-out hover:bg-primary hover:text-white hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    >
+                      {primaryCta}
+                    </button>
+                  )}
+                </TenantVerificationGate>
+                <p className="mt-3 text-center font-body text-xs text-muted">
+                  You will not be charged yet.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setViewingDialogState("open")}
+                className="inline-flex min-h-12 w-full items-center justify-center rounded-full border border-border bg-bg px-5 font-body text-sm font-bold text-primary transition-all duration-200 ease-in-out hover:border-primary/30 hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent lg:mt-3"
+              >
+                Request a viewing
+              </button>
+
+              <div className="my-6 border-t border-border" />
+
               <p className="font-body text-xs font-bold uppercase tracking-[0.16em] text-muted">
-                {property.rentalMode === "SHORT_STAY"
-                  ? "Price per night"
-                  : property.rentalMode === "MONTHLY"
-                    ? "Monthly rent"
-                    : "Annual rent"}
+                Listed by
               </p>
-              <p className="mt-2 font-display text-3xl font-bold text-primary">
+              <div className="mt-3 flex items-center gap-3">
+                {property.host.avatarUrl ? (
+                  <Image
+                    src={property.host.avatarUrl}
+                    alt={property.host.name}
+                    width={48}
+                    height={48}
+                    className="h-12 w-12 rounded-full object-cover"
+                  />
+                ) : (
+                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary font-body text-sm font-bold text-white">
+                    {getInitials(property.host.name)}
+                  </span>
+                )}
+                <div className="min-w-0 flex-1">
+                  <Link
+                    href={hostPath(property.host)}
+                    className="block truncate font-body text-sm font-bold text-primary transition-all duration-200 ease-in-out hover:text-accent-alt focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  >
+                    {property.host.name}
+                  </Link>
+                  <p className="mt-1 font-body text-xs text-muted">
+                    {hostRole}
+                  </p>
+                </div>
+                {property.host.verified ? <VerifiedBadge size="sm" /> : null}
+              </div>
+
+              <Link
+                href={hostPath(property.host)}
+                className="mt-4 inline-flex items-center gap-2 font-body text-sm font-medium text-muted transition-all duration-200 ease-in-out hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                See all homes from this {hostRole.toLowerCase()}
+                <ArrowUpRight size={15} />
+              </Link>
+
+              <MessageHostButton
+                hostId={property.host.id}
+                hostName={property.host.name}
+                hostRole={property.host.role}
+                propertyId={property.id}
+                propertyName={property.title}
+              />
+
+              <button
+                type="button"
+                onClick={() => setIsReporting(true)}
+                className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full px-4 py-2 font-body text-xs font-bold text-muted underline-offset-4 hover:text-red-700 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                Report this listing
+              </button>
+              <ReportDialog
+                open={isReporting}
+                onClose={() => setIsReporting(false)}
+                target={{
+                  type: "LISTING",
+                  listingId: property.publicId ?? property.id,
+                }}
+              />
+
+              {viewingDialogState !== "idle" ? (
+                <ViewingRequestDialog
+                  allowVirtual={hasTour}
+                  onClose={() => setViewingDialogState("closed")}
+                  open={viewingDialogState === "open"}
+                  propertyId={property.id}
+                  propertyTitle={property.title}
+                />
+              ) : null}
+            </aside>
+          </div>
+        </div>
+
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-bg/95 px-4 pt-3 shadow-[0_-12px_30px_-24px_rgba(1,57,81,0.55)] backdrop-blur-md lg:hidden">
+          <div
+            className="mx-auto flex max-w-7xl items-center gap-3"
+            style={{
+              paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))",
+            }}
+          >
+            <div className="min-w-0 flex-1">
+              <p className="font-body text-[11px] font-bold uppercase tracking-[0.12em] text-muted">
+                {getRentalPeriodLabel(property.rentalMode)}
+              </p>
+              <p className="truncate font-display text-lg font-bold text-primary">
                 <PropertyPrice
                   value={property.price}
                   listingType={property.status}
                   rentalMode={property.rentalMode}
                 />
               </p>
-              <TenantVerificationGate
-                intent={property.status === "FOR_RENT" ? "booking" : "offer"}
-                onVerifiedAction={openPrimaryFlow}
-              >
-                {(requestAction) => (
-                  <button
-                    type="button"
-                    onClick={requestAction}
-                    className="mt-6 inline-flex min-h-14 w-full items-center justify-center rounded-full bg-accent px-6 py-4 font-body text-sm font-bold text-primary transition-all duration-200 ease-in-out hover:bg-primary hover:text-white hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                  >
-                    {primaryCta}
-                  </button>
-                )}
-              </TenantVerificationGate>
             </div>
-
-            <button
-              type="button"
-              onClick={() => setViewingDialogState("open")}
-              className="inline-flex min-h-12 w-full items-center justify-center rounded-full border border-border bg-bg px-5 font-body text-sm font-bold text-primary transition-all duration-200 ease-in-out hover:border-primary/30 hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent lg:mt-3"
+            <TenantVerificationGate
+              intent={property.status === "FOR_RENT" ? "booking" : "offer"}
+              onVerifiedAction={openPrimaryFlow}
             >
-              Request a viewing
-            </button>
-
-            <p className="mt-4 text-center font-body text-xs text-muted">
-              You will not be charged yet.
-            </p>
-
-            <div className="my-6 border-t border-border" />
-
-            <p className="font-body text-xs font-bold uppercase tracking-[0.16em] text-muted">
-              Listed by
-            </p>
-            <div className="mt-3 flex items-center gap-3">
-              {property.host.avatarUrl ? (
-                <Image
-                  src={property.host.avatarUrl}
-                  alt={property.host.name}
-                  width={48}
-                  height={48}
-                  className="h-12 w-12 rounded-full object-cover"
-                />
-              ) : (
-                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary font-body text-sm font-bold text-white">
-                  {getInitials(property.host.name)}
-                </span>
-              )}
-              <div className="min-w-0 flex-1">
-                <Link
-                  href={hostPath(property.host)}
-                  className="block truncate font-body text-sm font-bold text-primary transition-all duration-200 ease-in-out hover:text-accent-alt focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              {(requestAction) => (
+                <button
+                  type="button"
+                  onClick={requestAction}
+                  className="inline-flex min-h-12 shrink-0 items-center justify-center rounded-full bg-accent px-5 font-body text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 >
-                  {property.host.name}
-                </Link>
-                <p className="mt-1 font-body text-xs text-muted">{hostRole}</p>
-              </div>
-              {property.host.verified ? <VerifiedBadge size="sm" /> : null}
-            </div>
-
-            <Link
-              href={hostPath(property.host)}
-              className="mt-4 inline-flex items-center gap-2 font-body text-sm font-medium text-muted transition-all duration-200 ease-in-out hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            >
-              See all homes from this {hostRole.toLowerCase()}
-              <ArrowUpRight size={15} />
-            </Link>
-
-            <MessageHostButton
-              hostId={property.host.id}
-              hostName={property.host.name}
-              hostRole={property.host.role}
-              propertyId={property.id}
-              propertyName={property.title}
-            />
-
-            <button
-              type="button"
-              onClick={() => setIsReporting(true)}
-              className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full px-4 py-2 font-body text-xs font-bold text-muted underline-offset-4 hover:text-red-700 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            >
-              Report this listing
-            </button>
-            <ReportDialog
-              open={isReporting}
-              onClose={() => setIsReporting(false)}
-              target={{
-                type: "LISTING",
-                listingId: property.publicId ?? property.id,
-              }}
-            />
-
-            {viewingDialogState !== "idle" ? (
-              <ViewingRequestDialog
-                allowVirtual={hasTour}
-                onClose={() => setViewingDialogState("closed")}
-                open={viewingDialogState === "open"}
-                propertyId={property.id}
-                propertyTitle={property.title}
-              />
-            ) : null}
-          </aside>
-        </div>
-      </div>
-
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-bg/95 px-4 pt-3 shadow-[0_-12px_30px_-24px_rgba(1,57,81,0.55)] backdrop-blur-md lg:hidden">
-        <div
-          className="mx-auto flex max-w-7xl items-center gap-3"
-          style={{
-            paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))",
-          }}
-        >
-          <div className="min-w-0 flex-1">
-            <p className="font-body text-[11px] font-bold uppercase tracking-[0.12em] text-muted">
-              {property.rentalMode === "SHORT_STAY"
-                ? "Price per night"
-                : property.rentalMode === "MONTHLY"
-                  ? "Monthly rent"
-                  : "Annual rent"}
-            </p>
-            <p className="truncate font-display text-lg font-bold text-primary">
-              <PropertyPrice
-                value={property.price}
-                listingType={property.status}
-                rentalMode={property.rentalMode}
-              />
-            </p>
+                  {primaryCta}
+                </button>
+              )}
+            </TenantVerificationGate>
           </div>
-          <TenantVerificationGate
-            intent={property.status === "FOR_RENT" ? "booking" : "offer"}
-            onVerifiedAction={openPrimaryFlow}
-          >
-            {(requestAction) => (
-              <button
-                type="button"
-                onClick={requestAction}
-                className="inline-flex min-h-12 shrink-0 items-center justify-center rounded-full bg-accent px-5 font-body text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-              >
-                {primaryCta}
-              </button>
-            )}
-          </TenantVerificationGate>
         </div>
-      </div>
-    </main>
+      </main>
+    </>
   );
 }

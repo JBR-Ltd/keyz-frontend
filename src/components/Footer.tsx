@@ -78,7 +78,30 @@ export default function Footer() {
         </div>
 
         <div className="grid gap-6 pt-6 text-sm text-white/50 sm:grid-cols-[1fr_auto] sm:items-center">
-          <p>© 2026 Rello. All rights reserved.</p>
+          <div>
+            <p>© 2026 Rello. All rights reserved.</p>
+            <p className="mt-1 text-xs">
+              Location information uses{" "}
+              <a
+                href="https://www.geonames.org/"
+                target="_blank"
+                rel="noreferrer"
+                className="underline-offset-2 transition-colors hover:text-accent hover:underline focus:outline-none focus-visible:text-accent"
+              >
+                GeoNames
+              </a>{" "}
+              under{" "}
+              <a
+                href="https://creativecommons.org/licenses/by/4.0/"
+                target="_blank"
+                rel="noreferrer"
+                className="underline-offset-2 transition-colors hover:text-accent hover:underline focus:outline-none focus-visible:text-accent"
+              >
+                CC BY 4.0
+              </a>
+              .
+            </p>
+          </div>
 
           <div className="flex items-center gap-2 sm:justify-end">
             {SOCIALS.map(({ label, href, icon }) => (

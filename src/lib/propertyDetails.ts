@@ -163,14 +163,16 @@ export async function getProperties(
 export interface InterpretedPropertyQueryResult extends PropertyQueryResult {
   fallback: boolean;
   filters: SearchFilters | null;
+  strategy: "KEYWORD" | "INTERPRETED";
 }
 
 export async function interpretProperties(
   query: string,
   page = 0,
   size = 12,
+  search?: ListingSearch,
 ): Promise<InterpretedPropertyQueryResult> {
-  const result = await interpretPublicProperties(query, page, size);
+  const result = await interpretPublicProperties(query, page, size, search);
 
   return {
     data: result.data
@@ -178,6 +180,7 @@ export async function interpretProperties(
       .map(backendPropertyToPropertyDetail),
     fallback: result.fallback,
     filters: result.filters,
+    strategy: result.strategy,
     hasNext: result.hasNext,
     message: result.message,
     totalItems: result.totalItems,

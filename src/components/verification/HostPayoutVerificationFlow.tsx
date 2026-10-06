@@ -42,7 +42,7 @@ export default function HostPayoutVerificationFlow({
   const router = useRouter();
   const searchParams = useSearchParams();
   const reduceMotion = useReducedMotion();
-  const centerHref = `/${role}/verify`;
+  const paymentsHref = `/${role}/settings?section=payments`;
   const initialMode: PayoutScreen =
     searchParams.get("mode") === "setup" ? "setup" : "overview";
   const [screen, setScreen] = useState<PayoutScreen>("loading");
@@ -94,7 +94,7 @@ export default function HostPayoutVerificationFlow({
   }, []);
 
   const exitFlow = (): void => {
-    router.push(centerHref);
+    router.push(paymentsHref);
   };
 
   const handleAccountNumberChange = (
@@ -394,7 +394,7 @@ export default function HostPayoutVerificationFlow({
           onClick={exitFlow}
           className="mt-10 rounded-full bg-accent px-10 py-4 font-body text-sm font-medium text-primary transition-all duration-200 ease-in-out hover:scale-[1.02] hover:bg-primary hover:text-white hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         >
-          Back to Verification Center
+          Back to Payments
         </button>
       </motion.div>
     </main>

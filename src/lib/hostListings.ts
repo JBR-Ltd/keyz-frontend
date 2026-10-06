@@ -654,13 +654,17 @@ export interface SearchFilters {
   minBedrooms: number | null;
   minPrice: number | null;
   minSquareFootage: number | null;
-  rentalMode: RentalMode;
+  rentalMode: RentalMode | null;
+  stayType: StayType | null;
 }
+
+export type SearchStrategy = "KEYWORD" | "INTERPRETED";
 
 export interface InterpretedPropertiesResult extends PublicPropertiesResult {
   /** True when the query could not be read and these are plain keyword matches. */
   fallback: boolean;
   filters: SearchFilters | null;
+  strategy: SearchStrategy;
 }
 
 function isSearchFilters(value: unknown): value is SearchFilters {
@@ -668,14 +672,21 @@ function isSearchFilters(value: unknown): value is SearchFilters {
     value !== null &&
     typeof value === "object" &&
     "rentalMode" in value &&
-    typeof value.rentalMode === "string"
+    (value.rentalMode === null || typeof value.rentalMode === "string") &&
+    "stayType" in value &&
+    (value.stayType === null || typeof value.stayType === "string")
   );
+}
+
+function isSearchStrategy(value: unknown): value is SearchStrategy {
+  return value === "KEYWORD" || value === "INTERPRETED";
 }
 
 export async function interpretPublicProperties(
   query: string,
   page = 0,
   size = 12,
+  search?: ListingSearch,
 ): Promise<InterpretedPropertiesResult> {
   try {
     const response = await apiRequest(
@@ -683,7 +694,15 @@ export async function interpretPublicProperties(
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: query.trim() }),
+        body: JSON.stringify({
+          query: query.trim(),
+          stayType: search?.stayType,
+          rentalMode: search?.rentalMode,
+          minPrice: search?.minPrice,
+          maxPrice: search?.maxPrice,
+          minBedrooms: search?.minBedrooms,
+          sort: search?.sort,
+        }),
       },
     );
     const envelope = await parseApiResponse(response);
@@ -704,11 +723,16 @@ export async function interpretPublicProperties(
             amenities: envelope.data.filters.amenities ?? [],
           }
         : null;
+    const strategy =
+      "strategy" in envelope.data && isSearchStrategy(envelope.data.strategy)
+        ? envelope.data.strategy
+        : "KEYWORD";
 
     return {
       data: envelope.data.items,
       fallback,
       filters,
+      strategy,
       hasNext: envelope.data.hasNext,
       totalItems: envelope.data.totalItems,
       unavailable: false,
@@ -718,6 +742,7 @@ export async function interpretPublicProperties(
       data: [],
       fallback: false,
       filters: null,
+      strategy: "KEYWORD",
       hasNext: false,
       message:
         error instanceof Error ? error.message : "The search could not be run.",
@@ -784,8 +809,7 @@ export async function getPropertyPortfolio(): Promise<
 
   try {
     const response = await apiRequest("/api/properties/portfolio", {
-      headers: {
-      },
+      headers: {},
     });
     const envelope = await parseApiResponse(response);
 

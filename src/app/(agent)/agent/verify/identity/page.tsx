@@ -1,10 +1,10 @@
 import { Suspense } from "react";
-import HostIdentityVerificationFlow from "@/components/verification/HostIdentityVerificationFlow";
+import IdentityVerificationFlow from "@/components/verification/IdentityVerificationFlow";
 
 export default function AgentIdentityVerificationPage() {
   return (
     <Suspense fallback={null}>
-      <HostIdentityVerificationFlow role="agent" />
+      <IdentityVerificationFlow role="agent" />
     </Suspense>
   );
 }

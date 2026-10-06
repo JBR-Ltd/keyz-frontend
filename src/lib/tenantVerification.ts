@@ -11,7 +11,6 @@ export type VerificationStepStatus =
 export interface TenantVerificationState {
   nin: VerificationStepStatus;
   bvn: VerificationStepStatus;
-  selfie: VerificationStepStatus;
 }
 
 export interface TenantVerificationSnapshot {
@@ -19,12 +18,9 @@ export interface TenantVerificationSnapshot {
   verifiedAt: string | null;
 }
 
-export type TenantVerificationStep = keyof TenantVerificationState;
-
 const DEFAULT_TENANT_VERIFICATION_STATE: TenantVerificationState = {
   nin: "not_started",
   bvn: "not_started",
-  selfie: "not_started",
 };
 
 const DEFAULT_TENANT_VERIFICATION_SNAPSHOT: TenantVerificationSnapshot = {
@@ -45,33 +41,14 @@ function subscribeToTenantVerification(callback: () => void): () => void {
 }
 
 export function isTenantVerified(state: TenantVerificationState): boolean {
-  return (
-    state.nin === "verified" &&
-    state.bvn === "verified" &&
-    state.selfie === "verified"
-  );
+  return state.nin === "verified" && state.bvn === "verified";
 }
 
 export function countVerifiedTenantSteps(
   state: TenantVerificationState,
 ): number {
-  return [state.nin, state.bvn, state.selfie].filter(
-    (status) => status === "verified",
-  ).length;
-}
-
-export function getFirstIncompleteTenantVerificationStep(
-  state: TenantVerificationState,
-): TenantVerificationStep {
-  if (state.nin !== "verified") {
-    return "nin";
-  }
-
-  if (state.bvn !== "verified") {
-    return "bvn";
-  }
-
-  return "selfie";
+  return [state.nin, state.bvn].filter((status) => status === "verified")
+    .length;
 }
 
 export function getTenantVerificationSnapshot(): TenantVerificationSnapshot {
@@ -95,18 +72,6 @@ export function saveTenantVerificationState(
   emitTenantVerificationChange();
 
   return cachedSnapshot;
-}
-
-export function saveTenantVerificationStep(
-  step: TenantVerificationStep,
-  status: VerificationStepStatus,
-): TenantVerificationSnapshot {
-  const current = getTenantVerificationSnapshot();
-
-  return saveTenantVerificationState({
-    ...current.state,
-    [step]: status,
-  });
 }
 
 export function useTenantVerificationSnapshot(): TenantVerificationSnapshot {

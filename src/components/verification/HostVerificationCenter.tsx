@@ -2,106 +2,100 @@
 
 import {
   AlertCircle,
-  Banknote,
-  Clock,
+  ArrowRight,
+  Building2,
+  CheckCircle2,
+  Clock3,
   FileText,
-  Home,
-  Lock,
+  IdCard,
+  Landmark,
+  LockKeyhole,
+  ScanFace,
   ShieldCheck,
 } from "lucide-react";
 import Link from "next/link";
-import { ReactElement, useCallback, useEffect, useState } from "react";
+import { type ReactElement, useCallback, useEffect, useState } from "react";
 import VerifiedBadge from "@/components/ui/VerifiedBadge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  getBankName,
   getHostVerification,
-  maskAccountNumber,
-  type HostCheckStatus,
   type HostVerificationRole,
   type HostVerificationSnapshot,
 } from "@/lib/hostVerification";
-import { cn } from "@/lib/utils";
 
 interface HostVerificationCenterProps {
   role: HostVerificationRole;
 }
 
-interface StatusCardProps {
-  actionHref?: string;
-  actionLabel?: string;
-  children: ReactElement;
+interface Requirement {
+  description: string;
   icon: typeof ShieldCheck;
-  locked?: boolean;
   title: string;
 }
 
-const CHECK_LABELS: Record<string, string> = {
-  NIN: "NIN",
-  BVN: "BVN",
-  SELFIE: "Selfie",
-};
+const LANDLORD_REQUIREMENTS: Requirement[] = [
+  {
+    description: "Your 11 digit National Identification Number",
+    icon: IdCard,
+    title: "NIN",
+  },
+  {
+    description: "Your 11 digit Bank Verification Number",
+    icon: Landmark,
+    title: "BVN",
+  },
+  {
+    description: "A clear, current photo of your face",
+    icon: ScanFace,
+    title: "Live selfie",
+  },
+];
 
-function StatusCard({
-  actionHref,
-  actionLabel,
-  children,
-  icon: Icon,
-  locked = false,
-  title,
-}: StatusCardProps): ReactElement {
-  const hasAction = Boolean(actionHref && actionLabel);
+const AGENT_REQUIREMENTS: Requirement[] = [
+  ...LANDLORD_REQUIREMENTS,
+  {
+    description: "Your CAC certificate or equivalent ownership record",
+    icon: Building2,
+    title: "Business registration",
+  },
+  {
+    description: "A recent utility bill, bank statement, or address document",
+    icon: FileText,
+    title: "Proof of address",
+  },
+];
 
+function PreparationSkeleton(): ReactElement {
   return (
-    <article
-      className={cn(
-        "rounded-xl border border-primary/10 bg-[var(--color-bg)] p-6 shadow-sm transition-all duration-200 ease-in-out",
-        hasAction ? "hover:-translate-y-1 hover:shadow-md" : "",
-        locked ? "opacity-75" : "",
-      )}
+    <main
+      className="min-h-screen bg-surface-soft px-5 py-12 sm:px-8 lg:px-10 lg:py-16"
+      role="status"
+      aria-label="Loading identity verification"
     >
-      <div className="flex items-start justify-between gap-4">
-        <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
-          <Icon size={24} strokeWidth={1.9} />
-        </span>
-        {locked ? <Lock className="h-5 w-5 text-muted" /> : null}
+      <div className="mx-auto max-w-3xl">
+        <Skeleton className="h-4 w-40" />
+        <Skeleton className="mt-6 h-12 w-4/5 max-w-xl" />
+        <Skeleton className="mt-4 h-5 w-full max-w-2xl" />
+        <div className="mt-12 border-y border-border">
+          {Array.from({ length: 3 }, (_, index) => (
+            <div
+              key={`identity-requirement-${index + 1}`}
+              className="flex items-center gap-4 border-b border-border py-5 last:border-b-0"
+              aria-hidden="true"
+            >
+              <Skeleton className="h-11 w-11 shrink-0 rounded-full" />
+              <div className="flex-1">
+                <Skeleton className="h-5 w-28" />
+                <Skeleton className="mt-2 h-4 w-3/4" />
+              </div>
+            </div>
+          ))}
+        </div>
+        <Skeleton className="mt-8 h-12 w-48 rounded-full" />
       </div>
-      <h2 className="mt-5 font-display text-xl font-bold text-primary">
-        {title}
-      </h2>
-      <div className="mt-4 min-h-24">{children}</div>
-      {hasAction ? (
-        <Link
-          href={actionHref ?? "#"}
-          className="mt-6 inline-flex min-h-11 items-center justify-center rounded-full bg-accent px-5 py-3 font-body text-sm font-medium text-primary transition-all duration-200 ease-in-out hover:scale-[1.02] hover:bg-primary hover:text-white hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-        >
-          {actionLabel}
-        </Link>
-      ) : null}
-    </article>
+      <span className="sr-only">Loading identity verification</span>
+    </main>
   );
-}
-
-function PendingBadge({ children }: { children: string }): ReactElement {
-  return (
-    <span className="inline-flex items-center gap-2 rounded-full bg-accent/10 px-3 py-1 font-body text-xs font-bold text-primary">
-      <Clock size={14} />
-      {children}
-    </span>
-  );
-}
-
-function ActionBadge(): ReactElement {
-  return (
-    <span className="inline-flex items-center gap-2 rounded-full border border-red-500/30 bg-red-500/10 px-3 py-1 font-body text-xs font-bold text-red-700">
-      <AlertCircle size={14} />
-      Action needed
-    </span>
-  );
-}
-
-function NotStarted(): ReactElement {
-  return <p className="font-body text-sm text-muted">Not started</p>;
 }
 
 export default function HostVerificationCenter({
@@ -141,269 +135,196 @@ export default function HostVerificationCenter({
     };
   }, [refreshKey]);
 
-  // Finishing a flow in another tab should not leave a stale page behind here
   useEffect(() => {
     const refresh = (): void => {
       if (document.visibilityState === "visible") {
-        void load();
+        load();
       }
     };
 
     document.addEventListener("visibilitychange", refresh);
-
     return () => document.removeEventListener("visibilitychange", refresh);
   }, [load]);
 
   if (isLoading) {
-    return (
-      <main
-        className="min-h-screen bg-surface-soft px-5 py-12 sm:px-8 lg:px-10 lg:py-16 xl:px-14"
-        role="status"
-        aria-label="Loading your verification status"
-      >
-        <div className="mx-auto max-w-6xl">
-          <Skeleton className="h-4 w-36" />
-          <Skeleton className="mt-6 h-12 w-3/5 max-w-lg" />
-          <Skeleton className="mt-4 h-5 w-4/5 max-w-2xl" />
-          <div className="mt-10 grid gap-5 lg:grid-cols-3">
-            {Array.from({ length: 3 }, (_, index) => (
-              <div
-                key={`verification-card-${index + 1}`}
-                className="rounded-2xl bg-[var(--color-bg)] p-6 shadow-sm"
-                aria-hidden="true"
-              >
-                <Skeleton className="h-12 w-12 rounded-full" />
-                <Skeleton className="mt-6 h-7 w-2/3" />
-                <Skeleton className="mt-4 h-4 w-full" />
-                <Skeleton className="mt-2 h-4 w-4/5" />
-                <Skeleton className="mt-7 h-11 w-32 rounded-full" />
-              </div>
-            ))}
-          </div>
-        </div>
-        <span className="sr-only">Loading your verification status</span>
-      </main>
-    );
+    return <PreparationSkeleton />;
   }
 
   if (!snapshot) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-surface-soft px-5">
-        <div className="max-w-md text-center">
-          <AlertCircle className="mx-auto h-10 w-10 text-muted" />
-          <p className="mt-4 font-body text-sm leading-6 text-muted">
+      <main className="flex min-h-screen items-center justify-center bg-surface-soft px-5 py-16">
+        <section className="w-full max-w-lg text-center">
+          <AlertCircle className="mx-auto h-11 w-11 text-red-700" />
+          <h1 className="mt-5 font-display text-3xl font-bold text-primary">
+            We could not load your verification
+          </h1>
+          <p className="mt-3 font-body text-sm leading-6 text-muted">
             {loadError || "Your status could not be loaded."}
           </p>
           <button
             type="button"
             onClick={() => {
               setIsLoading(true);
-              void load();
+              load();
             }}
-            className="mt-6 inline-flex min-h-11 items-center rounded-full bg-accent px-5 py-3 font-body text-sm font-medium text-primary transition-all hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="mt-7 inline-flex min-h-12 items-center justify-center rounded-full bg-primary px-6 font-body text-sm font-bold text-white transition-colors hover:bg-primary/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             Try again
           </button>
-        </div>
+        </section>
       </main>
     );
   }
 
-  const { identity, kyb, payout } = snapshot;
-  const isLandlord = role === "landlord";
-  // Business documents are an agent requirement; a landlord proves ownership per listing
-  const trackedStatuses: HostCheckStatus[] = isLandlord
-    ? [identity.status, payout.status]
-    : [identity.status, kyb.status, payout.status];
-  const totalCount = trackedStatuses.length;
-  const completeCount = trackedStatuses.filter(
-    (status: HostCheckStatus) => status === "approved",
-  ).length;
+  const { identity, kyb } = snapshot;
+  const isAgent = role === "agent";
+  const dashboardHref = `/${role}/dashboard`;
+  const identityHref = `/${role}/verify/identity`;
+  const requirements = isAgent ? AGENT_REQUIREMENTS : LANDLORD_REQUIREMENTS;
+  const isApproved =
+    identity.status === "approved" && (!isAgent || kyb.status === "approved");
+  const isPending =
+    isAgent && identity.status === "approved" && kyb.status === "pending";
+  const isRejected = isAgent && kyb.status === "rejected";
+  const needsDocuments =
+    isAgent && identity.status === "approved" && kyb.status === "not_started";
 
-  const renderIdentity = (): ReactElement => {
-    if (identity.status === "approved") {
-      return (
-        <div className="space-y-3">
-          <VerifiedBadge size="sm" />
-          <p className="font-body text-sm text-muted">
-            {identity.required.map((check) => CHECK_LABELS[check]).join(", ")}{" "}
-            confirmed
+  if (isApproved || isPending) {
+    return (
+      <main className="min-h-screen bg-surface-soft px-5 py-16 sm:px-8 lg:px-10 lg:py-20">
+        <section className="mx-auto max-w-2xl text-center">
+          <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-accent/15 text-primary">
+            {isApproved ? (
+              <CheckCircle2 size={30} aria-hidden="true" />
+            ) : (
+              <Clock3 size={30} aria-hidden="true" />
+            )}
+          </span>
+          <p className="mt-6 font-accent text-xs font-bold uppercase tracking-[0.3em] text-accent-alt">
+            Identity verification
           </p>
-        </div>
-      );
-    }
-
-    if (identity.status === "partial") {
-      return (
-        <div className="space-y-3">
-          <PendingBadge>Part finished</PendingBadge>
-          <p className="font-body text-sm leading-6 text-muted">
-            {identity.outstanding
-              .map((check) => CHECK_LABELS[check])
-              .join(" and ")}{" "}
-            still to go.
+          <h1 className="mt-3 font-display text-4xl font-bold leading-tight text-primary sm:text-5xl">
+            {isApproved
+              ? isAgent
+                ? "Your agent profile is verified"
+                : "Your identity is confirmed"
+              : "Your documents are under review"}
+          </h1>
+          <p className="mx-auto mt-4 max-w-xl font-body text-base leading-7 text-muted">
+            {isApproved
+              ? "Your verification is complete. Return to your dashboard to continue setting up your Rello account."
+              : "Your identity is confirmed. Our team will email you when the business-document review is complete."}
           </p>
-        </div>
-      );
-    }
+          {isApproved ? (
+            <div className="mt-6 flex justify-center">
+              <VerifiedBadge size="md" />
+            </div>
+          ) : (
+            <p
+              className="mt-6 font-body text-sm font-bold text-primary"
+              role="status"
+            >
+              Review in progress
+            </p>
+          )}
+          <Link
+            href={dashboardHref}
+            className="mt-9 inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-primary px-7 font-body text-sm font-bold text-white transition-colors hover:bg-primary/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          >
+            Back to dashboard
+            <ArrowRight size={17} aria-hidden="true" />
+          </Link>
+        </section>
+      </main>
+    );
+  }
 
-    return <NotStarted />;
-  };
-
-  const renderKyb = (): ReactElement => {
-    if (kyb.status === "approved") {
-      return (
-        <div className="space-y-3">
-          <VerifiedBadge size="sm" />
-          <p className="font-body text-sm text-muted">
-            Business documents approved
-          </p>
-        </div>
-      );
-    }
-
-    if (kyb.status === "pending") {
-      return (
-        <div className="space-y-3">
-          <PendingBadge>Under review</PendingBadge>
-          <p className="font-body text-sm leading-6 text-muted">
-            Usually takes 1 to 2 business days. We will email you the decision.
-          </p>
-        </div>
-      );
-    }
-
-    if (kyb.status === "rejected") {
-      return (
-        <div className="space-y-3">
-          <ActionBadge />
-          <p className="font-body text-sm leading-6 text-muted">
-            {kyb.rejectionReason ?? "Upload clearer documents and resubmit."}
-          </p>
-        </div>
-      );
-    }
-
-    return <NotStarted />;
-  };
-
-  const renderPayout = (): ReactElement => {
-    if (payout.status === "approved") {
-      return (
-        <div className="space-y-3">
-          <VerifiedBadge size="sm" />
-          <p className="font-body text-sm font-bold text-primary">
-            {getBankName(payout.bankCode, payout.bankName)} ·{" "}
-            {maskAccountNumber(payout.accountLast4)}
-          </p>
-          <p className="font-body text-sm text-muted">{payout.accountName}</p>
-        </div>
-      );
-    }
-
-    return <NotStarted />;
-  };
-
-  const identityActionLabel =
-    identity.status === "approved"
-      ? undefined
+  const actionLabel = isRejected
+    ? "Resubmit documents"
+    : needsDocuments
+      ? "Upload business documents"
       : identity.status === "partial"
-        ? "Finish"
-        : "Begin";
-
-  // Documents are collected inside the identity flow, so there is nowhere
-  // separate to send a host who has not verified their identity yet
-  const kybActionLabel =
-    kyb.status === "rejected"
-      ? "Resubmit"
-      : kyb.status === "not_started" && identity.status === "approved"
-        ? "Upload documents"
-        : undefined;
-
-  const payoutActionLabel =
-    payout.status === "approved" ? undefined : "Set up payout";
+        ? "Continue identity check"
+        : "Start identity check";
 
   return (
     <main className="min-h-screen bg-surface-soft px-5 py-12 sm:px-8 lg:px-10 lg:py-16">
-      <section className="mx-auto max-w-6xl">
-        <p className="font-accent text-xs font-bold uppercase tracking-[0.3em] text-primary">
-          Verification Center
+      <section className="mx-auto max-w-3xl">
+        <p className="font-accent text-xs font-bold uppercase tracking-[0.3em] text-accent-alt">
+          Account verification
         </p>
-        <h1 className="mt-4 font-display text-4xl font-bold leading-[0.92] text-primary sm:text-5xl">
-          {isLandlord ? "Manage your account setup" : "Get fully verified"}
+        <h1 className="mt-4 max-w-2xl font-display text-4xl font-bold leading-[0.96] text-primary sm:text-5xl">
+          {isAgent ? "Verify your agent profile" : "Confirm your identity"}
         </h1>
-        <p className="mt-4 max-w-2xl font-body text-sm leading-6 text-muted">
-          {isLandlord
-            ? "Identity verification and payout setup are tracked separately. Missing payout details will not change your identity status. Each property you list is verified on its own."
-            : "Complete these checks to publish listings and receive payouts. Your identity is confirmed straight away; business documents are reviewed by our team."}
+        <p className="mt-5 max-w-2xl font-body text-base leading-7 text-muted">
+          {isAgent
+            ? "Confirm who you are and provide your business documents before publishing listings on Rello."
+            : "Confirm who you are so tenants can trust your profile and you can publish homes on Rello."}
         </p>
 
-        <div className="mt-8 rounded-xl border border-primary/10 bg-[var(--color-bg)] p-5 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="font-body text-sm font-bold text-primary">
-              {completeCount} of {totalCount} setup tasks complete
+        {isRejected ? (
+          <div className="mt-8 border-l-4 border-red-700 pl-5" role="alert">
+            <p className="font-body text-sm font-bold text-red-700">
+              Your business documents need attention
             </p>
-            <p className="font-body text-xs text-muted">
-              Property verification starts after your first listing is created.
+            <p className="mt-2 font-body text-sm leading-6 text-muted">
+              {kyb.rejectionReason ??
+                "Upload clearer or more recent documents and submit them again."}
             </p>
           </div>
-          <div className="mt-4 h-2 overflow-hidden rounded-full bg-border">
-            <div
-              className="h-full rounded-full bg-accent transition-all duration-300 ease-in-out"
-              style={{ width: `${(completeCount / totalCount) * 100}%` }}
-            />
-          </div>
+        ) : null}
+
+        <div className="mt-12">
+          <h2 className="font-body text-sm font-bold text-primary">
+            Have these ready
+          </h2>
+          <ul
+            className="mt-4 border-y border-border"
+            aria-label="Verification requirements"
+          >
+            {requirements.map((requirement) => {
+              const Icon = requirement.icon;
+
+              return (
+                <li
+                  key={requirement.title}
+                  className="flex min-h-20 items-center gap-4 border-b border-border py-4 last:border-b-0"
+                >
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/5 text-primary">
+                    <Icon size={20} aria-hidden="true" />
+                  </span>
+                  <span>
+                    <span className="block font-body text-sm font-bold text-primary">
+                      {requirement.title}
+                    </span>
+                    <span className="mt-1 block font-body text-sm leading-6 text-muted">
+                      {requirement.description}
+                    </span>
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
         </div>
 
-        <div className="mt-8 grid gap-5 sm:grid-cols-2">
-          <StatusCard
-            actionHref={
-              identityActionLabel ? `/${role}/verify/identity` : undefined
-            }
-            actionLabel={identityActionLabel}
-            icon={ShieldCheck}
-            title="Identity Verification"
-          >
-            {renderIdentity()}
-          </StatusCard>
-
-          {isLandlord ? null : (
-            <StatusCard
-              actionHref={
-                kybActionLabel ? `/${role}/verify/identity` : undefined
-              }
-              actionLabel={kybActionLabel}
-              icon={FileText}
-              title="Business Documents"
-            >
-              {renderKyb()}
-            </StatusCard>
-          )}
-
-          <StatusCard
-            actionHref={
-              payoutActionLabel ? `/${role}/verify/payout` : undefined
-            }
-            actionLabel={payoutActionLabel}
-            icon={Banknote}
-            title="Payout Setup"
-          >
-            {renderPayout()}
-          </StatusCard>
-
-          <StatusCard icon={Home} locked title="Property Verification">
-            <div className="space-y-3">
-              <span className="inline-flex items-center gap-2 rounded-full bg-primary/5 px-3 py-1 font-body text-xs font-bold text-muted">
-                <Lock size={14} />
-                Locked
-              </span>
-              <p className="font-body text-sm leading-6 text-muted">
-                Available once you add a property. Each listing is verified with
-                a photo taken at the address.
-              </p>
-            </div>
-          </StatusCard>
+        <div className="mt-7 flex items-start gap-3 text-muted">
+          <LockKeyhole
+            className="mt-0.5 h-5 w-5 shrink-0 text-accent-alt"
+            aria-hidden="true"
+          />
+          <p className="max-w-2xl font-body text-sm leading-6">
+            Your identity information is securely checked through Dojah and is
+            not shown on your public profile.
+          </p>
         </div>
+
+        <Link
+          href={identityHref}
+          className="mt-8 inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-primary px-7 font-body text-sm font-bold text-white transition-colors hover:bg-primary/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        >
+          {actionLabel}
+          <ArrowRight size={17} aria-hidden="true" />
+        </Link>
       </section>
     </main>
   );

@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "locations:update": "node scripts/update-geonames-cities.mjs",
+    "locations:test": "vitest run src/lib/__tests__/cityCatalogue.test.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
