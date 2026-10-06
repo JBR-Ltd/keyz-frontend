@@ -1,3 +1,5 @@
+import { hostPublicIdFrom, propertyPublicIdFrom } from "@/lib/publicIds";
+
 const HISTORY_KEY = "rello_internal_navigation_v1";
 const PENDING_DESTINATION_KEY = "rello_internal_navigation_pending_v1";
 const HISTORY_LIFETIME_MS = 12 * 60 * 60 * 1000;
@@ -73,6 +75,36 @@ function isAuthenticationRoute(href: string): boolean {
   );
 }
 
+function getPublicResourceIdentity(href: string): string | null {
+  const [pathname] = href.split(/[?#]/);
+  const match = pathname?.match(/^\/(host|property)\/([^/]+)\/?$/);
+  const resourceType = match?.[1];
+  const segment = match?.[2];
+
+  if (!resourceType || !segment) {
+    return null;
+  }
+
+  const publicId =
+    resourceType === "host"
+      ? hostPublicIdFrom(segment)
+      : propertyPublicIdFrom(segment);
+
+  return publicId ? `${resourceType}:${publicId}` : null;
+}
+
+function isSamePublicResource(firstHref: string, secondHref: string): boolean {
+  if (firstHref === secondHref) {
+    return true;
+  }
+
+  const firstIdentity = getPublicResourceIdentity(firstHref);
+  return (
+    firstIdentity !== null &&
+    firstIdentity === getPublicResourceIdentity(secondHref)
+  );
+}
+
 function isCompatibleDestination(
   currentHref: string,
   candidateHref: string,
@@ -124,7 +156,10 @@ export function getInternalBackDestination(
 
   const history = readHistory();
 
-  while (history.at(-1)?.href === currentHref) {
+  while (
+    history.at(-1) &&
+    isSamePublicResource(currentHref, history.at(-1)?.href ?? "")
+  ) {
     history.pop();
   }
 

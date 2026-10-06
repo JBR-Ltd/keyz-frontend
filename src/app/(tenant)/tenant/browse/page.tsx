@@ -1323,6 +1323,7 @@ export default function TenantBrowsePage(): ReactElement {
                   .filter(Boolean)
                   .join(", ")}
                 price={property.price}
+                rentalMode={property.rentalMode}
                 listingType={property.status}
                 bedrooms={property.bedrooms}
                 bathrooms={property.bathrooms}

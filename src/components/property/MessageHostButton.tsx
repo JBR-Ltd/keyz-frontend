@@ -46,7 +46,7 @@ export default function MessageHostButton({
         variant="utility-secondary"
         size="utility"
         onClick={() => setIsThreadOpen(true)}
-        className="mt-3 w-full font-bold"
+        className="w-full font-bold sm:w-auto"
       >
         <MessageSquareText size={17} aria-hidden="true" />
         Message {hostLabel}

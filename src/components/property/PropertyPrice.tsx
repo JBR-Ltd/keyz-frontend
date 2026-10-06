@@ -7,6 +7,7 @@ interface PropertyPriceProps {
   listingType?: PropertyListingStatus;
   /** Decides the suffix. Without it a rental is assumed to be let by the year. */
   rentalMode?: RentalMode;
+  showRentalSuffix?: boolean;
 }
 
 const RENTAL_SUFFIXES: Record<RentalMode, string> = {
@@ -31,12 +32,13 @@ export default function PropertyPrice({
   value,
   listingType,
   rentalMode,
+  showRentalSuffix = true,
 }: PropertyPriceProps): ReactElement {
   const formatted = formatNaira(value);
   // A rental used to always read as monthly, which is wrong for a shortlet and
   // for the annual tenancies most Nigerian listings actually are
   const suffix =
-    typeof value === "number" && listingType === "FOR_RENT"
+    showRentalSuffix && typeof value === "number" && listingType === "FOR_RENT"
       ? RENTAL_SUFFIXES[rentalMode ?? "ANNUAL"]
       : "";
 

@@ -571,7 +571,7 @@ Existing rental catalogue and saved-search contracts remain unchanged.
 
 ### What was there before
 
-- The public property route had no navigation header, even when opened from an authenticated portal.
+- A later refinement added a persistent marketplace navigation bar above the public property page.
 - The desktop Save button rendered the text `aria-busy=` because the attribute was placed inside the button body.
 - Property verification appeared beside the title and again over the lead photograph.
 - The desktop back action was an unexplained icon over the image.
@@ -583,14 +583,14 @@ Existing rental catalogue and saved-search contracts remain unchanged.
 ### Why it was a problem
 
 - A visible accessibility attribute made the page look broken and reduced trust in the Save action.
-- Missing navigation disconnected a shareable listing from the rest of Rello.
+- The navigation bar duplicated the page's contextual back controls and consumed valuable first-viewport space.
 - Repeated verification and heavy borders created visual noise without adding information.
 - Tenants could not immediately see the rental period, price, availability, or photo count.
 - The first viewport emphasized gallery height over the tenant's core decision-making information.
 
 ### How it was fixed
 
-- Added a compact context-aware header for tenants, landlords, agents, administrators, and anonymous visitors while keeping the listing publicly accessible.
+- Removed the persistent marketplace header and tightened the space above the desktop title and gallery.
 - Replaced the desktop image-overlay arrow with a labeled `Back to results` action and retained the compact overlay control on mobile.
 - Moved `aria-busy` onto the Save button and preserved its loader, disabled state, stable dimensions, pressed state, and toast feedback.
 - Kept one property verification badge beside the title and retained the separate host verification badge in the host section.
@@ -612,3 +612,81 @@ Existing rental catalogue and saved-search contracts remain unchanged.
 - Focused property-page ESLint checks passed.
 - The production build passed.
 - Git diff integrity checks passed.
+
+## Public Host Profile Redesign
+
+### What was there before
+
+- An earlier refinement added the property page's marketplace navigation bar to the public host profile.
+- The profile identity, description, report action, and statistics were enclosed in a large dashboard-style card.
+- Verification appeared as both an avatar ornament and a badge with repeated explanatory text.
+- Empty rating and review values were given the same prominence as useful trust information.
+- A single listing remained constrained to one narrow column in a three-column grid.
+- Listing cards showed exact street addresses on the public host profile.
+- Host listing cards did not receive rental mode or available-unit data, so monthly and short-stay prices could display the wrong period and availability was hidden.
+
+### Why it was a problem
+
+- The added navigation bar duplicated the profile's contextual `Back to homes` action and consumed unnecessary vertical space.
+- The enclosing card and repeated verification treatments made a simple public profile look like an internal dashboard.
+- Large zero-value statistics added visual weight without helping tenants assess trust.
+- Exact addresses exposed more location detail than tenants need before opening a listing.
+- Narrow cards and incorrect price periods made the portfolio harder to scan and compare.
+
+### How it was fixed
+
+- Removed the marketplace header from both public host and property pages so they use their contextual back controls consistently.
+- Preserved the contextual `Back to homes` action and reduced the padding above it and before the profile identity.
+- Replaced the profile card with an open header separated from the portfolio by a quiet divider.
+- Kept one verification badge beside the host name and removed the duplicate avatar ornament and verification sentence.
+- Replaced the generic biography and three-column statistic panel with factual role-aware copy, a combined reputation summary, and a separate verified-home count.
+- Moved the report action below the trust information and reduced its visual prominence.
+- Renamed the portfolio heading to `Available homes` and adapted the grid width for one, two, or three or more listings.
+- Limited public card locations to area and city, with a neutral fallback when neither value is available.
+- Passed rental mode and available-unit count into shared property cards so price periods and availability are accurate.
+- Updated property cards on Browse to use the same rental-mode-aware price rendering.
+
+### Interfaces and behavior preserved
+
+- No backend, endpoint, host-profile payload, listing payload, reporting, or pagination contract changed.
+- Existing canonical host links, listing links, report submission, loading, retry, empty, and pagination behavior remain in place.
+
+## Canonical Public-Page Back Navigation
+
+### What was happening
+
+- Opening a host through a short public-ID URL recorded that route in the internal navigation history.
+- The host page then replaced it with the canonical name and public-ID URL, which was recorded as a second route.
+- `Back to homes` selected the earlier short URL, which redirected to the canonical profile again and appeared to loop.
+- Property pages shared the same canonical redirect pattern and could encounter the same behavior.
+
+### How it was fixed
+
+- The internal navigation resolver now identifies public host and property routes by their opaque public IDs.
+- Canonical and non-canonical URLs for the same public resource are treated as one history destination.
+- Back navigation skips every equivalent alias before selecting the previous valid route or role-aware fallback.
+- Existing button labels, role fallbacks, canonical redirects, and browser-safe internal URL validation remain unchanged.
+
+## Property Rental Action Panel Refinement
+
+### What was there before
+
+- The sticky rental card combined price, availability, booking, viewing, host identity, portfolio navigation, messaging, and reporting.
+- `Monthly rent` repeated the `/mo` suffix already attached to the price.
+- Three full-width actions competed for attention inside one tall bordered panel.
+- The host verification badge sat away from the host name, and reporting appeared inside the conversion area.
+- The sticky offset still reserved space for a page header that had been removed.
+
+### How it was fixed
+
+- Reduced the desktop panel to price, rental period, availability, minimum stay, the primary request action, reassurance, and a quieter viewing action.
+- Displayed the full rental unit as `per month`, `per year`, or `per night` beside a suffix-free price.
+- Reduced the panel padding, border weight, shadow, button height, and sticky offset.
+- Moved host identity, verification, portfolio navigation, and messaging into an open section after amenities.
+- Moved listing reporting beneath the reviews and outside the transaction panel.
+- Kept the desktop action panel hidden on smaller screens, preserved the fixed mobile primary action, and added an in-content mobile viewing action.
+
+### Interfaces and behavior preserved
+
+- `PropertyPrice` gained an optional suffix-display control that defaults to the existing output.
+- No backend, property payload, booking, viewing, verification, messaging, reporting, or host-route contract changed.

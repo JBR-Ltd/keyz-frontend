@@ -7,7 +7,6 @@ import {
   CircleAlert,
   Loader2,
   SearchX,
-  ShieldCheck,
   Star,
 } from "lucide-react";
 import BackButton from "@/components/navigation/BackButton";
@@ -37,6 +36,20 @@ function getInitials(name: string): string {
     .toUpperCase();
 }
 
+function getPublicLocation(listing: BackendProperty): string {
+  const location = [listing.area, listing.city]
+    .filter((part): part is string => Boolean(part?.trim()))
+    .join(", ");
+
+  return location || "Location available on request";
+}
+
+function getListingGridClass(listingCount: number): string {
+  if (listingCount === 1) return "max-w-xl grid-cols-1";
+  if (listingCount === 2) return "max-w-5xl sm:grid-cols-2";
+  return "sm:grid-cols-2 lg:grid-cols-3";
+}
+
 function ListingGridSkeleton(): ReactElement {
   return (
     <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -59,32 +72,32 @@ function ListingGridSkeleton(): ReactElement {
 
 function HostProfileSkeleton(): ReactElement {
   return (
-    <main className="min-h-screen bg-surface-soft/40 px-5 py-8 sm:px-8 lg:px-10 lg:py-12 xl:px-14">
+    <main className="min-h-screen bg-bg px-5 pb-7 pt-4 sm:px-8 sm:pt-5 lg:px-10 lg:pb-9 lg:pt-5 xl:px-14">
       <div
-        className="mx-auto max-w-7xl animate-pulse"
+        className="mx-auto max-w-7xl"
         role="status"
         aria-label="Loading profile"
       >
-        <div className="h-5 w-32 rounded-full bg-border" />
-        <div className="mt-8 rounded-3xl border border-border bg-[var(--color-bg)] p-6 sm:p-8 lg:p-10">
-          <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
-            <div className="h-24 w-24 shrink-0 rounded-full bg-border sm:h-28 sm:w-28" />
-            <div className="flex-1">
-              <div className="h-3 w-24 rounded-full bg-border" />
-              <div className="mt-4 h-10 w-56 max-w-full rounded-lg bg-border" />
-              <div className="mt-4 h-7 w-56 rounded-md bg-border" />
+        <Skeleton className="h-5 w-32" />
+        <div className="mt-5 flex flex-col gap-6 border-b border-border pb-10 sm:flex-row sm:items-center">
+          <Skeleton className="h-24 w-24 shrink-0 rounded-full sm:h-28 sm:w-28" />
+          <div className="flex-1">
+            <Skeleton className="h-3 w-24" />
+            <Skeleton className="mt-4 h-10 w-64 max-w-full" />
+            <Skeleton className="mt-4 h-6 w-32" />
+            <div className="mt-7 flex gap-8">
+              <div>
+                <Skeleton className="h-7 w-20" />
+                <Skeleton className="mt-2 h-3 w-24" />
+              </div>
+              <div>
+                <Skeleton className="h-7 w-20" />
+                <Skeleton className="mt-2 h-3 w-24" />
+              </div>
             </div>
           </div>
-          <div className="mt-8 grid grid-cols-3 gap-4 border-t border-border pt-7">
-            {[0, 1, 2].map((item) => (
-              <div key={item}>
-                <div className="h-8 w-16 rounded-md bg-border" />
-                <div className="mt-2 h-3 w-20 max-w-full rounded-full bg-border" />
-              </div>
-            ))}
-          </div>
         </div>
-        <div className="mt-10 h-9 w-48 rounded-lg bg-border" />
+        <Skeleton className="mt-10 h-9 w-48" />
         <div className="mt-7 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {[0, 1, 2].map((item) => (
             <div
@@ -227,8 +240,8 @@ export default function HostProfilePage({
 
   if (!profile) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-surface-soft/40 px-5 py-16 text-center">
-        <div className="w-full max-w-lg rounded-3xl border border-border bg-[var(--color-bg)] px-6 py-12 shadow-sm sm:px-10">
+      <main className="flex min-h-screen items-center justify-center bg-bg px-5 py-12 text-center">
+        <div className="w-full max-w-lg">
           <span className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-surface-soft text-primary">
             <SearchX size={36} aria-hidden="true" />
           </span>
@@ -241,8 +254,10 @@ export default function HostProfilePage({
           <BackButton
             fallbackHref="/tenant/browse"
             roleFallbacks={{
+              ADMIN: "/admin/dashboard",
               AGENT: "/agent/dashboard",
               LANDLORD: "/landlord/dashboard",
+              TENANT: "/tenant/browse",
             }}
             className="mt-8 inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-body text-sm font-bold text-white transition-all duration-200 ease-in-out hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
@@ -257,18 +272,21 @@ export default function HostProfilePage({
   const roleLabel = profile.role === "AGENT" ? "Property agent" : "Landlord";
   const firstName = profile.name.split(" ")[0] || profile.name;
   const hasRating = profile.rating !== null && profile.reviewCount > 0;
-  const listingLabel =
-    profile.listingCount === 1 ? "Verified home" : "Verified homes";
-  const reviewLabel = profile.reviewCount === 1 ? "Review" : "Reviews";
+  const profileSummary =
+    profile.role === "AGENT"
+      ? `Explore verified homes represented by ${firstName} on Rello.`
+      : `Explore ${firstName}'s verified homes available on Rello.`;
 
   return (
-    <main className="min-h-screen bg-surface-soft/40 px-5 py-8 sm:px-8 lg:px-10 lg:py-12 xl:px-14">
+    <main className="min-h-screen bg-bg px-5 pb-7 pt-4 sm:px-8 sm:pt-5 lg:px-10 lg:pb-9 lg:pt-5 xl:px-14">
       <div className="mx-auto max-w-7xl">
         <BackButton
           fallbackHref="/tenant/browse"
           roleFallbacks={{
+            ADMIN: "/admin/dashboard",
             AGENT: "/agent/dashboard",
             LANDLORD: "/landlord/dashboard",
+            TENANT: "/tenant/browse",
           }}
           className="inline-flex min-h-11 items-center gap-2 rounded-full px-1 font-body text-sm font-semibold text-muted transition-colors duration-200 hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         >
@@ -276,100 +294,86 @@ export default function HostProfilePage({
           Back to homes
         </BackButton>
 
-        <header className="mt-6 rounded-3xl border border-border bg-[var(--color-bg)] p-6 shadow-sm sm:p-8 lg:p-10">
-          <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
-            <div className="relative w-fit shrink-0">
-              <span className="flex h-24 w-24 items-center justify-center rounded-full bg-primary font-display text-3xl font-bold text-white ring-4 ring-accent/25 ring-offset-4 ring-offset-[var(--color-bg)] sm:h-28 sm:w-28 sm:text-4xl">
-                {getInitials(profile.name)}
-              </span>
-              {profile.identityVerified ? (
-                <span className="absolute -bottom-1 -right-1 flex h-9 w-9 items-center justify-center rounded-full border-4 border-[var(--color-bg)] bg-accent text-primary">
-                  <ShieldCheck size={18} strokeWidth={2.5} aria-hidden="true" />
-                  <span className="sr-only">Identity verified</span>
-                </span>
-              ) : null}
-            </div>
+        <header className="mt-4 border-b border-border pb-10 sm:mt-5">
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:gap-8">
+            <span className="flex h-24 w-24 shrink-0 items-center justify-center rounded-full bg-primary font-display text-3xl font-bold text-white sm:h-28 sm:w-28 sm:text-4xl">
+              {getInitials(profile.name)}
+            </span>
 
             <div className="min-w-0 flex-1">
               <p className="font-accent text-xs font-bold uppercase tracking-[0.22em] text-accent-alt">
                 {roleLabel}
               </p>
-              <h1 className="mt-2 break-words font-display text-4xl font-bold leading-tight text-primary sm:text-5xl">
-                {profile.name}
-              </h1>
-              <div className="mt-4 flex flex-wrap items-center gap-3">
+              <div className="mt-2 flex flex-wrap items-center gap-3">
+                <h1 className="break-words font-display text-4xl font-bold leading-tight text-primary sm:text-5xl">
+                  {profile.name}
+                </h1>
                 {profile.identityVerified ? (
-                  <>
-                    <VerifiedBadge size="md" />
-                    <span className="font-body text-sm text-muted">
-                      Identity verified by Rello
-                    </span>
-                  </>
+                  <VerifiedBadge size="md" />
                 ) : (
                   <span className="inline-flex items-center gap-2 rounded-full bg-surface-soft px-3 py-1.5 font-body text-xs font-semibold text-muted">
                     Verification not completed
                   </span>
                 )}
-                <button
-                  type="button"
-                  onClick={() => setIsReporting(true)}
-                  className="font-body text-xs font-bold text-muted underline-offset-4 hover:text-red-700 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                >
-                  Report this host
-                </button>
-                <ReportDialog
-                  open={isReporting}
-                  onClose={() => setIsReporting(false)}
-                  target={{ type: "USER", userId: profile.publicId ?? String(profile.id) }}
-                />
               </div>
+
+              <p className="mt-4 max-w-2xl font-body text-base leading-7 text-muted">
+                {profileSummary}
+              </p>
+
+              <dl className="mt-7 flex flex-wrap items-center gap-x-8 gap-y-4">
+                <div>
+                  <dt className="font-body text-xs font-medium text-muted">
+                    Reputation
+                  </dt>
+                  <dd className="mt-1 flex items-center gap-2 font-body text-sm font-bold text-primary">
+                    {hasRating && profile.rating !== null ? (
+                      <>
+                        <Star
+                          size={16}
+                          className="fill-accent text-accent"
+                          aria-hidden="true"
+                        />
+                        <span>{profile.rating.toFixed(1)}</span>
+                        <span className="font-medium text-muted">
+                          {profile.reviewCount}{" "}
+                          {profile.reviewCount === 1 ? "review" : "reviews"}
+                        </span>
+                      </>
+                    ) : (
+                      "No reviews yet"
+                    )}
+                  </dd>
+                </div>
+                <div className="h-10 w-px bg-border" aria-hidden="true" />
+                <div>
+                  <dt className="font-body text-xs font-medium text-muted">
+                    Portfolio
+                  </dt>
+                  <dd className="mt-1 font-body text-sm font-bold text-primary">
+                    {profile.listingCount} verified{" "}
+                    {profile.listingCount === 1 ? "home" : "homes"}
+                  </dd>
+                </div>
+              </dl>
+
+              <button
+                type="button"
+                onClick={() => setIsReporting(true)}
+                className="mt-7 inline-flex min-h-11 items-center rounded-lg px-1 font-body text-xs font-semibold text-muted underline-offset-4 hover:text-red-700 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                Report this host
+              </button>
+              <ReportDialog
+                open={isReporting}
+                onClose={() => setIsReporting(false)}
+                target={{
+                  type: "USER",
+                  userId: profile.publicId ?? String(profile.id),
+                }}
+              />
             </div>
           </div>
-
-          <p className="mt-8 max-w-2xl border-t border-border pt-7 font-body text-base leading-7 text-muted">
-            {firstName} is a {roleLabel.toLowerCase()} with{" "}
-            {profile.listingCount}{" "}
-            {profile.listingCount === 1 ? "home" : "homes"} currently verified
-            and available to explore on Rello.
-          </p>
-
-          <dl className="mt-8 grid grid-cols-3 divide-x divide-border rounded-2xl bg-surface-soft px-2 py-5 sm:px-4">
-            <div className="px-2 text-center sm:px-4">
-              <dt className="mt-2 font-body text-xs font-medium text-muted">
-                Rating
-              </dt>
-              <dd className="flex items-center justify-center gap-1.5 font-display text-2xl font-bold text-primary sm:text-3xl">
-                {hasRating ? (
-                  <>
-                    <Star
-                      size={18}
-                      className="fill-accent text-accent"
-                      aria-hidden="true"
-                    />
-                    {profile.rating!.toFixed(1)}
-                  </>
-                ) : (
-                  "New"
-                )}
-              </dd>
-            </div>
-            <div className="px-2 text-center sm:px-4">
-              <dt className="mt-2 font-body text-xs font-medium text-muted">
-                {reviewLabel}
-              </dt>
-              <dd className="font-display text-2xl font-bold text-primary sm:text-3xl">
-                {profile.reviewCount}
-              </dd>
-            </div>
-            <div className="px-2 text-center sm:px-4">
-              <dt className="mt-2 font-body text-xs font-medium text-muted">
-                {listingLabel}
-              </dt>
-              <dd className="font-display text-2xl font-bold text-primary sm:text-3xl">
-                {profile.listingCount}
-              </dd>
-            </div>
-          </dl>
         </header>
 
         <section className="mt-10" aria-labelledby="host-listings-heading">
@@ -382,7 +386,7 @@ export default function HostProfilePage({
                 id="host-listings-heading"
                 className="mt-2 font-display text-3xl font-bold text-primary sm:text-4xl"
               >
-                Homes from {firstName}
+                Available homes
               </h2>
             </div>
             {listings.length > 0 ? (
@@ -442,7 +446,9 @@ export default function HostProfilePage({
             </div>
           ) : (
             <>
-              <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              <div
+                className={`mt-8 grid gap-6 ${getListingGridClass(listings.length)}`}
+              >
                 {listings.map((listing) => (
                   <PropertyCard
                     key={listing.id}
@@ -450,8 +456,9 @@ export default function HostProfilePage({
                     publicId={listing.publicId}
                     slug={listing.slug}
                     name={listing.title}
-                    location={listing.address}
+                    location={getPublicLocation(listing)}
                     price={listing.price}
+                    rentalMode={listing.rentalMode}
                     listingType={
                       listing.status === "FOR_SALE" ? "FOR_SALE" : "FOR_RENT"
                     }
@@ -460,6 +467,7 @@ export default function HostProfilePage({
                     imageUrl={listing.imageUrl ?? LISTING_FALLBACK_IMAGE}
                     featured={false}
                     verified
+                    availableUnitCount={listing.availableUnitCount}
                   />
                 ))}
               </div>

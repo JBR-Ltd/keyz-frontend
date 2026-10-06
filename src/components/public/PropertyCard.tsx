@@ -5,6 +5,7 @@ import { Bath, BedDouble, Heart, Loader2, MapPin } from "lucide-react";
 import PropertyPrice from "@/components/property/PropertyPrice";
 import VerifiedBadge from "@/components/ui/VerifiedBadge";
 import { propertyPath } from "@/lib/publicIds";
+import type { RentalMode } from "@/lib/hostListings";
 
 type ListingType = "FOR_RENT" | "FOR_SALE";
 
@@ -16,6 +17,7 @@ interface PropertyCardProps {
   name: string;
   location: string;
   price: number;
+  rentalMode?: RentalMode | null;
   listingType: ListingType;
   bedrooms: number;
   bathrooms: number;
@@ -35,6 +37,7 @@ export default function PropertyCard({
   name,
   location,
   price,
+  rentalMode,
   listingType,
   bedrooms,
   bathrooms,
@@ -87,7 +90,11 @@ export default function PropertyCard({
             <span className="truncate">{location}</span>
           </p>
           <p className="mt-4 font-body text-xl font-bold text-primary">
-            <PropertyPrice value={price} listingType={listingType} />
+            <PropertyPrice
+              value={price}
+              listingType={listingType}
+              rentalMode={rentalMode ?? undefined}
+            />
           </p>
           <div className="mt-auto flex flex-wrap items-center gap-4 pt-4 font-body text-sm text-muted">
             <span className="inline-flex items-center gap-1.5">
