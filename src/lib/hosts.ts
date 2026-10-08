@@ -11,6 +11,7 @@ export interface HostProfile {
   id: number;
   publicId?: string;
   slug?: string;
+  avatarUrl?: string | null;
   identityVerified: boolean;
   listingCount: number;
   name: string;

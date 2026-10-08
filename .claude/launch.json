@@ -2,10 +2,18 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "rello-web",
-      "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["dev"],
-      "port": 3000
+      "name": "rello-api-demo",
+      "runtimeExecutable": "C:\\Users\\BEST\\Documents\\backend\\mvnw.cmd",
+      "runtimeArgs": [
+        "-f",
+        "C:\\Users\\BEST\\Documents\\backend\\pom.xml",
+        "-o",
+        "spring-boot:run",
+        "-Dspring-boot.run.profiles=local",
+        "-Dspring-boot.run.useTestClasspath=true",
+        "-Dspring-boot.run.arguments=--spring.config.additional-location=file:C:/Users/BEST/AppData/Local/Temp/claude/C--Users-BEST-Documents-keyz-frontend/1381393f-ed76-4bd9-9e4e-76ff0a92c7dc/scratchpad/grant/config/"
+      ],
+      "port": 8080
     },
     {
       "name": "rello-api-no-jobs",
@@ -21,9 +29,20 @@
       "port": 8080
     },
     {
+      "name": "rello-web",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "dev"
+      ],
+      "port": 3000
+    },
+    {
       "name": "rello-web-npm",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
       "port": 3000
     }
   ]

@@ -9,6 +9,7 @@ import ChatAttachmentCard, {
 } from "@/components/chat/ChatAttachmentCard";
 import ChatShareMenu from "@/components/chat/ChatShareMenu";
 import OverlayPortal from "@/components/ui/OverlayPortal";
+import UserAvatar from "@/components/ui/user-avatar";
 import { useAuthenticatedUser } from "@/lib/account";
 import {
   getConversation,
@@ -19,6 +20,7 @@ import {
 import type { ChatMessage, ChatPartyRole } from "@/lib/chat/chatStorage";
 import { startCall } from "@/lib/calls";
 import { useDialogFocus } from "@/lib/useDialogFocus";
+import { getInitials } from "@/lib/utils";
 
 interface ChatThreadProps {
   conversationId: string | null;
@@ -28,6 +30,7 @@ interface ChatThreadProps {
   propertyId?: number;
   otherPartyName: string;
   otherPartyRole: ChatPartyRole;
+  otherPartyAvatarUrl?: string | null;
   propertyName: string;
   onClose: () => void;
 }
@@ -93,6 +96,7 @@ export default function ChatThread({
   propertyId,
   otherPartyName,
   otherPartyRole,
+  otherPartyAvatarUrl,
   propertyName,
   onClose,
 }: ChatThreadProps): ReactElement | null {
@@ -355,18 +359,26 @@ export default function ChatThread({
           >
             <header className="shrink-0 border-b border-border bg-bg px-5 py-4">
               <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <div className="flex min-w-0 items-center gap-2">
-                    <h2 className="truncate font-body text-base font-bold text-primary">
-                      {otherPartyName}
-                    </h2>
-                    <span className="shrink-0 rounded-full bg-primary/10 px-2 py-1 font-body text-[11px] font-bold text-primary">
-                      {otherPartyRole}
-                    </span>
+                <div className="flex min-w-0 items-center gap-3">
+                  <UserAvatar
+                    avatarUrl={otherPartyAvatarUrl}
+                    initials={getInitials(otherPartyName)}
+                    className="h-10 w-10 text-sm"
+                    sizes="40px"
+                  />
+                  <div className="min-w-0">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <h2 className="truncate font-body text-base font-bold text-primary">
+                        {otherPartyName}
+                      </h2>
+                      <span className="shrink-0 rounded-full bg-primary/10 px-2 py-1 font-body text-[11px] font-bold text-primary">
+                        {otherPartyRole}
+                      </span>
+                    </div>
+                    <p className="mt-1 truncate font-body text-sm text-muted">
+                      {propertyName}
+                    </p>
                   </div>
-                  <p className="mt-1 truncate font-body text-sm text-muted">
-                    {propertyName}
-                  </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-1">
                   {otherUserId !== null && propertyId !== undefined ? (

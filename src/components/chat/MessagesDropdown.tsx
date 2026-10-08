@@ -4,12 +4,14 @@ import type { ReactElement } from "react";
 import { MessageCircle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import ChatThread from "@/components/chat/ChatThread";
+import UserAvatar from "@/components/ui/user-avatar";
 import type { ChatPartyRole } from "@/lib/chat/chatStorage";
 import {
   getChatThreads,
   getUnreadCount,
   type ChatThread as ChatThreadSummary,
 } from "@/lib/chat/chatClient";
+import { getInitials } from "@/lib/utils";
 
 function toDisplayRole(role: string): ChatPartyRole {
   if (role === "LANDLORD") return "Landlord";
@@ -198,9 +200,15 @@ export default function MessagesDropdown(): ReactElement {
                   key={conversation.otherUserId}
                   type="button"
                   onClick={() => handleConversationOpen(conversation)}
-                  className="grid w-full grid-cols-[minmax(0,1fr)_auto] gap-3 px-4 py-3 text-left transition-all duration-200 ease-in-out hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  className="grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 text-left transition-all duration-200 ease-in-out hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                   role="menuitem"
                 >
+                  <UserAvatar
+                    avatarUrl={conversation.otherUserAvatarUrl}
+                    initials={getInitials(conversation.otherUserName)}
+                    className="h-9 w-9 text-xs"
+                    sizes="36px"
+                  />
                   <span className="min-w-0">
                     <span className="flex min-w-0 items-center gap-2">
                       <span className="truncate font-body text-sm font-bold text-primary">
@@ -239,6 +247,7 @@ export default function MessagesDropdown(): ReactElement {
         }
         otherUserId={activeConversation?.otherUserId ?? null}
         otherPartyName={activeConversation?.otherUserName ?? ""}
+        otherPartyAvatarUrl={activeConversation?.otherUserAvatarUrl}
         otherPartyRole={toDisplayRole(
           activeConversation?.otherUserRole ?? "AGENT",
         )}

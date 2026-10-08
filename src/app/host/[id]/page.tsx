@@ -14,6 +14,7 @@ import PropertyCard from "@/components/public/PropertyCard";
 import { useRouter } from "next/navigation";
 import { canonicalSegment } from "@/lib/publicIds";
 import VerifiedBadge from "@/components/ui/VerifiedBadge";
+import UserAvatar from "@/components/ui/user-avatar";
 import ReportDialog from "@/components/reports/ReportDialog";
 import { getHostListings, getHostProfile, type HostProfile } from "@/lib/hosts";
 import type { BackendProperty } from "@/lib/hostListings";
@@ -296,9 +297,12 @@ export default function HostProfilePage({
 
         <header className="mt-4 border-b border-border pb-10 sm:mt-5">
           <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:gap-8">
-            <span className="flex h-24 w-24 shrink-0 items-center justify-center rounded-full bg-primary font-display text-3xl font-bold text-white sm:h-28 sm:w-28 sm:text-4xl">
-              {getInitials(profile.name)}
-            </span>
+            <UserAvatar
+              avatarUrl={profile.avatarUrl}
+              initials={getInitials(profile.name)}
+              className="h-24 w-24 font-display text-3xl sm:h-28 sm:w-28 sm:text-4xl"
+              sizes="112px"
+            />
 
             <div className="min-w-0 flex-1">
               <p className="font-accent text-xs font-bold uppercase tracking-[0.22em] text-accent-alt">

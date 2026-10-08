@@ -36,6 +36,7 @@ export interface ServerChatMessage {
   read: boolean;
   receiverId: number;
   receiverName: string;
+  senderAvatarUrl?: string | null;
   senderId: number;
   senderName: string;
   timestamp: string;
@@ -45,6 +46,7 @@ export interface ChatThread {
   lastMessage: string | null;
   lastMessageRead: boolean;
   lastMessageTimestamp: string | null;
+  otherUserAvatarUrl?: string | null;
   otherUserId: number;
   otherUserName: string;
   otherUserRole: ChatPartyRole;

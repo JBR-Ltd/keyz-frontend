@@ -29,6 +29,7 @@ export interface BackendPropertyHost {
   id: number;
   /** For linking to the host's public profile. */
   publicId?: string;
+  avatarUrl?: string | null;
   identityVerified: boolean;
   name: string;
   rating?: number | null;

@@ -85,6 +85,7 @@ export function backendPropertyToPropertyDetail(
       publicId: property.host?.publicId,
       name: hostName || "Property host",
       role: hostRole,
+      avatarUrl: property.host?.avatarUrl ?? undefined,
       verified: property.host?.identityVerified ?? false,
     },
     amenities: property.amenities ?? [],
