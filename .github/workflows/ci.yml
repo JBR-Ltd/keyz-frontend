@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, founder-1]
+    branches: [main, founder-1, feat/add-dashboards-2]
   pull_request:
 
 concurrency:
