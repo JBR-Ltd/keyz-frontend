@@ -937,3 +937,26 @@ Existing rental catalogue and saved-search contracts remain unchanged.
 
 - Profile, security, notification, payment, privacy, payout, session, and account-deactivation APIs retain their existing contracts.
 - No backend, database, authentication, preference, or payment payload changed.
+
+## Shared Statement Workspace
+
+### What was there before
+
+- Statement pages opened with excessive introductory space and a generic description that changed after data loaded.
+- Tenant totals used accounting labels such as `Gross` and displayed an irrelevant zero-fee column.
+- Date filtering offered only a large custom calendar and a vague `Show` action.
+- Transactions displayed raw ISO dates in a wide table that required horizontal scrolling on small screens.
+- Loading used an isolated spinner, errors had no retry action, and empty periods offered no recovery path.
+
+### How it was fixed
+
+- Added a compact, role-aware statement header for tenants, landlords, and agents.
+- Added 30-day, three-month, one-year, and custom period controls with explicit Apply behavior and range validation.
+- Replaced summary cards with open totals and role-appropriate financial labels.
+- Added a structured desktop table and labelled mobile transaction records with friendly dates, transaction names, and statuses.
+- Added matching loading skeletons, inline retry, and a wider-range action for empty periods.
+
+### Interfaces and behavior preserved
+
+- Statement fetching, payment records, authentication, and spreadsheet-safe CSV exports retain their existing contracts.
+- No backend, endpoint, database, or statement payload changed.
