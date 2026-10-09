@@ -15,17 +15,27 @@
 // plan, add another floor, or publish.
 //
 // Back buttons stay inside the wizard. The browser's own back button would
-// leave the whole capture flow.
+// leave the whole capture flow. The one exception is the FIRST step
+// (floor-setup): there is nothing to go "back" to inside the wizard, so it
+// sends the host out of the wizard to wherever they came from.
+//
+// Each wizard step can carry its own guided walkthrough. The first time the
+// host lands on an unseen step, its tutorial auto-opens after a short beat.
+// After that, the "View tutorial" button in the header replays it on demand.
 
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, CircleHelp } from "lucide-react";
 
+import BackButton from "@/components/navigation/BackButton";
+import ProductTour from "@/components/tour/ProductTour";
 import { useToast } from "@/components/ui/toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useWizardStepTour } from "@/hooks/useWizardStepTour";
+import { WIZARD_STEP_TUTORIALS } from "@/lib/tourWizardTutorials";
 import CaptureInstructions from "@/components/tour/CaptureInstructions";
 import CaptureProgress from "@/components/tour/CaptureProgress";
 import CaptureReview from "@/components/tour/CaptureReview";
@@ -117,6 +127,9 @@ const PHASE_LABEL: Record<WizardStep, string> = {
   publish: "Published",
 };
 
+const WIZARD_BACK_BUTTON_CLASS =
+  "mb-4 inline-flex min-h-11 items-center gap-1.5 font-body text-sm font-medium text-muted transition-colors hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent";
+
 export default function TourWizard({ propertyId, role }: TourWizardProps) {
   const reduceMotion = useReducedMotion();
   const { notify } = useToast();
@@ -137,6 +150,14 @@ export default function TourWizard({ propertyId, role }: TourWizardProps) {
   const [isPublishing, setIsPublishing] = useState(false);
 
   const bootstrapped = useRef(false);
+
+  // === Guided walkthrough ===
+
+  const tutorialSteps =
+    step === "loading" ? null : WIZARD_STEP_TUTORIALS[step] ?? null;
+  const showTutorialButton =
+    tutorialSteps !== null && tutorialSteps.length > 0;
+  const wizardTour = useWizardStepTour(step === "loading" ? null : step);
 
   const refreshRooms = useCallback(async (floorId: number): Promise<Room[]> => {
     const next = await getRoomsForFloor(floorId);
@@ -442,11 +463,6 @@ export default function TourWizard({ propertyId, role }: TourWizardProps) {
     setStep("overview");
   };
 
-  /**
-   * From the 3D floor-plan viewer: open a room. Goes back to the room's
-   * capture page, where the host can retake the sweep, adjust the size, or
-   * edit the doors and staircases.
-   */
   const handleOpenRoomFromFloorPlan = useCallback(
     async (roomId: number) => {
       const room = rooms.find((r) => r.id === roomId);
@@ -779,23 +795,50 @@ export default function TourWizard({ propertyId, role }: TourWizardProps) {
     <main className="min-h-screen overflow-x-hidden px-5 pb-0 pt-12 sm:px-8 lg:px-10 lg:pt-16 xl:px-14">
       <div className="mx-auto max-w-2xl">
         <header className="pb-8">
-          <p className="font-accent text-xs font-bold uppercase tracking-[0.3em] text-primary">
-            Virtual tour · {PHASE_LABEL[step]}
-          </p>
-          <h1 className="mt-4 font-display text-3xl font-bold leading-tight text-primary">
-            Build your virtual tour
-          </h1>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="min-w-0">
+              <p className="font-accent text-xs font-bold uppercase tracking-[0.3em] text-primary">
+                Virtual tour · {PHASE_LABEL[step]}
+              </p>
+              <h1 className="mt-4 font-display text-3xl font-bold leading-tight text-primary">
+                Build your virtual tour
+              </h1>
+            </div>
+            {showTutorialButton ? (
+              <button
+                type="button"
+                onClick={wizardTour.start}
+                className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-primary/20 bg-bg px-4 font-body text-xs font-bold text-primary transition-colors hover:border-accent hover:bg-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                <CircleHelp size={14} aria-hidden="true" />
+                View tutorial
+              </button>
+            ) : null}
+          </div>
         </header>
 
         {backTarget ? (
           <button
             type="button"
             onClick={handleBack}
-            className="mb-4 inline-flex items-center gap-1.5 font-body text-sm font-medium text-muted transition-colors hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className={WIZARD_BACK_BUTTON_CLASS}
           >
             <ChevronLeft size={15} aria-hidden="true" />
             {backTarget.label}
           </button>
+        ) : step === "floor-setup" ? (
+          <BackButton
+            fallbackHref={`/${role}/listings/${propertyId}`}
+            pendingLabel="Leaving tour…"
+            roleFallbacks={{
+              AGENT: "/agent/saved-listings",
+              LANDLORD: "/landlord/saved-listings",
+            }}
+            className={WIZARD_BACK_BUTTON_CLASS}
+          >
+            <ChevronLeft size={15} aria-hidden="true" />
+            Back to listing
+          </BackButton>
         ) : null}
 
         <div className="rounded-xl border border-border bg-bg p-5 shadow-sm sm:p-8">
@@ -964,6 +1007,14 @@ export default function TourWizard({ propertyId, role }: TourWizardProps) {
           </AnimatePresence>
         </div>
       </div>
+
+      {tutorialSteps ? (
+        <ProductTour
+          steps={tutorialSteps}
+          isOpen={wizardTour.isOpen}
+          onFinish={wizardTour.finish}
+        />
+      ) : null}
     </main>
   );
 }

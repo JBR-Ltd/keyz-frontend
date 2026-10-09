@@ -81,13 +81,14 @@ export default function CaptureInstructions({
         })}
       </ul>
 
-      <button
-        type="button"
-        onClick={onContinue}
-        className="mt-6 inline-flex min-h-12 w-full items-center justify-center rounded-full bg-accent px-7 py-3 font-body text-sm font-bold text-primary transition-all duration-200 hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-      >
-        Start capturing
-      </button>
+     <button
+  type="button"
+  data-tour="instructions-continue"
+  onClick={onContinue}
+  className="mt-6 inline-flex min-h-12 w-full items-center justify-center rounded-full bg-accent px-7 py-3 font-body text-sm font-bold text-primary transition-all duration-200 hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+>
+  Start capturing
+</button>
     </section>
   );
 }

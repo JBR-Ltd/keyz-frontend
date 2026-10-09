@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { Eye } from "lucide-react";
+import { PendingLink } from "@/components/ui/pending-link";
 
 interface PublishConfirmationProps {
   propertyId: number;
@@ -34,20 +34,22 @@ export default function PublishConfirmation({
         page.
       </p>
 
-      <div className="mt-6 flex flex-wrap justify-center gap-3">
-        <Link
+     <div data-tour="publish-ctas" className="mt-6 flex flex-wrap justify-center gap-3">
+        <PendingLink
           href={previewHref}
+          pendingLabel="Opening preview…"
           className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-primary/20 bg-bg px-6 py-3 font-body text-sm font-bold text-primary transition-all duration-200 hover:border-accent hover:bg-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         >
           <Eye size={15} aria-hidden="true" />
           Preview as renter
-        </Link>
-        <Link
+        </PendingLink>
+        <PendingLink
           href={listingHref}
+          pendingLabel="Loading listing…"
           className="inline-flex min-h-12 items-center justify-center rounded-full bg-accent px-7 py-3 font-body text-sm font-bold text-primary transition-all duration-200 hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         >
           Back to the listing
-        </Link>
+        </PendingLink>
       </div>
     </section>
   );

@@ -1,10 +1,9 @@
 // src/components/tour/RoomBoardPage.tsx
 //
-// The landlord's capture tracking board. Lists every room on a floor with
-// its status and jumps into the tour wizard at the right point. If the caller
-// did not supply a floor (via ?floor=), the board fetches the property's
-// floors and picks the first. If the property has more than one floor, a
-// switcher appears under the header.
+// The landlord/agent capture tracking board. Shows every room on every floor
+// of the property's virtual tour, grouped by floor. Each floor carries its
+// own actions (open its floor plan, add a room to it) so the host never has
+// to pick a floor up front.
 
 "use client";
 
@@ -27,156 +26,103 @@ import {
 } from "lucide-react";
 import RoomTile from "@/components/tour/RoomTile";
 import { useToast } from "@/components/ui/toast";
-import { getFloor, getFloorsForProperty } from "@/lib/api/tours/floors";
+import { getFloorsForProperty } from "@/lib/api/tours/floors";
 import { deleteRoom, getRoomsForFloor, updateRoom } from "@/lib/api/tours/rooms";
 import { ROOM_TYPES, SIZE_OPTIONS } from "@/lib/tourConstants";
 import type { Floor, Room, SizeBucket } from "@/lib/types/tour";
 
 interface RoomBoardPageProps {
   propertyId: number;
-  floorId?: number;
   role: "landlord" | "agent";
+}
+
+interface FloorWithRooms {
+  floor: Floor;
+  rooms: Room[];
 }
 
 type LoadState =
   | { status: "loading" }
   | { status: "error"; message: string }
-  | { status: "ready"; floor: Floor; rooms: Room[] };
+  | { status: "ready"; floors: FloorWithRooms[] };
 
 const INPUT_CLASS_NAME =
   "mt-2 min-h-11 w-full rounded-lg border border-border bg-bg px-3 font-body text-sm text-primary outline-none transition-all duration-200 focus:border-accent focus:ring-2 focus:ring-accent/30";
 
 export default function RoomBoardPage({
   propertyId,
-  floorId,
   role,
 }: RoomBoardPageProps): ReactElement {
   const { notify } = useToast();
   const router = useRouter();
 
-  const [floors, setFloors] = useState<Floor[] | null>(null);
-  const [activeFloorId, setActiveFloorId] = useState<number | null>(
-    floorId ?? null,
-  );
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [editingRoom, setEditingRoom] = useState<Room | null>(null);
 
-  // If the caller did not pass a floor, resolve one. Otherwise skip straight
-  // to loading the rooms.
-  useEffect(() => {
-    if (activeFloorId !== null) return;
-
-    let active = true;
-    void (async () => {
-      try {
-        const list = await getFloorsForProperty(propertyId);
-        if (!active) return;
-        setFloors(list);
-        if (list.length === 0) {
-          setState({
-            status: "error",
-            message:
-              "This property has no floors yet. Open the tour wizard to add one.",
-          });
-          return;
-        }
-        setActiveFloorId(list[0].id);
-      } catch (error) {
-        if (!active) return;
-        setState({
-          status: "error",
-          message:
-            error instanceof Error
-              ? error.message
-              : "Could not load this property's floors.",
-        });
-      }
-    })();
-
-    return () => {
-      active = false;
-    };
-  }, [propertyId, activeFloorId]);
-
-  const loadRooms = useCallback(async (fid: number) => {
+  const load = useCallback(async (): Promise<void> => {
     setState({ status: "loading" });
     try {
-      const [floor, rooms] = await Promise.all([
-        getFloor(fid),
-        getRoomsForFloor(fid),
-      ]);
-      setState({ status: "ready", floor, rooms });
+      const floors = await getFloorsForProperty(propertyId);
+      const withRooms = await Promise.all(
+        floors.map(async (floor) => ({
+          floor,
+          rooms: await getRoomsForFloor(floor.id),
+        })),
+      );
+      setState({ status: "ready", floors: withRooms });
     } catch (error) {
       setState({
         status: "error",
         message:
           error instanceof Error
             ? error.message
-            : "Could not load rooms for this floor.",
+            : "Could not load the rooms for this property.",
       });
     }
-  }, []);
+  }, [propertyId]);
 
   useEffect(() => {
-    if (activeFloorId !== null) void loadRooms(activeFloorId);
-  }, [activeFloorId, loadRooms]);
-
-  // Fetch the full floor list once, for the switcher. This runs in parallel
-  // with the initial room load and is idempotent.
-  useEffect(() => {
-    if (floors !== null) return;
-    let active = true;
-    void (async () => {
-      try {
-        const list = await getFloorsForProperty(propertyId);
-        if (!active) return;
-        setFloors(list);
-      } catch {
-        // The switcher is optional; the room list already renders.
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, [propertyId, floors]);
+    void load();
+  }, [load]);
 
   const summary = useMemo(() => {
     if (state.status !== "ready") {
-      return { total: 0, ready: 0, pending: 0, retake: 0 };
+      return { total: 0, ready: 0, pending: 0, retake: 0, floors: 0 };
     }
-    const total = state.rooms.length;
-    const ready = state.rooms.filter((r) => r.status === "ready").length;
-    const retake = state.rooms.filter((r) => r.status === "retake").length;
-    return { total, ready, pending: total - ready - retake, retake };
+    const allRooms = state.floors.flatMap((f) => f.rooms);
+    const total = allRooms.length;
+    const ready = allRooms.filter((r) => r.status === "ready").length;
+    const retake = allRooms.filter((r) => r.status === "retake").length;
+    return {
+      total,
+      ready,
+      pending: total - ready - retake,
+      retake,
+      floors: state.floors.length,
+    };
   }, [state]);
 
   const tourBase = `/${role}/listings/${propertyId}/tour`;
 
-  const handleRoomClick = (room: Room): void => {
-    const activeFloor = state.status === "ready" ? state.floor.id : null;
+  const handleRoomClick = (room: Room, floor: Floor): void => {
     const params = new URLSearchParams();
-    if (activeFloor !== null) params.set("floor", String(activeFloor));
+    params.set("floor", String(floor.id));
     params.set("room", String(room.id));
     router.push(`${tourBase}?${params.toString()}`);
   };
 
-  const handleAddRoom = (): void => {
-    const activeFloor = state.status === "ready" ? state.floor.id : null;
+  const handleAddRoom = (floor: Floor): void => {
     const params = new URLSearchParams();
-    if (activeFloor !== null) params.set("floor", String(activeFloor));
+    params.set("floor", String(floor.id));
     params.set("action", "add-room");
     router.push(`${tourBase}?${params.toString()}`);
   };
 
-  const handleOpenFloorPlan = (): void => {
-    const activeFloor = state.status === "ready" ? state.floor.id : null;
-    if (activeFloor === null) return;
-    router.push(`/tours/${propertyId}/floor-plan?floor=${activeFloor}`);
-  };
-
-  const handleSwitchFloor = (id: number): void => {
-    setActiveFloorId(id);
+  const handleOpenFloorPlan = (floor: Floor): void => {
+    router.push(
+      `/${role}/listings/${propertyId}/floor-plan?floor=${floor.id}`,
+    );
   };
 
   const handleDelete = useCallback(
@@ -189,12 +135,16 @@ export default function RoomBoardPage({
       setDeletingId(room.id);
       try {
         await deleteRoom(room.id);
-        if (state.status === "ready") {
-          setState({
-            ...state,
-            rooms: state.rooms.filter((r) => r.id !== room.id),
-          });
-        }
+        setState((current) => {
+          if (current.status !== "ready") return current;
+          return {
+            status: "ready",
+            floors: current.floors.map((entry) => ({
+              ...entry,
+              rooms: entry.rooms.filter((r) => r.id !== room.id),
+            })),
+          };
+        });
         notify({
           title: "Room deleted",
           description: `${room.roomName} was removed.`,
@@ -210,21 +160,22 @@ export default function RoomBoardPage({
         setDeletingId(null);
       }
     },
-    [state, notify],
+    [notify],
   );
 
-  const handleRoomUpdated = useCallback(
-    (updated: Room): void => {
-      if (state.status === "ready") {
-        setState({
-          ...state,
-          rooms: state.rooms.map((r) => (r.id === updated.id ? updated : r)),
-        });
-      }
-      setEditingRoom(null);
-    },
-    [state],
-  );
+  const handleRoomUpdated = useCallback((updated: Room): void => {
+    setState((current) => {
+      if (current.status !== "ready") return current;
+      return {
+        status: "ready",
+        floors: current.floors.map((entry) => ({
+          ...entry,
+          rooms: entry.rooms.map((r) => (r.id === updated.id ? updated : r)),
+        })),
+      };
+    });
+    setEditingRoom(null);
+  }, []);
 
   if (state.status === "loading") {
     return (
@@ -239,15 +190,13 @@ export default function RoomBoardPage({
       <main className="mx-auto flex min-h-screen max-w-2xl flex-col items-center justify-center gap-4 px-6 text-center">
         <p className="font-body text-sm text-red-700">{state.message}</p>
         <div className="flex flex-wrap gap-3">
-          {activeFloorId !== null ? (
-            <button
-              type="button"
-              onClick={() => void loadRooms(activeFloorId)}
-              className="inline-flex min-h-11 items-center rounded-full border border-primary/20 px-5 font-body text-sm font-bold text-primary hover:border-accent"
-            >
-              Retry
-            </button>
-          ) : null}
+          <button
+            type="button"
+            onClick={() => void load()}
+            className="inline-flex min-h-11 items-center rounded-full border border-primary/20 px-5 font-body text-sm font-bold text-primary hover:border-accent"
+          >
+            Retry
+          </button>
           <Link
             href={`/${role}/listings/${propertyId}`}
             className="inline-flex min-h-11 items-center gap-2 rounded-full bg-primary px-5 font-body text-sm font-bold text-white"
@@ -259,8 +208,6 @@ export default function RoomBoardPage({
       </main>
     );
   }
-
-  const { floor, rooms } = state;
 
   return (
     <main className="min-h-screen bg-bg pb-16">
@@ -279,11 +226,12 @@ export default function RoomBoardPage({
               Room board
             </p>
             <h1 className="mt-3 font-display text-4xl font-bold leading-tight text-primary">
-              {floor.name}
+              Manage rooms
             </h1>
             <p className="mt-2 max-w-2xl font-body text-sm text-muted">
-              Track which rooms are captured, which need a retake, and which
-              are ready to publish. Hover a tile to edit or delete it.
+              Every room across every floor of this tour. Track which are
+              captured, which need a retake, and which are ready to publish.
+              Hover a tile to edit or delete it.
             </p>
           </div>
 
@@ -295,56 +243,22 @@ export default function RoomBoardPage({
               <LayoutGrid size={15} aria-hidden="true" />
               Manage floors
             </Link>
-            <button
-              type="button"
-              onClick={handleOpenFloorPlan}
-              className="inline-flex min-h-11 items-center gap-2 rounded-full border border-primary/20 bg-bg px-5 font-body text-sm font-bold text-primary transition-all duration-200 ease-in-out hover:border-accent hover:bg-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            >
-              <LayoutGrid size={15} aria-hidden="true" />
-              Open floor plan
-            </button>
-            <button
-              type="button"
-              onClick={handleAddRoom}
-              className="inline-flex min-h-11 items-center gap-2 rounded-full bg-accent px-5 font-body text-sm font-bold text-primary transition-all duration-200 ease-in-out hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            >
-              <Plus size={15} aria-hidden="true" />
-              Add room
-            </button>
           </div>
         </header>
 
-        {floors && floors.length > 1 ? (
-          <nav
-            aria-label="Floors"
-            className="mt-6 flex flex-wrap gap-2 rounded-lg border border-border bg-bg p-1.5"
-          >
-            {floors.map((f) => {
-              const isActive = f.id === floor.id;
-              return (
-                <button
-                  key={f.id}
-                  type="button"
-                  onClick={() => handleSwitchFloor(f.id)}
-                  aria-current={isActive ? "page" : undefined}
-                  className={`rounded-md px-4 py-2 font-body text-sm font-bold transition-colors ${
-                    isActive
-                      ? "bg-primary text-white"
-                      : "text-primary/70 hover:bg-primary/10 hover:text-primary"
-                  }`}
-                >
-                  {f.name}
-                </button>
-              );
-            })}
-          </nav>
-        ) : null}
-
         <section className="mt-8 rounded-xl border border-border bg-bg p-5 shadow-sm">
           <div className="grid gap-4 sm:grid-cols-4">
-            <Stat label="Total rooms" value={String(summary.total)} tone="neutral" />
+            <Stat
+              label="Total rooms"
+              value={String(summary.total)}
+              tone="neutral"
+            />
             <Stat label="Ready" value={String(summary.ready)} tone="success" />
-            <Stat label="Pending" value={String(summary.pending)} tone="accent" />
+            <Stat
+              label="Pending"
+              value={String(summary.pending)}
+              tone="accent"
+            />
             <Stat label="Retakes" value={String(summary.retake)} tone="danger" />
           </div>
 
@@ -361,83 +275,66 @@ export default function RoomBoardPage({
           </div>
         </section>
 
-        {rooms.length === 0 ? (
+        {state.floors.length === 0 ? (
           <section className="mt-10 rounded-xl border border-dashed border-primary/20 bg-surface-soft/40 p-12 text-center">
             <p className="font-display text-xl font-bold text-primary">
-              No rooms on this floor yet
+              No floors yet
             </p>
             <p className="mx-auto mt-2 max-w-md font-body text-sm text-muted">
-              Add the first room to start capturing. Each room gets its own
-              panorama, door pins, and status.
+              Start the virtual tour to add your first floor, then capture its
+              rooms one by one.
             </p>
-            <button
-              type="button"
-              onClick={handleAddRoom}
+            <Link
+              href={`/${role}/listings/${propertyId}/tour`}
               className="mt-6 inline-flex min-h-11 items-center gap-2 rounded-full bg-accent px-6 font-body text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-white"
             >
-              <Plus size={15} aria-hidden="true" />
-              Add the first room
-            </button>
+              <Sparkles size={15} aria-hidden="true" />
+              Set up your tour
+            </Link>
           </section>
         ) : (
-          <section className="mt-10">
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <h2 className="font-display text-lg font-bold text-primary">
-                Rooms on this floor
-              </h2>
-              <p className="font-body text-xs text-muted">
-                {rooms.length} room{rooms.length === 1 ? "" : "s"}
-              </p>
-            </div>
-            <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {rooms.map((room) => (
-                <li key={room.id}>
-                  <RoomTile
-                    room={room}
-                    onClick={handleRoomClick}
-                    onEdit={setEditingRoom}
-                    onDelete={(r) => void handleDelete(r)}
-                    isDeleting={deletingId === room.id}
-                  />
-                </li>
-              ))}
-            </ul>
-          </section>
+          <div className="mt-10 space-y-10">
+            {state.floors.map(({ floor, rooms }) => (
+              <FloorSection
+                key={floor.id}
+                floor={floor}
+                rooms={rooms}
+                deletingId={deletingId}
+                onRoomClick={(room) => handleRoomClick(room, floor)}
+                onEditRoom={setEditingRoom}
+                onDeleteRoom={(room) => void handleDelete(room)}
+                onAddRoom={() => handleAddRoom(floor)}
+                onOpenFloorPlan={() => handleOpenFloorPlan(floor)}
+              />
+            ))}
+          </div>
         )}
 
-        <section className="mt-10 rounded-xl border border-accent/40 bg-accent/5 p-5">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="min-w-0 flex-1">
-              <p className="font-body text-[11px] font-bold uppercase tracking-[0.18em] text-accent-alt">
-                <Sparkles size={12} className="mr-1.5 inline" aria-hidden="true" />
-                Next step
-              </p>
-              <p className="mt-2 font-body text-sm leading-6 text-primary">
-                {summary.total === 0
-                  ? "Add rooms to this floor to start capturing."
-                  : summary.ready === 0
-                    ? "Capture at least one room before generating the floor plan."
-                    : summary.pending === 0
-                      ? "Every room is captured. Generate and review the floor plan."
-                      : `${summary.pending} room${summary.pending === 1 ? "" : "s"} still need capturing.`}
-              </p>
+        {state.floors.length > 0 ? (
+          <section className="mt-10 rounded-xl border border-accent/40 bg-accent/5 p-5">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <p className="font-body text-[11px] font-bold uppercase tracking-[0.18em] text-accent-alt">
+                  <Sparkles
+                    size={12}
+                    className="mr-1.5 inline"
+                    aria-hidden="true"
+                  />
+                  Next step
+                </p>
+                <p className="mt-2 font-body text-sm leading-6 text-primary">
+                  {summary.total === 0
+                    ? "Add rooms to your floors to start capturing."
+                    : summary.ready === 0
+                      ? "Capture at least one room before generating a floor plan."
+                      : summary.pending === 0
+                        ? "Every room across every floor is captured. Generate and review each floor plan."
+                        : `${summary.pending} room${summary.pending === 1 ? "" : "s"} still need capturing across ${summary.floors} floor${summary.floors === 1 ? "" : "s"}.`}
+                </p>
+              </div>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                const params = new URLSearchParams();
-                params.set("floor", String(floor.id));
-                params.set("action", "floor-plan");
-                router.push(`${tourBase}?${params.toString()}`);
-              }}
-              disabled={summary.ready === 0}
-              className="inline-flex min-h-11 items-center gap-2 rounded-full bg-accent px-6 font-body text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <LayoutGrid size={15} aria-hidden="true" />
-              Go to floor plan
-            </button>
-          </div>
-        </section>
+          </section>
+        ) : null}
       </div>
 
       {editingRoom ? (
@@ -448,6 +345,121 @@ export default function RoomBoardPage({
         />
       ) : null}
     </main>
+  );
+}
+
+interface FloorSectionProps {
+  floor: Floor;
+  rooms: Room[];
+  deletingId: number | null;
+  onRoomClick: (room: Room) => void;
+  onEditRoom: (room: Room) => void;
+  onDeleteRoom: (room: Room) => void;
+  onAddRoom: () => void;
+  onOpenFloorPlan: () => void;
+}
+
+function FloorSection({
+  floor,
+  rooms,
+  deletingId,
+  onRoomClick,
+  onEditRoom,
+  onDeleteRoom,
+  onAddRoom,
+  onOpenFloorPlan,
+}: FloorSectionProps): ReactElement {
+  const readyCount = rooms.filter((r) => r.status === "ready").length;
+
+  return (
+    <section
+      aria-labelledby={`floor-section-${floor.id}`}
+      className="rounded-xl border border-border bg-bg shadow-sm"
+    >
+      <header className="flex flex-wrap items-start justify-between gap-3 border-b border-border bg-surface-soft/40 px-5 py-4">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2
+              id={`floor-section-${floor.id}`}
+              className="font-display text-xl font-bold text-primary"
+            >
+              {floor.name}
+            </h2>
+            <span
+              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-body text-[10px] font-bold ${
+                floor.isFloorPlanConfirmed
+                  ? "bg-green-100 text-green-800"
+                  : "bg-amber-100 text-amber-800"
+              }`}
+            >
+              {floor.isFloorPlanConfirmed
+                ? "Floor plan confirmed"
+                : "Floor plan not confirmed"}
+            </span>
+          </div>
+          <p className="mt-1 font-body text-xs text-muted">
+            {rooms.length === 0
+              ? "No rooms captured on this floor yet."
+              : `${readyCount} of ${rooms.length} room${rooms.length === 1 ? "" : "s"} ready`}
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={onOpenFloorPlan}
+            className="inline-flex min-h-10 items-center gap-2 rounded-full border border-primary/20 bg-bg px-4 font-body text-xs font-bold text-primary transition-all duration-200 ease-in-out hover:border-accent hover:bg-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          >
+            <LayoutGrid size={13} aria-hidden="true" />
+            Open floor plan
+          </button>
+          <button
+            type="button"
+            onClick={onAddRoom}
+            className="inline-flex min-h-10 items-center gap-2 rounded-full bg-accent px-4 font-body text-xs font-bold text-primary transition-all duration-200 ease-in-out hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          >
+            <Plus size={13} aria-hidden="true" />
+            Add room
+          </button>
+        </div>
+      </header>
+
+      <div className="p-5">
+        {rooms.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-primary/20 bg-surface-soft/40 px-6 py-10 text-center">
+            <p className="font-body text-sm font-bold text-primary">
+              No rooms on this floor yet
+            </p>
+            <p className="mx-auto mt-1 max-w-md font-body text-xs text-muted">
+              Add the first room to start capturing. Each room gets its own
+              panorama, door pins, and status.
+            </p>
+            <button
+              type="button"
+              onClick={onAddRoom}
+              className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-full bg-accent px-5 font-body text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-white"
+            >
+              <Plus size={14} aria-hidden="true" />
+              Add the first room
+            </button>
+          </div>
+        ) : (
+          <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {rooms.map((room) => (
+              <li key={room.id}>
+                <RoomTile
+                  room={room}
+                  onClick={onRoomClick}
+                  onEdit={onEditRoom}
+                  onDelete={onDeleteRoom}
+                  isDeleting={deletingId === room.id}
+                />
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </section>
   );
 }
 

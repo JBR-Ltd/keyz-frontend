@@ -89,7 +89,7 @@ export default function CaptureProgress({
         </div>
       ) : null}
 
-      <div className="mt-6 grid grid-cols-2 gap-3">
+     <div data-tour="progress-grid" className="mt-6 grid grid-cols-2 gap-3">
         {rooms.map((room) => {
           const badge = STATUS_BADGE[room.status];
           const clickable = Boolean(onRoomClick);
@@ -144,20 +144,22 @@ export default function CaptureProgress({
       </div>
 
       <div className="mt-6 flex flex-wrap gap-3">
-        <button
-          type="button"
-          onClick={onAddAnotherRoom}
-          className="flex-1 rounded-full border border-primary/20 bg-bg px-6 py-3 font-body text-sm font-bold text-primary transition-all duration-200 ease-in-out hover:border-accent hover:bg-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-        >
-          Capture another room
-        </button>
-        <button
-          type="button"
-          disabled={readyCount === 0}
-          onClick={onReviewFloorPlan}
-          className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-full bg-accent px-6 py-3 font-body text-sm font-bold text-primary transition-all duration-200 ease-in-out hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <Sparkles size={15} aria-hidden="true" />
+       <button
+  type="button"
+  data-tour="progress-add"
+  onClick={onAddAnotherRoom}
+  className="flex-1 rounded-full border border-primary/20 bg-bg px-6 py-3 font-body text-sm font-bold text-primary transition-all duration-200 ease-in-out hover:border-accent hover:bg-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+>
+  Capture another room
+</button>
+       <button
+  type="button"
+  data-tour="progress-floor-plan"
+  disabled={readyCount === 0}
+  onClick={onReviewFloorPlan}
+  className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-full bg-accent px-6 py-3 font-body text-sm font-bold text-primary transition-all duration-200 ease-in-out hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-50"
+>
+         
           Review floor plan
         </button>
       </div>

@@ -27,6 +27,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { SyntheticEvent, useEffect, useRef, useState } from "react";
 import OverlayPortal from "@/components/ui/OverlayPortal";
 import UserAvatar from "@/components/ui/user-avatar";
+import { PendingIconSwap } from "@/components/ui/pending-link";
 import { logOutAccount, useAuthenticatedUser } from "@/lib/account";
 import { useDialogFocus } from "@/lib/useDialogFocus";
 import relloLogoMark from "../../../public/rello-logo-cropped.svg";
@@ -262,15 +263,17 @@ function RoleNavigation({
                     : "border-l-2 border-transparent text-muted hover:bg-primary/5 hover:text-primary"
                 }`}
               >
-                <Icon
-                  size={19}
-                  strokeWidth={1.8}
-                  className={
-                    isActive
-                      ? "shrink-0 text-accent-alt"
-                      : "shrink-0 text-primary transition-colors duration-200 group-hover:text-accent-alt"
-                  }
-                />
+                <PendingIconSwap size={19} className="text-accent-alt">
+                  <Icon
+                    size={19}
+                    strokeWidth={1.8}
+                    className={
+                      isActive
+                        ? "shrink-0 text-accent-alt"
+                        : "shrink-0 text-primary transition-colors duration-200 group-hover:text-accent-alt"
+                    }
+                  />
+                </PendingIconSwap>
                 <span
                   className={`overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out ${
                     isCollapsed ? "w-0 opacity-0" : "w-40 opacity-100"
@@ -454,7 +457,9 @@ function RoleProfileCard({
               }}
               className="flex items-center gap-3 rounded-lg px-4 py-3 font-body text-sm font-medium text-primary transition-all duration-200 ease-in-out hover:bg-primary/5"
             >
-              <Settings size={17} strokeWidth={1.9} />
+              <PendingIconSwap size={17}>
+                <Settings size={17} strokeWidth={1.9} />
+              </PendingIconSwap>
               Settings
             </Link>
             <button

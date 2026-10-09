@@ -21,6 +21,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import OverlayPortal from "@/components/ui/OverlayPortal";
+import { PendingIconSwap, PendingLink } from "@/components/ui/pending-link";
 import { logOutAccount, useAuthenticatedUser } from "@/lib/account";
 import { subscribeTenantHeaderSearch } from "@/lib/tenantHeaderSearch";
 import { useDialogFocus } from "@/lib/useDialogFocus";
@@ -107,12 +108,14 @@ function TenantNavigation({
                       }`
                 }
               >
-                <Icon
-                  size={18}
-                  strokeWidth={1.8}
-                  className={isActive ? "text-accent-alt" : "text-primary"}
-                  aria-hidden="true"
-                />
+                <PendingIconSwap size={18}>
+                  <Icon
+                    size={18}
+                    strokeWidth={1.8}
+                    className={isActive ? "text-accent-alt" : "text-primary"}
+                    aria-hidden="true"
+                  />
+                </PendingIconSwap>
                 {label}
               </Link>
             </li>
@@ -157,13 +160,15 @@ function VerificationMenuCard({
           </span>
         </span>
       </div>
-      <Link
+      <PendingLink
         href={href}
         onClick={onNavigate}
         className="mt-3 flex min-h-9 items-center justify-center rounded-full bg-primary px-4 py-2 font-body text-xs font-bold text-white transition-colors hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        pendingLabel="Opening…"
+        pendingClassName="min-h-9"
       >
         {verifiedStepCount > 0 ? "Continue verification" : "Verify identity"}
-      </Link>
+      </PendingLink>
     </div>
   );
 }
@@ -338,7 +343,9 @@ export default function TenantSidebar({
                       onClick={() => setIsProfileOpen(false)}
                       className="flex items-center gap-3 rounded-lg px-4 py-3 font-body text-sm font-medium text-primary transition-colors hover:bg-primary/5"
                     >
-                      <BellRing size={17} strokeWidth={1.9} />
+                      <PendingIconSwap size={17}>
+                        <BellRing size={17} strokeWidth={1.9} />
+                      </PendingIconSwap>
                       Saved searches
                     </Link>
                     <Link
@@ -347,7 +354,9 @@ export default function TenantSidebar({
                       onClick={() => setIsProfileOpen(false)}
                       className="flex items-center gap-3 rounded-lg px-4 py-3 font-body text-sm font-medium text-primary transition-colors hover:bg-primary/5"
                     >
-                      <ReceiptText size={17} strokeWidth={1.9} />
+                      <PendingIconSwap size={17}>
+                        <ReceiptText size={17} strokeWidth={1.9} />
+                      </PendingIconSwap>
                       Statement
                     </Link>
                     <Link
@@ -356,7 +365,9 @@ export default function TenantSidebar({
                       onClick={() => setIsProfileOpen(false)}
                       className="flex items-center gap-3 rounded-lg px-4 py-3 font-body text-sm font-medium text-primary transition-colors hover:bg-primary/5"
                     >
-                      <UserRound size={17} strokeWidth={1.9} />
+                      <PendingIconSwap size={17}>
+                        <UserRound size={17} strokeWidth={1.9} />
+                      </PendingIconSwap>
                       Profile
                     </Link>
                     <Link
@@ -365,7 +376,9 @@ export default function TenantSidebar({
                       onClick={() => setIsProfileOpen(false)}
                       className="flex items-center gap-3 rounded-lg px-4 py-3 font-body text-sm font-medium text-primary transition-colors hover:bg-primary/5"
                     >
-                      <Settings size={17} strokeWidth={1.9} />
+                      <PendingIconSwap size={17}>
+                        <Settings size={17} strokeWidth={1.9} />
+                      </PendingIconSwap>
                       Settings
                     </Link>
                     <button
@@ -475,7 +488,9 @@ export default function TenantSidebar({
                     onClick={() => setIsMobileOpen(false)}
                     className="flex min-h-11 items-center gap-3 rounded-lg px-3 font-body text-sm font-medium text-primary transition-colors hover:bg-primary/5"
                   >
-                    <BellRing size={17} />
+                    <PendingIconSwap size={17}>
+                      <BellRing size={17} />
+                    </PendingIconSwap>
                     Saved searches
                   </Link>
                   <Link
@@ -483,7 +498,9 @@ export default function TenantSidebar({
                     onClick={() => setIsMobileOpen(false)}
                     className="flex min-h-11 items-center gap-3 rounded-lg px-3 font-body text-sm font-medium text-primary transition-colors hover:bg-primary/5"
                   >
-                    <ReceiptText size={17} />
+                    <PendingIconSwap size={17}>
+                      <ReceiptText size={17} />
+                    </PendingIconSwap>
                     Statement
                   </Link>
                   <Link
@@ -491,7 +508,9 @@ export default function TenantSidebar({
                     onClick={() => setIsMobileOpen(false)}
                     className="flex min-h-11 items-center gap-3 rounded-lg px-3 font-body text-sm font-medium text-primary transition-colors hover:bg-primary/5"
                   >
-                    <UserRound size={17} />
+                    <PendingIconSwap size={17}>
+                      <UserRound size={17} />
+                    </PendingIconSwap>
                     Profile
                   </Link>
                   <Link
@@ -499,7 +518,9 @@ export default function TenantSidebar({
                     onClick={() => setIsMobileOpen(false)}
                     className="flex min-h-11 items-center gap-3 rounded-lg px-3 font-body text-sm font-medium text-primary transition-colors hover:bg-primary/5"
                   >
-                    <Settings size={17} />
+                    <PendingIconSwap size={17}>
+                      <Settings size={17} />
+                    </PendingIconSwap>
                     Settings
                   </Link>
                   <button

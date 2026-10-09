@@ -5,7 +5,6 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
 import Link from "next/link";
@@ -13,10 +12,12 @@ import {
   Check,
   ExternalLink,
   Layers,
-  Maximize2,
+  Loader2,
   RefreshCw,
 } from "lucide-react";
+import BlueprintCanvas from "@/components/tour/BlueprintCanvas";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import { AsyncButtonContent } from "@/components/ui/async-button-content";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import FloorPlan3DView from "@/components/tour/FloorPlan3DView";
@@ -44,162 +45,12 @@ interface FloorPlanViewerProps {
   staircases?: Staircase[];
   previewHref?: string;
   onBackToFloors?: () => void;
-  onConfirm?: () => void;
-  onRoomClick?: (roomId: number) => void;
+  onConfirm?: () => void | Promise<void>;
+  onRoomClick?: (roomId: number) => void | Promise<void>;
 }
 
 type ViewMode = "blueprint" | "3d";
-
-// ============================================================
-// Blueprint canvas: drag to pan, wheel/pinch to zoom
-// ============================================================
-
-interface BlueprintCanvasProps {
-  svg: string;
-}
-
-function BlueprintCanvas({ svg }: BlueprintCanvasProps): ReactElement {
-  const [zoom, setZoom] = useState(1);
-  const [offset, setOffset] = useState({ x: 0, y: 0 });
-
-  const containerRef = useRef<HTMLDivElement>(null);
-  const pointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
-  const gestureRef = useRef<{
-    startOffset: { x: number; y: number };
-    startCenter: { x: number; y: number };
-    startDistance: number;
-    startZoom: number;
-  } | null>(null);
-
-  const reset = () => {
-    setZoom(1);
-    setOffset({ x: 0, y: 0 });
-  };
-
-  // Native wheel listener with { passive: false } so preventDefault() stops
-  // the page from scrolling behind the canvas. React's synthetic onWheel is
-  // passive in some setups, which silently ignores preventDefault.
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const handler = (event: WheelEvent) => {
-      event.preventDefault();
-      const factor = event.deltaY > 0 ? 0.9 : 1.1;
-      setZoom((z) => Math.max(0.5, Math.min(4, z * factor)));
-    };
-    el.addEventListener("wheel", handler, { passive: false });
-    return () => el.removeEventListener("wheel", handler);
-  }, []);
-
-  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (e.pointerType === "mouse" && e.button !== 0) return;
-    (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
-    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
-
-    const pts = Array.from(pointersRef.current.values());
-    if (pts.length === 1) {
-      gestureRef.current = {
-        startOffset: offset,
-        startCenter: pts[0],
-        startDistance: 0,
-        startZoom: zoom,
-      };
-    } else if (pts.length === 2) {
-      const [a, b] = pts;
-      gestureRef.current = {
-        startOffset: offset,
-        startCenter: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 },
-        startDistance: Math.hypot(a.x - b.x, a.y - b.y),
-        startZoom: zoom,
-      };
-    }
-  };
-
-  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!pointersRef.current.has(e.pointerId)) return;
-    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    const g = gestureRef.current;
-    if (!g) return;
-    const pts = Array.from(pointersRef.current.values());
-
-    if (pts.length === 1) {
-      setOffset({
-        x: g.startOffset.x + (pts[0].x - g.startCenter.x),
-        y: g.startOffset.y + (pts[0].y - g.startCenter.y),
-      });
-    } else if (pts.length === 2 && g.startDistance > 0) {
-      const [a, b] = pts;
-      const distance = Math.hypot(a.x - b.x, a.y - b.y);
-      const next = Math.max(
-        0.5,
-        Math.min(4, g.startZoom * (distance / g.startDistance)),
-      );
-      setZoom(next);
-    }
-  };
-
-  const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
-    pointersRef.current.delete(e.pointerId);
-    const remaining = Array.from(pointersRef.current.values());
-    if (remaining.length === 0) {
-      gestureRef.current = null;
-    } else if (remaining.length === 1) {
-      gestureRef.current = {
-        startOffset: offset,
-        startCenter: remaining[0],
-        startDistance: 0,
-        startZoom: zoom,
-      };
-    }
-  };
-
-  return (
-    <div
-      ref={containerRef}
-      className="relative h-[480px] w-full touch-none select-none overflow-hidden overscroll-contain rounded-lg border border-border bg-white sm:h-[560px]"
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerCancel={onPointerUp}
-      style={{ cursor: "grab" }}
-    >
-      <div
-        className="pointer-events-none absolute inset-0 flex items-center justify-center [&>svg]:pointer-events-none"
-        style={{
-          transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`,
-          transformOrigin: "center center",
-        }}
-      >
-        <div
-          className="[&>svg]:block [&>svg]:h-auto [&>svg]:w-full"
-          dangerouslySetInnerHTML={{ __html: svg }}
-        />
-      </div>
-
-      <div className="pointer-events-none absolute bottom-2 right-2 flex items-center gap-1.5">
-        <span className="rounded-full bg-black/55 px-2 py-1 font-mono text-[10px] font-bold text-white backdrop-blur-sm">
-          {Math.round(zoom * 100)}%
-        </span>
-        <button
-          type="button"
-          onClick={reset}
-          className="pointer-events-auto inline-flex items-center gap-1 rounded-full bg-black/55 px-2 py-1 font-body text-[10px] font-bold text-white backdrop-blur-sm transition-colors hover:bg-black/70"
-        >
-          <Maximize2 size={10} aria-hidden="true" />
-          Reset
-        </button>
-      </div>
-
-      <p className="pointer-events-none absolute left-2 top-2 rounded-full bg-black/45 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.08em] text-white/90 backdrop-blur-sm">
-        Drag to pan · Pinch or scroll to zoom
-      </p>
-    </div>
-  );
-}
-
-// ============================================================
-// FloorPlanViewer
-// ============================================================
+type NudgeDirection = "up" | "down" | "left" | "right";
 
 export default function FloorPlanViewer({
   floorId,
@@ -220,6 +71,9 @@ export default function FloorPlanViewer({
   const [isDeleting, setIsDeleting] = useState(false);
   const [selectedRoomId, setSelectedRoomId] = useState<number | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("blueprint");
+  const [pendingNudge, setPendingNudge] = useState<NudgeDirection | null>(null);
+  const [isOpeningRoom, setIsOpeningRoom] = useState(false);
+  const [isOpeningOverview, setIsOpeningOverview] = useState(false);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -280,7 +134,7 @@ export default function FloorPlanViewer({
     try {
       await confirmFloorPlan(floorId);
       await load();
-      onConfirm?.();
+      await onConfirm?.();
     } catch (error) {
       notify({
         title: "Could not confirm the floor plan",
@@ -291,6 +145,16 @@ export default function FloorPlanViewer({
       setIsConfirming(false);
     }
   }, [floorId, load, notify, onConfirm]);
+
+  const handleGoToOverview = useCallback(async () => {
+    if (!onConfirm) return;
+    setIsOpeningOverview(true);
+    try {
+      await onConfirm();
+    } finally {
+      setIsOpeningOverview(false);
+    }
+  }, [onConfirm]);
 
   const handleDeleteConfirmed = useCallback(async () => {
     setIsDeleting(true);
@@ -311,7 +175,7 @@ export default function FloorPlanViewer({
   }, [floorId, notify]);
 
   const handleNudge = useCallback(
-    async (roomId: number, dx: number, dy: number) => {
+    async (roomId: number, dx: number, dy: number): Promise<void> => {
       const placement = plan?.placements.find((p) => p.roomId === roomId);
       if (!placement || placement.gridX === null || placement.gridY === null) {
         return;
@@ -333,6 +197,30 @@ export default function FloorPlanViewer({
     },
     [plan, load, notify],
   );
+
+  const handleNudgeClick = async (
+    direction: NudgeDirection,
+    dx: number,
+    dy: number,
+  ): Promise<void> => {
+    if (selectedRoomId === null) return;
+    setPendingNudge(direction);
+    try {
+      await handleNudge(selectedRoomId, dx, dy);
+    } finally {
+      setPendingNudge(null);
+    }
+  };
+
+  const handleStepInside = async (): Promise<void> => {
+    if (!onRoomClick || selectedRoomId === null) return;
+    setIsOpeningRoom(true);
+    try {
+      await onRoomClick(selectedRoomId);
+    } finally {
+      setIsOpeningRoom(false);
+    }
+  };
 
   const graph = useMemo(() => {
     if (!plan) return null;
@@ -395,9 +283,15 @@ export default function FloorPlanViewer({
           type="button"
           onClick={() => void handleGenerate()}
           disabled={isSaving || rooms.length === 0}
+          aria-busy={isSaving}
           className="inline-flex min-h-12 w-full items-center justify-center rounded-full bg-accent px-7 py-3 font-body text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {isSaving ? "Generating…" : "Generate floor plan"}
+          <AsyncButtonContent
+            isPending={isSaving}
+            pendingLabel="Generating…"
+          >
+            Generate floor plan
+          </AsyncButtonContent>
         </button>
         {rooms.length === 0 ? (
           <p className="text-center font-body text-xs text-muted">
@@ -440,7 +334,10 @@ export default function FloorPlanViewer({
                 Back to floors
               </button>
             ) : null}
-            <div className="flex gap-1 rounded-lg border border-border bg-bg p-0.5">
+            <div
+  data-tour="plan-tabs"
+  className="flex gap-1 rounded-lg border border-border bg-bg p-0.5"
+>
               <button
                 type="button"
                 onClick={() => setViewMode("blueprint")}
@@ -512,40 +409,67 @@ export default function FloorPlanViewer({
           <div className="mt-2 grid grid-cols-4 gap-2">
             <button
               type="button"
-              onClick={() => void handleNudge(selectedRoomId, 0, -1)}
-              className="min-h-9 rounded-md border border-border bg-bg font-body text-xs font-bold text-primary hover:border-accent"
+              disabled={pendingNudge !== null}
+              onClick={() => void handleNudgeClick("up", 0, -1)}
+              className="inline-flex min-h-9 items-center justify-center rounded-md border border-border bg-bg font-body text-xs font-bold text-primary hover:border-accent disabled:cursor-wait disabled:opacity-60"
             >
-              Up
+              {pendingNudge === "up" ? (
+                <Loader2 size={12} className="animate-spin" aria-hidden="true" />
+              ) : (
+                "Up"
+              )}
             </button>
             <button
               type="button"
-              onClick={() => void handleNudge(selectedRoomId, 0, 1)}
-              className="min-h-9 rounded-md border border-border bg-bg font-body text-xs font-bold text-primary hover:border-accent"
+              disabled={pendingNudge !== null}
+              onClick={() => void handleNudgeClick("down", 0, 1)}
+              className="inline-flex min-h-9 items-center justify-center rounded-md border border-border bg-bg font-body text-xs font-bold text-primary hover:border-accent disabled:cursor-wait disabled:opacity-60"
             >
-              Down
+              {pendingNudge === "down" ? (
+                <Loader2 size={12} className="animate-spin" aria-hidden="true" />
+              ) : (
+                "Down"
+              )}
             </button>
             <button
               type="button"
-              onClick={() => void handleNudge(selectedRoomId, -1, 0)}
-              className="min-h-9 rounded-md border border-border bg-bg font-body text-xs font-bold text-primary hover:border-accent"
+              disabled={pendingNudge !== null}
+              onClick={() => void handleNudgeClick("left", -1, 0)}
+              className="inline-flex min-h-9 items-center justify-center rounded-md border border-border bg-bg font-body text-xs font-bold text-primary hover:border-accent disabled:cursor-wait disabled:opacity-60"
             >
-              Left
+              {pendingNudge === "left" ? (
+                <Loader2 size={12} className="animate-spin" aria-hidden="true" />
+              ) : (
+                "Left"
+              )}
             </button>
             <button
               type="button"
-              onClick={() => void handleNudge(selectedRoomId, 1, 0)}
-              className="min-h-9 rounded-md border border-border bg-bg font-body text-xs font-bold text-primary hover:border-accent"
+              disabled={pendingNudge !== null}
+              onClick={() => void handleNudgeClick("right", 1, 0)}
+              className="inline-flex min-h-9 items-center justify-center rounded-md border border-border bg-bg font-body text-xs font-bold text-primary hover:border-accent disabled:cursor-wait disabled:opacity-60"
             >
-              Right
+              {pendingNudge === "right" ? (
+                <Loader2 size={12} className="animate-spin" aria-hidden="true" />
+              ) : (
+                "Right"
+              )}
             </button>
           </div>
           {onRoomClick && !nodeById.get(selectedRoomId)?.isStaircase ? (
             <button
               type="button"
-              onClick={() => onRoomClick(selectedRoomId)}
-              className="mt-3 w-full rounded-full bg-primary px-4 py-2 font-body text-xs font-bold text-white transition-colors hover:bg-primary/90"
+              disabled={isOpeningRoom}
+              aria-busy={isOpeningRoom}
+              onClick={() => void handleStepInside()}
+              className="mt-3 w-full rounded-full bg-primary px-4 py-2 font-body text-xs font-bold text-white transition-colors hover:bg-primary/90 disabled:cursor-wait disabled:opacity-60"
             >
-              Step inside this room →
+              <AsyncButtonContent
+                isPending={isOpeningRoom}
+                pendingLabel="Opening room…"
+              >
+                Step inside this room →
+              </AsyncButtonContent>
             </button>
           ) : null}
         </div>
@@ -556,11 +480,12 @@ export default function FloorPlanViewer({
         </p>
       )}
 
-      <div className="flex flex-wrap gap-3">
+     <div data-tour="plan-actions" className="flex flex-wrap gap-3">
         <button
           type="button"
           onClick={() => void handleGenerate()}
           disabled={isSaving}
+          aria-busy={isSaving}
           className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-full border border-border bg-bg px-6 py-3 font-body text-sm font-bold text-primary transition-colors hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <RefreshCw size={14} aria-hidden="true" />
@@ -571,6 +496,7 @@ export default function FloorPlanViewer({
             type="button"
             onClick={() => void handleConfirm()}
             disabled={isConfirming}
+            aria-busy={isConfirming}
             className="flex-1 rounded-full bg-accent px-6 py-3 font-body text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isConfirming ? "Confirming…" : "Confirm floor plan"}
@@ -581,13 +507,22 @@ export default function FloorPlanViewer({
               <Check size={14} aria-hidden="true" />
               Confirmed
             </span>
-            <button
-              type="button"
-              onClick={() => onConfirm?.()}
-              className="inline-flex min-h-11 flex-1 items-center justify-center rounded-full bg-primary px-6 py-3 font-body text-sm font-bold text-white transition-colors hover:bg-primary/90"
-            >
-              Go to overview
-            </button>
+            {onConfirm ? (
+              <button
+                type="button"
+                disabled={isOpeningOverview}
+                aria-busy={isOpeningOverview}
+                onClick={() => void handleGoToOverview()}
+                className="inline-flex min-h-11 flex-1 items-center justify-center rounded-full bg-primary px-6 py-3 font-body text-sm font-bold text-white transition-colors hover:bg-primary/90 disabled:cursor-wait disabled:opacity-60"
+              >
+                <AsyncButtonContent
+                  isPending={isOpeningOverview}
+                  pendingLabel="Opening overview…"
+                >
+                  Go to overview
+                </AsyncButtonContent>
+              </button>
+            ) : null}
           </>
         )}
         <button

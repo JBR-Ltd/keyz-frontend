@@ -15,6 +15,7 @@ import {
 } from "react";
 import Link from "next/link";
 import { ArrowLeft, Loader2 } from "lucide-react";
+import BlueprintCanvas from "@/components/tour/BlueprintCanvas";
 import FloorPlan3DView from "@/components/tour/FloorPlan3DView";
 import { buildGraph } from "@/lib/tour/buildGraph";
 import { generateSimpleBlueprint } from "@/lib/tour/blueprint";
@@ -29,12 +30,13 @@ import type {
   Room,
 } from "@/lib/types/tour";
 
+type ViewMode = "blueprint" | "3d";
+
 interface FloorPlanPageClientProps {
   publicId: string;
   initialFloorId?: number;
+  initialViewMode?: ViewMode;
 }
-
-type ViewMode = "blueprint" | "3d";
 
 // ---------------------------------------------------------------------------
 // Adapters from the public bundle shape to the internal shapes the graph and
@@ -101,11 +103,12 @@ function publicFloorToFloor(pf: PublicTourFloor, propertyId: number): Floor {
 export default function FloorPlanPageClient({
   publicId,
   initialFloorId,
+  initialViewMode = "blueprint",
 }: FloorPlanPageClientProps): ReactElement {
   const [tour, setTour] = useState<PublicTour | null>(null);
   const [activeFloorId, setActiveFloorId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<ViewMode>("blueprint");
+  const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -268,18 +271,10 @@ export default function FloorPlanPageClient({
       ) : null}
 
       <div className="mx-auto mt-6 max-w-6xl px-4 sm:px-6 lg:px-8">
-        <div className="overflow-hidden rounded-2xl border border-border bg-bg shadow-sm">
-          {viewMode === "blueprint" ? (
-            <div
-              className="w-full overflow-auto p-4"
-              style={{ minHeight: "500px" }}
-            >
-              <div
-                dangerouslySetInnerHTML={{ __html: blueprintSVG }}
-                className="[&>svg]:mx-auto [&>svg]:h-auto [&>svg]:w-full [&>svg]:max-w-full"
-              />
-            </div>
-          ) : (
+        {viewMode === "blueprint" ? (
+          <BlueprintCanvas svg={blueprintSVG} />
+        ) : (
+          <div className="overflow-hidden rounded-2xl border border-border bg-bg shadow-sm">
             <FloorPlan3DView
               floor={floorForView}
               rooms={roomsForView}
@@ -288,8 +283,8 @@ export default function FloorPlanPageClient({
                 window.location.href = `/tours/${publicId}?room=${roomId}`;
               }}
             />
-          )}
-        </div>
+          </div>
+        )}
 
         <p className="mt-4 text-center font-body text-xs text-muted">
           {graph.disclaimer}

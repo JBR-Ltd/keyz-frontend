@@ -119,7 +119,7 @@ export default function TourPreviewPage({
               className="inline-flex h-9 items-center gap-1.5 rounded-full border border-white/20 bg-[#0a1622]/90 px-3 font-body text-[11px] font-bold text-white/90 transition-colors hover:border-sky-300 hover:bg-sky-500/15 sm:h-10 sm:gap-2 sm:px-4 sm:text-xs"
             >
               <Wand2 size={14} aria-hidden="true" />
-              Back to wizard
+              Back to Setup
             </Link>
             <Link
               href={listingHref}

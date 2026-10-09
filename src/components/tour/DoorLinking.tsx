@@ -26,6 +26,7 @@ import type {
   UpdateDoorRequest,
   WallSide,
 } from "@/lib/types/tour";
+import { AsyncButtonContent } from "@/components/ui/async-button-content";
 import DoorPin, {
   type DoorPinData,
   type DoorPinPosition,
@@ -72,7 +73,7 @@ interface DoorLinkingProps {
     input: Omit<CreateStaircaseRequest, "hostRoomId">,
   ) => Promise<boolean>;
   onDeleteStaircase: (staircaseId: number) => Promise<void>;
-  onContinue: () => void;
+  onContinue: () => void | Promise<void>;
 }
 
 function createLocalId(): string {
@@ -151,6 +152,7 @@ export default function DoorLinking({
   const [activeSavedId, setActiveSavedId] = useState<number | null>(null);
   const [showStaircaseForm, setShowStaircaseForm] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isContinuing, setIsContinuing] = useState(false);
 
   const [pendingSavedPositions, setPendingSavedPositions] = useState<
     Record<number, DoorPinPosition>
@@ -378,6 +380,15 @@ export default function DoorLinking({
     }
   };
 
+  const handleContinue = async (): Promise<void> => {
+    setIsContinuing(true);
+    try {
+      await onContinue();
+    } finally {
+      setIsContinuing(false);
+    }
+  };
+
   const setActiveDraftField = <K extends keyof DraftPin>(
     key: K,
     value: DraftPin[K],
@@ -485,17 +496,19 @@ export default function DoorLinking({
         </p>
         <div className="flex flex-wrap gap-2">
           <button
-            type="button"
-            onClick={handleAddDraftPin}
-            className="inline-flex min-h-10 items-center justify-center rounded-full border border-border bg-bg px-5 font-body text-sm font-bold text-primary transition-colors hover:bg-surface-soft"
-          >
-            + Add another door
-          </button>
+  type="button"
+  data-tour="door-add"
+  onClick={handleAddDraftPin}
+  className="inline-flex min-h-10 items-center justify-center rounded-full border border-border bg-bg px-5 font-body text-sm font-bold text-primary transition-colors hover:bg-surface-soft"
+>
+  + Add another door
+</button>
           <button
-            type="button"
-            onClick={() => setShowStaircaseForm((current) => !current)}
-            className="inline-flex min-h-10 items-center justify-center rounded-full border border-border bg-bg px-5 font-body text-sm font-bold text-primary transition-colors hover:bg-surface-soft"
-          >
+  type="button"
+  data-tour="door-staircases"
+  onClick={() => setShowStaircaseForm((current) => !current)}
+  className="inline-flex min-h-10 items-center justify-center rounded-full border border-border bg-bg px-5 font-body text-sm font-bold text-primary transition-colors hover:bg-surface-soft"
+>
             {showStaircaseForm
               ? "Hide staircases"
               : staircases.length > 0
@@ -597,13 +610,20 @@ export default function DoorLinking({
       ) : null}
 
       <div className="mt-6 flex justify-end">
-        <button
-          type="button"
-          disabled={isSaving}
-          onClick={onContinue}
-          className="inline-flex min-h-12 items-center justify-center rounded-full bg-accent px-7 py-3 font-body text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {isSaving ? "Saving…" : "Continue"}
+       <button
+  type="button"
+  data-tour="door-continue"
+  disabled={isSaving || isContinuing}
+  aria-busy={isContinuing}
+  onClick={() => void handleContinue()}
+  className="inline-flex min-h-12 items-center justify-center rounded-full bg-accent px-7 py-3 font-body text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-white disabled:cursor-wait disabled:opacity-60"
+>
+          <AsyncButtonContent
+            isPending={isContinuing}
+            pendingLabel="Loading rooms…"
+          >
+            Continue
+          </AsyncButtonContent>
         </button>
       </div>
     </section>
