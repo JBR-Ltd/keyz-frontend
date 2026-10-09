@@ -40,7 +40,7 @@ const MISSING_REFERENCE =
 function Shell({ children }: { children: ReactElement }): ReactElement {
   return (
     <main className="min-h-screen overflow-x-hidden bg-surface-soft px-5 py-10 sm:px-8 lg:px-10 lg:py-16">
-      <div className="mx-auto max-w-xl rounded-2xl border border-border bg-bg p-6 text-center shadow-sm sm:p-10">
+      <div className="mx-auto max-w-xl py-6 text-center sm:py-10">
         {children}
       </div>
     </main>
