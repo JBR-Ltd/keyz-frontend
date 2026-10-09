@@ -113,7 +113,10 @@ export default function FloorPlanPageClient({
 
   useEffect(() => {
     let active = true;
-    setIsLoading(true);
+    // Deferred, so the effect body itself never sets state
+    queueMicrotask(() => {
+      if (active) setIsLoading(true);
+    });
     void (async () => {
       try {
         const next = await getPublicTour(publicId);

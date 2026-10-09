@@ -83,7 +83,7 @@ export default function RoomBoardPage({
   }, [propertyId]);
 
   useEffect(() => {
-    void load();
+    queueMicrotask(() => void load());
   }, [load]);
 
   const summary = useMemo(() => {

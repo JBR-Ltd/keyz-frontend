@@ -71,7 +71,6 @@ export default function RoomDoorEditor({
   onKindChange,
   onNudge,
   onEditModeChange,
-  onConfirmDraft,
   onDismiss,
 }: RoomDoorEditorProps): ReactElement | null {
   const [selectedRoomId, setSelectedRoomId] = useState<string>("");

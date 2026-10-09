@@ -178,9 +178,11 @@ export default function DoorLinking({
         !d.isFixed && d.leadsToRoomId === pendingSelectLinkedRoomId,
     );
     if (!door) return;
-    setActiveSavedId(door.id);
-    setActiveDraftId(null);
-    setPendingSelectLinkedRoomId(null);
+    queueMicrotask(() => {
+      setActiveSavedId(door.id);
+      setActiveDraftId(null);
+      setPendingSelectLinkedRoomId(null);
+    });
   }, [savedDoors, pendingSelectLinkedRoomId]);
 
   const savedPins: DoorPinData[] = useMemo(

@@ -138,7 +138,10 @@ export default function PanoramaViewer({
   const tourPluginRef = useRef<VirtualTourPlugin | null>(null);
   const lastAppliedNodeId = useRef<string>(startNodeId);
   const onNodeChangeRef = useRef(onNodeChange);
-  onNodeChangeRef.current = onNodeChange;
+
+  useEffect(() => {
+    onNodeChangeRef.current = onNodeChange;
+  }, [onNodeChange]);
 
   const [roomStartIndex, setRoomStartIndex] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState(5);
@@ -234,7 +237,7 @@ export default function PanoramaViewer({
     const activeIndex = rooms.findIndex((r) => String(r.id) === activeNodeId);
     if (activeIndex === -1) return;
     const pageStart = Math.floor(activeIndex / itemsPerPage) * itemsPerPage;
-    setRoomStartIndex(pageStart);
+    queueMicrotask(() => setRoomStartIndex(pageStart));
   }, [activeNodeId, rooms, itemsPerPage]);
 
   // === Room navigation (image-overlay arrows) ===

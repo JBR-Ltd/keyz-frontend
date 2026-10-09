@@ -8,10 +8,8 @@
 import type {
   CompassDirection,
   FloorPlanGraph,
-  FloorPlanGraphEdge,
   FloorPlanGraphNode,
   Room,
-  WallSide,
 } from "@/lib/types/tour";
 
 const CELL_PX = 130;
@@ -32,19 +30,6 @@ const ROOM_COLORS = [
 
 function isHorizontalCompass(c: CompassDirection): boolean {
   return c === "N" || c === "S";
-}
-
-function compassToWall(c: CompassDirection): WallSide {
-  switch (c) {
-    case "N":
-      return "TOP";
-    case "E":
-      return "RIGHT";
-    case "S":
-      return "BOTTOM";
-    case "W":
-      return "LEFT";
-  }
 }
 
 interface PlacedNode {

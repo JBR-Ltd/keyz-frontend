@@ -44,7 +44,7 @@ export default function BlueprintCanvas({
   // When we return to 100%, drop any pan so the SVG sits flush in the frame.
   useEffect(() => {
     if (zoom <= MIN_ZOOM) {
-      setOffset({ x: 0, y: 0 });
+      queueMicrotask(() => setOffset({ x: 0, y: 0 }));
     }
   }, [zoom]);
 

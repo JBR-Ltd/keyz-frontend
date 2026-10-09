@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactElement } from "react";
-import { CheckCircle2, Plus, Rocket, Sparkles } from "lucide-react";
+import { CheckCircle2, Plus, Rocket } from "lucide-react";
 import { iconForRoom } from "@/lib/tour/roomIcons";
 import type { Room, RoomStatus } from "@/lib/types/tour";
 
@@ -72,7 +72,7 @@ export default function CaptureProgress({
               </p>
               <p className="mt-1 font-body text-sm text-primary">
                 Every room is captured and every floor plan is confirmed.
-                Publish now, or keep adjusting. Don't worry, publishing can be re-run any
+                Publish now, or keep adjusting. Don&apos;t worry, publishing can be re-run any
                 time.
               </p>
             </div>

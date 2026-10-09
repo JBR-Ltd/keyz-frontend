@@ -89,7 +89,10 @@ export default function HostFloorPlanPage({
   useEffect(() => {
     if (activeFloorId === null) return;
     let active = true;
-    setIsLoadingBundle(true);
+    // Deferred, so the effect body itself never sets state
+    queueMicrotask(() => {
+      if (active) setIsLoadingBundle(true);
+    });
     void (async () => {
       try {
         const [rooms, staircases] = await Promise.all([

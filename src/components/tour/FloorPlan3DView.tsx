@@ -42,7 +42,6 @@ import type {
   Floor,
   FloorPlanGraph,
   Room,
-  SizeBucket,
   WallSide,
 } from "@/lib/types/tour";
 
@@ -384,32 +383,44 @@ let tileRoughnessTex: THREE.CanvasTexture | null = null;
 let wallRoughnessTex: THREE.CanvasTexture | null = null;
 const wallTexCache = new Map<string, THREE.CanvasTexture>();
 
+// Seeded rather than Math.random, so scenery is pure and holds still across renders
+function seededRandom(seed: number): () => number {
+  let state = seed;
+  return () => {
+    state = (state * 9301 + 49297) % 233280;
+    return state / 233280;
+  };
+}
+
 function getWallTexture(hex: string): THREE.CanvasTexture {
   if (!wallTexCache.has(hex)) wallTexCache.set(hex, makeWallPaintTexture(hex));
   return wallTexCache.get(hex)!;
 }
 
+// A plain function rather than the hook body, since a hook may not reassign module state
+function getSharedTextures() {
+  if (!grassTex) grassTex = makeGrassTexture();
+  if (!barkTex) barkTex = makeBarkTexture();
+  if (!concreteTex) concreteTex = makeConcreteTexture();
+  if (!woodFloorTex) woodFloorTex = makeWoodFloorTexture();
+  if (!tileFloorTex) tileFloorTex = makeTileFloorTexture();
+  if (!woodRoughnessTex) woodRoughnessTex = makeWoodRoughnessTexture();
+  if (!tileRoughnessTex) tileRoughnessTex = makeTileRoughnessTexture();
+  if (!wallRoughnessTex) wallRoughnessTex = makeWallRoughnessTexture();
+  return {
+    grassTex,
+    barkTex,
+    concreteTex,
+    woodFloorTex,
+    tileFloorTex,
+    woodRoughnessTex,
+    tileRoughnessTex,
+    wallRoughnessTex,
+  };
+}
+
 function useSharedTextures() {
-  return useMemo(() => {
-    if (!grassTex) grassTex = makeGrassTexture();
-    if (!barkTex) barkTex = makeBarkTexture();
-    if (!concreteTex) concreteTex = makeConcreteTexture();
-    if (!woodFloorTex) woodFloorTex = makeWoodFloorTexture();
-    if (!tileFloorTex) tileFloorTex = makeTileFloorTexture();
-    if (!woodRoughnessTex) woodRoughnessTex = makeWoodRoughnessTexture();
-    if (!tileRoughnessTex) tileRoughnessTex = makeTileRoughnessTexture();
-    if (!wallRoughnessTex) wallRoughnessTex = makeWallRoughnessTexture();
-    return {
-      grassTex,
-      barkTex,
-      concreteTex,
-      woodFloorTex,
-      tileFloorTex,
-      woodRoughnessTex,
-      tileRoughnessTex,
-      wallRoughnessTex,
-    };
-  }, []);
+  return useMemo(() => getSharedTextures(), []);
 }
 
 // ============================================================
@@ -1349,11 +1360,12 @@ function FlowerBed({
   const colors = ["#D96B8A", "#E8C34A", "#C75B5B", "#8A6BC7"];
   const flowers = useMemo(() => {
     const arr: { fx: number; fz: number; c: string }[] = [];
+    const rand = seededRandom(Math.abs(Math.round(x * 97 + z * 31)) + 1);
     for (let i = 0; i < Math.round(w * 3); i++) {
       arr.push({
-        fx: (Math.random() - 0.5) * w * 0.9,
-        fz: (Math.random() - 0.5) * d * 0.7,
-        c: colors[Math.floor(Math.random() * colors.length)],
+        fx: (rand() - 0.5) * w * 0.9,
+        fz: (rand() - 0.5) * d * 0.7,
+        c: colors[Math.floor(rand() * colors.length)],
       });
     }
     return arr;
@@ -2151,11 +2163,7 @@ function GroundLevelSurroundings({
     const treeCount = Math.max(6, Math.round(groundSize / 4));
     const bushCount = Math.max(10, Math.round(groundSize / 3));
 
-    let seed = 1;
-    const rand = () => {
-      seed = (seed * 9301 + 49297) % 233280;
-      return seed / 233280;
-    };
+    const rand = seededRandom(1);
 
     let attempts = 0;
     while (

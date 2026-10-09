@@ -81,7 +81,7 @@ export default function ProductTour({
 
   // Reset to the first step whenever the tour opens.
   useEffect(() => {
-    if (isOpen) setStepIndex(0);
+    if (isOpen) queueMicrotask(() => setStepIndex(0));
   }, [isOpen]);
 
   const step = steps[stepIndex] ?? null;

@@ -47,7 +47,7 @@ export function useProductTour(
       seen = false;
     }
 
-    setHasSeen(seen);
+    queueMicrotask(() => setHasSeen(seen));
 
     if (!autoStart || seen) return;
 

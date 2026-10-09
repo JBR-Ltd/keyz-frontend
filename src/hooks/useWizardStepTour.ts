@@ -39,10 +39,13 @@ export function useWizardStepTour(
 
   useEffect(() => {
     currentStepRef.current = step;
-    setIsOpen(false);
 
+    // Deferred, so the effect body itself never sets state
     if (step === null) {
-      setHasSeenCurrentStep(true);
+      queueMicrotask(() => {
+        setIsOpen(false);
+        setHasSeenCurrentStep(true);
+      });
       return;
     }
 
@@ -56,7 +59,10 @@ export function useWizardStepTour(
       seen = false;
     }
 
-    setHasSeenCurrentStep(seen);
+    queueMicrotask(() => {
+      setIsOpen(false);
+      setHasSeenCurrentStep(seen);
+    });
 
     if (seen) return;
 

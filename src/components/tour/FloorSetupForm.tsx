@@ -68,7 +68,7 @@ export default function FloorSetupForm({
   }, [propertyId]);
 
   useEffect(() => {
-    void load();
+    queueMicrotask(() => void load());
   }, [load]);
 
   const handleAddFloor = async (): Promise<void> => {

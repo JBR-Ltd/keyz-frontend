@@ -99,7 +99,10 @@ export default function Host3DWalkthroughPage({
   useEffect(() => {
     if (activeFloorId === null) return;
     let active = true;
-    setIsLoadingBundle(true);
+    // Deferred, so the effect body itself never sets state
+    queueMicrotask(() => {
+      if (active) setIsLoadingBundle(true);
+    });
     void (async () => {
       try {
         const [rooms, staircases, plan] = await Promise.all([

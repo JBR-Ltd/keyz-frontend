@@ -84,7 +84,6 @@ import type {
   Staircase,
   TourSummary,
   UpdateDoorRequest,
-  WallSide,
 } from "@/lib/types/tour";
 import type { DoorPinPosition } from "@/components/tour/DoorPin";
 
@@ -105,13 +104,6 @@ type WizardStep =
   | "floor-plan"
   | "overview"
   | "publish";
-
-const WALL_TO_YAW: Record<WallSide, number> = {
-  TOP: 0,
-  RIGHT: 90,
-  BOTTOM: 180,
-  LEFT: 270,
-};
 
 const PHASE_LABEL: Record<WizardStep, string> = {
   loading: "Loading",
@@ -301,7 +293,7 @@ export default function TourWizard({ propertyId, role }: TourWizardProps) {
         if (!cancelled) setOverviewTour(null);
       }
     })();
-    void refreshSummary();
+    queueMicrotask(() => void refreshSummary());
     return () => {
       cancelled = true;
     };

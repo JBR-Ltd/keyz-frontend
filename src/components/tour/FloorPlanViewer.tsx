@@ -69,7 +69,7 @@ export default function FloorPlanViewer({
   const [isConfirming, setIsConfirming] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [selectedRoomId, setSelectedRoomId] = useState<number | null>(null);
+  const [selectedRoomId] = useState<number | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("blueprint");
   const [pendingNudge, setPendingNudge] = useState<NudgeDirection | null>(null);
   const [isOpeningRoom, setIsOpeningRoom] = useState(false);
@@ -88,7 +88,7 @@ export default function FloorPlanViewer({
   }, [floorId]);
 
   useEffect(() => {
-    void load();
+    queueMicrotask(() => void load());
   }, [load]);
 
   const save = useCallback(

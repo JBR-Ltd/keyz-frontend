@@ -47,7 +47,10 @@ export default function PropertyTourEmbed({
 
   useEffect(() => {
     let active = true;
-    setState({ status: "loading" });
+    // Deferred, so the effect body itself never sets state
+    queueMicrotask(() => {
+      if (active) setState({ status: "loading" });
+    });
 
     void (async () => {
       try {
