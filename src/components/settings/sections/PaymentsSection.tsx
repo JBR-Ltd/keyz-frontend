@@ -4,6 +4,7 @@ import { Landmark, ReceiptText } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactElement } from "react";
+import SettingsSectionHeader from "@/components/settings/SettingsSectionHeader";
 import PropertyPrice from "@/components/property/PropertyPrice";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -55,6 +56,7 @@ export default function PaymentsSection(): ReactElement {
   const pathname = usePathname();
   const role = pathname.split("/")[1] ?? "tenant";
   const isHost = role === "landlord" || role === "agent";
+  const isAdmin = role === "admin";
   const { isLoading: isLoadingPayout, snapshot } = useHostVerification(isHost);
   const [entries, setEntries] = useState<EscrowEntry[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
@@ -82,23 +84,20 @@ export default function PaymentsSection(): ReactElement {
   const hasPayoutAccount = payout?.accountLast4 != null;
 
   return (
-    <section className="overflow-hidden rounded-lg border border-border bg-bg shadow-sm">
-      <div className="border-b border-border bg-surface-soft p-6 sm:p-8">
-        <p className="font-accent text-xs font-bold uppercase tracking-[0.3em] text-primary">
-          Money
-        </p>
-        <h2 className="mt-3 font-display text-3xl font-bold leading-none text-primary sm:text-4xl">
-          Payments
-        </h2>
-        <p className="mt-4 max-w-2xl font-body text-sm leading-6 text-muted">
-          {isHost
-            ? "Rent is held in escrow and released to one account. Rello never stores your card."
-            : "Rent is paid through the bank at checkout and held in escrow until your stay is honoured. Rello never stores your card."}
-        </p>
-      </div>
+    <section className="overflow-hidden rounded-2xl border border-border bg-bg shadow-sm">
+      <SettingsSectionHeader
+        title="Payments"
+        description={
+          isHost
+            ? "Manage your payout account and review money moving through escrow."
+            : isAdmin
+              ? "Review payment activity associated with this account."
+              : "Review rent payments and receipts held through Rello escrow."
+        }
+      />
 
       {isHost ? (
-        <div className="border-b border-border px-5 py-7 sm:px-7">
+        <div className="border-b border-border px-5 py-6 sm:px-6">
           <div className="grid gap-5 sm:grid-cols-[1fr_auto] sm:items-center">
             <div className="flex gap-4">
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/5 text-primary">
@@ -146,9 +145,13 @@ export default function PaymentsSection(): ReactElement {
         </div>
       ) : null}
 
-      <div className="px-5 py-7 sm:px-7">
+      <div className="px-5 py-6 sm:px-6">
         <h3 className="font-body text-lg font-bold text-primary">
-          {isHost ? "Money in and out" : "What you have paid"}
+          {isHost
+            ? "Money in and out"
+            : isAdmin
+              ? "Account payment history"
+              : "What you have paid"}
         </h3>
 
         {loadError ? (

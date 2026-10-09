@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
 import SettingsView from "@/components/settings/SettingsView";
+import { resolveSettingsSection } from "@/components/settings/types";
 
 interface LandlordSettingsPageProps {
   searchParams: Promise<{ section?: string | string[] }>;
@@ -10,9 +11,5 @@ export default async function LandlordSettingsPage({
 }: LandlordSettingsPageProps): Promise<ReactElement> {
   const { section } = await searchParams;
 
-  return (
-    <SettingsView
-      initialSection={section === "payments" ? "payments" : "profile"}
-    />
-  );
+  return <SettingsView activeSection={resolveSettingsSection(section)} />;
 }

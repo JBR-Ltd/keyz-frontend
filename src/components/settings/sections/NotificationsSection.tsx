@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import type { ReactElement } from "react";
+import SettingsSectionHeader from "@/components/settings/SettingsSectionHeader";
 import { usePreferenceToggles } from "@/lib/preferences";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -91,29 +92,24 @@ export default function NotificationsSection(): ReactElement {
   );
 
   return (
-    <section className="overflow-hidden rounded-lg border border-border bg-bg shadow-sm">
-      <div className="border-b border-border bg-surface-soft p-6 sm:p-8">
-        <p className="font-accent text-xs font-bold uppercase tracking-[0.3em] text-primary">
-          Your attention
-        </p>
-        <h2 className="mt-3 font-display text-3xl font-bold leading-none text-primary sm:text-4xl">
-          Notifications
-        </h2>
-        <p className="mt-4 max-w-2xl font-body text-sm leading-6 text-muted">
-          Choose which updates deserve a place in your inbox. Critical account
-          notices will always be delivered.
-        </p>
-        {error ? (
-          <p className="mt-3 font-body text-sm text-red-700">{error}</p>
-        ) : null}
-      </div>
+    <section className="overflow-hidden rounded-2xl border border-border bg-bg shadow-sm">
+      <SettingsSectionHeader
+        title="Notifications"
+        description="Choose which updates reach you. Critical account notices are always delivered."
+      />
 
-      <div className="px-5 sm:px-7">
+      {error ? (
+        <div className="border-b border-border bg-red-50 px-5 py-4 font-body text-sm text-red-700 sm:px-6">
+          {error}
+        </div>
+      ) : null}
+
+      <div className="px-5 sm:px-6">
         {isLoading
           ? preferences.map((preference) => (
               <div
                 key={`loading-${preference.id}`}
-                className="grid gap-5 border-b border-border py-7 sm:grid-cols-[1fr_auto] sm:items-center"
+                className="grid gap-5 border-b border-border py-6 sm:grid-cols-[1fr_auto] sm:items-center"
                 aria-hidden="true"
               >
                 <div>
@@ -126,7 +122,7 @@ export default function NotificationsSection(): ReactElement {
           : preferences.map((preference) => (
               <div
                 key={preference.id}
-                className="grid gap-5 border-b border-border py-7 transition-all duration-200 ease-in-out hover:bg-surface-soft hover:shadow-sm sm:grid-cols-[1fr_auto] sm:items-center"
+                className="grid gap-5 border-b border-border py-6 sm:grid-cols-[1fr_auto] sm:items-center"
               >
                 <div>
                   <h2 className="font-body text-lg font-bold text-primary">

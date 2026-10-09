@@ -913,3 +913,27 @@ Existing rental catalogue and saved-search contracts remain unchanged.
 
 - Profile updates, avatar uploads, identity verification, locked verified names, and toast feedback retain their existing contracts.
 - No backend, route, authentication, or profile payload changed.
+
+## Shared Account Settings Workspace
+
+### What was there before
+
+- Settings stacked a large page heading, a heavy horizontal tab container, and another oversized section header before showing useful controls.
+- The standalone public-profile-inspired identity layout was embedded unchanged inside Settings, creating duplicate hierarchy and pushing fields below the first viewport.
+- Section changes lived only in component state, so refresh and browser navigation returned people to Profile.
+- Administrator settings included an unrelated strip of hardcoded operational statistics.
+- Section surfaces used inconsistent heading sizes, shadows, hover movement, spacing, and role-specific language.
+
+### How it was fixed
+
+- Added a compact desktop settings sidebar and a horizontally scrollable mobile section selector.
+- Made every section addressable through the `section` query parameter with safe Profile fallback and focus movement after navigation.
+- Added a compact settings presentation for the shared profile component while preserving the standalone Profile page.
+- Standardised section headings, borders, row spacing, loading states, errors, and responsive action placement.
+- Removed the hardcoded administrator statistics strip and corrected host-specific privacy controls for both landlords and agents.
+- Kept Payments available to administrators with neutral account-payment language.
+
+### Interfaces and behavior preserved
+
+- Profile, security, notification, payment, privacy, payout, session, and account-deactivation APIs retain their existing contracts.
+- No backend, database, authentication, preference, or payment payload changed.

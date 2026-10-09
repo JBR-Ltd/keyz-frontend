@@ -14,6 +14,7 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { useRef, useState, type ReactElement } from "react";
+import SettingsSectionHeader from "@/components/settings/SettingsSectionHeader";
 import { useToast } from "@/components/ui/toast";
 import { AsyncButtonContent } from "@/components/ui/async-button-content";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -37,6 +38,10 @@ interface ProfileDraft {
   username: string;
 }
 
+interface ProfileSectionProps {
+  variant?: "settings" | "standalone";
+}
+
 function draftFrom(user: AuthenticatedUser | null): ProfileDraft {
   return {
     city: user?.city ?? "",
@@ -47,7 +52,46 @@ function draftFrom(user: AuthenticatedUser | null): ProfileDraft {
   };
 }
 
-function ProfileSectionSkeleton(): ReactElement {
+function ProfileSectionSkeleton({
+  variant,
+}: Required<ProfileSectionProps>): ReactElement {
+  if (variant === "settings") {
+    return (
+      <section
+        className="overflow-hidden rounded-2xl border border-border bg-bg shadow-sm"
+        role="status"
+        aria-label="Loading profile"
+      >
+        <div className="border-b border-border px-5 py-5 sm:px-6 sm:py-6">
+          <Skeleton className="h-8 w-28" />
+          <Skeleton className="mt-3 h-4 w-72 max-w-full" />
+        </div>
+        <div className="flex flex-col gap-4 border-b border-border px-5 py-5 sm:flex-row sm:items-center sm:px-6">
+          <Skeleton className="h-16 w-16 shrink-0 rounded-full" />
+          <div className="min-w-0 flex-1">
+            <Skeleton className="h-6 w-52 max-w-full" />
+            <Skeleton className="mt-3 h-4 w-64 max-w-full" />
+          </div>
+          <Skeleton className="h-11 w-28 rounded-full" />
+        </div>
+        <div className="p-5 sm:p-6">
+          <div className="grid gap-4 sm:grid-cols-2">
+            {Array.from({ length: 7 }, (_, index) => (
+              <div
+                key={`settings-profile-field-${index + 1}`}
+                className="rounded-xl border border-border p-4"
+              >
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="mt-3 h-5 w-3/4" />
+              </div>
+            ))}
+          </div>
+        </div>
+        <span className="sr-only">Loading profile</span>
+      </section>
+    );
+  }
+
   return (
     <section
       className="space-y-8"
@@ -90,7 +134,9 @@ function ProfileSectionSkeleton(): ReactElement {
   );
 }
 
-export default function ProfileSection(): ReactElement {
+export default function ProfileSection({
+  variant = "standalone",
+}: ProfileSectionProps): ReactElement {
   const { notify } = useToast();
   const { user: loadedUser, isLoading } = useAuthenticatedUser();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -110,6 +156,7 @@ export default function ProfileSection(): ReactElement {
   const initials = user
     ? [user.firstName.charAt(0), user.lastName.charAt(0)].join("").toUpperCase()
     : "";
+  const isSettings = variant === "settings";
 
   // Seeded when editing opens rather than in an effect, so the draft is only
   // ever written in response to something the person did
@@ -251,14 +298,45 @@ export default function ProfileSection(): ReactElement {
   ];
 
   if (isLoading && !user) {
-    return <ProfileSectionSkeleton />;
+    return <ProfileSectionSkeleton variant={variant} />;
   }
 
   return (
-    <section className="space-y-8">
-      <header className="border-b border-border pb-8">
-        <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:gap-8">
-          <label className="group relative flex h-24 w-24 shrink-0 cursor-pointer items-center justify-center rounded-full bg-primary font-display text-3xl font-bold text-white shadow-sm ring-4 ring-bg focus-within:outline-none focus-within:ring-accent sm:h-28 sm:w-28 sm:text-4xl">
+    <section
+      className={
+        isSettings
+          ? "overflow-hidden rounded-2xl border border-border bg-bg shadow-sm"
+          : "space-y-8"
+      }
+    >
+      {isSettings ? (
+        <SettingsSectionHeader
+          title="Profile"
+          description="Keep your personal details, identity, and profile photo up to date."
+        />
+      ) : null}
+
+      <header
+        className={
+          isSettings
+            ? "border-b border-border px-5 py-5 sm:px-6"
+            : "border-b border-border pb-8"
+        }
+      >
+        <div
+          className={`flex flex-col sm:flex-row ${
+            isSettings
+              ? "gap-4 sm:items-center sm:gap-5"
+              : "gap-6 sm:items-start sm:gap-8"
+          }`}
+        >
+          <label
+            className={`group relative flex shrink-0 cursor-pointer items-center justify-center rounded-full bg-primary font-display font-bold text-white shadow-sm focus-within:outline-none focus-within:ring-accent ${
+              isSettings
+                ? "h-16 w-16 text-xl ring-2 ring-surface-soft"
+                : "h-24 w-24 text-3xl ring-4 ring-bg sm:h-28 sm:w-28 sm:text-4xl"
+            }`}
+          >
             <span className="absolute inset-0 overflow-hidden rounded-full">
               {user?.avatarUrl ? (
                 <Image
@@ -266,7 +344,7 @@ export default function ProfileSection(): ReactElement {
                   alt=""
                   fill
                   unoptimized
-                  sizes="112px"
+                  sizes={isSettings ? "64px" : "112px"}
                   className="object-cover"
                 />
               ) : (
@@ -282,7 +360,11 @@ export default function ProfileSection(): ReactElement {
                 )}
               </span>
             </span>
-            <span className="absolute bottom-0 right-0 flex h-10 w-10 items-center justify-center rounded-full border-4 border-surface-soft bg-accent text-primary shadow-sm transition-colors group-hover:bg-primary group-hover:text-white group-focus-within:bg-primary group-focus-within:text-white">
+            <span
+              className={`absolute bottom-0 right-0 flex items-center justify-center rounded-full border-surface-soft bg-accent text-primary shadow-sm transition-colors group-hover:bg-primary group-hover:text-white group-focus-within:bg-primary group-focus-within:text-white ${
+                isSettings ? "h-8 w-8 border-2" : "h-10 w-10 border-4"
+              }`}
+            >
               {isUploading ? (
                 <Loader2
                   size={17}
@@ -311,7 +393,11 @@ export default function ProfileSection(): ReactElement {
               {roleLabel}
             </p>
             <div className="mt-2 flex flex-wrap items-center gap-3">
-              <h1 className="break-words font-display text-4xl font-bold leading-tight text-primary sm:text-5xl">
+              <h1
+                className={`break-words font-display font-bold leading-tight text-primary ${
+                  isSettings ? "text-2xl sm:text-3xl" : "text-4xl sm:text-5xl"
+                }`}
+              >
                 {fullName}
               </h1>
               {isVerified ? (
@@ -322,8 +408,14 @@ export default function ProfileSection(): ReactElement {
                 </span>
               )}
             </div>
-            <p className="mt-4 max-w-2xl font-body text-base leading-7 text-muted">
-              Manage your personal details, account identity, and profile photo.
+            <p
+              className={`max-w-2xl font-body text-muted ${
+                isSettings ? "mt-2 break-all text-sm" : "mt-4 text-base leading-7"
+              }`}
+            >
+              {isSettings
+                ? user?.email
+                : "Manage your personal details, account identity, and profile photo."}
             </p>
           </div>
 
@@ -341,7 +433,13 @@ export default function ProfileSection(): ReactElement {
       </header>
 
       {!isVerified && canVerifyIdentity ? (
-        <div className="rounded-2xl border border-accent/30 bg-accent/10 px-5 py-5 sm:px-6">
+        <div
+          className={
+            isSettings
+              ? "border-b border-border bg-accent/10 px-5 py-5 sm:px-6"
+              : "rounded-2xl border border-accent/30 bg-accent/10 px-5 py-5 sm:px-6"
+          }
+        >
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex gap-3">
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent text-primary">
@@ -367,9 +465,23 @@ export default function ProfileSection(): ReactElement {
         </div>
       ) : null}
 
-      <div className="overflow-hidden rounded-2xl border border-border bg-bg shadow-sm">
-        <div className="border-b border-border px-6 py-6 sm:px-8">
-          <h2 className="font-display text-2xl font-bold leading-tight text-primary sm:text-3xl">
+      <div
+        className={
+          isSettings
+            ? ""
+            : "overflow-hidden rounded-2xl border border-border bg-bg shadow-sm"
+        }
+      >
+        <div
+          className={`border-b border-border ${
+            isSettings ? "px-5 py-5 sm:px-6" : "px-6 py-6 sm:px-8"
+          }`}
+        >
+          <h2
+            className={`font-display font-bold leading-tight text-primary ${
+              isSettings ? "text-xl sm:text-2xl" : "text-2xl sm:text-3xl"
+            }`}
+          >
             Profile details
           </h2>
           <p className="mt-3 max-w-2xl font-body text-sm leading-6 text-muted">
@@ -379,7 +491,7 @@ export default function ProfileSection(): ReactElement {
           </p>
         </div>
 
-        <div className="p-6 sm:p-8">
+        <div className={isSettings ? "p-5 sm:p-6" : "p-6 sm:p-8"}>
           <div className="grid gap-4 border-b border-border pb-6 sm:grid-cols-2">
             <div className="rounded-xl bg-surface-soft p-4">
               <span className="flex items-center gap-2 font-body text-xs font-bold uppercase tracking-[0.14em] text-muted">
@@ -403,7 +515,9 @@ export default function ProfileSection(): ReactElement {
             {details.map((field) => (
               <label
                 key={field.label}
-                className="min-w-0 rounded-xl border border-border bg-bg p-5 transition-all duration-200 ease-in-out hover:border-primary/30 hover:bg-surface-soft"
+                className={`min-w-0 rounded-xl border border-border bg-bg transition-colors duration-200 hover:border-primary/30 hover:bg-surface-soft ${
+                  isSettings ? "p-4" : "p-5"
+                }`}
               >
                 <span className="flex items-center gap-2 font-body text-xs font-medium uppercase tracking-[0.14em] text-muted">
                   {field.icon}

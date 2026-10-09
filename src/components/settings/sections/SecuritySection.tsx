@@ -3,6 +3,7 @@
 import { FormEvent, useState, type ReactElement } from "react";
 import LoginSessionsPanel from "@/components/settings/LoginSessionsPanel";
 import SettingsDangerZone from "@/components/settings/SettingsDangerZone";
+import SettingsSectionHeader from "@/components/settings/SettingsSectionHeader";
 import { AsyncButtonContent } from "@/components/ui/async-button-content";
 import { useToast } from "@/components/ui/toast";
 import {
@@ -150,21 +151,14 @@ export default function SecuritySection(): ReactElement {
   };
 
   return (
-    <section className="overflow-hidden rounded-lg border border-border bg-bg shadow-sm">
-      <div className="border-b border-primary bg-surface-soft p-6 sm:p-8">
-        <p className="font-accent text-xs font-bold uppercase tracking-[0.3em] text-primary">
-          Account protection
-        </p>
-        <h2 className="mt-3 font-display text-3xl font-bold leading-none text-primary sm:text-4xl">
-          Security
-        </h2>
-        <p className="mt-4 max-w-2xl font-body text-sm leading-6 text-muted">
-          Manage your password and active login sessions.
-        </p>
-      </div>
+    <section className="overflow-hidden rounded-2xl border border-border bg-bg shadow-sm">
+      <SettingsSectionHeader
+        title="Security"
+        description="Manage your password, two-step sign-in, and active login sessions."
+      />
 
-      <div className="px-5 sm:px-7">
-        <div className="border-b border-border py-7 transition-all duration-200 ease-in-out hover:bg-surface-soft hover:shadow-sm">
+      <div className="px-5 sm:px-6">
+        <div className="border-b border-border py-6">
           <div className="grid gap-5 sm:grid-cols-[1fr_auto] sm:items-center">
             <div>
               <h2 className="font-body text-xl font-bold text-primary">
@@ -177,7 +171,7 @@ export default function SecuritySection(): ReactElement {
             <button
               type="button"
               onClick={() => setIsPasswordFormOpen((current) => !current)}
-              className="min-h-12 rounded-full bg-accent px-6 py-3 font-body text-sm font-medium text-primary transition-all duration-200 ease-in-out hover:scale-[1.02] hover:bg-primary hover:text-white hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              className="min-h-12 rounded-full bg-accent px-6 py-3 font-body text-sm font-medium text-primary transition-colors duration-200 hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             >
               {isPasswordFormOpen ? "Close form" : "Change password"}
             </button>
@@ -247,7 +241,7 @@ export default function SecuritySection(): ReactElement {
           ) : null}
         </div>
 
-        <div className="border-b border-border py-7 transition-all duration-200 ease-in-out hover:bg-surface-soft hover:shadow-sm">
+        <div className="border-b border-border py-6">
           <div className="grid gap-5 sm:grid-cols-[1fr_auto] sm:items-center">
             <div>
               <h2 className="font-body text-xl font-bold text-primary">
@@ -271,7 +265,7 @@ export default function SecuritySection(): ReactElement {
 
                 void sendCode();
               }}
-              className={`flex min-h-12 items-center justify-center gap-2 rounded-full border border-primary/30 px-6 py-3 font-body text-sm font-medium transition-all duration-200 ease-in-out hover:scale-[1.02] hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-60 ${
+              className={`flex min-h-12 items-center justify-center gap-2 rounded-full border border-primary/30 px-6 py-3 font-body text-sm font-medium transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-60 ${
                 twoFactorOn
                   ? "bg-accent text-primary"
                   : "bg-primary/10 text-primary"

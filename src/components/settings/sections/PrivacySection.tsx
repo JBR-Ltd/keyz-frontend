@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import DataExportPanel from "@/components/settings/DataExportPanel";
 import type { ReactElement } from "react";
+import SettingsSectionHeader from "@/components/settings/SettingsSectionHeader";
 import { usePreferenceToggles } from "@/lib/preferences";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -53,38 +54,37 @@ const LANDLORD_CONTROLS = [
 
 export default function PrivacySection(): ReactElement {
   const pathname = usePathname();
-  const isLandlord = pathname.startsWith("/landlord");
-  const controls = isLandlord ? LANDLORD_CONTROLS : INITIAL_CONTROLS;
+  const isHost =
+    pathname.startsWith("/landlord") || pathname.startsWith("/agent");
+  const controls = isHost ? LANDLORD_CONTROLS : INITIAL_CONTROLS;
   const { error, isLoading, toggle, values } = usePreferenceToggles(
     "privacy",
     controls,
   );
 
   return (
-    <section className="overflow-hidden rounded-lg border border-border bg-bg shadow-sm">
-      <div className="border-b border-border bg-surface-soft p-6 sm:p-8">
-        <p className="font-accent text-xs font-bold uppercase tracking-[0.3em] text-primary">
-          Data controls
-        </p>
-        <h2 className="mt-3 font-display text-3xl font-bold leading-none text-primary sm:text-4xl">
-          Privacy
-        </h2>
-        <p className="mt-4 max-w-2xl font-body text-sm leading-6 text-muted">
-          {isLandlord
-            ? "Decide how your portfolio activity supports recommendations and how verified renters can connect with you."
-            : "Decide how your activity supports recommendations and how verified professionals can connect with you."}
-        </p>
-        {error ? (
-          <p className="mt-3 font-body text-sm text-red-700">{error}</p>
-        ) : null}
-      </div>
+    <section className="overflow-hidden rounded-2xl border border-border bg-bg shadow-sm">
+      <SettingsSectionHeader
+        title="Privacy"
+        description={
+          isHost
+            ? "Control how your portfolio supports recommendations and how verified renters can find you."
+            : "Control discovery, personalisation, analytics, and your account data."
+        }
+      />
 
-      <div className="px-5 sm:px-7">
+      {error ? (
+        <div className="border-b border-border bg-red-50 px-5 py-4 font-body text-sm text-red-700 sm:px-6">
+          {error}
+        </div>
+      ) : null}
+
+      <div className="px-5 sm:px-6">
         {isLoading
           ? controls.map((control) => (
               <div
                 key={`loading-${control.id}`}
-                className="grid gap-5 border-b border-border py-7 sm:grid-cols-[1fr_auto] sm:items-center"
+                className="grid gap-5 border-b border-border py-6 sm:grid-cols-[1fr_auto] sm:items-center"
                 aria-hidden="true"
               >
                 <div>
@@ -97,7 +97,7 @@ export default function PrivacySection(): ReactElement {
           : controls.map((control) => (
               <div
                 key={control.id}
-                className="grid gap-5 border-b border-border py-7 transition-all duration-200 ease-in-out hover:bg-surface-soft hover:shadow-sm sm:grid-cols-[1fr_auto] sm:items-center"
+                className="grid gap-5 border-b border-border py-6 sm:grid-cols-[1fr_auto] sm:items-center"
               >
                 <div>
                   <h2 className="font-body text-lg font-bold text-primary">
