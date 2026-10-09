@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/status-badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
+import { getTourSummary } from "@/lib/api/tours/publish";
 import {
   blockDates,
   getPropertyAvailability,
@@ -65,6 +66,7 @@ import {
   type PropertyVerificationResult,
   type PropertyVerificationState,
 } from "@/lib/propertyVerification";
+import type { TourSummary } from "@/lib/types/tour";
 
 interface ManageListingViewProps {
   propertyId: string;
@@ -201,6 +203,10 @@ export default function ManageListingView({
   const [blockEnd, setBlockEnd] = useState("");
   const [blockReason, setBlockReason] = useState("");
 
+  const [tourSummary, setTourSummary] = useState<TourSummary | null>(null);
+  const [tourStatus, setTourStatus] = useState<LoadStatus>("idle");
+  const [tourError, setTourError] = useState("");
+
   const loadUnits = useCallback(async (): Promise<void> => {
     setUnitsStatus("loading");
     setUnitsError("");
@@ -247,6 +253,25 @@ export default function ManageListingView({
 
     setPhotos(result.data);
     setPhotosStatus("ready");
+  }, [numericId]);
+
+  const loadTourSummary = useCallback(async (): Promise<void> => {
+    setTourStatus("loading");
+    setTourError("");
+
+    try {
+      const summary = await getTourSummary(numericId);
+      setTourSummary(summary);
+      setTourStatus("ready");
+    } catch (error) {
+      setTourSummary(null);
+      setTourError(
+        error instanceof Error
+          ? error.message
+          : "Could not load the tour summary.",
+      );
+      setTourStatus("error");
+    }
   }, [numericId]);
 
   useEffect(() => {
@@ -317,6 +342,13 @@ export default function ManageListingView({
     const request = window.setTimeout(() => void loadPhotos(), 0);
     return () => window.clearTimeout(request);
   }, [activeSection, loadPhotos, photosStatus]);
+
+  useEffect(() => {
+    if (activeSection !== "tour" || tourStatus !== "idle") return;
+
+    const request = window.setTimeout(() => void loadTourSummary(), 0);
+    return () => window.clearTimeout(request);
+  }, [activeSection, loadTourSummary, tourStatus]);
 
   const activateSection = (section: ManagementSection): void => {
     const params = new URLSearchParams(searchParams.toString());
@@ -748,6 +780,10 @@ export default function ManageListingView({
                 propertyId={numericId}
                 publicId={property.publicId}
                 role={role}
+                status={tourStatus}
+                summary={tourSummary}
+                error={tourError}
+                onRetry={loadTourSummary}
               />
             </div>
           ) : null}

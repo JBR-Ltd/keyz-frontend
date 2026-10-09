@@ -1,7 +1,9 @@
 "use client";
 
 import type { ButtonHTMLAttributes, ReactNode } from "react";
+import { useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { AsyncButtonContent } from "@/components/ui/async-button-content";
 import { getInternalBackDestination } from "@/lib/internalNavigation";
 import { getAuthenticationSnapshot } from "@/lib/authSession";
 
@@ -11,6 +13,7 @@ interface BackButtonProps extends Omit<
 > {
   children: ReactNode;
   fallbackHref: string;
+  pendingLabel?: string;
   roleFallbacks?: Partial<
     Record<"ADMIN" | "AGENT" | "LANDLORD" | "TENANT", string>
   >;
@@ -19,10 +22,13 @@ interface BackButtonProps extends Omit<
 export default function BackButton({
   children,
   fallbackHref,
+  pendingLabel = "Loading…",
   roleFallbacks,
+  disabled,
   ...buttonProps
 }: BackButtonProps): ReactNode {
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
 
   const handleClick = (): void => {
     const currentHref = `${window.location.pathname}${window.location.search}`;
@@ -35,14 +41,24 @@ export default function BackButton({
         ? roleFallbacks?.[role]
         : undefined;
 
-    router.replace(
-      getInternalBackDestination(currentHref, roleFallback ?? fallbackHref),
-    );
+    startTransition(() => {
+      router.replace(
+        getInternalBackDestination(currentHref, roleFallback ?? fallbackHref),
+      );
+    });
   };
 
   return (
-    <button type="button" onClick={handleClick} {...buttonProps}>
-      {children}
+    <button
+      type="button"
+      onClick={handleClick}
+      disabled={disabled || isPending}
+      aria-busy={isPending || undefined}
+      {...buttonProps}
+    >
+      <AsyncButtonContent isPending={isPending} pendingLabel={pendingLabel}>
+        {children}
+      </AsyncButtonContent>
     </button>
   );
 }

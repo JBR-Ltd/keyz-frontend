@@ -321,7 +321,10 @@ export default function FloorSetupForm({
         )}
       </div>
 
-      <div className="mt-6 rounded-lg border border-border bg-surface-soft/40 p-5">
+     <div
+  data-tour="floor-add-form"
+  className="mt-6 rounded-lg border border-border bg-surface-soft/40 p-5"
+>
         <p className="font-body text-sm font-bold text-primary">Add a floor</p>
         <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
           <label>
@@ -365,14 +368,15 @@ export default function FloorSetupForm({
         </button>
       </div>
 
-      <button
-        type="button"
-        onClick={handleContinue}
-        disabled={selectedId === null}
-        className="mt-6 inline-flex min-h-12 w-full items-center justify-center rounded-full bg-accent px-7 py-3 font-body text-sm font-bold text-primary transition-all duration-200 hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        Continue to capture
-      </button>
+    <button
+  type="button"
+  data-tour="floor-continue"
+  onClick={handleContinue}
+  disabled={selectedId === null}
+  className="mt-6 inline-flex min-h-12 w-full items-center justify-center rounded-full bg-accent px-7 py-3 font-body text-sm font-bold text-primary transition-all duration-200 hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-50"
+>
+  Continue to capture
+</button>
 
       <ConfirmDialog
         open={pendingDelete !== null}

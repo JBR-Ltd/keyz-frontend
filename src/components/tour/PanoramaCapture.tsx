@@ -3,6 +3,7 @@
 import { RotateCcw, Upload, X } from "lucide-react";
 import { useCallback, useState, type ReactElement } from "react";
 import { useDropzone } from "react-dropzone";
+import { AsyncButtonContent } from "@/components/ui/async-button-content";
 import { SIZE_OPTIONS } from "@/lib/tourConstants";
 import type { SizeBucket } from "@/lib/types/tour";
 
@@ -20,12 +21,12 @@ interface PanoramaCaptureProps {
   /**
    * Called when the host submits.
    *
-   * - file !== null → the picked file. The wizard saves the size if it
+   * - file !== null -> the picked file. The wizard saves the size if it
    *   changed, then moves to review.
-   * - file === null → the host pressed Continue without picking a file. The
+   * - file === null -> the host pressed Continue without picking a file. The
    *   wizard saves the size if it changed, then moves on to the door editor.
    */
-  onSubmit: (file: File | null, sizeBucket: SizeBucket) => void;
+  onSubmit: (file: File | null, sizeBucket: SizeBucket) => void | Promise<void>;
 }
 
 export default function PanoramaCapture({
@@ -39,6 +40,7 @@ export default function PanoramaCapture({
   const [isRetaking, setIsRetaking] = useState(!hasExisting);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const sizeChanged = sizeBucket !== initialSize;
 
@@ -67,11 +69,30 @@ export default function PanoramaCapture({
     setPreview(null);
   };
 
+  const submitWithFile = async (): Promise<void> => {
+    if (!selectedFile) return;
+    setIsSubmitting(true);
+    try {
+      await onSubmit(selectedFile, sizeBucket);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const submitWithoutFile = async (): Promise<void> => {
+    setIsSubmitting(true);
+    try {
+      await onSubmit(null, sizeBucket);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const sizeChips = (
-    <div className="mt-6">
-      <span className="font-body text-sm font-bold text-primary">
-        How big is this room?
-      </span>
+   <div data-tour="capture-size" className="mt-6">
+  <span className="font-body text-sm font-bold text-primary">
+    How big is this room?
+  </span>
       <div className="mt-2 grid grid-cols-3 gap-2">
         {SIZE_OPTIONS.map((option) => {
           const isSelected = sizeBucket === option.value;
@@ -138,19 +159,27 @@ export default function PanoramaCapture({
       </label>
 
       <button
-        type="button"
-        disabled={!selectedFile}
-        onClick={() => selectedFile && onSubmit(selectedFile, sizeBucket)}
+  type="button"
+  data-tour="capture-submit"
+  disabled={!selectedFile || isSubmitting}
+  aria-busy={isSubmitting}
+  onClick={() => void submitWithFile()}
         className="mt-5 inline-flex min-h-12 w-full items-center justify-center rounded-full bg-accent px-7 py-3 font-body text-sm font-bold text-primary transition-all duration-200 hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-50"
       >
-        Use this photo
+        <AsyncButtonContent
+          isPending={isSubmitting}
+          pendingLabel="Uploading…"
+        >
+          Use this photo
+        </AsyncButtonContent>
       </button>
 
       {hasExisting ? (
         <button
           type="button"
           onClick={cancelRetake}
-          className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-full border border-border bg-bg px-5 font-body text-sm font-bold text-primary transition-colors hover:bg-surface-soft"
+          disabled={isSubmitting}
+          className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-full border border-border bg-bg px-5 font-body text-sm font-bold text-primary transition-colors hover:bg-surface-soft disabled:cursor-not-allowed disabled:opacity-60"
         >
           <X size={14} aria-hidden="true" />
           Keep the current sweep
@@ -200,17 +229,26 @@ export default function PanoramaCapture({
             <button
               type="button"
               onClick={startRetake}
-              className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-full border border-primary/20 bg-bg px-6 py-3 font-body text-sm font-bold text-primary transition-colors hover:border-accent hover:bg-accent/10"
+              disabled={isSubmitting}
+              className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-full border border-primary/20 bg-bg px-6 py-3 font-body text-sm font-bold text-primary transition-colors hover:border-accent hover:bg-accent/10 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <RotateCcw size={15} aria-hidden="true" />
               Retake panorama
             </button>
-            <button
-              type="button"
-              onClick={() => onSubmit(null, sizeBucket)}
-              className="inline-flex min-h-12 flex-1 items-center justify-center rounded-full bg-accent px-6 py-3 font-body text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-white"
+           <button
+  type="button"
+  data-tour="capture-submit"
+  disabled={isSubmitting}
+  aria-busy={isSubmitting}
+  onClick={() => void submitWithoutFile()}
+              className="inline-flex min-h-12 flex-1 items-center justify-center rounded-full bg-accent px-6 py-3 font-body text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-white disabled:cursor-wait disabled:opacity-60"
             >
-              {sizeChanged ? "Save size and continue" : "Continue to doors"}
+              <AsyncButtonContent
+                isPending={isSubmitting}
+                pendingLabel="Saving…"
+              >
+                {sizeChanged ? "Save size and continue" : "Continue to doors"}
+              </AsyncButtonContent>
             </button>
           </div>
         </>

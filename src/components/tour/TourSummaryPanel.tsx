@@ -2,59 +2,38 @@
 
 import type { ReactElement } from "react";
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
 import {
   ArrowUpRight,
   Camera,
   CheckCircle2,
   Compass,
   LayoutGrid,
-  Loader2,
 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { getTourSummary } from "@/lib/api/tours/publish";
 import type { TourSummary } from "@/lib/types/tour";
 
+export type TourSummaryStatus = "idle" | "loading" | "ready" | "error";
+
 interface TourSummaryPanelProps {
+  error: string;
+  onRetry: () => Promise<void>;
   propertyId: number;
   publicId?: string | null;
   role: "agent" | "landlord";
+  status: TourSummaryStatus;
+  summary: TourSummary | null;
 }
 
-type LoadState =
-  | { status: "loading" }
-  | { status: "error"; message: string }
-  | { status: "ready"; summary: TourSummary };
-
 export default function TourSummaryPanel({
+  error,
+  onRetry,
   propertyId,
   publicId,
   role,
+  status,
+  summary,
 }: TourSummaryPanelProps): ReactElement {
-  const [state, setState] = useState<LoadState>({ status: "loading" });
-
-  const load = useCallback(async (): Promise<void> => {
-    setState({ status: "loading" });
-
-    try {
-      const summary = await getTourSummary(propertyId);
-      setState({ status: "ready", summary });
-    } catch (error) {
-      setState({
-        status: "error",
-        message:
-          error instanceof Error
-            ? error.message
-            : "Could not load the tour summary.",
-      });
-    }
-  }, [propertyId]);
-
-  useEffect(() => {
-    const request = window.setTimeout(() => void load(), 0);
-    return () => window.clearTimeout(request);
-  }, [load]);
-
   return (
     <section aria-labelledby="virtual-tour-heading">
       <div>
@@ -69,26 +48,14 @@ export default function TourSummaryPanel({
         </p>
       </div>
 
-      {state.status === "loading" ? (
-        <div
-          className="mt-6 flex min-h-48 items-center justify-center border-y border-border font-body text-sm text-muted"
-          role="status"
-        >
-          <Loader2
-            size={18}
-            className="mr-2 animate-spin motion-reduce:animate-none"
-            aria-hidden="true"
-          />
-          Loading tour status...
-        </div>
-      ) : null}
+      {status === "idle" || status === "loading" ? <TourSummarySkeleton /> : null}
 
-      {state.status === "error" ? (
+      {status === "error" ? (
         <div className="mt-6 border-l-2 border-red-700 pl-4" role="alert">
-          <p className="font-body text-sm text-red-700">{state.message}</p>
+          <p className="font-body text-sm text-red-700">{error}</p>
           <button
             type="button"
-            onClick={() => void load()}
+            onClick={() => void onRetry()}
             className="mt-3 inline-flex min-h-11 items-center font-body text-sm font-bold text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             Retry tour status
@@ -96,15 +63,49 @@ export default function TourSummaryPanel({
         </div>
       ) : null}
 
-      {state.status === "ready" ? (
+      {status === "ready" && summary ? (
         <ReadyState
-          summary={state.summary}
+          summary={summary}
           tourHref={`/${role}/listings/${propertyId}/tour`}
           roomsHref={`/${role}/listings/${propertyId}/rooms`}
           publicTourHref={`/tours/${publicId ?? propertyId}`}
         />
       ) : null}
     </section>
+  );
+}
+
+function TourSummarySkeleton(): ReactElement {
+  return (
+    <div className="mt-6" role="status" aria-busy="true">
+      <div className="flex flex-col gap-5 border-y border-border py-5 sm:flex-row sm:items-center sm:justify-between">
+        <Skeleton className="h-6 w-20 rounded-full" />
+
+        <dl className="grid flex-1 grid-cols-3 gap-4 sm:max-w-xl">
+          {[0, 1, 2].map((item) => (
+            <div key={item} className="flex min-w-0 items-center gap-3">
+              <Skeleton className="h-9 w-9 shrink-0 rounded-full" />
+              <div className="min-w-0 flex-1">
+                <Skeleton className="h-3 w-16" />
+                <Skeleton className="mt-2 h-5 w-10" />
+              </div>
+            </div>
+          ))}
+        </dl>
+      </div>
+
+      <div className="mt-5 space-y-2">
+        <Skeleton className="h-4 w-full max-w-xl" />
+        <Skeleton className="h-4 w-2/3 max-w-md" />
+      </div>
+
+      <div className="mt-6 flex flex-wrap gap-3">
+        <Skeleton className="h-11 w-32 rounded-full" />
+        <Skeleton className="h-11 w-40 rounded-full" />
+      </div>
+
+      <span className="sr-only">Loading tour status...</span>
+    </div>
   );
 }
 

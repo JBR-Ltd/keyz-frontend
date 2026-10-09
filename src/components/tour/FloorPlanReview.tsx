@@ -10,7 +10,7 @@ interface FloorPlanReviewProps {
   floor: Floor;
   rooms: Room[];
   tourSummary?: TourSummary | null;
-  /** Pre-built preview link. When provided, a "Preview as renter" button appears. */
+  
   previewHref?: string;
   onPublish: () => void;
   onAddAnotherFloor?: () => void;

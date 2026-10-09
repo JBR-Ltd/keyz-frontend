@@ -1,6 +1,7 @@
 "use client";
 
 import { SubmitHandler, useForm } from "react-hook-form";
+import { AsyncButtonContent } from "@/components/ui/async-button-content";
 import { ROOM_TYPES } from "@/lib/tourConstants";
 
 interface RoomDetailsFormValues {
@@ -9,7 +10,7 @@ interface RoomDetailsFormValues {
 }
 
 interface RoomDetailsFormProps {
-  onSubmit: (values: RoomDetailsFormValues) => void;
+  onSubmit: (values: RoomDetailsFormValues) => void | Promise<void>;
 }
 
 const INPUT_CLASS_NAME =
@@ -32,8 +33,8 @@ export default function RoomDetailsForm({ onSubmit }: RoomDetailsFormProps) {
     },
   });
 
-  const submit: SubmitHandler<RoomDetailsFormValues> = (values) => {
-    onSubmit(values);
+  const submit: SubmitHandler<RoomDetailsFormValues> = async (values) => {
+    await onSubmit(values);
   };
 
   return (
@@ -53,11 +54,12 @@ export default function RoomDetailsForm({ onSubmit }: RoomDetailsFormProps) {
           <span className="font-body text-sm font-bold text-primary">
             Room Name
           </span>
-          <input
-            placeholder="Master Bedroom"
-            className={INPUT_CLASS_NAME}
-            {...register("roomName", { required: "Room name is required" })}
-          />
+         <input
+  data-tour="room-name"
+  placeholder="Master Bedroom"
+  className={INPUT_CLASS_NAME}
+  {...register("roomName", { required: "Room name is required" })}
+/>
           {errors.roomName ? (
             <span className="mt-2 block font-body text-sm font-medium text-red-700">
               {errors.roomName.message}
@@ -81,12 +83,19 @@ export default function RoomDetailsForm({ onSubmit }: RoomDetailsFormProps) {
           </select>
         </label>
 
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="mt-2 inline-flex min-h-12 w-full items-center justify-center rounded-full bg-accent px-7 py-3 font-body text-sm font-bold text-primary transition-all duration-200 hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          Continue to Capture
+       <button
+  type="submit"
+  data-tour="room-submit"
+  disabled={isSubmitting}
+  aria-busy={isSubmitting}
+  className="mt-2 inline-flex min-h-12 w-full items-center justify-center rounded-full bg-accent px-7 py-3 font-body text-sm font-bold text-primary transition-all duration-200 hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-60"
+>
+          <AsyncButtonContent
+            isPending={isSubmitting}
+            pendingLabel="Creating room…"
+          >
+            Continue to Capture
+          </AsyncButtonContent>
         </button>
       </form>
     </section>

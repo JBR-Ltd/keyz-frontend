@@ -12,7 +12,7 @@
 "use client";
 
 import type { ReactElement } from "react";
-import Link from "next/link";
+import { useState } from "react";
 import {
   AlertCircle,
   CheckCircle2,
@@ -21,6 +21,7 @@ import {
   Plus,
   Rocket,
 } from "lucide-react";
+import { PendingLink } from "@/components/ui/pending-link";
 import { iconForTypeAndName } from "@/lib/tour/roomIcons";
 import type {
   PublicTour,
@@ -34,9 +35,9 @@ interface TourOverviewProps {
   previewHref?: string;
   isPublishing?: boolean;
   onAddAnotherFloor: () => void;
-  onOpenFloor: (floorId: number) => void;
-  onOpenRoom: (floorId: number, roomId: number) => void;
-  onOpenFloorPlan: (floorId: number) => void;
+  onOpenFloor: (floorId: number) => void | Promise<void>;
+  onOpenRoom: (floorId: number, roomId: number) => void | Promise<void>;
+  onOpenFloorPlan: (floorId: number) => void | Promise<void>;
   onPublish: () => void;
 }
 
@@ -57,6 +58,20 @@ export default function TourOverview({
   onOpenFloorPlan,
   onPublish,
 }: TourOverviewProps): ReactElement {
+  const [pendingKey, setPendingKey] = useState<string | null>(null);
+
+  const run = async (
+    key: string,
+    action: () => void | Promise<void>,
+  ): Promise<void> => {
+    setPendingKey(key);
+    try {
+      await action();
+    } finally {
+      setPendingKey(null);
+    }
+  };
+
   const publishable = summary?.isPublishable ?? false;
   const published = summary?.isPublished ?? tour.published;
   const blockers: string[] = [];
@@ -126,6 +141,8 @@ export default function TourOverview({
         <ul className="mt-6 space-y-3">
           {tour.floors.map((floor) => {
             const { total, ready } = floorStats(floor);
+            const floorKey = `open-floor:${floor.id}`;
+            const planKey = `open-plan:${floor.id}`;
             return (
               <li
                 key={floor.id}
@@ -154,46 +171,85 @@ export default function TourOverview({
                   <div className="flex flex-wrap gap-2">
                     <button
                       type="button"
-                      onClick={() => onOpenFloor(floor.id)}
-                      className="rounded-full border border-primary/20 bg-bg px-3 py-1.5 font-body text-xs font-bold text-primary transition-colors hover:border-accent hover:bg-accent/10"
+                      disabled={pendingKey !== null}
+                      onClick={() =>
+                        void run(floorKey, () => onOpenFloor(floor.id))
+                      }
+                      className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-bg px-3 py-1.5 font-body text-xs font-bold text-primary transition-colors hover:border-accent hover:bg-accent/10 disabled:cursor-wait disabled:opacity-60"
                     >
-                      Open floor
+                      {pendingKey === floorKey ? (
+                        <Loader2
+                          size={12}
+                          className="animate-spin"
+                          aria-hidden="true"
+                        />
+                      ) : null}
+                      {pendingKey === floorKey ? "Opening…" : "Open floor"}
                     </button>
                     <button
                       type="button"
-                      onClick={() => onOpenFloorPlan(floor.id)}
-                      className="rounded-full border border-primary/20 bg-bg px-3 py-1.5 font-body text-xs font-bold text-primary transition-colors hover:border-accent hover:bg-accent/10"
+                      disabled={pendingKey !== null}
+                      onClick={() =>
+                        void run(planKey, () => onOpenFloorPlan(floor.id))
+                      }
+                      className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-bg px-3 py-1.5 font-body text-xs font-bold text-primary transition-colors hover:border-accent hover:bg-accent/10 disabled:cursor-wait disabled:opacity-60"
                     >
-                      Floor plan
+                      {pendingKey === planKey ? (
+                        <Loader2
+                          size={12}
+                          className="animate-spin"
+                          aria-hidden="true"
+                        />
+                      ) : null}
+                      {pendingKey === planKey ? "Opening…" : "Floor plan"}
                     </button>
                   </div>
                 </div>
 
                 {floor.rooms.length > 0 ? (
                   <ul className="flex flex-wrap gap-2 px-4 py-3">
-                    {floor.rooms.map((room) => (
-                      <li key={room.id}>
-                        <button
-                          type="button"
-                          onClick={() => onOpenRoom(floor.id, room.id)}
-                          title={
-                            room.status === "ready"
-                              ? `${room.name} — ready`
-                              : `${room.name} — not captured`
-                          }
-                          className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 font-body text-xs font-medium transition-colors ${
-                            room.status === "ready"
-                              ? "border-green-200 bg-green-50 text-green-800 hover:bg-green-100"
-                              : "border-border bg-bg text-muted hover:border-accent hover:bg-accent/10"
-                          }`}
-                        >
-                          <span>{iconForTypeAndName(room.type, room.name)}</span>
-                          <span className="max-w-[10rem] truncate">
-                            {room.name}
-                          </span>
-                        </button>
-                      </li>
-                    ))}
+                    {floor.rooms.map((room) => {
+                      const roomKey = `open-room:${floor.id}:${room.id}`;
+                      const isRoomPending = pendingKey === roomKey;
+                      return (
+                        <li key={room.id}>
+                          <button
+                            type="button"
+                            disabled={pendingKey !== null}
+                            onClick={() =>
+                              void run(roomKey, () =>
+                                onOpenRoom(floor.id, room.id),
+                              )
+                            }
+                            title={
+                              room.status === "ready"
+                                ? `${room.name} — ready`
+                                : `${room.name} — not captured`
+                            }
+                            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 font-body text-xs font-medium transition-colors disabled:cursor-wait disabled:opacity-60 ${
+                              room.status === "ready"
+                                ? "border-green-200 bg-green-50 text-green-800 hover:bg-green-100"
+                                : "border-border bg-bg text-muted hover:border-accent hover:bg-accent/10"
+                            }`}
+                          >
+                            <span>
+                              {isRoomPending ? (
+                                <Loader2
+                                  size={12}
+                                  className="animate-spin"
+                                  aria-hidden="true"
+                                />
+                              ) : (
+                                iconForTypeAndName(room.type, room.name)
+                              )}
+                            </span>
+                            <span className="max-w-[10rem] truncate">
+                              {isRoomPending ? "Opening…" : room.name}
+                            </span>
+                          </button>
+                        </li>
+                      );
+                    })}
                   </ul>
                 ) : (
                   <p className="px-4 py-3 font-body text-xs text-muted">
@@ -221,37 +277,41 @@ export default function TourOverview({
       ) : null}
 
       <div className="mt-6 flex flex-wrap gap-3">
-        <button
-          type="button"
-          onClick={onAddAnotherFloor}
-          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-primary/20 bg-bg px-5 font-body text-sm font-bold text-primary transition-colors hover:border-accent hover:bg-accent/10"
-        >
-          <Plus size={14} aria-hidden="true" />
-          Add another floor
-        </button>
+       <button
+  type="button"
+  data-tour="overview-add-floor"
+  disabled={pendingKey !== null}
+  onClick={onAddAnotherFloor}
+  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-primary/20 bg-bg px-5 font-body text-sm font-bold text-primary transition-colors hover:border-accent hover:bg-accent/10 disabled:cursor-not-allowed disabled:opacity-60"
+>
+  <Plus size={14} aria-hidden="true" />
+  Add another floor
+</button>
 
         {previewHref ? (
-          <Link
+          <PendingLink
             href={previewHref}
             target="_blank"
+            pendingLabel="Opening preview…"
             className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-primary/20 bg-bg px-5 font-body text-sm font-bold text-primary transition-colors hover:border-accent hover:bg-accent/10"
           >
             <ExternalLink size={14} aria-hidden="true" />
             Preview as renter
-          </Link>
+          </PendingLink>
         ) : null}
 
         <button
-          type="button"
-          onClick={onPublish}
+        type="button"
+  data-tour="overview-publish"
+  onClick={onPublish}
           disabled={!publishable || isPublishing}
+          aria-busy={isPublishing}
           title={
             publishable
               ? "Publish this tour"
               : "Fill in the blockers above before publishing"
           }
-          className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-full bg-accent px-6 font-body text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-        >
+           className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-full bg-accent px-6 font-body text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-white disabled:cursor-not-allowed disabled:opacity-50" >
           {isPublishing ? (
             <>
               <Loader2 size={14} className="animate-spin" aria-hidden="true" />

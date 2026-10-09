@@ -2,6 +2,7 @@
 
 import { CheckCircle2, Loader2, RotateCcw, XCircle } from "lucide-react";
 import { useEffect, useRef, useState, type ReactElement } from "react";
+import { AsyncButtonContent } from "@/components/ui/async-button-content";
 import { uploadPanorama } from "@/lib/api/tours/panoramas";
 import type { Panorama } from "@/lib/types/tour";
 
@@ -9,7 +10,7 @@ interface CaptureReviewProps {
   roomId: number;
   roomName: string;
   file: File;
-  onAccepted: (panorama: Panorama) => void;
+  onAccepted: (panorama: Panorama) => void | Promise<void>;
   onRetake: () => void;
 }
 
@@ -26,6 +27,7 @@ export default function CaptureReview({
   onRetake,
 }: CaptureReviewProps): ReactElement {
   const [state, setState] = useState<ReviewState>({ status: "uploading" });
+  const [isContinuing, setIsContinuing] = useState(false);
   // Tracks the file we have already started uploading. If the parent
   // re-renders with the same file, we do not fire a second upload — that
   // bug was hitting the 2-per-room cap and getting retakes stuck.
@@ -59,8 +61,18 @@ export default function CaptureReview({
       });
   }, [roomId, file]);
 
+  const handlePinDoors = async (): Promise<void> => {
+    if (state.status !== "accepted") return;
+    setIsContinuing(true);
+    try {
+      await onAccepted(state.panorama);
+    } finally {
+      setIsContinuing(false);
+    }
+  };
+
   return (
-    <section aria-labelledby="tour-capture-review">
+    <section data-tour="review-section" aria-labelledby="tour-capture-review">
       <p className="font-body text-xs font-medium uppercase tracking-wide text-muted">
         Reviewing the sweep
       </p>
@@ -136,10 +148,17 @@ export default function CaptureReview({
           </div>
           <button
             type="button"
-            onClick={() => onAccepted(state.panorama)}
-            className="mt-4 inline-flex min-h-11 items-center justify-center rounded-full bg-accent px-6 font-body text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-white"
+            disabled={isContinuing}
+            aria-busy={isContinuing}
+            onClick={() => void handlePinDoors()}
+            className="mt-4 inline-flex min-h-11 items-center justify-center rounded-full bg-accent px-6 font-body text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-white disabled:cursor-wait disabled:opacity-60"
           >
-            Pin the doors
+            <AsyncButtonContent
+              isPending={isContinuing}
+              pendingLabel="Opening door editor…"
+            >
+              Pin the doors
+            </AsyncButtonContent>
           </button>
         </div>
       ) : null}
