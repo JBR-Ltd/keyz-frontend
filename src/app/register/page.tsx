@@ -7,12 +7,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { SubmitHandler, useForm } from "react-hook-form";
+import { SubmitHandler, useForm, useWatch } from "react-hook-form";
 import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
+import PasswordRequirements from "@/components/auth/PasswordRequirements";
 import { AsyncButtonContent } from "@/components/ui/async-button-content";
 import { useToast } from "@/components/ui/toast";
 import { resolveApiError } from "@/lib/errors";
 import { getInstallationId } from "@/lib/authSession";
+import { validatePassword } from "@/lib/passwordPolicy";
 
 type UserRole = "LANDLORD" | "AGENT" | "TENANT";
 
@@ -74,6 +76,7 @@ export default function RegisterPage() {
   const [selectedRole, setSelectedRole] = useState<UserRole>("LANDLORD");
   const {
     formState: { errors, isSubmitting },
+    control,
     handleSubmit,
     register,
     setValue,
@@ -88,6 +91,7 @@ export default function RegisterPage() {
     mode: "onSubmit",
     reValidateMode: "onSubmit",
   });
+  const password = useWatch({ control, name: "password" });
   const fieldInitial = reduceMotion ? false : { opacity: 0, y: 16 };
   const fieldAnimate = reduceMotion ? undefined : { opacity: 1, y: 0 };
   const selectedRoleDescription =
@@ -349,6 +353,7 @@ export default function RegisterPage() {
                     className="min-h-14 w-full rounded-xl border border-border bg-bg px-4 py-3 pr-14 font-body text-base text-[var(--color-text)] outline-none transition-all duration-200 ease-in-out placeholder:text-muted focus:border-accent focus:ring-2 focus:ring-accent/50"
                     {...register("password", {
                       required: "Password is required",
+                      validate: validatePassword,
                     })}
                   />
                   <button
@@ -380,6 +385,9 @@ export default function RegisterPage() {
                     </motion.p>
                   ) : null}
                 </AnimatePresence>
+                <div className="mt-3">
+                  <PasswordRequirements password={password} />
+                </div>
               </motion.label>
 
               <motion.div

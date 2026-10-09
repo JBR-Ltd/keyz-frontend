@@ -5,6 +5,7 @@ import LoginSessionsPanel from "@/components/settings/LoginSessionsPanel";
 import SettingsDangerZone from "@/components/settings/SettingsDangerZone";
 import SettingsSectionHeader from "@/components/settings/SettingsSectionHeader";
 import { AsyncButtonContent } from "@/components/ui/async-button-content";
+import PasswordRequirements from "@/components/auth/PasswordRequirements";
 import { useToast } from "@/components/ui/toast";
 import {
   changeAccountPassword,
@@ -13,6 +14,7 @@ import {
   startTwoFactorSetup,
   useAuthenticatedUser,
 } from "@/lib/account";
+import { validatePassword } from "@/lib/passwordPolicy";
 
 export default function SecuritySection(): ReactElement {
   const [isPasswordFormOpen, setIsPasswordFormOpen] = useState(false);
@@ -119,6 +121,16 @@ export default function SecuritySection(): ReactElement {
       return;
     }
 
+    const passwordResult = validatePassword(newPassword);
+    if (passwordResult !== true) {
+      notify({
+        title: "Password requirements not met",
+        description: passwordResult,
+        variant: "error",
+      });
+      return;
+    }
+
     if (oldPassword === newPassword) {
       notify({
         title: "Choose a new password",
@@ -214,6 +226,9 @@ export default function SecuritySection(): ReactElement {
                   className="mt-2 min-h-12 w-full rounded-lg border border-border bg-bg px-4 outline-none focus:border-accent focus:ring-2 focus:ring-accent/50"
                 />
               </label>
+              <div className="md:col-span-3">
+                <PasswordRequirements password={newPassword} />
+              </div>
               <div className="flex flex-wrap gap-3 md:col-span-3">
                 <button
                   type="submit"

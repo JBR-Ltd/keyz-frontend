@@ -50,7 +50,7 @@ export default function AuthInput<TFieldValues extends FieldValues>({
           autoComplete={autoComplete}
           aria-invalid={error ? "true" : "false"}
           aria-describedby={error ? errorId : undefined}
-          className={`min-h-14 w-full border border-surface bg-[var(--color-bg)] px-4 py-3 font-body text-base text-[var(--color-text)] outline-none transition-all duration-200 ease-in-out placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-accent/30 ${
+          className={`min-h-14 w-full rounded-xl border border-surface bg-[var(--color-bg)] px-4 py-3 font-body text-base text-[var(--color-text)] outline-none transition-colors duration-200 placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-accent/30 ${
             showToggle ? "pr-14" : ""
           }`}
           {...register(name, rules)}

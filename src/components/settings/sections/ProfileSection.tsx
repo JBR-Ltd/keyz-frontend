@@ -93,11 +93,7 @@ function ProfileSectionSkeleton({
   }
 
   return (
-    <section
-      className="space-y-8"
-      role="status"
-      aria-label="Loading profile"
-    >
+    <section className="space-y-8" role="status" aria-label="Loading profile">
       <div className="border-b border-border pb-8">
         <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
           <Skeleton className="h-24 w-24 shrink-0 rounded-full sm:h-28 sm:w-28" />
@@ -331,7 +327,7 @@ export default function ProfileSection({
           }`}
         >
           <label
-            className={`group relative flex shrink-0 cursor-pointer items-center justify-center rounded-full bg-primary font-display font-bold text-white shadow-sm focus-within:outline-none focus-within:ring-accent ${
+            className={`group relative flex shrink-0 cursor-pointer items-center justify-center rounded-full bg-primary font-display font-bold text-white shadow-sm transition-shadow hover:ring-4 hover:ring-accent/15 focus-within:outline-none focus-within:ring-4 focus-within:ring-accent/20 motion-reduce:transition-none ${
               isSettings
                 ? "h-16 w-16 text-xl ring-2 ring-surface-soft"
                 : "h-24 w-24 text-3xl ring-4 ring-bg sm:h-28 sm:w-28 sm:text-4xl"
@@ -352,13 +348,6 @@ export default function ProfileSection({
                   {initials}
                 </span>
               )}
-              <span className="absolute inset-0 flex items-center justify-center rounded-full bg-primary/50 opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100 motion-reduce:transition-none">
-                {isUploading ? (
-                  <Loader2 size={20} className="animate-spin text-white" />
-                ) : (
-                  <Camera size={20} className="text-white" aria-hidden="true" />
-                )}
-              </span>
             </span>
             <span
               className={`absolute bottom-0 right-0 flex items-center justify-center rounded-full border-surface-soft bg-accent text-primary shadow-sm transition-colors group-hover:bg-primary group-hover:text-white group-focus-within:bg-primary group-focus-within:text-white ${
@@ -410,7 +399,9 @@ export default function ProfileSection({
             </div>
             <p
               className={`max-w-2xl font-body text-muted ${
-                isSettings ? "mt-2 break-all text-sm" : "mt-4 text-base leading-7"
+                isSettings
+                  ? "mt-2 break-all text-sm"
+                  : "mt-4 text-base leading-7"
               }`}
             >
               {isSettings

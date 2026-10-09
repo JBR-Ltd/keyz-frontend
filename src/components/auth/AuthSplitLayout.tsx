@@ -2,6 +2,7 @@
 
 import { motion, useReducedMotion } from "framer-motion";
 import Image from "next/image";
+import Link from "next/link";
 import { ReactNode } from "react";
 import relloLogo from "../../../public/FullLogo_Transparent (2).png";
 
@@ -36,12 +37,12 @@ export default function AuthSplitLayout({
             />
           ))}
         </div>
-        <div className="relative z-10 flex min-h-screen items-center px-12 py-20">
+        <div className="relative z-10 flex min-h-screen items-center px-12 py-20 xl:px-20">
           {leftContent}
         </div>
       </motion.div>
 
-      <div className="relative flex min-h-screen items-center overflow-hidden bg-[var(--color-bg)] px-4 py-16 sm:px-6 lg:px-12">
+      <div className="relative flex min-h-screen items-center overflow-hidden bg-[var(--color-bg)] px-4 py-8 sm:px-6 lg:px-12">
         {showWatermark ? (
           <Image
             src={relloLogo}
@@ -52,11 +53,23 @@ export default function AuthSplitLayout({
           />
         ) : null}
         <motion.div
-          className="relative z-10 mx-auto w-full max-w-xl"
+          className="relative z-10 mx-auto w-full max-w-md"
           initial={reduceMotion ? false : { opacity: 0, y: 20 }}
           animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: "easeOut" }}
         >
+          <Link
+            href="/"
+            aria-label="Rello home"
+            className="mb-10 inline-flex lg:hidden"
+          >
+            <Image
+              src={relloLogo}
+              alt="Rello"
+              className="h-auto w-28"
+              priority
+            />
+          </Link>
           {rightContent}
         </motion.div>
       </div>

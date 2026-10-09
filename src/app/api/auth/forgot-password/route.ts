@@ -27,7 +27,8 @@ async function proxyJsonResponse(
   backendUrl: string,
 ): Promise<Response> {
   const body = await response.text();
-  const contentType = response.headers.get("Content-Type") ?? "application/json";
+  const contentType =
+    response.headers.get("Content-Type") ?? "application/json";
 
   if (!response.ok) {
     console.error("Auth proxy request failed", {
@@ -68,11 +69,18 @@ async function proxyJsonResponse(
 }
 
 export async function POST(request: Request): Promise<Response> {
+  const rejected = rejectCrossSiteMutation(request);
+  if (rejected) return rejected;
+
   const backendUrl = getBackendUrl("/api/auth/forgot-password");
 
   if (!backendUrl) {
     return Response.json(
-      { success: false, message: "API_BASE_URL is not configured.", data: null },
+      {
+        success: false,
+        message: "API_BASE_URL is not configured.",
+        data: null,
+      },
       { status: 500 },
     );
   }
@@ -120,3 +128,4 @@ export async function POST(request: Request): Promise<Response> {
     timeout.cancel();
   }
 }
+import { rejectCrossSiteMutation } from "@/app/api/_csrf";

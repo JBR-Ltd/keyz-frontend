@@ -960,3 +960,29 @@ Existing rental catalogue and saved-search contracts remain unchanged.
 
 - Statement fetching, payment records, authentication, and spreadsheet-safe CSV exports retain their existing contracts.
 - No backend, endpoint, database, or statement payload changed.
+
+## Supporting Authentication Flows
+
+### What was there before
+
+- Forgot Password left the original form active after sending a code, which made duplicate submissions easy and gave the success state little visual priority.
+- Reset Password used a plain text code field, had no confirmation field, and did not explain or consistently enforce password requirements.
+- Verify Email hid the destination address, put verification codes in URL query parameters, and allowed immediate repeated resends.
+- Recovery errors relied mainly on temporary toast messages, and search parameter reads could produce hydration differences.
+- Newly issued verification and reset codes were stored as plaintext, and email verification codes had no failed-attempt limit.
+
+### How it was fixed
+
+- Refined the shared split layout with mobile branding, one page heading, a narrower form column, rounded controls, and consistent focus states.
+- Added persistent email-sent guidance, expiry information, resend cooldowns, and direct recovery actions.
+- Added a shared segmented six-digit code input with paste support, numeric filtering, and keyboard movement.
+- Added one shared password policy and live checklist across registration, reset, and password changes.
+- Moved verification and resend data into JSON request bodies and added cross-site mutation checks to recovery proxies.
+- Hashes newly issued codes while retaining temporary compatibility with unexpired legacy plaintext codes.
+- Added a five-attempt limit for email verification, strict authentication rate limits, generic invalid-code responses, and verification attempt storage.
+
+### Interfaces and behavior preserved
+
+- Password reset codes still expire after 15 minutes and verification codes still expire after one hour.
+- Successful password resets still revoke sessions, and successful email verification still signs the account in and uses role-specific navigation.
+- Login, two-step sign-in, BCrypt password storage, and the overall Register design remain unchanged.
