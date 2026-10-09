@@ -93,6 +93,7 @@ export async function POST(request: Request): Promise<Response> {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        ...clientAddressHeaders(request),
       },
       signal: timeout.signal,
       body,
@@ -128,4 +129,5 @@ export async function POST(request: Request): Promise<Response> {
     timeout.cancel();
   }
 }
+import { clientAddressHeaders } from "@/app/api/_clientAddress";
 import { rejectCrossSiteMutation } from "@/app/api/_csrf";

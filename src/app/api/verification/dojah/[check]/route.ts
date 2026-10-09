@@ -1,3 +1,4 @@
+import { clientAddressHeaders } from "@/app/api/_clientAddress";
 import { rejectCrossSiteMutation } from "@/app/api/_csrf";
 import { getSessionToken } from "@/app/api/_session";
 
@@ -109,6 +110,7 @@ export async function POST(
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
+        ...clientAddressHeaders(request),
         ...(contentType ? { "Content-Type": contentType } : {}),
       },
       body: check === "selfie" ? await request.arrayBuffer() : undefined,

@@ -1,3 +1,5 @@
+import { clientAddressHeaders } from "@/app/api/_clientAddress";
+
 const API_BASE_URL = process.env.API_BASE_URL;
 const AUTH_REQUEST_TIMEOUT_MS = 90000;
 
@@ -87,6 +89,7 @@ export async function POST(request: Request): Promise<Response> {
       headers: {
         "Content-Type": "application/json",
         "X-Device-Fingerprint": fingerprint,
+        ...clientAddressHeaders(request),
       },
       signal: timeout.signal,
       body,

@@ -1,3 +1,4 @@
+import { clientAddressHeaders } from "@/app/api/_clientAddress";
 import { browserAuthResponse } from "@/app/api/_authResponse";
 import { rejectCrossSiteMutation } from "@/app/api/_csrf";
 
@@ -95,7 +96,10 @@ export async function POST(request: Request): Promise<Response> {
   try {
     const response = await fetch(backendUrl, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...clientAddressHeaders(request),
+      },
       signal: timeout.signal,
       body,
     });

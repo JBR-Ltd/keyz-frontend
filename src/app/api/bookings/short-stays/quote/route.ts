@@ -1,3 +1,4 @@
+import { clientAddressHeaders } from "@/app/api/_clientAddress";
 import { requestIdHeader } from "@/app/api/_requestId";
 
 const API_BASE_URL = process.env.API_BASE_URL;
@@ -21,7 +22,10 @@ export async function GET(request: Request): Promise<Response> {
   try {
     const response = await fetch(
       `${API_BASE_URL.replace(/\/$/, "")}/api/bookings/short-stays/quote${new URL(request.url).search}`,
-      { signal: AbortSignal.timeout(QUOTE_TIMEOUT_MS) },
+      {
+        headers: clientAddressHeaders(request),
+        signal: AbortSignal.timeout(QUOTE_TIMEOUT_MS),
+      },
     );
     const body = await response.text();
 

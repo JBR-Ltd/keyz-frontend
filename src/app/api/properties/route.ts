@@ -1,3 +1,5 @@
+import { clientAddressHeaders } from "@/app/api/_clientAddress";
+
 const API_BASE_URL = process.env.API_BASE_URL;
 const REQUEST_TIMEOUT_MS = 15000;
 
@@ -71,7 +73,11 @@ export async function POST(request: Request): Promise<Response> {
   try {
     const response = await fetch(backendUrl, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: authorization },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: authorization,
+        ...clientAddressHeaders(request),
+      },
       signal: timeout.signal,
       body,
     });

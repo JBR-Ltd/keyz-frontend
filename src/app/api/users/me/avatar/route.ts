@@ -1,3 +1,4 @@
+import { clientAddressHeaders } from "@/app/api/_clientAddress";
 import { rejectCrossSiteMutation } from "@/app/api/_csrf";
 import { requestIdHeader } from "@/app/api/_requestId";
 import { getSessionToken } from "@/app/api/_session";
@@ -44,6 +45,7 @@ export async function POST(request: Request): Promise<Response> {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
+          ...clientAddressHeaders(request),
           // Forwarded verbatim: the multipart boundary lives in this header
           ...(contentType ? { "Content-Type": contentType } : {}),
         },

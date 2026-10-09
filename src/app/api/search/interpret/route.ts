@@ -1,3 +1,4 @@
+import { clientAddressHeaders } from "@/app/api/_clientAddress";
 import { requestIdHeader } from "@/app/api/_requestId";
 
 const API_BASE_URL = process.env.API_BASE_URL;
@@ -28,7 +29,10 @@ export async function POST(request: Request): Promise<Response> {
   try {
     const response = await fetch(backendUrl, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...clientAddressHeaders(request),
+      },
       body: await request.text(),
       signal: controller.signal,
     });

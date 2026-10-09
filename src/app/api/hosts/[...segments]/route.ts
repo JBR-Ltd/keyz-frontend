@@ -1,3 +1,4 @@
+import { clientAddressHeaders } from "@/app/api/_clientAddress";
 import { cacheHeaders, requestIdHeader } from "@/app/api/_requestId";
 
 const API_BASE_URL = process.env.API_BASE_URL;
@@ -34,7 +35,10 @@ export async function GET(
   try {
     const ifNoneMatch = request.headers.get("If-None-Match");
     const response = await fetch(backendUrl, {
-      headers: ifNoneMatch ? { "If-None-Match": ifNoneMatch } : undefined,
+      headers: {
+        ...clientAddressHeaders(request),
+        ...(ifNoneMatch ? { "If-None-Match": ifNoneMatch } : {}),
+      },
       signal: controller.signal,
     });
 

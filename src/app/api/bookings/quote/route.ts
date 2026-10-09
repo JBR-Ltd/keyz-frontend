@@ -1,3 +1,4 @@
+import { clientAddressHeaders } from "@/app/api/_clientAddress";
 import { requestIdHeader } from "@/app/api/_requestId";
 
 const API_BASE_URL = process.env.API_BASE_URL;
@@ -20,6 +21,7 @@ export async function GET(request: Request): Promise<Response> {
     const search = new URL(request.url).search;
     const response = await fetch(
       `${API_BASE_URL.replace(/\/$/, "")}/api/bookings/quote${search}`,
+      { headers: clientAddressHeaders(request) },
     );
     const body = await response.text();
 

@@ -1,3 +1,4 @@
+import { clientAddressHeaders } from "@/app/api/_clientAddress";
 import { requestIdHeader } from "@/app/api/_requestId";
 import { rejectCrossSiteMutation } from "@/app/api/_csrf";
 
@@ -31,7 +32,10 @@ export async function POST(request: Request): Promise<Response> {
   try {
     const response = await fetch(backendUrl, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...clientAddressHeaders(request),
+      },
       signal: controller.signal,
       body: requestBody,
     });

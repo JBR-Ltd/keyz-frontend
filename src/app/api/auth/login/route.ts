@@ -1,3 +1,4 @@
+import { clientAddressHeaders } from "@/app/api/_clientAddress";
 import { browserAuthResponse } from "@/app/api/_authResponse";
 import { rejectCrossSiteMutation } from "@/app/api/_csrf";
 
@@ -96,6 +97,8 @@ export async function POST(request: Request): Promise<Response> {
       headers: {
         "Content-Type": "application/json",
         "X-Device-Fingerprint": fingerprint,
+        ...clientAddressHeaders(request),
+        "User-Agent": request.headers.get("User-Agent") ?? "",
       },
       signal: timeout.signal,
       body,

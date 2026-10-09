@@ -1,3 +1,4 @@
+import { clientAddressHeaders } from "@/app/api/_clientAddress";
 import { rejectCrossSiteMutation } from "@/app/api/_csrf";
 import { cacheHeaders, requestIdHeader } from "@/app/api/_requestId";
 import { getSessionToken } from "@/app/api/_session";
@@ -339,6 +340,7 @@ async function handlePropertyRequest(
     const response = await fetch(backendUrl, {
       method,
       headers: {
+        ...clientAddressHeaders(request),
         ...(authorization ? { Authorization: authorization } : {}),
         ...(contentType ? { "Content-Type": contentType } : {}),
         ...(ifNoneMatch ? { "If-None-Match": ifNoneMatch } : {}),

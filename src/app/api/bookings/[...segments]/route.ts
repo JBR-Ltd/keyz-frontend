@@ -1,3 +1,4 @@
+import { clientAddressHeaders } from "@/app/api/_clientAddress";
 import { rejectCrossSiteMutation } from "@/app/api/_csrf";
 import { listHeaders } from "@/app/api/_requestId";
 import { getSessionToken } from "@/app/api/_session";
@@ -66,6 +67,8 @@ async function handle(
         method,
         headers: {
           Authorization: `Bearer ${token}`,
+          ...clientAddressHeaders(request),
+          "User-Agent": request.headers.get("User-Agent") ?? "",
           ...(contentType ? { "Content-Type": contentType } : {}),
         },
         body: method === "GET" ? undefined : await request.arrayBuffer(),

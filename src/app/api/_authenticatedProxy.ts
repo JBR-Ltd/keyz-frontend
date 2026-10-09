@@ -1,3 +1,4 @@
+import { clientAddressHeaders } from "@/app/api/_clientAddress";
 import { listHeaders, requestIdHeader } from "@/app/api/_requestId";
 import { rejectCrossSiteMutation } from "@/app/api/_csrf";
 import { getSessionToken } from "@/app/api/_session";
@@ -56,9 +57,10 @@ export async function proxyAuthenticatedRequest({
     method === "POST" || method === "PATCH" || method === "PUT"
       ? await request.arrayBuffer()
       : undefined;
-  const headers = new Headers(
-    token ? { Authorization: `Bearer ${token}` } : {},
-  );
+  const headers = new Headers({
+    ...clientAddressHeaders(request),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  });
 
   if (body && body.byteLength > 0) {
     headers.set(

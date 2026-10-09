@@ -1,3 +1,4 @@
+import { clientAddressHeaders } from "@/app/api/_clientAddress";
 import { browserAuthResponse } from "@/app/api/_authResponse";
 import { rejectCrossSiteMutation } from "@/app/api/_csrf";
 import { getSessionToken } from "@/app/api/_session";
@@ -69,6 +70,8 @@ export async function POST(
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
           "X-Device-Fingerprint":
             request.headers.get("X-Device-Fingerprint") ?? "",
+          "User-Agent": request.headers.get("User-Agent") ?? "",
+          ...clientAddressHeaders(request),
         },
         body: await request.text(),
         signal: controller.signal,
