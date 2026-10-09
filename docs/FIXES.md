@@ -891,3 +891,25 @@ Existing rental catalogue and saved-search contracts remain unchanged.
 - Existing historical tenancy records remain valid and readable.
 - No endpoint, payload, or database migration changed.
 - Historical tenancy imports remain outside the ordinary host acceptance workflow.
+
+## Shared Account Profile Hierarchy
+
+### What was there before
+
+- Tenant, landlord, and agent profiles opened with a large page heading followed by an oversized dark account banner.
+- Repeated labels such as `Profile`, `Your account`, account role, `Personal information`, and `Profile details` competed for attention.
+- The presentation pushed useful account fields below the first viewport and placed editing away from the information it affected.
+- Profile photo editing depended on a hover-only overlay, which made the action difficult to discover on touch devices.
+
+### How it was fixed
+
+- Reworked the shared profile into an open identity header inspired by the public host profile.
+- Grouped the circular avatar, role, name, verification state, account guidance, and edit action in one compact hierarchy.
+- Added a persistent camera badge with accessible upload status for profile photo changes.
+- Moved profile details directly beneath the identity summary and simplified verified-name guidance.
+- Updated loading skeletons and responsive layouts to match the final tenant, landlord, and agent experience.
+
+### Interfaces and behavior preserved
+
+- Profile updates, avatar uploads, identity verification, locked verified names, and toast feedback retain their existing contracts.
+- No backend, route, authentication, or profile payload changed.
