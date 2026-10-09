@@ -690,3 +690,204 @@ Existing rental catalogue and saved-search contracts remain unchanged.
 
 - `PropertyPrice` gained an optional suffix-display control that defaults to the existing output.
 - No backend, property payload, booking, viewing, verification, messaging, reporting, or host-route contract changed.
+
+## Host Listings Workspace Redesign
+
+### What was there before
+
+- The page behaved like a public property gallery instead of a host management workspace.
+- Large introductory spacing and a narrow first card left most of a common laptop viewport unused.
+- Cards opened the public property page while management actions were separated in a low-priority footer.
+- Every published but unverified property appeared as `Pending Verification`, even when no evidence had been submitted or a submission had been rejected.
+- Published properties received the current browser time during mapping, which made a future `Updated` label unreliable.
+- Agent and landlord pages did not share the same heading hierarchy.
+
+### How it was fixed
+
+- Rebuilt the shared page as a compact, responsive management grid with consistent headers for landlords and agents.
+- Added status filters with counts for drafts, listings needing action, listings under review, and live listings.
+- Added title and location search with a clear action and contextual filtered empty state.
+- Made the card body open listing management and gave every workflow state one explicit primary action.
+- Limited public preview links to live listings and moved secondary editing destinations into an overflow menu.
+- Added accurate price periods, unit availability, draft completion, and genuine draft update dates.
+- Added a portfolio-safe property response carrying the latest verification state and rejection reason without exposing raw property entities.
+- Resolved verification states in one backend query so the grid does not make one request per property.
+- Removed fabricated update dates from published listing records.
+
+### Workflow states
+
+- Unpublished records appear as `Draft`.
+- Published properties without evidence appear as `Ready to verify`.
+- Pending submissions appear as `Under review`.
+- Rejected submissions appear as `Needs changes` with the available rejection reason.
+- Approved properties appear as `Live`.
+
+## Listing Management Workspace Redesign
+
+### What was there before
+
+- Listing management placed units, virtual tours, photos, and dates in one long page without a clear task hierarchy.
+- The large heading area consumed much of a laptop viewport before any management control appeared.
+- Unit requests were rejected by the frontend proxy even though the backend supported them, producing `Unsupported property request` and a misleading `0 of 0 available` count.
+- Virtual-tour actions appeared both above and inside the tour summary.
+- Annual and monthly listings displayed date-blocking tools even though their rental requests do not use a booking calendar.
+- The date action rendered `aria-busy` as visible button text.
+- Photo deletion happened immediately without confirmation, and several photo controls were smaller than the minimum touch target.
+
+### How it was fixed
+
+- Replaced the scrolling page with URL-driven Availability, Photos, and Virtual tour tabs, with Availability selected by default.
+- Removed the portal navbar from the focused listing management route while keeping it on every other landlord and agent screen.
+- Replaced its history-aware `Back to listings` control with a direct role-specific My Listings link so the label and destination always agree.
+- Added a compact property header with location, price period, authoritative verification status, editing, verification, and public-listing actions.
+- Added authenticated unit read and update routes to the frontend proxy allowlist while retaining backend ownership checks.
+- Added focused loading, error, retry, and empty states for each management section.
+- Limited blocked-date management to short-stay listings and moved `aria-busy` back onto the button attribute.
+- Consolidated tour status and actions into one state-aware panel.
+- Added photo deletion confirmation, clearer cover treatment, photo-limit guidance, and 44px action targets.
+
+### Interfaces and behavior preserved
+
+- No backend endpoint, database, listing, gallery, availability, or tour contract changed.
+- Existing upload validation, cover selection, unit status updates, date conflicts, verification routes, and tour publication behavior remain authoritative.
+
+## Role-Aware Public Property Pages
+
+### What was happening
+
+- The public property page rendered the same rental controls for every signed-in role.
+- Landlords and agents could see Save, rental request, viewing request, and host messaging actions intended for tenants.
+- A host viewing their own live listing could report or message themselves instead of returning to listing management.
+- Tenant actions could appear briefly while the current session was still loading.
+
+### How it was fixed
+
+- Kept the property route public for sharing, search visibility, and live-listing previews.
+- Limited saved homes, rental requests, viewing requests, and host messaging to tenant and signed-out views.
+- Added Edit listing and Manage listing actions when a landlord or agent owns the displayed property.
+- Kept other host and administrator views read-only while preserving sharing, galleries, tours, reviews, host profiles, and reporting for non-owners.
+- Applied the same role rules to desktop controls, mobile gallery actions, the rental sidebar, dialogs, and the mobile action bar.
+- Deferred role-specific controls until authentication resolves so tenant actions do not flash for hosts or administrators.
+
+### Interfaces and behavior preserved
+
+- No backend endpoint, database, property payload, booking, saved-listing, or public route changed.
+- Ownership uses the existing authenticated user and property host identifiers.
+
+## Useful Tenant Browse Filters
+
+### What was there before
+
+- Browse offered fixed price buckets and a bedrooms selector only.
+- Budget controls stayed disabled until a rental period was selected, but the period control was easy to miss.
+- Filter changes ran immediately, including while a tenant was still building a price range.
+- Bathrooms and listing amenities were available in property data but unavailable as manual filters.
+- Saved searches could not retain or alert on bathroom and amenity requirements.
+
+### How it was fixed
+
+- Added Annual and Monthly selection inside the detailed filter panel while keeping stay scope visible in the search pill.
+- Replaced fixed price buckets with optional minimum and maximum whole-naira inputs and accessible range validation.
+- Added minimum bedrooms, minimum bathrooms, and all ten canonical listing amenities.
+- Staged detailed changes until `Apply filters`, with dismissal restoring the currently applied values.
+- Added removable chips for the period, budget, room counts, and each required amenity.
+- Extended keyword and interpreted searches with minimum bathrooms and repeated amenities using required-all matching.
+- Added bathroom and amenity persistence to saved searches and included both in new-listing alert matching.
+- Reused the listing form's canonical amenity vocabulary across creation and Browse.
+
+### Data changes
+
+- Added `saved_searches.min_bathrooms`.
+- Added `saved_search_amenities` with cascade deletion and one unique row per saved search and amenity.
+- Added Flyway migration `V24__saved_search_bathrooms_and_amenities.sql`.
+
+## Stable Browse Filter Layout and Suggested Defaults
+
+### What was happening
+
+- The desktop filter popover opened over the sticky tenant header and property results.
+- The complete panel scrolled as one tall surface, so its fields and Apply action could appear clipped on laptop screens.
+- Every detailed filter started empty, leaving tenants to build a common annual search from scratch.
+
+### How it was fixed
+
+- Replaced the desktop overlay with an inline expandable panel that pushes the results downward.
+- Made the sticky header filter control return to the primary search and open the same inline panel.
+- Kept changes staged until Apply filters, with Escape and the close control discarding unsubmitted edits.
+- Added a first-use suggestion for annual homes from ₦500,000 to ₦5,000,000 with at least one bedroom and bathroom.
+- Kept the first result set unrestricted so suggested values never silently filter homes.
+- Preserved saved-search values and existing applied filters instead of replacing them with suggestions.
+- Retained the contained bottom sheet for mobile filters.
+
+## Rental Request State on Property Pages
+
+### What was happening
+
+- The backend rejected a second pending or confirmed rental request, but the property page did not load that state.
+- After a successful submission, the page closed the dialog and immediately showed `Request to rent` again.
+- Tenants could reopen the form and only discover the duplicate when the backend returned a conflict.
+
+### How it was fixed
+
+- Added an authenticated property-specific lookup for the signed-in tenant's newest open long-term rental request.
+- Kept the rental action disabled while the request state is loading and provided a retry when it cannot be checked.
+- Replaced the action with `Request pending` or `View tenancy`, linking to My Home when an open request exists.
+- Updated desktop and mobile actions immediately after a successful submission.
+- Refreshed request state after rejected submissions so stale pages and cross-tab submissions reconcile with the server.
+- Left Shortlet actions unchanged because separate date ranges can be requested legitimately.
+
+### Interfaces and behavior preserved
+
+- The existing backend transaction lock and duplicate conflict remain authoritative.
+- Cancelled and completed requests permit a future request.
+- No database migration or booking payload change was required.
+
+## Host Tenancies Workspace Redesign
+
+### What was there before
+
+- Landlord and agent tenancy pages implemented the same workflow separately and had already begun to diverge.
+- The page opened with filters instead of a heading, explanation, or indication that a request needed attention.
+- Pending requests appeared in a sparse table that did not surface tenant notes, rental period, payment state, deposit state, or instalment context.
+- The inline `Confirm` action encouraged a consequential decision before the host reviewed the complete request.
+- Filter controls used incomplete tab semantics, loading errors had no recovery action, and search had no clear control.
+- Intermediate viewport widths inherited desktop table content without a deliberate card hierarchy.
+
+### How it was fixed
+
+- Replaced both role pages with one shared, role-aware host tenancy workspace.
+- Added a compact Tenancies heading, explanatory copy, and a live summary of requests awaiting a response.
+- Replaced ARIA tabs with pressed-state filter buttons and added a clearable tenant, property, and location search.
+- Reworked records around property, tenant verification, requested terms, payment summary, tenant notes, and workflow status.
+- Added purposeful responsive cards with explicit field labels below desktop widths.
+- Replaced inline confirmation with `Review request`, keeping final acceptance and rejection inside the existing details drawer.
+- Added matching skeletons, contextual empty-state recovery, and an inline retry action for failed loads.
+
+### Interfaces and behavior preserved
+
+- No backend, database, booking payload, payment, messaging, or pagination contract changed.
+- Existing move-in, cancellation, completion, messaging, paperwork, condition-report, deposit-claim, and payment workflows remain authoritative.
+
+## Notification Hierarchy and Move-In Date Policy
+
+### What was happening
+
+- Notification rows had no layout styles, so their unread marker, title, body, and timestamp collapsed into a centered block.
+- Read and unread notifications lacked sufficient visual distinction and the pagination button rendered its `aria-busy` expression as visible text.
+- The move-in calendar used a date 90 days ago as its minimum and therefore opened three months behind the current date.
+- Both acceptance and move-in update endpoints allowed hosts to submit dates in the past.
+
+### How it was fixed
+
+- Added a responsive notification row layout with left-aligned content, a dedicated timestamp column, clearer unread treatment, and complete interaction states.
+- Improved dropdown header spacing, unread count presentation, and the `Mark all read` action.
+- Moved `aria-busy` onto the older-notifications button attribute.
+- Limited ordinary request acceptance and move-in changes to today or a future date, up to the existing one-year maximum.
+- Kept expired exact-date requests visible as context while requiring the host to choose a new valid date.
+- Enforced the same rule in the backend so direct API requests cannot backdate a tenancy.
+
+### Interfaces and existing data
+
+- Existing historical tenancy records remain valid and readable.
+- No endpoint, payload, or database migration changed.
+- Historical tenancy imports remain outside the ordinary host acceptance workflow.

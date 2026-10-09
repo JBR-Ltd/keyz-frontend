@@ -10,7 +10,6 @@ import {
   type ReactElement,
 } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Popover as PopoverPrimitive } from "radix-ui";
 import {
   Loader2,
   RotateCcw,
@@ -43,16 +42,12 @@ import {
 import { publishTenantHeaderSearch } from "@/lib/tenantHeaderSearch";
 import { useDialogFocus } from "@/lib/useDialogFocus";
 import { createSavedSearch, getSavedSearches } from "@/lib/marketplace";
+import { LISTING_AMENITIES } from "@/lib/listingAmenities";
 
 // === Types
 
 type BedroomFilter = "all" | "1" | "2" | "3" | "4";
-type PriceFilter =
-  | "all"
-  | "under-100000"
-  | "100000-250000"
-  | "250000-500000"
-  | "over-500000";
+type BathroomFilter = BedroomFilter;
 type SortOption = "recommended" | "price-low" | "price-high" | "bedrooms";
 
 /**
@@ -69,6 +64,17 @@ interface AppliedFilter {
   id: string;
   label: string;
   remove: () => void;
+}
+
+interface DetailedFilterDraft {
+  amenities: string[];
+  bathroomFilter: BathroomFilter;
+  bedroomFilter: BedroomFilter;
+  longTermPeriod: LongTermPeriod;
+  maxPrice: string;
+  minPrice: string;
+  sort: SortOption;
+  stayMode: StayMode;
 }
 
 // === Constants
@@ -109,12 +115,12 @@ const BEDROOM_OPTIONS: SelectOption[] = [
   { label: "4+ bedrooms", value: "4" },
 ];
 
-const STICKY_BEDROOM_OPTIONS: SelectOption[] = [
-  { label: "Any beds", value: "all" },
-  { label: "1+ beds", value: "1" },
-  { label: "2+ beds", value: "2" },
-  { label: "3+ beds", value: "3" },
-  { label: "4+ beds", value: "4" },
+const BATHROOM_OPTIONS: SelectOption[] = [
+  { label: "Any bathrooms", value: "all" },
+  { label: "1+ bathrooms", value: "1" },
+  { label: "2+ bathrooms", value: "2" },
+  { label: "3+ bathrooms", value: "3" },
+  { label: "4+ bathrooms", value: "4" },
 ];
 
 const SORT_OPTIONS: SelectOption[] = [
@@ -124,37 +130,24 @@ const SORT_OPTIONS: SelectOption[] = [
   { label: "Most bedrooms", value: "bedrooms" },
 ];
 
-const PRICE_PERIOD_LABELS: Record<RentalMode, string> = {
-  ANNUAL: "annual budget",
-  MONTHLY: "monthly budget",
-  SHORT_STAY: "nightly budget",
-};
-
-const PRICE_PERIOD_SUFFIXES: Record<RentalMode, string> = {
-  ANNUAL: "/yr",
-  MONTHLY: "/mo",
-  SHORT_STAY: "/night",
-};
-
 const PRICE_CONTROL_LABELS: Record<RentalMode, string> = {
   ANNUAL: "Annual budget",
   MONTHLY: "Monthly budget",
   SHORT_STAY: "Nightly budget",
 };
 
-// === Helpers
-
-/** The price bands the menu offers, as the bounds the query takes. */
-const PRICE_BOUNDS: Record<
-  PriceFilter,
-  [number | undefined, number | undefined]
-> = {
-  all: [undefined, undefined],
-  "under-100000": [undefined, 100000],
-  "100000-250000": [100000, 250000],
-  "250000-500000": [250000, 500000],
-  "over-500000": [500000, undefined],
+const SUGGESTED_FILTER_DRAFT: DetailedFilterDraft = {
+  amenities: [],
+  bathroomFilter: "1",
+  bedroomFilter: "1",
+  longTermPeriod: "ANNUAL",
+  maxPrice: "5000000",
+  minPrice: "500000",
+  sort: "recommended",
+  stayMode: "long",
 };
+
+// === Helpers
 
 /** What the server calls each ordering. Recommended is its default, so it sends none. */
 const SORT_PARAMS: Record<SortOption, string | undefined> = {
@@ -168,32 +161,33 @@ function getOptionLabel(options: SelectOption[], value: string): string {
   return options.find((option) => option.value === value)?.label ?? value;
 }
 
-function priceOptionsFor(
-  rentalMode: RentalMode | undefined,
-  compact = false,
-): SelectOption[] {
-  const period = rentalMode ? PRICE_PERIOD_LABELS[rentalMode] : "price";
-  const suffix = rentalMode ? PRICE_PERIOD_SUFFIXES[rentalMode] : "";
+function numberFromInput(value: string): number | undefined {
+  if (!value.trim()) {
+    return undefined;
+  }
 
-  return [
-    { label: `Any ${period}`, value: "all" },
-    {
-      label: `Under ₦${compact ? "100k" : "100,000"}${suffix}`,
-      value: "under-100000",
-    },
-    {
-      label: `₦${compact ? "100k–250k" : "100,000–250,000"}${suffix}`,
-      value: "100000-250000",
-    },
-    {
-      label: `₦${compact ? "250k–500k" : "250,000–500,000"}${suffix}`,
-      value: "250000-500000",
-    },
-    {
-      label: `Above ₦${compact ? "500k" : "500,000"}${suffix}`,
-      value: "over-500000",
-    },
-  ];
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) ? parsed : undefined;
+}
+
+function budgetError(draft: DetailedFilterDraft): string {
+  const minPrice = numberFromInput(draft.minPrice);
+  const maxPrice = numberFromInput(draft.maxPrice);
+
+  if (
+    (draft.minPrice && minPrice === undefined) ||
+    (draft.maxPrice && maxPrice === undefined) ||
+    (minPrice !== undefined && minPrice < 0) ||
+    (maxPrice !== undefined && maxPrice < 0)
+  ) {
+    return "Enter whole naira amounts of zero or more.";
+  }
+
+  if (minPrice !== undefined && maxPrice !== undefined && minPrice > maxPrice) {
+    return "Minimum budget cannot be more than maximum budget.";
+  }
+
+  return "";
 }
 
 function formatNaira(amount: number): string {
@@ -285,11 +279,25 @@ export default function TenantBrowsePage(): ReactElement {
   const [retryKey, setRetryKey] = useState(0);
   const [queryInput, setQueryInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [priceFilter, setPriceFilter] = useState<PriceFilter>("all");
+  const [minPrice, setMinPrice] = useState<number | undefined>();
+  const [maxPrice, setMaxPrice] = useState<number | undefined>();
   const [bedroomFilter, setBedroomFilter] = useState<BedroomFilter>("all");
+  const [bathroomFilter, setBathroomFilter] = useState<BathroomFilter>("all");
+  const [amenities, setAmenities] = useState<string[]>([]);
   const [sort, setSort] = useState<SortOption>("recommended");
   const [stayMode, setStayMode] = useState<StayMode>("all");
   const [longTermPeriod, setLongTermPeriod] = useState<LongTermPeriod>("all");
+  const [filterDraft, setFilterDraft] = useState<DetailedFilterDraft>({
+    amenities: [],
+    bathroomFilter: "all",
+    bedroomFilter: "all",
+    longTermPeriod: "all",
+    maxPrice: "",
+    minPrice: "",
+    sort: "recommended",
+    stayMode: "all",
+  });
+  const [isDesktopFiltersOpen, setIsDesktopFiltersOpen] = useState(false);
   const [savedIds, setSavedIds] = useState<Set<string>>(() => new Set());
   const [isSavedLoading, setIsSavedLoading] = useState(true);
   const [savingIds, setSavingIds] = useState<Set<string>>(() => new Set());
@@ -298,6 +306,7 @@ export default function TenantBrowsePage(): ReactElement {
   const searchGeneration = useRef(0);
   const paginationGeneration = useRef<number | null>(null);
   const shouldFocusResults = useRef(false);
+  const hasOpenedDetailedFilters = useRef(false);
   const [isHeaderSearchVisible, setIsHeaderSearchVisible] = useState(false);
   const [interpretation, setInterpretation] = useState<SearchFilters | null>(
     null,
@@ -307,6 +316,7 @@ export default function TenantBrowsePage(): ReactElement {
     "KEYWORD" | "INTERPRETED"
   >("KEYWORD");
   const desktopSearchRef = useRef<HTMLFormElement>(null);
+  const desktopFilterTriggerRef = useRef<HTMLButtonElement>(null);
   const resultsHeadingRef = useRef<HTMLHeadingElement>(null);
   const dialogRef = useDialogFocus<HTMLDivElement>(isSearchSheetOpen);
 
@@ -330,12 +340,6 @@ export default function TenantBrowsePage(): ReactElement {
         return;
       }
 
-      const bucket = (Object.keys(PRICE_BOUNDS) as PriceFilter[]).find(
-        (key) =>
-          PRICE_BOUNDS[key][0] === (saved.minPrice ?? undefined) &&
-          PRICE_BOUNDS[key][1] === (saved.maxPrice ?? undefined),
-      );
-
       setQueryInput(saved.query ?? "");
       setSearchQuery(saved.query ?? "");
       if (saved.rentalMode === "SHORT_STAY") {
@@ -357,12 +361,19 @@ export default function TenantBrowsePage(): ReactElement {
         setStayMode("all");
         setLongTermPeriod("all");
       }
-      setPriceFilter(bucket ?? "all");
+      setMinPrice(saved.minPrice ?? undefined);
+      setMaxPrice(saved.maxPrice ?? undefined);
       setBedroomFilter(
         saved.minBedrooms && saved.minBedrooms >= 1 && saved.minBedrooms <= 4
           ? (String(saved.minBedrooms) as BedroomFilter)
           : "all",
       );
+      setBathroomFilter(
+        saved.minBathrooms && saved.minBathrooms >= 1 && saved.minBathrooms <= 4
+          ? (String(saved.minBathrooms) as BathroomFilter)
+          : "all",
+      );
+      setAmenities(saved.amenities ?? []);
     });
 
     return () => {
@@ -377,14 +388,6 @@ export default function TenantBrowsePage(): ReactElement {
         ? longTermPeriod
         : undefined;
   const priceControlsEnabled = Boolean(exactRentalMode);
-  const priceOptions = useMemo(
-    () => priceOptionsFor(exactRentalMode),
-    [exactRentalMode],
-  );
-  const stickyPriceOptions = useMemo(
-    () => priceOptionsFor(exactRentalMode, true),
-    [exactRentalMode],
-  );
   const sortOptions = useMemo(
     () =>
       SORT_OPTIONS.map((option) => ({
@@ -397,13 +400,14 @@ export default function TenantBrowsePage(): ReactElement {
   );
 
   const search = useMemo<ListingSearch>(() => {
-    const [minPrice, maxPrice] = PRICE_BOUNDS[priceFilter];
-
     return {
+      amenities: amenities.length > 0 ? amenities : undefined,
       query: searchQuery.trim() || undefined,
       minPrice,
       maxPrice,
       minBedrooms: bedroomFilter === "all" ? undefined : Number(bedroomFilter),
+      minBathrooms:
+        bathroomFilter === "all" ? undefined : Number(bathroomFilter),
       rentalMode: exactRentalMode,
       sort: SORT_PARAMS[sort],
       stayType:
@@ -414,9 +418,12 @@ export default function TenantBrowsePage(): ReactElement {
             : undefined,
     };
   }, [
+    amenities,
+    bathroomFilter,
     bedroomFilter,
     exactRentalMode,
-    priceFilter,
+    maxPrice,
+    minPrice,
     searchQuery,
     sort,
     stayMode,
@@ -477,15 +484,27 @@ export default function TenantBrowsePage(): ReactElement {
   }, []);
 
   useEffect(() => {
-    if (!isSearchSheetOpen) return;
+    if (!isSearchSheetOpen && !isDesktopFiltersOpen) return;
 
     const handleKeyDown = (event: KeyboardEvent): void => {
-      if (event.key === "Escape") setIsSearchSheetOpen(false);
+      if (event.key !== "Escape") {
+        return;
+      }
+
+      if (isSearchSheetOpen) {
+        setIsSearchSheetOpen(false);
+        return;
+      }
+
+      setIsDesktopFiltersOpen(false);
+      window.requestAnimationFrame(() =>
+        desktopFilterTriggerRef.current?.focus(),
+      );
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isSearchSheetOpen]);
+  }, [isDesktopFiltersOpen, isSearchSheetOpen]);
 
   useEffect(() => {
     const search = desktopSearchRef.current;
@@ -519,7 +538,8 @@ export default function TenantBrowsePage(): ReactElement {
 
       setStayMode(mode);
       setLongTermPeriod("all");
-      setPriceFilter("all");
+      setMinPrice(undefined);
+      setMaxPrice(undefined);
       if (sort === "price-low" || sort === "price-high") {
         setSort("recommended");
       }
@@ -528,19 +548,126 @@ export default function TenantBrowsePage(): ReactElement {
     [sort, stayMode],
   );
 
-  const changeLongTermPeriod = useCallback(
-    (period: LongTermPeriod): void => {
-      if (period === longTermPeriod) return;
+  const openDetailedFilters = (): void => {
+    const hasSavedSearch = new URLSearchParams(window.location.search).has(
+      "search",
+    );
+    const isPristine =
+      stayMode === "all" &&
+      longTermPeriod === "all" &&
+      minPrice === undefined &&
+      maxPrice === undefined &&
+      bedroomFilter === "all" &&
+      bathroomFilter === "all" &&
+      amenities.length === 0 &&
+      sort === "recommended";
+    const shouldSuggestDefaults =
+      !hasOpenedDetailedFilters.current && !hasSavedSearch && isPristine;
 
-      setLongTermPeriod(period);
-      setPriceFilter("all");
-      if (sort === "price-low" || sort === "price-high") {
-        setSort("recommended");
-      }
-      setPage(0);
-    },
-    [longTermPeriod, sort],
-  );
+    hasOpenedDetailedFilters.current = true;
+    setFilterDraft({
+      ...(shouldSuggestDefaults
+        ? SUGGESTED_FILTER_DRAFT
+        : {
+            amenities,
+            bathroomFilter,
+            bedroomFilter,
+            longTermPeriod,
+            maxPrice: maxPrice === undefined ? "" : String(maxPrice),
+            minPrice: minPrice === undefined ? "" : String(minPrice),
+            sort,
+            stayMode,
+          }),
+    });
+  };
+
+  const applyDetailedFilters = (): boolean => {
+    if (budgetError(filterDraft)) {
+      return false;
+    }
+
+    const nextRentalMode =
+      filterDraft.stayMode === "short"
+        ? "SHORT_STAY"
+        : filterDraft.stayMode === "long" &&
+            filterDraft.longTermPeriod !== "all"
+          ? filterDraft.longTermPeriod
+          : undefined;
+    const nextMinPrice = numberFromInput(filterDraft.minPrice);
+    const nextMaxPrice = numberFromInput(filterDraft.maxPrice);
+
+    if (
+      (nextMinPrice !== undefined || nextMaxPrice !== undefined) &&
+      !nextRentalMode
+    ) {
+      return false;
+    }
+
+    setLongTermPeriod(filterDraft.longTermPeriod);
+    setStayMode(filterDraft.stayMode);
+    setMinPrice(nextMinPrice);
+    setMaxPrice(nextMaxPrice);
+    setBedroomFilter(filterDraft.bedroomFilter);
+    setBathroomFilter(filterDraft.bathroomFilter);
+    setAmenities(filterDraft.amenities);
+    if (
+      !nextRentalMode &&
+      (filterDraft.sort === "price-low" || filterDraft.sort === "price-high")
+    ) {
+      setSort("recommended");
+    } else {
+      setSort(filterDraft.sort);
+    }
+    setPage(0);
+    return true;
+  };
+
+  const clearFilterDraft = (): void => {
+    setFilterDraft({
+      amenities: [],
+      bathroomFilter: "all",
+      bedroomFilter: "all",
+      longTermPeriod: "all",
+      maxPrice: "",
+      minPrice: "",
+      sort: "recommended",
+      stayMode: "all",
+    });
+  };
+
+  const toggleDesktopFilters = (): void => {
+    if (isDesktopFiltersOpen) {
+      setIsDesktopFiltersOpen(false);
+      return;
+    }
+
+    openDetailedFilters();
+    setIsDesktopFiltersOpen(true);
+  };
+
+  const openInlineFiltersFromSticky = (): void => {
+    if (!isDesktopFiltersOpen) {
+      openDetailedFilters();
+      setIsDesktopFiltersOpen(true);
+    }
+
+    desktopSearchRef.current?.scrollIntoView({
+      behavior: reduceMotion ? "auto" : "smooth",
+      block: "start",
+    });
+    window.requestAnimationFrame(() =>
+      desktopFilterTriggerRef.current?.focus({ preventScroll: true }),
+    );
+  };
+
+  const openSearchSheet = (): void => {
+    openDetailedFilters();
+    setIsSearchSheetOpen(true);
+  };
+
+  const closeSearchSheet = (): void => {
+    setIsSearchSheetOpen(false);
+  };
 
   const appliedFilters = useMemo<AppliedFilter[]>(() => {
     const filters: AppliedFilter[] = [];
@@ -569,15 +696,30 @@ export default function TenantBrowsePage(): ReactElement {
       filters.push({
         id: "period",
         label: getOptionLabel(LONG_TERM_PERIOD_OPTIONS, longTermPeriod),
-        remove: () => changeLongTermPeriod("all"),
+        remove: () => {
+          setLongTermPeriod("all");
+          setMinPrice(undefined);
+          setMaxPrice(undefined);
+          if (sort === "price-low" || sort === "price-high") {
+            setSort("recommended");
+          }
+        },
       });
     }
 
-    if (priceFilter !== "all") {
+    if (minPrice !== undefined || maxPrice !== undefined) {
       filters.push({
-        id: "price",
-        label: getOptionLabel(priceOptions, priceFilter),
-        remove: () => setPriceFilter("all"),
+        id: "budget",
+        label:
+          minPrice !== undefined && maxPrice !== undefined
+            ? `${formatNaira(minPrice)} to ${formatNaira(maxPrice)}`
+            : minPrice !== undefined
+              ? `From ${formatNaira(minPrice)}`
+              : `Up to ${formatNaira(maxPrice ?? 0)}`,
+        remove: () => {
+          setMinPrice(undefined);
+          setMaxPrice(undefined);
+        },
       });
     }
 
@@ -589,25 +731,44 @@ export default function TenantBrowsePage(): ReactElement {
       });
     }
 
+    if (bathroomFilter !== "all") {
+      filters.push({
+        id: "bathrooms",
+        label: getOptionLabel(BATHROOM_OPTIONS, bathroomFilter),
+        remove: () => setBathroomFilter("all"),
+      });
+    }
+
+    amenities.forEach((amenity) => {
+      filters.push({
+        id: `amenity-${amenity}`,
+        label: amenity,
+        remove: () =>
+          setAmenities((current) => current.filter((item) => item !== amenity)),
+      });
+    });
+
     return filters;
   }, [
+    amenities,
+    bathroomFilter,
     bedroomFilter,
-    changeLongTermPeriod,
     changeStayMode,
     longTermPeriod,
-    priceFilter,
-    priceOptions,
+    maxPrice,
+    minPrice,
     searchQuery,
+    sort,
     stayMode,
   ]);
 
-  const clearFilters = (): void => {
-    setQueryInput("");
-    setSearchQuery("");
-    setPriceFilter("all");
+  const clearDetailedFilters = (): void => {
+    setMinPrice(undefined);
+    setMaxPrice(undefined);
     setBedroomFilter("all");
+    setBathroomFilter("all");
+    setAmenities([]);
     setSort("recommended");
-    setStayMode("all");
     setLongTermPeriod("all");
   };
 
@@ -626,6 +787,23 @@ export default function TenantBrowsePage(): ReactElement {
     shouldFocusResults.current = true;
     setIsSubmittingSearch(true);
     setSearchQuery(nextQuery);
+  };
+
+  const applySearchSheet = (): void => {
+    if (!applyDetailedFilters()) {
+      return;
+    }
+
+    const nextQuery = queryInput.trim();
+    closeSearchSheet();
+    shouldFocusResults.current = true;
+    setIsSubmittingSearch(true);
+
+    if (nextQuery === searchQuery) {
+      setRetryKey((current) => current + 1);
+    } else {
+      setSearchQuery(nextQuery);
+    }
   };
 
   const loadMore = async (): Promise<void> => {
@@ -728,8 +906,7 @@ export default function TenantBrowsePage(): ReactElement {
   const desktopFilterCount = disclosedFilters.length;
   const mobileSearchSummary =
     searchQuery || "Where or what are you looking for?";
-  const searchPlaceholder =
-    "Search by city, area, property, or describe what you need";
+  const searchPlaceholder = "Search by location or describe your ideal home";
   const saveSearch = async (): Promise<void> => {
     setIsSavingSearch(true);
     const result = await createSavedSearch({
@@ -738,6 +915,8 @@ export default function TenantBrowsePage(): ReactElement {
       minPrice: search.minPrice,
       maxPrice: search.maxPrice,
       minBedrooms: search.minBedrooms,
+      minBathrooms: search.minBathrooms,
+      amenities: search.amenities,
       rentalMode: search.rentalMode,
       stayType: search.stayType,
     });
@@ -763,9 +942,26 @@ export default function TenantBrowsePage(): ReactElement {
     : appliedFilters.length > 0
       ? `${totalItems} matching homes`
       : `${totalItems || properties.length} homes available`;
-  const priceControlLabel = exactRentalMode
-    ? PRICE_CONTROL_LABELS[exactRentalMode]
-    : "Price";
+  const draftRentalMode: RentalMode | undefined =
+    filterDraft.stayMode === "short"
+      ? "SHORT_STAY"
+      : filterDraft.stayMode === "long" && filterDraft.longTermPeriod !== "all"
+        ? filterDraft.longTermPeriod
+        : undefined;
+  const draftPriceControlLabel = draftRentalMode
+    ? PRICE_CONTROL_LABELS[draftRentalMode]
+    : "Budget";
+  const draftBudgetError = budgetError(filterDraft);
+  const draftHasBudget = Boolean(
+    filterDraft.minPrice.trim() || filterDraft.maxPrice.trim(),
+  );
+  const draftNeedsPeriod = draftHasBudget && !draftRentalMode;
+  const draftSortOptions = SORT_OPTIONS.map((option) => ({
+    ...option,
+    disabled:
+      !draftRentalMode &&
+      (option.value === "price-low" || option.value === "price-high"),
+  }));
   const onlyQueryApplied =
     appliedFilters.length === 1 && appliedFilters[0]?.id === "query";
 
@@ -773,212 +969,366 @@ export default function TenantBrowsePage(): ReactElement {
     <main className="min-h-screen overflow-x-hidden px-5 pb-12 pt-8 sm:px-8 lg:px-10 lg:pb-16 lg:pt-10 xl:px-14">
       <section aria-label="Search and filter listings">
         <div className="mx-auto hidden max-w-7xl md:block">
-          <div className="overflow-visible rounded-2xl bg-bg p-2 shadow-sm ring-1 ring-border">
-            <form
-              ref={desktopSearchRef}
-              onSubmit={submitSearch}
-              className="flex min-h-14 w-full items-stretch overflow-hidden rounded-xl border border-primary/25 bg-bg transition-shadow focus-within:border-primary focus-within:ring-2 focus-within:ring-accent/40"
+          <form
+            ref={desktopSearchRef}
+            onSubmit={submitSearch}
+            className="flex min-h-16 w-full scroll-mt-24 items-center rounded-full border border-primary/10 bg-bg p-1.5 shadow-[0_14px_40px_-28px_rgba(1,57,81,0.5)] transition-[border-color,box-shadow] focus-within:border-primary/30 focus-within:shadow-[0_16px_44px_-26px_rgba(1,57,81,0.58)] focus-within:ring-2 focus-within:ring-accent/25"
+          >
+            <div className="flex min-w-0 flex-1 items-center gap-3 pl-4 pr-2 focus-within:text-primary lg:pl-5">
+              <Search
+                className="shrink-0 text-muted"
+                size={19}
+                aria-hidden="true"
+              />
+              <input
+                type="search"
+                aria-label="Search homes"
+                value={queryInput}
+                onChange={(event) => setQueryInput(event.target.value)}
+                placeholder={searchPlaceholder}
+                maxLength={DESCRIBE_QUERY_MAX_LENGTH}
+                className="min-w-0 flex-1 bg-transparent font-body text-base text-primary outline-none placeholder:text-muted [&::-webkit-search-cancel-button]:appearance-none"
+              />
+            </div>
+            {queryInput ? (
+              <button
+                type="button"
+                onClick={() => setQueryInput("")}
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-soft hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                aria-label="Clear search text"
+              >
+                <X size={17} aria-hidden="true" />
+              </button>
+            ) : null}
+            <span
+              className="mx-1 h-8 w-px shrink-0 bg-border/80"
+              aria-hidden="true"
+            />
+            <div className="flex w-32 shrink-0 items-center px-3 lg:w-40 lg:px-4">
+              <Select
+                ariaLabel="Filter by stay type"
+                value={stayMode}
+                onValueChange={(value) => changeStayMode(value as StayMode)}
+                options={DESKTOP_STAY_MODE_OPTIONS}
+                className="text-sm font-bold"
+                contentClassName="min-w-44"
+              />
+            </div>
+            <span
+              className="h-8 w-px shrink-0 bg-border/80"
+              aria-hidden="true"
+            />
+            <button
+              ref={desktopFilterTriggerRef}
+              type="button"
+              onClick={toggleDesktopFilters}
+              aria-expanded={isDesktopFiltersOpen}
+              aria-controls="desktop-listing-filters"
+              className="relative mx-1 inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full px-3 font-body text-sm font-bold text-primary transition-colors hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent lg:px-4"
+              aria-label={
+                desktopFilterCount > 0
+                  ? `${isDesktopFiltersOpen ? "Close" : "Open"} filters, ${desktopFilterCount} applied`
+                  : `${isDesktopFiltersOpen ? "Close" : "Open"} filters`
+              }
             >
-              <div className="flex min-w-0 flex-1 items-center gap-3 px-5 focus-within:text-primary">
-                <Search
-                  className="shrink-0 text-muted"
-                  size={19}
+              <SlidersHorizontal size={17} aria-hidden="true" />
+              <span className="hidden lg:inline">Filters</span>
+              {desktopFilterCount > 0 ? (
+                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] text-white">
+                  {desktopFilterCount}
+                </span>
+              ) : null}
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmittingSearch}
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent text-primary shadow-sm transition-[background-color,color,transform] hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-wait disabled:opacity-70 motion-safe:hover:scale-[1.03]"
+              aria-label={
+                isSubmittingSearch ? "Searching for homes" : "Search listings"
+              }
+            >
+              {isSubmittingSearch ? (
+                <Loader2
+                  size={18}
+                  className="animate-spin"
                   aria-hidden="true"
                 />
-                <input
-                  type="search"
-                  aria-label="Search homes"
-                  value={queryInput}
-                  onChange={(event) => setQueryInput(event.target.value)}
-                  placeholder={searchPlaceholder}
-                  maxLength={DESCRIBE_QUERY_MAX_LENGTH}
-                  className="min-w-0 flex-1 bg-transparent font-body text-base text-primary outline-none placeholder:text-muted [&::-webkit-search-cancel-button]:appearance-none"
-                />
-              </div>
-              {queryInput ? (
-                <button
-                  type="button"
-                  onClick={() => setQueryInput("")}
-                  className="flex min-h-11 w-11 shrink-0 items-center justify-center text-muted transition-colors hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
-                  aria-label="Clear search text"
-                >
-                  <X size={17} aria-hidden="true" />
-                </button>
-              ) : null}
-              <div className="flex w-36 shrink-0 items-center border-l border-border px-3 lg:w-44 lg:px-4">
-                <Select
-                  ariaLabel="Filter by stay type"
-                  value={stayMode}
-                  onValueChange={(value) => changeStayMode(value as StayMode)}
-                  options={DESKTOP_STAY_MODE_OPTIONS}
-                  className="text-sm font-bold"
-                  contentClassName="min-w-44"
-                />
-              </div>
-              <PopoverPrimitive.Root>
-                <PopoverPrimitive.Trigger asChild>
-                  <button
-                    type="button"
-                    className="relative inline-flex min-h-11 shrink-0 items-center justify-center gap-2 border-l border-border px-3 font-body text-sm font-bold text-primary transition-colors hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent lg:px-4"
-                    aria-label={
-                      desktopFilterCount > 0
-                        ? `Open filters, ${desktopFilterCount} applied`
-                        : "Open filters"
-                    }
-                  >
-                    <SlidersHorizontal size={17} aria-hidden="true" />
-                    <span className="hidden lg:inline">Filters</span>
-                    {desktopFilterCount > 0 ? (
-                      <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] text-white">
-                        {desktopFilterCount}
-                      </span>
-                    ) : null}
-                  </button>
-                </PopoverPrimitive.Trigger>
-                <PopoverPrimitive.Portal>
-                  <PopoverPrimitive.Content
-                    align="end"
-                    sideOffset={10}
-                    className="z-[110] w-[min(26rem,calc(100vw-2rem))] rounded-2xl border border-border bg-bg p-5 shadow-xl outline-none data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 motion-reduce:data-[state=open]:animate-none motion-reduce:data-[state=closed]:animate-none"
-                    aria-label="Listing filters"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <h2 className="font-display text-xl font-bold text-primary">
-                          Refine your search
-                        </h2>
-                        <p className="mt-1 font-body text-sm text-muted">
-                          Results update as you choose.
-                        </p>
-                      </div>
-                      {desktopFilterCount > 0 ? (
-                        <button
-                          type="button"
-                          onClick={clearFilters}
-                          className="min-h-11 shrink-0 px-2 font-body text-sm font-bold text-muted hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                        >
-                          Clear all
-                        </button>
-                      ) : null}
+              ) : (
+                <Search size={18} aria-hidden="true" />
+              )}
+            </button>
+          </form>
+
+          <AnimatePresence initial={false}>
+            {isDesktopFiltersOpen ? (
+              <motion.div
+                id="desktop-listing-filters"
+                role="region"
+                aria-label="Listing filters"
+                initial={reduceMotion ? false : { height: 0, opacity: 0 }}
+                animate={
+                  reduceMotion ? undefined : { height: "auto", opacity: 1 }
+                }
+                exit={reduceMotion ? undefined : { height: 0, opacity: 0 }}
+                transition={{ duration: 0.22, ease: "easeOut" }}
+                className="overflow-hidden"
+              >
+                <div className="mt-3 rounded-2xl border border-border bg-bg p-5 shadow-[0_18px_50px_-36px_rgba(1,57,81,0.55)] lg:p-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <h2 className="font-display text-xl font-bold text-primary">
+                        Refine your search
+                      </h2>
+                      <p className="mt-1 font-body text-sm text-muted">
+                        Choose what matters. Results change only when you apply
+                        your filters.
+                      </p>
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsDesktopFiltersOpen(false);
+                        window.requestAnimationFrame(() =>
+                          desktopFilterTriggerRef.current?.focus(),
+                        );
+                      }}
+                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted hover:bg-surface-soft hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                      aria-label="Close filters without applying"
+                    >
+                      <X size={18} aria-hidden="true" />
+                    </button>
+                  </div>
 
-                    <div className="mt-5 space-y-5">
-                      {stayMode === "long" ? (
-                        <fieldset>
-                          <legend className="mb-2 font-body text-xs font-bold uppercase tracking-[0.14em] text-muted">
-                            Rental period
-                          </legend>
-                          <div
-                            className="grid grid-cols-2 gap-1 rounded-xl bg-surface-soft p-1"
-                            role="group"
-                          >
-                            {LONG_TERM_PERIOD_OPTIONS.filter(
-                              (option) => option.value !== "all",
-                            ).map((option) => {
-                              const active = longTermPeriod === option.value;
+                  <div className="mt-5 grid gap-5 lg:grid-cols-[0.8fr_1.35fr_1fr]">
+                    <fieldset>
+                      <legend className="mb-2 font-body text-xs font-bold uppercase tracking-[0.14em] text-muted">
+                        Rental period
+                      </legend>
+                      {filterDraft.stayMode === "long" ? (
+                        <div
+                          className="grid grid-cols-2 gap-1 rounded-xl bg-surface-soft p-1"
+                          role="group"
+                        >
+                          {LONG_TERM_PERIOD_OPTIONS.filter(
+                            (option) => option.value !== "all",
+                          ).map((option) => {
+                            const active =
+                              filterDraft.longTermPeriod === option.value;
 
-                              return (
-                                <button
-                                  key={option.value}
-                                  type="button"
-                                  aria-pressed={active}
-                                  onClick={() =>
-                                    changeLongTermPeriod(
+                            return (
+                              <button
+                                key={option.value}
+                                type="button"
+                                aria-pressed={active}
+                                onClick={() =>
+                                  setFilterDraft((current) => ({
+                                    ...current,
+                                    longTermPeriod:
                                       option.value as LongTermPeriod,
-                                    )
-                                  }
-                                  className={`min-h-11 rounded-lg px-3 font-body text-sm font-bold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
-                                    active
-                                      ? "bg-bg text-primary shadow-sm"
-                                      : "text-muted hover:text-primary"
-                                  }`}
-                                >
-                                  {option.value === "ANNUAL"
-                                    ? "Annual"
-                                    : "Monthly"}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </fieldset>
-                      ) : null}
+                                    maxPrice: "",
+                                    minPrice: "",
+                                  }))
+                                }
+                                className={`min-h-12 rounded-lg px-3 font-body text-sm font-bold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                                  active
+                                    ? "bg-bg text-primary shadow-sm"
+                                    : "text-muted hover:text-primary"
+                                }`}
+                              >
+                                {option.value === "ANNUAL"
+                                  ? "Annual"
+                                  : "Monthly"}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="flex min-h-12 items-center rounded-xl bg-surface-soft px-4 font-body text-sm text-muted">
+                          {filterDraft.stayMode === "short"
+                            ? "Nightly"
+                            : "Choose Homes to rent above"}
+                        </div>
+                      )}
+                    </fieldset>
 
-                      <label className="block">
-                        <span className="mb-2 block font-body text-xs font-bold uppercase tracking-[0.14em] text-muted">
-                          {priceControlLabel}
-                        </span>
-                        <span className="block rounded-xl border border-border px-4 py-3.5">
-                          <Select
-                            ariaLabel={priceControlLabel}
-                            disabled={!priceControlsEnabled}
-                            value={priceFilter}
-                            onValueChange={(value) =>
-                              setPriceFilter(value as PriceFilter)
-                            }
-                            options={priceOptions}
-                            className="text-sm"
-                          />
-                        </span>
-                      </label>
-
-                      {!priceControlsEnabled ? (
+                    <fieldset>
+                      <legend className="mb-2 font-body text-xs font-bold uppercase tracking-[0.14em] text-muted">
+                        {draftPriceControlLabel}
+                      </legend>
+                      <div className="grid grid-cols-2 gap-3">
+                        {[
+                          {
+                            id: "desktop-min-budget",
+                            label: "Minimum",
+                            key: "minPrice" as const,
+                          },
+                          {
+                            id: "desktop-max-budget",
+                            label: "Maximum",
+                            key: "maxPrice" as const,
+                          },
+                        ].map((field) => (
+                          <label key={field.id} htmlFor={field.id}>
+                            <span className="sr-only">
+                              {field.label} budget in naira
+                            </span>
+                            <span className="flex min-h-12 items-center rounded-xl border border-border bg-bg px-3 focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/30">
+                              <span className="font-body text-sm text-muted">
+                                ₦
+                              </span>
+                              <input
+                                id={field.id}
+                                type="number"
+                                inputMode="numeric"
+                                min="0"
+                                step="1"
+                                disabled={!draftRentalMode}
+                                value={filterDraft[field.key]}
+                                onChange={(event) =>
+                                  setFilterDraft((current) => ({
+                                    ...current,
+                                    [field.key]: event.target.value,
+                                  }))
+                                }
+                                placeholder={field.label}
+                                aria-describedby="desktop-budget-feedback"
+                                aria-invalid={Boolean(draftBudgetError)}
+                                className="min-w-0 flex-1 bg-transparent px-2 py-3 font-body text-sm text-primary outline-none placeholder:text-muted disabled:cursor-not-allowed disabled:opacity-50"
+                              />
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                      {!draftRentalMode ? (
                         <p
-                          className="font-body text-xs leading-5 text-muted"
+                          id="desktop-budget-feedback"
+                          className="mt-2 font-body text-xs leading-5 text-muted"
                           role="status"
                         >
-                          {stayMode === "long"
-                            ? "Choose Annual or Monthly to set a budget."
-                            : "Choose a stay type and rental period to set a budget."}
+                          Choose a stay type and rental period to set a budget.
                         </p>
-                      ) : null}
+                      ) : draftBudgetError ? (
+                        <p
+                          id="desktop-budget-feedback"
+                          className="mt-2 font-body text-xs font-semibold text-red-700"
+                          role="alert"
+                        >
+                          {draftBudgetError}
+                        </p>
+                      ) : (
+                        <span id="desktop-budget-feedback" className="sr-only">
+                          Enter an optional minimum or maximum budget.
+                        </span>
+                      )}
+                    </fieldset>
 
-                      <label className="block">
-                        <span className="mb-2 block font-body text-xs font-bold uppercase tracking-[0.14em] text-muted">
-                          Bedrooms
-                        </span>
-                        <span className="block rounded-xl border border-border px-4 py-3.5">
-                          <Select
-                            ariaLabel="Filter by bedrooms"
-                            value={bedroomFilter}
-                            onValueChange={(value) =>
-                              setBedroomFilter(value as BedroomFilter)
-                            }
-                            options={BEDROOM_OPTIONS}
-                            className="text-sm"
-                          />
-                        </span>
-                      </label>
+                    <div className="grid grid-cols-2 gap-3">
+                      {[
+                        {
+                          label: "Bedrooms",
+                          value: filterDraft.bedroomFilter,
+                          options: BEDROOM_OPTIONS,
+                          key: "bedroomFilter" as const,
+                        },
+                        {
+                          label: "Bathrooms",
+                          value: filterDraft.bathroomFilter,
+                          options: BATHROOM_OPTIONS,
+                          key: "bathroomFilter" as const,
+                        },
+                      ].map((field) => (
+                        <label key={field.label} className="block">
+                          <span className="mb-2 block font-body text-xs font-bold uppercase tracking-[0.14em] text-muted">
+                            {field.label}
+                          </span>
+                          <span className="block rounded-xl border border-border px-3 py-3.5">
+                            <Select
+                              ariaLabel={`Filter by ${field.label.toLowerCase()}`}
+                              value={field.value}
+                              onValueChange={(value) =>
+                                setFilterDraft((current) => ({
+                                  ...current,
+                                  [field.key]: value,
+                                }))
+                              }
+                              options={field.options}
+                              className="text-sm"
+                            />
+                          </span>
+                        </label>
+                      ))}
                     </div>
-                  </PopoverPrimitive.Content>
-                </PopoverPrimitive.Portal>
-              </PopoverPrimitive.Root>
-              <button
-                type="submit"
-                disabled={isSubmittingSearch}
-                className="inline-flex min-w-14 shrink-0 items-center justify-center gap-2 bg-accent px-4 font-body text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary disabled:cursor-wait disabled:opacity-70 lg:min-w-32 lg:px-6"
-              >
-                {isSubmittingSearch ? (
-                  <Loader2
-                    size={18}
-                    className="animate-spin"
-                    aria-hidden="true"
-                  />
-                ) : (
-                  <Search size={18} aria-hidden="true" />
-                )}
-                <span className="hidden lg:inline">
-                  {isSubmittingSearch ? "Searching..." : "Search"}
-                </span>
-              </button>
-            </form>
-          </div>
+                  </div>
+
+                  <fieldset className="mt-5">
+                    <legend className="mb-2 font-body text-xs font-bold uppercase tracking-[0.14em] text-muted">
+                      Amenities
+                    </legend>
+                    <div className="flex flex-wrap gap-2">
+                      {LISTING_AMENITIES.map((amenity) => {
+                        const selected =
+                          filterDraft.amenities.includes(amenity);
+
+                        return (
+                          <button
+                            key={amenity}
+                            type="button"
+                            aria-pressed={selected}
+                            onClick={() =>
+                              setFilterDraft((current) => ({
+                                ...current,
+                                amenities: selected
+                                  ? current.amenities.filter(
+                                      (item) => item !== amenity,
+                                    )
+                                  : [...current.amenities, amenity],
+                              }))
+                            }
+                            className={`min-h-11 rounded-full border px-3 py-2 font-body text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                              selected
+                                ? "border-primary bg-primary text-white"
+                                : "border-border text-primary hover:border-primary/40 hover:bg-primary/5"
+                            }`}
+                          >
+                            {amenity}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </fieldset>
+
+                  <div className="mt-5 flex items-center justify-between gap-4 border-t border-border pt-4">
+                    <button
+                      type="button"
+                      onClick={clearFilterDraft}
+                      className="min-h-11 rounded-full px-4 font-body text-sm font-bold text-muted hover:bg-surface-soft hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    >
+                      Clear
+                    </button>
+                    <button
+                      type="button"
+                      disabled={Boolean(draftBudgetError) || draftNeedsPeriod}
+                      onClick={() => {
+                        if (applyDetailedFilters()) {
+                          setIsDesktopFiltersOpen(false);
+                        }
+                      }}
+                      className="min-h-11 rounded-full bg-accent px-6 font-body text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Apply filters
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
         </div>
 
         <div className="md:hidden">
           <button
             type="button"
-            onClick={() => setIsSearchSheetOpen(true)}
-            className="flex min-h-14 w-full items-center justify-between gap-4 rounded-2xl bg-bg px-4 py-3 shadow-sm ring-1 ring-border focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            onClick={openSearchSheet}
+            className="flex min-h-16 w-full items-center justify-between gap-4 rounded-full border border-primary/10 bg-bg p-1.5 pl-5 shadow-[0_12px_34px_-26px_rgba(1,57,81,0.5)] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             aria-label="Open search filters"
           >
             <span className="flex min-w-0 items-center gap-3">
@@ -998,7 +1348,7 @@ export default function TenantBrowsePage(): ReactElement {
                 </span>
               </span>
             </span>
-            <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent text-primary">
+            <span className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent text-primary shadow-sm">
               <Search size={17} aria-hidden="true" />
               {mobileFilterCount > 0 ? (
                 <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 font-body text-[10px] font-bold text-white">
@@ -1027,7 +1377,7 @@ export default function TenantBrowsePage(): ReactElement {
             ))}
             <button
               type="button"
-              onClick={clearFilters}
+              onClick={clearDetailedFilters}
               className="inline-flex min-h-9 items-center gap-1.5 px-2 py-2 font-body text-xs font-bold text-muted hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             >
               <RotateCcw size={13} aria-hidden="true" />
@@ -1079,9 +1429,9 @@ export default function TenantBrowsePage(): ReactElement {
           >
             <form
               onSubmit={submitSearch}
-              className="pointer-events-auto flex h-12 w-[min(56rem,calc(100vw-28rem))] min-w-[32rem] items-center overflow-hidden rounded-full border border-primary/10 bg-bg"
+              className="pointer-events-auto flex h-14 w-[min(56rem,calc(100vw-28rem))] min-w-[32rem] items-center rounded-full border border-primary/10 bg-bg p-1 shadow-[0_12px_36px_-24px_rgba(1,57,81,0.55)] transition-[border-color,box-shadow] focus-within:border-primary/25 focus-within:shadow-[0_14px_40px_-22px_rgba(1,57,81,0.6)] focus-within:ring-2 focus-within:ring-accent/25"
             >
-              <div className="flex min-w-0 flex-1 items-center gap-2.5 px-5 focus-within:text-primary">
+              <div className="flex min-w-0 flex-1 items-center gap-2.5 px-4 focus-within:text-primary">
                 <Search
                   className="shrink-0 text-muted"
                   size={17}
@@ -1118,63 +1468,22 @@ export default function TenantBrowsePage(): ReactElement {
                     className="font-body text-xs font-bold"
                   />
                 </div>
-                {stayMode === "long" ? (
-                  <>
-                    <div className="hidden h-8 w-px shrink-0 bg-border xl:block" />
-                    <div className="hidden w-28 shrink-0 px-3 xl:block">
-                      <Select
-                        ariaLabel="Choose annual or monthly rent"
-                        value={longTermPeriod}
-                        onValueChange={(value) =>
-                          changeLongTermPeriod(value as LongTermPeriod)
-                        }
-                        options={LONG_TERM_PERIOD_OPTIONS}
-                        className="font-body text-xs font-bold"
-                      />
-                    </div>
-                  </>
-                ) : null}
-                <div className="hidden h-8 w-px shrink-0 bg-border xl:block" />
-                <div className="hidden w-36 shrink-0 px-3 xl:block">
-                  <Select
-                    ariaLabel={priceControlLabel}
-                    disabled={!priceControlsEnabled}
-                    value={priceFilter}
-                    onValueChange={(value) =>
-                      setPriceFilter(value as PriceFilter)
-                    }
-                    options={stickyPriceOptions}
-                    className="font-body text-xs font-bold"
-                  />
-                </div>
-                <div className="hidden h-8 w-px shrink-0 bg-border xl:block" />
-                <div className="hidden w-32 shrink-0 px-3 xl:block">
-                  <Select
-                    ariaLabel="Filter by bedrooms"
-                    value={bedroomFilter}
-                    onValueChange={(value) =>
-                      setBedroomFilter(value as BedroomFilter)
-                    }
-                    options={STICKY_BEDROOM_OPTIONS}
-                    className="font-body text-xs font-bold"
-                  />
-                </div>
                 <button
                   type="button"
-                  onClick={() => setIsSearchSheetOpen(true)}
+                  onClick={openInlineFiltersFromSticky}
                   className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-primary transition-colors hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                  aria-label="Open listing filters"
+                  aria-label="Open listing filters in the main search area"
                 >
                   <SlidersHorizontal size={17} aria-hidden="true" />
                   {desktopFilterCount > 0 ? (
-                    <span className="absolute right-0.5 top-0.5 h-2 w-2 rounded-full bg-accent" />
+                    <span className="absolute right-0.5 top-0.5 h-2 w-2 rounded-full bg-primary" />
                   ) : null}
                 </button>
               </>
               <button
                 type="submit"
                 disabled={isSubmittingSearch}
-                className="mr-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent text-primary transition-colors duration-200 ease-in-out hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent text-primary shadow-sm transition-[background-color,color,transform] duration-200 ease-in-out hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-70 motion-safe:hover:scale-[1.03]"
                 aria-label={
                   isSubmittingSearch ? "Searching for homes" : "Search listings"
                 }
@@ -1303,7 +1612,14 @@ export default function TenantBrowsePage(): ReactElement {
             {appliedFilters.length > 0 ? (
               <button
                 type="button"
-                onClick={clearFilters}
+                onClick={() => {
+                  if (onlyQueryApplied) {
+                    setQueryInput("");
+                    setSearchQuery("");
+                  } else {
+                    clearDetailedFilters();
+                  }
+                }}
                 className="mt-5 rounded-full bg-primary px-5 py-3 font-body text-sm font-bold text-white hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               >
                 {onlyQueryApplied ? "View all homes" : "Clear filters"}
@@ -1368,7 +1684,7 @@ export default function TenantBrowsePage(): ReactElement {
                 animate={reduceMotion ? undefined : { opacity: 1 }}
                 exit={reduceMotion ? undefined : { opacity: 0 }}
                 transition={{ duration: 0.3, ease: "easeOut" }}
-                onClick={() => setIsSearchSheetOpen(false)}
+                onClick={closeSearchSheet}
               />
               <div className="pointer-events-none fixed inset-0 z-[110] flex items-end md:items-center md:justify-center md:p-6">
                 <motion.div
@@ -1389,7 +1705,7 @@ export default function TenantBrowsePage(): ReactElement {
                     </h2>
                     <button
                       type="button"
-                      onClick={() => setIsSearchSheetOpen(false)}
+                      onClick={closeSearchSheet}
                       className="flex h-9 w-9 items-center justify-center rounded-full text-muted hover:bg-primary/10 hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                       aria-label="Close search"
                     >
@@ -1446,14 +1762,22 @@ export default function TenantBrowsePage(): ReactElement {
                           aria-label="Kind of stay"
                         >
                           {STAY_MODES.map((mode) => {
-                            const active = stayMode === mode.id;
+                            const active = filterDraft.stayMode === mode.id;
 
                             return (
                               <button
                                 key={mode.id}
                                 type="button"
                                 aria-pressed={active}
-                                onClick={() => changeStayMode(mode.id)}
+                                onClick={() => {
+                                  setFilterDraft((current) => ({
+                                    ...current,
+                                    longTermPeriod: "all",
+                                    maxPrice: "",
+                                    minPrice: "",
+                                    stayMode: mode.id,
+                                  }));
+                                }}
                                 className={`min-h-11 rounded-lg px-2 font-body text-sm font-bold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                                   active
                                     ? "bg-bg text-primary shadow-sm"
@@ -1467,7 +1791,7 @@ export default function TenantBrowsePage(): ReactElement {
                         </div>
                       </div>
 
-                      {stayMode === "long" ? (
+                      {filterDraft.stayMode === "long" ? (
                         <div>
                           <span className="mb-2 block font-body text-xs font-bold uppercase tracking-[0.14em] text-muted">
                             Rental period
@@ -1480,7 +1804,8 @@ export default function TenantBrowsePage(): ReactElement {
                             {LONG_TERM_PERIOD_OPTIONS.filter(
                               (option) => option.value !== "all",
                             ).map((option) => {
-                              const active = longTermPeriod === option.value;
+                              const active =
+                                filterDraft.longTermPeriod === option.value;
 
                               return (
                                 <button
@@ -1488,9 +1813,13 @@ export default function TenantBrowsePage(): ReactElement {
                                   type="button"
                                   aria-pressed={active}
                                   onClick={() =>
-                                    changeLongTermPeriod(
-                                      option.value as LongTermPeriod,
-                                    )
+                                    setFilterDraft((current) => ({
+                                      ...current,
+                                      longTermPeriod:
+                                        option.value as LongTermPeriod,
+                                      maxPrice: "",
+                                      minPrice: "",
+                                    }))
                                   }
                                   className={`min-h-11 rounded-lg px-3 font-body text-sm font-bold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                                     active
@@ -1508,30 +1837,92 @@ export default function TenantBrowsePage(): ReactElement {
                         </div>
                       ) : null}
 
+                      <fieldset>
+                        <legend className="mb-2 font-body text-xs font-bold uppercase tracking-[0.14em] text-muted">
+                          {draftPriceControlLabel}
+                        </legend>
+                        <div className="grid grid-cols-2 gap-3">
+                          {[
+                            {
+                              id: "mobile-min-budget",
+                              label: "Minimum",
+                              key: "minPrice" as const,
+                            },
+                            {
+                              id: "mobile-max-budget",
+                              label: "Maximum",
+                              key: "maxPrice" as const,
+                            },
+                          ].map((field) => (
+                            <label key={field.id} htmlFor={field.id}>
+                              <span className="sr-only">
+                                {field.label} budget in naira
+                              </span>
+                              <span className="flex min-h-12 items-center rounded-lg bg-surface-soft px-3 focus-within:ring-2 focus-within:ring-accent">
+                                <span className="font-body text-sm text-muted">
+                                  ₦
+                                </span>
+                                <input
+                                  id={field.id}
+                                  type="number"
+                                  inputMode="numeric"
+                                  min="0"
+                                  step="1"
+                                  disabled={!draftRentalMode}
+                                  value={filterDraft[field.key]}
+                                  onChange={(event) =>
+                                    setFilterDraft((current) => ({
+                                      ...current,
+                                      [field.key]: event.target.value,
+                                    }))
+                                  }
+                                  placeholder={field.label}
+                                  aria-describedby="mobile-budget-feedback"
+                                  aria-invalid={Boolean(draftBudgetError)}
+                                  className="min-w-0 flex-1 bg-transparent px-2 py-3 font-body text-sm text-primary outline-none placeholder:text-muted disabled:cursor-not-allowed disabled:opacity-50"
+                                />
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      </fieldset>
+
+                      {!draftRentalMode ? (
+                        <p
+                          id="mobile-budget-feedback"
+                          className="font-body text-xs leading-5 text-muted"
+                          role="status"
+                        >
+                          {filterDraft.stayMode === "long"
+                            ? "Choose Annual or Monthly to set a budget."
+                            : "Choose a stay type and rental period to set a budget."}
+                        </p>
+                      ) : draftBudgetError ? (
+                        <p
+                          id="mobile-budget-feedback"
+                          className="font-body text-xs font-semibold text-red-700"
+                          role="alert"
+                        >
+                          {draftBudgetError}
+                        </p>
+                      ) : (
+                        <span id="mobile-budget-feedback" className="sr-only">
+                          Enter an optional minimum or maximum budget.
+                        </span>
+                      )}
+
                       {[
                         {
-                          label: priceControlLabel,
-                          value: priceFilter,
-                          options: priceOptions,
-                          disabled: !priceControlsEnabled,
-                          change: (value: string) =>
-                            setPriceFilter(value as PriceFilter),
-                        },
-                        {
                           label: "Bedrooms",
-                          value: bedroomFilter,
+                          value: filterDraft.bedroomFilter,
                           options: BEDROOM_OPTIONS,
-                          disabled: false,
-                          change: (value: string) =>
-                            setBedroomFilter(value as BedroomFilter),
+                          key: "bedroomFilter" as const,
                         },
                         {
-                          label: "Sort by",
-                          value: sort,
-                          options: sortOptions,
-                          disabled: false,
-                          change: (value: string) =>
-                            setSort(value as SortOption),
+                          label: "Bathrooms",
+                          value: filterDraft.bathroomFilter,
+                          options: BATHROOM_OPTIONS,
+                          key: "bathroomFilter" as const,
                         },
                       ].map((field) => (
                         <label key={field.label} className="block">
@@ -1540,37 +1931,94 @@ export default function TenantBrowsePage(): ReactElement {
                           </span>
                           <div className="rounded-lg bg-surface-soft px-4 py-4">
                             <Select
-                              ariaLabel={field.label}
+                              ariaLabel={`Filter by ${field.label.toLowerCase()}`}
                               value={field.value}
-                              onValueChange={field.change}
+                              onValueChange={(value) =>
+                                setFilterDraft((current) => ({
+                                  ...current,
+                                  [field.key]: value,
+                                }))
+                              }
                               options={field.options}
-                              disabled={field.disabled}
                             />
                           </div>
                         </label>
                       ))}
-                      {!priceControlsEnabled ? (
-                        <p className="font-body text-xs leading-5 text-muted">
-                          {stayMode === "long"
-                            ? "Choose Annual or Monthly to set a budget and sort by price."
-                            : "Choose a stay type and rental period to set a budget."}
-                        </p>
-                      ) : null}
+
+                      <fieldset>
+                        <legend className="mb-2 font-body text-xs font-bold uppercase tracking-[0.14em] text-muted">
+                          Amenities
+                        </legend>
+                        <div className="flex flex-wrap gap-2">
+                          {LISTING_AMENITIES.map((amenity) => {
+                            const selected =
+                              filterDraft.amenities.includes(amenity);
+
+                            return (
+                              <button
+                                key={amenity}
+                                type="button"
+                                aria-pressed={selected}
+                                onClick={() =>
+                                  setFilterDraft((current) => ({
+                                    ...current,
+                                    amenities: selected
+                                      ? current.amenities.filter(
+                                          (item) => item !== amenity,
+                                        )
+                                      : [...current.amenities, amenity],
+                                  }))
+                                }
+                                className={`min-h-11 rounded-full border px-3 py-2 font-body text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                                  selected
+                                    ? "border-primary bg-primary text-white"
+                                    : "border-border text-primary"
+                                }`}
+                              >
+                                {amenity}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </fieldset>
+
+                      <label className="block">
+                        <span className="mb-2 block font-body text-xs font-bold uppercase tracking-[0.14em] text-muted">
+                          Sort by
+                        </span>
+                        <div className="rounded-lg bg-surface-soft px-4 py-4">
+                          <Select
+                            ariaLabel="Sort by"
+                            value={filterDraft.sort}
+                            onValueChange={(value) =>
+                              setFilterDraft((current) => ({
+                                ...current,
+                                sort: value as SortOption,
+                              }))
+                            }
+                            options={draftSortOptions}
+                          />
+                        </div>
+                      </label>
                     </>
                   </div>
 
                   <div className="grid grid-cols-[auto_1fr] gap-3 border-t border-border bg-bg px-5 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
                     <button
                       type="button"
-                      onClick={clearFilters}
+                      onClick={clearFilterDraft}
                       className="rounded-full px-4 py-3 font-body text-sm font-bold text-muted hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                     >
                       Clear
                     </button>
                     <button
                       type="button"
-                      onClick={() => submitSearch()}
-                      disabled={isSubmittingSearch}
+                      onClick={applySearchSheet}
+                      disabled={
+                        isSubmittingSearch ||
+                        Boolean(draftBudgetError) ||
+                        draftNeedsPeriod
+                      }
                       className="flex items-center justify-center gap-2 rounded-full bg-accent px-6 py-3 font-body text-sm font-bold text-primary hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                     >
                       {isSubmittingSearch ? (
@@ -1582,9 +2030,7 @@ export default function TenantBrowsePage(): ReactElement {
                       ) : (
                         <Search size={16} aria-hidden="true" />
                       )}
-                      {isSubmittingSearch
-                        ? "Searching..."
-                        : `Show ${totalItems} homes`}
+                      {isSubmittingSearch ? "Applying..." : "Apply filters"}
                     </button>
                   </div>
                 </motion.div>

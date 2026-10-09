@@ -44,11 +44,13 @@ export interface AdminReport {
 
 export interface SavedSearch {
   alerts: boolean;
+  amenities: string[];
   city: string | null;
   createdAt: string;
   id: number;
   lastAlertedAt: string | null;
   maxPrice: number | null;
+  minBathrooms: number | null;
   minBedrooms: number | null;
   minPrice: number | null;
   name: string;
@@ -59,8 +61,10 @@ export interface SavedSearch {
 
 export interface SavedSearchInput {
   alerts: boolean;
+  amenities?: string[];
   city?: string;
   maxPrice?: number;
+  minBathrooms?: number;
   minBedrooms?: number;
   minPrice?: number;
   name?: string;

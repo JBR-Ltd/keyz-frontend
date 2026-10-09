@@ -42,6 +42,7 @@ import {
   type HostListingRole,
   type RentalMode,
 } from "@/lib/hostListings";
+import { LISTING_AMENITIES } from "@/lib/listingAmenities";
 import type { PropertyListingStatus } from "@/lib/propertyDetails";
 import {
   readDeviceLocation,
@@ -166,19 +167,6 @@ type ListingStep =
   | "photos"
   | "verify"
   | "review";
-
-const AMENITIES = [
-  "Parking",
-  "Security",
-  "Generator",
-  "Water Supply",
-  "Elevator",
-  "Balcony",
-  "Garden",
-  "Wifi",
-  "Air Conditioning",
-  "Furnished",
-];
 
 const LISTING_STEPS: ListingStepOption[] = [
   { id: "basics", label: "Basics" },
@@ -1457,7 +1445,9 @@ export default function CreateListingForm({
                           className={INPUT_CLASS_NAME}
                           invalid={Boolean(errors.city)}
                           describedBy={
-                            errors.city ? "guided-listing-city-error" : undefined
+                            errors.city
+                              ? "guided-listing-city-error"
+                              : undefined
                           }
                         />
                         {errors.city ? (
@@ -1576,7 +1566,7 @@ export default function CreateListingForm({
                     </p>
 
                     <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                      {AMENITIES.map((amenity) => {
+                      {LISTING_AMENITIES.map((amenity) => {
                         const selected = values.amenities.includes(amenity);
 
                         return (
@@ -2474,7 +2464,7 @@ export default function CreateListingForm({
                 description="Select the practical features included with this property."
               />
               <div className="flex flex-wrap gap-2">
-                {AMENITIES.map((amenity) => {
+                {LISTING_AMENITIES.map((amenity) => {
                   const selected = values.amenities.includes(amenity);
 
                   return (

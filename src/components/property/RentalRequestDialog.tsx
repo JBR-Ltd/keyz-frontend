@@ -7,7 +7,11 @@ import OverlayPortal from "@/components/ui/OverlayPortal";
 import { AsyncButtonContent } from "@/components/ui/async-button-content";
 import { DatePicker } from "@/components/ui/date-picker";
 import { useToast } from "@/components/ui/toast";
-import { createRentalRequest, type MoveInPreference } from "@/lib/bookings";
+import {
+  createRentalRequest,
+  type Booking,
+  type MoveInPreference,
+} from "@/lib/bookings";
 import type { RentalMode } from "@/lib/hostListings";
 import { useDialogFocus } from "@/lib/useDialogFocus";
 
@@ -15,6 +19,8 @@ interface RentalRequestDialogProps {
   hostName: string;
   hostRole: string;
   onClose: () => void;
+  onRejected: () => void;
+  onSubmitted: (booking: Booking) => void;
   open: boolean;
   price: number;
   propertyId: string;
@@ -67,6 +73,8 @@ export default function RentalRequestDialog({
   hostName,
   hostRole,
   onClose,
+  onRejected,
+  onSubmitted,
   open,
   price,
   propertyId,
@@ -114,8 +122,10 @@ export default function RentalRequestDialog({
     setIsSubmitting(false);
     if (!result.data) {
       setError(result.message ?? "That rental request could not be sent.");
+      onRejected();
       return;
     }
+    onSubmitted(result.data);
     notify({
       title: "Rental request sent",
       description: `${propertyTitle} is waiting on the host to respond.`,

@@ -45,6 +45,24 @@ function getSidebarSnapshot(): boolean {
   return localStorage.getItem(SIDEBAR_STORAGE_KEY) === "true";
 }
 
+function isListingManagementPath(
+  pathname: string,
+  rolePath: DashboardShellProps["rolePath"],
+): boolean {
+  if (rolePath !== "landlord" && rolePath !== "agent") {
+    return false;
+  }
+
+  const segments = pathname.split("/").filter(Boolean);
+
+  return (
+    segments.length === 3 &&
+    segments[0] === rolePath &&
+    segments[1] === "listings" &&
+    segments[2] !== "create"
+  );
+}
+
 export default function DashboardShell({
   children,
   rolePath,
@@ -108,6 +126,7 @@ export default function DashboardShell({
     !isHostStatusLoading && landlordIdentity?.status !== "approved";
   const showAgentVerificationAction =
     !isHostStatusLoading && verifiedHostStepCount < 3;
+  const hideHostHeader = isListingManagementPath(pathname, rolePath);
 
   const toggleSidebar = (): void => {
     const nextValue = !isCollapsed;
@@ -134,19 +153,23 @@ export default function DashboardShell({
           verifiedStepCount={verifiedTenantStepCount}
         />
       ) : rolePath === "landlord" ? (
-        <LandlordHeader
-          actions={headerActions}
-          showVerificationAction={showLandlordVerificationAction}
-          verificationHref="/landlord/verify"
-          verifiedStepCount={verifiedLandlordStepCount}
-        />
+        hideHostHeader ? null : (
+          <LandlordHeader
+            actions={headerActions}
+            showVerificationAction={showLandlordVerificationAction}
+            verificationHref="/landlord/verify"
+            verifiedStepCount={verifiedLandlordStepCount}
+          />
+        )
       ) : rolePath === "agent" ? (
-        <AgentHeader
-          actions={headerActions}
-          showVerificationAction={showAgentVerificationAction}
-          verificationHref="/agent/verify"
-          verifiedStepCount={verifiedHostStepCount}
-        />
+        hideHostHeader ? null : (
+          <AgentHeader
+            actions={headerActions}
+            showVerificationAction={showAgentVerificationAction}
+            verificationHref="/agent/verify"
+            verifiedStepCount={verifiedHostStepCount}
+          />
+        )
       ) : (
         <>
           <RoleSidebar

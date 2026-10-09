@@ -49,6 +49,10 @@ function isNumericId(value: string): boolean {
   return /^\d+$/.test(value);
 }
 
+function isUnitPublicId(value: string): boolean {
+  return /^unit_[0-9a-f]{16}$/.test(value);
+}
+
 function isAllowedRequest(method: PropertyMethod, segments: string[]): boolean {
   if (method === "GET") {
     if (segments.length === 1) {
@@ -65,10 +69,18 @@ function isAllowedRequest(method: PropertyMethod, segments: string[]): boolean {
       return isPublicPropertyId(segments[1]);
     }
 
+    if (segments.length === 2 && isNumericId(segments[0])) {
+      return (
+        segments[1] === "images" ||
+        segments[1] === "availability" ||
+        segments[1] === "units"
+      );
+    }
+
     // A guest needs the gallery and the calendar before they can pick dates
     return (
       segments.length === 2 &&
-      (isNumericId(segments[0]) || isPublicPropertyId(segments[0])) &&
+      isPublicPropertyId(segments[0]) &&
       (segments[1] === "images" || segments[1] === "availability")
     );
   }
@@ -88,10 +100,14 @@ function isAllowedRequest(method: PropertyMethod, segments: string[]): boolean {
 
   if (method === "PATCH") {
     return (
-      segments.length === 3 &&
-      isNumericId(segments[0]) &&
-      segments[1] === "images" &&
-      segments[2] === "order"
+      (segments.length === 3 &&
+        isNumericId(segments[0]) &&
+        segments[1] === "images" &&
+        segments[2] === "order") ||
+      (segments.length === 3 &&
+        isNumericId(segments[0]) &&
+        segments[1] === "units" &&
+        isUnitPublicId(segments[2]))
     );
   }
 

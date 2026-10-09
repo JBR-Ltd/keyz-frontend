@@ -3,6 +3,7 @@
 import type { ReactElement } from "react";
 import RentalRequestDialog from "@/components/property/RentalRequestDialog";
 import ShortletBookingDialog from "@/components/property/ShortletBookingDialog";
+import type { Booking } from "@/lib/bookings";
 import type { RentalMode } from "@/lib/hostListings";
 
 interface BookingRequestDialogProps {
@@ -11,6 +12,8 @@ interface BookingRequestDialogProps {
   minimumNights?: number | null;
   maximumGuests?: number | null;
   onClose: () => void;
+  onRentalRequestRejected: () => void;
+  onRentalRequestSubmitted: (booking: Booking) => void;
   open: boolean;
   price: number;
   propertyId: string;
@@ -27,9 +30,16 @@ export default function BookingRequestDialog(
     return null;
   }
 
-  return props.rentalMode === "SHORT_STAY" ? (
-    <ShortletBookingDialog {...props} />
+  const { onRentalRequestRejected, onRentalRequestSubmitted, ...dialogProps } =
+    props;
+
+  return dialogProps.rentalMode === "SHORT_STAY" ? (
+    <ShortletBookingDialog {...dialogProps} />
   ) : (
-    <RentalRequestDialog {...props} />
+    <RentalRequestDialog
+      {...dialogProps}
+      onRejected={onRentalRequestRejected}
+      onSubmitted={onRentalRequestSubmitted}
+    />
   );
 }

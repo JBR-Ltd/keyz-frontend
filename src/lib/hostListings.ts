@@ -18,11 +18,18 @@ import type { PropertyListingStatus } from "@/lib/propertyDetails";
 
 export type HostListingRole = "landlord" | "agent";
 
-export type HostListingReviewStatus =
+export type HostListingWorkflowStatus =
   | "DRAFT"
-  | "PENDING_VERIFICATION"
-  | "VERIFIED"
-  | "REJECTED";
+  | "READY_TO_VERIFY"
+  | "UNDER_REVIEW"
+  | "NEEDS_CHANGES"
+  | "LIVE";
+
+export type PropertyVerificationState =
+  | "NOT_SUBMITTED"
+  | "PENDING_REVIEW"
+  | "REJECTED"
+  | "VERIFIED";
 
 /** Mirrors PartySummary on the backend: what a stranger may see about a person. */
 export interface BackendPropertyHost {
@@ -87,6 +94,8 @@ export interface BackendProperty {
   virtualTourUrl?: string | null;
   totalUnitCount?: number;
   availableUnitCount?: number;
+  verificationState?: PropertyVerificationState;
+  verificationRejectionReason?: string | null;
 }
 
 /** Mirrors PageResponse. Public listing endpoints are paged. */
@@ -166,8 +175,11 @@ export function toDraftNumber(id: string): number {
 export interface HostListingRecord extends HostListingInput {
   createdAt: string;
   id: string;
-  reviewStatus: HostListingReviewStatus;
-  updatedAt: string;
+  publicId?: string;
+  slug?: string;
+  verificationRejectionReason?: string | null;
+  reviewStatus: HostListingWorkflowStatus;
+  updatedAt: string | null;
 }
 
 interface HostListingsDatabase extends DBSchema {
@@ -296,8 +308,20 @@ function getListingStatus(property: BackendProperty): PropertyListingStatus {
   return property.status === "FOR_SALE" ? "FOR_SALE" : "FOR_RENT";
 }
 
-function getReviewStatus(property: BackendProperty): HostListingReviewStatus {
-  return property.verified ? "VERIFIED" : "PENDING_VERIFICATION";
+function getReviewStatus(property: BackendProperty): HostListingWorkflowStatus {
+  if (property.verified || property.verificationState === "VERIFIED") {
+    return "LIVE";
+  }
+
+  if (property.verificationState === "PENDING_REVIEW") {
+    return "UNDER_REVIEW";
+  }
+
+  if (property.verificationState === "REJECTED") {
+    return "NEEDS_CHANGES";
+  }
+
+  return "READY_TO_VERIFY";
 }
 
 function getRemotePhoto(property: BackendProperty): HostListingPhoto[] {
@@ -319,10 +343,10 @@ function mapBackendProperty(
   property: BackendProperty,
   localListing?: HostListingRecord,
 ): HostListingRecord {
-  const now = new Date().toISOString();
-
   return {
     id: String(property.id),
+    publicId: property.publicId,
+    slug: property.slug,
     ownerRole: getListingRole(property),
     listingType: getListingStatus(property),
     title: property.title,
@@ -354,9 +378,10 @@ function mapBackendProperty(
     photos: localListing?.photos.length
       ? localListing.photos
       : getRemotePhoto(property),
+    verificationRejectionReason: property.verificationRejectionReason,
     reviewStatus: getReviewStatus(property),
-    createdAt: localListing?.createdAt ?? now,
-    updatedAt: now,
+    createdAt: localListing?.createdAt ?? "",
+    updatedAt: localListing?.updatedAt ?? null,
   };
 }
 
@@ -547,8 +572,10 @@ export async function clearHostListingStorage(): Promise<void> {
 }
 
 export interface ListingSearch {
+  amenities?: string[];
   city?: string;
   maxPrice?: number;
+  minBathrooms?: number;
   minBedrooms?: number;
   minPrice?: number;
   query?: string;
@@ -588,6 +615,12 @@ function searchParams(
   if (search?.minBedrooms !== undefined) {
     params.set("minBedrooms", String(search.minBedrooms));
   }
+
+  if (search?.minBathrooms !== undefined) {
+    params.set("minBathrooms", String(search.minBathrooms));
+  }
+
+  search?.amenities?.forEach((amenity) => params.append("amenity", amenity));
 
   if (search?.stayType) {
     params.set("stayType", search.stayType);
@@ -702,6 +735,8 @@ export async function interpretPublicProperties(
           minPrice: search?.minPrice,
           maxPrice: search?.maxPrice,
           minBedrooms: search?.minBedrooms,
+          minBathrooms: search?.minBathrooms,
+          amenities: search?.amenities,
           sort: search?.sort,
         }),
       },
@@ -847,10 +882,10 @@ export async function getHostListings(
     return {
       data: storedListings.sort(
         (left, right) =>
-          new Date(right.updatedAt).getTime() -
-          new Date(left.updatedAt).getTime(),
+          new Date(right.updatedAt ?? 0).getTime() -
+          new Date(left.updatedAt ?? 0).getTime(),
       ),
-      message: portfolioResult.message,
+      message: portfolioResult.message ?? draftResult.message,
       unavailable: storageUnavailable,
     };
   }
@@ -871,11 +906,8 @@ export async function getHostListings(
   );
 
   return {
-    data: [...localOnlyListings, ...remoteListings].sort(
-      (left, right) =>
-        new Date(right.updatedAt).getTime() -
-        new Date(left.updatedAt).getTime(),
-    ),
+    data: [...localOnlyListings, ...remoteListings],
+    message: draftResult.message,
     unavailable: storageUnavailable,
   };
 }

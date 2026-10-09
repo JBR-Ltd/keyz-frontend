@@ -10,5 +10,5 @@ export default async function LandlordManageListingPage({
 }: PageProps): Promise<ReactElement> {
   const { id } = await params;
 
-  return <ManageListingView propertyId={id} role="landlord" />;
+  return <ManageListingView key={id} propertyId={id} role="landlord" />;
 }

@@ -30,9 +30,6 @@ interface AcceptBookingDialogProps {
 
 // === Constants
 
-/** Far enough back to record a tenant who was already living in the home. */
-const EARLIEST_MOVE_IN_DAYS_AGO = 90;
-
 /** The server refuses anything further ahead. */
 const LATEST_MOVE_IN_DAYS_AHEAD = 365;
 
@@ -50,12 +47,15 @@ function initialMoveIn(booking: Booking | null): string {
     return "";
   }
 
-  if (booking.tenancyStartDate) {
+  const today = todayIso();
+
+  if (booking.tenancyStartDate && booking.tenancyStartDate >= today) {
     return booking.tenancyStartDate;
   }
 
   return booking.moveInPreference === "EXACT_DATE" &&
-    booking.preferredMoveInDate
+    booking.preferredMoveInDate &&
+    booking.preferredMoveInDate >= today
     ? booking.preferredMoveInDate
     : "";
 }
@@ -84,7 +84,7 @@ export default function AcceptBookingDialog({
     const today = todayIso();
 
     return {
-      min: shiftDays(today, -EARLIEST_MOVE_IN_DAYS_AGO),
+      min: today,
       max: shiftDays(today, LATEST_MOVE_IN_DAYS_AHEAD),
     };
   });
@@ -112,6 +112,11 @@ export default function AcceptBookingDialog({
 
   const isRental = booking.bookingKind !== "SHORT_STAY";
   const tenantName = booking.tenant?.name ?? "The tenant";
+  const requestedDatePassed = Boolean(
+    booking.moveInPreference === "EXACT_DATE" &&
+      booking.preferredMoveInDate &&
+      booking.preferredMoveInDate < bounds.min,
+  );
 
   const save = async (): Promise<void> => {
     if (isRental && !moveInDate) {
@@ -245,6 +250,12 @@ export default function AcceptBookingDialog({
                       suggestedDate={booking.preferredMoveInDate}
                     />
                   </div>
+                  {requestedDatePassed ? (
+                    <p className="mt-3 rounded-xl bg-accent/10 px-4 py-3 font-body text-sm leading-6 text-primary">
+                      The tenant&apos;s requested date has passed. Choose today
+                      or a future date.
+                    </p>
+                  ) : null}
                   <p className="mt-3 flex items-center gap-2 font-body text-sm text-primary">
                     <CalendarDays size={16} className="text-accent-alt" />
                     {moveInDate

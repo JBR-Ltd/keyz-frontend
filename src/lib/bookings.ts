@@ -237,6 +237,56 @@ export async function getCurrentBooking(
   }
 }
 
+export async function getOpenRentalRequest(
+  propertyId: number,
+  signal?: AbortSignal,
+): Promise<BookingResult<Booking | null>> {
+  const token = getSessionMarker();
+
+  if (!token) {
+    return { data: null, message: "Log in to see your rental request." };
+  }
+
+  try {
+    const response = await apiRequest(
+      `/api/bookings/mine/properties/${propertyId}/open-rental-request`,
+      { signal, headers: {} },
+    );
+    const payload: unknown = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      return {
+        data: null,
+        message: resolveApiError(
+          payload,
+          "Your rental request status could not be loaded.",
+        ),
+      };
+    }
+
+    const data =
+      payload !== null && typeof payload === "object" && "data" in payload
+        ? payload.data
+        : undefined;
+
+    return data === null || isBooking(data)
+      ? { data }
+      : {
+          data: null,
+          message: "Your rental request status could not be loaded.",
+        };
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      return { data: null };
+    }
+
+    return {
+      data: null,
+      message: "Your rental request status could not be loaded.",
+    };
+  }
+}
+
 export function getHostBookings(
   page?: BookingPage,
 ): Promise<BookingResult<Booking[]>> {

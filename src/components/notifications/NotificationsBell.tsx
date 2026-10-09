@@ -321,20 +321,27 @@ export default function NotificationsBell(): ReactElement {
       {isOpen ? (
         <div
           ref={panelRef}
-          className="absolute right-0 top-12 z-[110] isolate w-96 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl bg-bg shadow-xl"
+          className="absolute right-0 top-12 z-[110] isolate w-[26rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-border/70 bg-bg shadow-2xl"
           role="region"
           aria-label="Notifications"
         >
-          <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
-            <h2 className="font-body text-sm font-semibold text-primary">
-              Notifications
-            </h2>
+          <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <h2 className="font-body text-base font-bold text-primary">
+                Notifications
+              </h2>
+              {unread > 0 ? (
+                <span className="rounded-full bg-accent/15 px-2 py-0.5 font-body text-[11px] font-bold text-primary">
+                  {unread} new
+                </span>
+              ) : null}
+            </div>
             {!isLoading && !error && items.some((item) => !item.read) ? (
               <button
                 type="button"
                 onClick={() => void readAll()}
                 disabled={isReading || isLoadingMore}
-                className="inline-flex items-center gap-1.5 rounded font-body text-xs font-bold text-accent-alt hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60"
+                className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-full px-2.5 font-body text-xs font-bold text-accent-alt transition-colors hover:bg-accent/10 hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-60"
                 aria-busy={isReading}
               >
                 <AsyncButtonContent
@@ -381,35 +388,40 @@ export default function NotificationsBell(): ReactElement {
                       onClick={() => void open(item)}
                       disabled={isReading || isLoadingMore}
                       aria-busy={readingId === item.id}
+                      className={`grid min-h-16 w-full grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-3 px-5 py-4 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent disabled:cursor-wait disabled:opacity-60 ${
+                        item.read
+                          ? "bg-bg hover:bg-surface-soft/70"
+                          : "bg-accent/[0.07] hover:bg-accent/[0.12]"
+                      }`}
                     >
                       {readingId === item.id ? (
                         <Loader2
                           size={12}
-                          className="mt-1 animate-spin"
+                          className="mt-1 animate-spin text-accent-alt"
                           aria-hidden="true"
                         />
                       ) : (
                         <span
-                          className={`mt-1.5 h-2 w-2 rounded-full ${item.read ? "bg-transparent" : "bg-accent"}`}
+                          className={`mt-1.5 h-2.5 w-2.5 rounded-full ${item.read ? "bg-border" : "bg-accent"}`}
                           aria-hidden="true"
                         />
                       )}
                       {readingId === item.id ? (
                         <span className="sr-only">Opening notification…</span>
                       ) : null}
-                      <span className="min-w-0">
+                      <span className="min-w-0 pr-1">
                         <span
-                          className={`block font-body text-sm text-primary ${item.read ? "font-medium" : "font-bold"}`}
+                          className={`line-clamp-2 block font-body text-sm leading-5 text-primary ${item.read ? "font-semibold" : "font-bold"}`}
                         >
                           {item.title}
                         </span>
                         {item.body ? (
-                          <span className="mt-1 line-clamp-2 block font-body text-xs leading-5 text-muted">
+                          <span className="mt-1.5 line-clamp-3 block font-body text-xs leading-5 text-muted">
                             {item.body}
                           </span>
                         ) : null}
                       </span>
-                      <span className="font-body text-[11px] font-bold text-muted">
+                      <span className="whitespace-nowrap pt-0.5 font-body text-[11px] font-semibold text-muted">
                         {now ? formatWhen(item.createdAt, now) : ""}
                         {item.read ? null : (
                           <span className="sr-only"> unread</span>
@@ -432,6 +444,7 @@ export default function NotificationsBell(): ReactElement {
                   type="button"
                   onClick={() => void loadOlder()}
                   disabled={isLoadingMore || isReading}
+                  aria-busy={isLoadingMore}
                   className="flex w-full items-center justify-center gap-2 border-t border-border px-4 py-3 font-body text-xs font-bold text-primary hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent disabled:opacity-60"
                 >
                   <AsyncButtonContent
@@ -442,7 +455,6 @@ export default function NotificationsBell(): ReactElement {
                       ? "Retry loading older notifications"
                       : "Load older notifications"}
                   </AsyncButtonContent>
-                  aria-busy={isLoadingMore}
                 </button>
               ) : null}
             </div>

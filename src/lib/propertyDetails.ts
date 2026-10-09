@@ -115,7 +115,7 @@ function hostListingToPropertyDetail(
       listing.photos.length > 0
         ? listing.photos.map((photo) => photo.dataUrl)
         : [DRAFT_IMAGE_FALLBACK],
-    verified: listing.reviewStatus === "VERIFIED",
+    verified: listing.reviewStatus === "LIVE",
     host: {
       id: isLandlord ? "host-current-landlord" : "host-current-agent",
       name: isLandlord ? "Chinedu Okafor" : "Tomi Adeyemi",

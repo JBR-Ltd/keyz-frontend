@@ -34,6 +34,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { TouchEvent, useEffect, useRef, useState } from "react";
+import { useAuthentication } from "@/components/auth/AuthProvider";
 import BackButton from "@/components/navigation/BackButton";
 import OverlayPortal from "@/components/ui/OverlayPortal";
 import MessageHostButton from "@/components/property/MessageHostButton";
@@ -53,6 +54,7 @@ import {
 } from "@/lib/savedListings";
 import { useDialogFocus } from "@/lib/useDialogFocus";
 import { useToast } from "@/components/ui/toast";
+import { getOpenRentalRequest, type Booking } from "@/lib/bookings";
 
 const BookingRequestDialog = dynamic(
   () => import("@/components/property/BookingRequestDialog"),
@@ -88,6 +90,7 @@ interface PropertyPageClientProps {
 }
 
 type LoadingState = "loading" | "ready" | "not-found";
+type RentalRequestLoadState = "idle" | "loading" | "ready" | "error";
 
 interface GalleryImage {
   src: string;
@@ -291,6 +294,7 @@ export default function PropertyPageClient({
   const router = useRouter();
   const reduceMotion = useReducedMotion();
   const { notify } = useToast();
+  const authentication = useAuthentication();
   const [loadingState, setLoadingState] = useState<LoadingState>(
     initialProperty ? "ready" : "loading",
   );
@@ -302,6 +306,15 @@ export default function PropertyPageClient({
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [isBookingOpen, setIsBookingOpen] = useState(false);
+  const [openRentalRequest, setOpenRentalRequest] = useState<Booking | null>(
+    null,
+  );
+  const [rentalRequestLoadState, setRentalRequestLoadState] =
+    useState<RentalRequestLoadState>("idle");
+  const [rentalRequestPropertyId, setRentalRequestPropertyId] = useState<
+    number | null
+  >(null);
+  const [rentalRequestRetryKey, setRentalRequestRetryKey] = useState(0);
   const [isReporting, setIsReporting] = useState(false);
   const [viewingDialogState, setViewingDialogState] = useState<
     "idle" | "open" | "closed"
@@ -398,6 +411,17 @@ export default function PropertyPageClient({
   }, [id, router]);
 
   useEffect(() => {
+    if (authentication.status === "checking") {
+      return;
+    }
+
+    if (
+      authentication.status === "authenticated" &&
+      authentication.user?.role !== "TENANT"
+    ) {
+      return;
+    }
+
     let active = true;
 
     async function loadSavedState(): Promise<void> {
@@ -414,7 +438,50 @@ export default function PropertyPageClient({
     return () => {
       active = false;
     };
-  }, []);
+  }, [authentication.status, authentication.user?.role]);
+
+  useEffect(() => {
+    const propertyId = Number(property?.id);
+    const shouldLoad =
+      authentication.status === "authenticated" &&
+      authentication.user?.role === "TENANT" &&
+      property?.rentalMode !== "SHORT_STAY" &&
+      Number.isSafeInteger(propertyId) &&
+      propertyId > 0;
+
+    if (!shouldLoad) {
+      return;
+    }
+
+    let active = true;
+    const controller = new AbortController();
+
+    const loadRentalRequest = async (): Promise<void> => {
+      setRentalRequestPropertyId(propertyId);
+      setRentalRequestLoadState("loading");
+      const result = await getOpenRentalRequest(propertyId, controller.signal);
+
+      if (!active) {
+        return;
+      }
+
+      setOpenRentalRequest(result.data);
+      setRentalRequestLoadState(result.message ? "error" : "ready");
+    };
+
+    void loadRentalRequest();
+
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [
+    authentication.status,
+    authentication.user?.role,
+    property?.id,
+    property?.rentalMode,
+    rentalRequestRetryKey,
+  ]);
 
   useEffect(() => {
     if (lightboxIndex === null || !property) {
@@ -591,10 +658,93 @@ export default function PropertyPageClient({
     property?.rentalMode === "SHORT_STAY"
       ? "Check availability"
       : "Request to rent";
+  const viewerRole = authentication.user?.role ?? null;
+  const isHostViewer = viewerRole === "LANDLORD" || viewerRole === "AGENT";
+  const isOwner =
+    isHostViewer &&
+    String(authentication.user?.id) === property.host.id &&
+    viewerRole === property.host.role;
+  const showTenantActions =
+    authentication.status === "unauthenticated" || viewerRole === "TENANT";
+  const ownerBasePath = isOwner ? `/${viewerRole.toLowerCase()}` : null;
+  const manageListingHref = ownerBasePath
+    ? `${ownerBasePath}/listings/${property.id}`
+    : null;
+  const editListingHref = ownerBasePath
+    ? `${ownerBasePath}/listings/create?draft=${property.id}`
+    : null;
+  const showMobileActionBar = showTenantActions || isOwner;
+  const shouldCheckRentalRequest =
+    viewerRole === "TENANT" && property.rentalMode !== "SHORT_STAY";
+  const hasCurrentRentalRequestState =
+    rentalRequestPropertyId === Number(property.id);
+  const currentOpenRentalRequest = hasCurrentRentalRequestState
+    ? openRentalRequest
+    : null;
+  const isRentalRequestLoading =
+    shouldCheckRentalRequest &&
+    (!hasCurrentRentalRequestState ||
+      rentalRequestLoadState === "idle" ||
+      rentalRequestLoadState === "loading");
+  const showChargeReassurance =
+    !shouldCheckRentalRequest ||
+    (rentalRequestLoadState === "ready" && !currentOpenRentalRequest);
+
+  const renderPrimaryAction = (className: string): ReactElement => {
+    if (currentOpenRentalRequest) {
+      return (
+        <Link href="/tenant/bookings" className={className}>
+          {currentOpenRentalRequest.status === "CONFIRMED"
+            ? "View tenancy"
+            : "Request pending"}
+        </Link>
+      );
+    }
+
+    if (isRentalRequestLoading) {
+      return (
+        <button type="button" disabled className={className}>
+          <Loader2 size={16} className="mr-2 animate-spin" aria-hidden="true" />
+          Checking request...
+        </button>
+      );
+    }
+
+    if (shouldCheckRentalRequest && rentalRequestLoadState === "error") {
+      return (
+        <button
+          type="button"
+          onClick={() => setRentalRequestRetryKey((current) => current + 1)}
+          className={className}
+        >
+          Retry request status
+        </button>
+      );
+    }
+
+    return (
+      <TenantVerificationGate
+        intent={property.status === "FOR_RENT" ? "booking" : "offer"}
+        onVerifiedAction={openPrimaryFlow}
+      >
+        {(requestAction) => (
+          <button type="button" onClick={requestAction} className={className}>
+            {primaryCta}
+          </button>
+        )}
+      </TenantVerificationGate>
+    );
+  };
 
   return (
     <main className="bg-bg text-primary">
-      <div className="mx-auto max-w-7xl px-4 pb-32 pt-3 sm:px-6 sm:pt-4 lg:px-8 lg:pb-10 lg:pt-4">
+      <div
+        className={`mx-auto max-w-7xl px-4 pt-3 sm:px-6 sm:pt-4 lg:px-8 lg:pb-10 lg:pt-4 ${
+          showMobileActionBar || authentication.status === "checking"
+            ? "pb-32"
+            : "pb-10"
+        }`}
+      >
         <BackButton
           fallbackHref="/tenant/browse"
           roleFallbacks={{
@@ -667,7 +817,7 @@ export default function PropertyPageClient({
               <Share2 size={16} aria-hidden="true" />
               Share
             </button>
-            {/^\d+$/.test(property.id) ? (
+            {showTenantActions && /^\d+$/.test(property.id) ? (
               <button
                 type="button"
                 onClick={() => void handleSaveToggle()}
@@ -698,6 +848,22 @@ export default function PropertyPageClient({
                   </AsyncButtonContent>
                 )}
               </button>
+            ) : null}
+            {isOwner && manageListingHref && editListingHref ? (
+              <>
+                <Link
+                  href={editListingHref}
+                  className="inline-flex min-h-10 items-center justify-center rounded-full border border-border bg-bg px-4 font-body text-sm font-bold text-primary transition-colors hover:border-primary/30 hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                >
+                  Edit listing
+                </Link>
+                <Link
+                  href={manageListingHref}
+                  className="inline-flex min-h-10 items-center justify-center rounded-full bg-primary px-4 font-body text-sm font-bold text-white transition-colors hover:bg-primary/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                >
+                  Manage listing
+                </Link>
+              </>
             ) : null}
           </div>
         </div>
@@ -818,7 +984,7 @@ export default function PropertyPageClient({
                 >
                   <Share2 size={18} aria-hidden="true" />
                 </button>
-                {/^[0-9]+$/.test(property.id) ? (
+                {showTenantActions && /^[0-9]+$/.test(property.id) ? (
                   <button
                     type="button"
                     onClick={() => void handleSaveToggle()}
@@ -959,8 +1125,16 @@ export default function PropertyPageClient({
           </AnimatePresence>
         </OverlayPortal>
 
-        <div className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1fr)_23rem] lg:items-start lg:gap-14">
-          <section className="min-w-0">
+        <div
+          className={`mt-8 grid gap-10 lg:items-start ${
+            showTenantActions
+              ? "lg:grid-cols-[minmax(0,1fr)_23rem] lg:gap-14"
+              : "lg:grid-cols-1"
+          }`}
+        >
+          <section
+            className={showTenantActions ? "min-w-0" : "min-w-0 max-w-4xl"}
+          >
             <div className="lg:hidden">
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="font-display text-3xl font-bold leading-tight text-primary">
@@ -1049,13 +1223,15 @@ export default function PropertyPageClient({
               ) : null}
             </div>
 
-            <button
-              type="button"
-              onClick={() => setViewingDialogState("open")}
-              className="mt-4 inline-flex min-h-12 w-full items-center justify-center rounded-xl border border-border bg-bg px-5 font-body text-sm font-bold text-primary transition-colors hover:border-primary/30 hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent lg:hidden"
-            >
-              Request a viewing
-            </button>
+            {showTenantActions ? (
+              <button
+                type="button"
+                onClick={() => setViewingDialogState("open")}
+                className="mt-4 inline-flex min-h-12 w-full items-center justify-center rounded-xl border border-border bg-bg px-5 font-body text-sm font-bold text-primary transition-colors hover:border-primary/30 hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent lg:hidden"
+              >
+                Request a viewing
+              </button>
+            ) : null}
 
             <div className="my-6 border-t border-border" />
 
@@ -1142,13 +1318,15 @@ export default function PropertyPageClient({
               </div>
 
               <div className="mt-4 flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-4">
-                <MessageHostButton
-                  hostId={property.host.id}
-                  hostName={property.host.name}
-                  hostRole={property.host.role}
-                  propertyId={property.id}
-                  propertyName={property.title}
-                />
+                {showTenantActions ? (
+                  <MessageHostButton
+                    hostId={property.host.id}
+                    hostName={property.host.name}
+                    hostRole={property.host.role}
+                    propertyId={property.id}
+                    propertyName={property.title}
+                  />
+                ) : null}
                 <Link
                   href={hostPath(property.host)}
                   className="inline-flex min-h-11 items-center gap-2 rounded-lg px-1 font-body text-sm font-medium text-muted transition-colors hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
@@ -1159,13 +1337,22 @@ export default function PropertyPageClient({
               </div>
             </section>
 
-            {isBookingOpen ? (
+            {showTenantActions && isBookingOpen ? (
               <BookingRequestDialog
                 hostName={property.host.name}
                 hostRole={hostRole}
                 maximumGuests={property.maximumGuests}
                 minimumNights={property.minimumNights}
                 onClose={() => setIsBookingOpen(false)}
+                onRentalRequestRejected={() => {
+                  setRentalRequestLoadState("loading");
+                  setRentalRequestRetryKey((current) => current + 1);
+                }}
+                onRentalRequestSubmitted={(booking) => {
+                  setOpenRentalRequest(booking);
+                  setRentalRequestPropertyId(booking.propertyId);
+                  setRentalRequestLoadState("ready");
+                }}
                 open={isBookingOpen}
                 price={property.price}
                 propertyId={property.id}
@@ -1175,7 +1362,7 @@ export default function PropertyPageClient({
               />
             ) : null}
 
-            {viewingDialogState !== "idle" ? (
+            {showTenantActions && viewingDialogState !== "idle" ? (
               <ViewingRequestDialog
                 allowVirtual={hasTour}
                 onClose={() => setViewingDialogState("closed")}
@@ -1306,130 +1493,143 @@ export default function PropertyPageClient({
               )}
             </section>
 
-            <button
-              type="button"
-              onClick={() => setIsReporting(true)}
-              className="mt-6 inline-flex min-h-11 items-center rounded-lg px-1 font-body text-xs font-semibold text-muted underline-offset-4 hover:text-red-700 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            >
-              Report this listing
-            </button>
-            <ReportDialog
-              open={isReporting}
-              onClose={() => setIsReporting(false)}
-              target={{
-                type: "LISTING",
-                listingId: property.publicId ?? property.id,
-              }}
-            />
+            {authentication.status !== "checking" && !isOwner ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setIsReporting(true)}
+                  className="mt-6 inline-flex min-h-11 items-center rounded-lg px-1 font-body text-xs font-semibold text-muted underline-offset-4 hover:text-red-700 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                >
+                  Report this listing
+                </button>
+                <ReportDialog
+                  open={isReporting}
+                  onClose={() => setIsReporting(false)}
+                  target={{
+                    type: "LISTING",
+                    listingId: property.publicId ?? property.id,
+                  }}
+                />
+              </>
+            ) : null}
           </section>
 
-          <aside className="hidden rounded-xl border border-border/70 bg-bg p-5 shadow-[0_16px_45px_-36px_rgba(1,57,81,0.42)] lg:sticky lg:top-4 lg:block">
-            <p className="font-body text-xs font-bold uppercase tracking-[0.16em] text-muted">
-              {property.status === "FOR_RENT" ? "Rental price" : "Asking price"}
-            </p>
-            <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1">
-              <p className="font-display text-3xl font-bold text-primary">
+          {showTenantActions ? (
+            <aside className="hidden rounded-xl border border-border/70 bg-bg p-5 shadow-[0_16px_45px_-36px_rgba(1,57,81,0.42)] lg:sticky lg:top-4 lg:block">
+              <p className="font-body text-xs font-bold uppercase tracking-[0.16em] text-muted">
+                {property.status === "FOR_RENT"
+                  ? "Rental price"
+                  : "Asking price"}
+              </p>
+              <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                <p className="font-display text-3xl font-bold text-primary">
+                  <PropertyPrice
+                    value={property.price}
+                    listingType={property.status}
+                    rentalMode={property.rentalMode}
+                    showRentalSuffix={false}
+                  />
+                </p>
+                {property.status === "FOR_RENT" ? (
+                  <p className="font-body text-sm font-medium text-muted">
+                    {getRentalUnitLabel(property.rentalMode)}
+                  </p>
+                ) : null}
+              </div>
+
+              <div className="mt-4 space-y-2 font-body text-sm">
+                {property.availableUnitCount > 0 ? (
+                  <p className="flex items-center gap-2 font-semibold text-primary">
+                    <span
+                      className="h-2 w-2 rounded-full bg-accent"
+                      aria-hidden="true"
+                    />
+                    {formatCount(
+                      property.availableUnitCount,
+                      "unit available",
+                      "units available",
+                    )}
+                  </p>
+                ) : null}
+                {property.rentalMode === "SHORT_STAY" &&
+                property.minimumNights ? (
+                  <p className="text-muted">
+                    Minimum{" "}
+                    {formatCount(property.minimumNights, "night", "nights")}
+                  </p>
+                ) : null}
+              </div>
+
+              {renderPrimaryAction(
+                "mt-5 inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-accent px-5 py-3 font-body text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-70",
+              )}
+              {showChargeReassurance ? (
+                <p className="mt-2 text-center font-body text-xs text-muted">
+                  You will not be charged yet.
+                </p>
+              ) : null}
+
+              <button
+                type="button"
+                onClick={() => setViewingDialogState("open")}
+                className="mt-2 inline-flex min-h-11 w-full items-center justify-center rounded-xl px-4 font-body text-sm font-bold text-muted transition-colors hover:bg-surface-soft hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                Request a viewing
+              </button>
+            </aside>
+          ) : null}
+        </div>
+      </div>
+
+      {showTenantActions ? (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-bg/95 px-4 pt-3 shadow-[0_-12px_30px_-24px_rgba(1,57,81,0.55)] backdrop-blur-md lg:hidden">
+          <div
+            className="mx-auto flex max-w-7xl items-center gap-3"
+            style={{
+              paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))",
+            }}
+          >
+            <div className="min-w-0 flex-1">
+              <p className="font-body text-[11px] font-bold uppercase tracking-[0.12em] text-muted">
+                {getRentalPeriodLabel(property.rentalMode)}
+              </p>
+              <p className="truncate font-display text-lg font-bold text-primary">
                 <PropertyPrice
                   value={property.price}
                   listingType={property.status}
                   rentalMode={property.rentalMode}
-                  showRentalSuffix={false}
                 />
               </p>
-              {property.status === "FOR_RENT" ? (
-                <p className="font-body text-sm font-medium text-muted">
-                  {getRentalUnitLabel(property.rentalMode)}
-                </p>
-              ) : null}
             </div>
-
-            <div className="mt-4 space-y-2 font-body text-sm">
-              {property.availableUnitCount > 0 ? (
-                <p className="flex items-center gap-2 font-semibold text-primary">
-                  <span
-                    className="h-2 w-2 rounded-full bg-accent"
-                    aria-hidden="true"
-                  />
-                  {formatCount(
-                    property.availableUnitCount,
-                    "unit available",
-                    "units available",
-                  )}
-                </p>
-              ) : null}
-              {property.rentalMode === "SHORT_STAY" &&
-              property.minimumNights ? (
-                <p className="text-muted">
-                  Minimum{" "}
-                  {formatCount(property.minimumNights, "night", "nights")}
-                </p>
-              ) : null}
-            </div>
-
-            <TenantVerificationGate
-              intent={property.status === "FOR_RENT" ? "booking" : "offer"}
-              onVerifiedAction={openPrimaryFlow}
-            >
-              {(requestAction) => (
-                <button
-                  type="button"
-                  onClick={requestAction}
-                  className="mt-5 inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-accent px-5 py-3 font-body text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                >
-                  {primaryCta}
-                </button>
-              )}
-            </TenantVerificationGate>
-            <p className="mt-2 text-center font-body text-xs text-muted">
-              You will not be charged yet.
-            </p>
-
-            <button
-              type="button"
-              onClick={() => setViewingDialogState("open")}
-              className="mt-2 inline-flex min-h-11 w-full items-center justify-center rounded-xl px-4 font-body text-sm font-bold text-muted transition-colors hover:bg-surface-soft hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            >
-              Request a viewing
-            </button>
-          </aside>
-        </div>
-      </div>
-
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-bg/95 px-4 pt-3 shadow-[0_-12px_30px_-24px_rgba(1,57,81,0.55)] backdrop-blur-md lg:hidden">
-        <div
-          className="mx-auto flex max-w-7xl items-center gap-3"
-          style={{
-            paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))",
-          }}
-        >
-          <div className="min-w-0 flex-1">
-            <p className="font-body text-[11px] font-bold uppercase tracking-[0.12em] text-muted">
-              {getRentalPeriodLabel(property.rentalMode)}
-            </p>
-            <p className="truncate font-display text-lg font-bold text-primary">
-              <PropertyPrice
-                value={property.price}
-                listingType={property.status}
-                rentalMode={property.rentalMode}
-              />
-            </p>
-          </div>
-          <TenantVerificationGate
-            intent={property.status === "FOR_RENT" ? "booking" : "offer"}
-            onVerifiedAction={openPrimaryFlow}
-          >
-            {(requestAction) => (
-              <button
-                type="button"
-                onClick={requestAction}
-                className="inline-flex min-h-12 shrink-0 items-center justify-center rounded-full bg-accent px-5 font-body text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-              >
-                {primaryCta}
-              </button>
+            {renderPrimaryAction(
+              "inline-flex min-h-12 shrink-0 items-center justify-center rounded-full bg-accent px-5 font-body text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-70",
             )}
-          </TenantVerificationGate>
+          </div>
         </div>
-      </div>
+      ) : null}
+      {isOwner && manageListingHref && editListingHref ? (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-bg/95 px-4 pt-3 shadow-[0_-12px_30px_-24px_rgba(1,57,81,0.55)] backdrop-blur-md lg:hidden">
+          <div
+            className="mx-auto flex max-w-7xl items-center gap-2"
+            style={{
+              paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))",
+            }}
+          >
+            <Link
+              href={editListingHref}
+              className="inline-flex min-h-12 flex-1 items-center justify-center rounded-full border border-primary/20 px-4 font-body text-sm font-bold text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            >
+              Edit listing
+            </Link>
+            <Link
+              href={manageListingHref}
+              className="inline-flex min-h-12 flex-1 items-center justify-center rounded-full bg-primary px-4 font-body text-sm font-bold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            >
+              Manage listing
+            </Link>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }
