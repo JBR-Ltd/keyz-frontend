@@ -923,9 +923,6 @@ export default function HostTenanciesWorkspace({
                           <StatusBadge tone={STATUS_TONES[booking.status]}>
                             {STATUS_LABELS[booking.status]}
                           </StatusBadge>
-                          <span className="font-body text-[11px] font-semibold text-muted">
-                            REQ-{booking.id}
-                          </span>
                         </div>
                         <h2 className="mt-2 line-clamp-2 font-body text-sm font-bold leading-5 text-primary">
                           {booking.propertyTitle}
