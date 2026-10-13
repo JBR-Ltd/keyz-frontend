@@ -16,7 +16,6 @@ import {
   WalletCards,
   type LucideIcon,
 } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import { propertyPath } from "@/lib/publicIds";
 import {
@@ -27,6 +26,7 @@ import {
   type ReactElement,
 } from "react";
 import PropertyPrice from "@/components/property/PropertyPrice";
+import ResilientPropertyImage from "@/components/property/ResilientPropertyImage";
 import { IconTile } from "@/components/ui/icon-tile";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { utilityCardVariants } from "@/components/ui/utility-card";
@@ -74,7 +74,7 @@ interface DashboardProperty {
   actionHref: string;
   address: string;
   id: number;
-  imageUrl: string;
+  imageUrl: string | null;
   monthlyRent: number;
   nextAction: string;
   status: PropertyStatus;
@@ -108,10 +108,11 @@ interface OnboardingMilestone {
   status: OnboardingMilestoneStatus;
 }
 
-// === Constants
+interface DashboardSkeletonProps {
+  animate: boolean;
+}
 
-const FALLBACK_PROPERTY_IMAGE =
-  "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=640&h=480&fit=crop&auto=format&q=80";
+// === Constants
 
 const ATTENTION_STYLES: Record<AttentionTone, string> = {
   urgent: "bg-red-700/10 text-red-700",
@@ -270,7 +271,7 @@ function mapDashboardProperty(
     actionHref,
     address: property.address,
     id: property.id,
-    imageUrl: property.imageUrl ?? FALLBACK_PROPERTY_IMAGE,
+    imageUrl: property.imageUrl ?? null,
     monthlyRent: property.price,
     nextAction: needsAttention
       ? "Review property"
@@ -442,13 +443,60 @@ function getUpcomingBookings(bookings: Booking[], now: number): Booking[] {
 
 // === Components
 
-function DashboardBootstrapSkeleton(): ReactElement {
+function DashboardClassificationSkeleton({
+  animate,
+}: DashboardSkeletonProps): ReactElement {
+  const pulseClass = animate
+    ? "animate-pulse motion-reduce:animate-none"
+    : "";
+
+  return (
+    <main
+      className="min-h-screen overflow-x-hidden px-5 py-12 sm:px-8 lg:px-10 lg:py-16 xl:px-14"
+      aria-busy="true"
+    >
+      <div className={pulseClass}>
+        <header className="flex flex-col gap-5 pb-9 sm:flex-row sm:items-end sm:justify-between">
+          <div className="h-12 w-72 max-w-full rounded-lg bg-skeleton-strong" />
+          <div className="h-12 w-40 rounded-full bg-skeleton" />
+        </header>
+
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+          {Array.from({ length: 4 }, (_, index) => (
+            <div
+              key={index}
+              className="h-36 rounded-lg border border-border bg-bg p-5 shadow-sm"
+            >
+              <div className="h-3 w-24 rounded-full bg-skeleton" />
+              <div className="mt-6 h-8 w-16 rounded-lg bg-skeleton-strong" />
+              <div className="mt-5 h-3 w-28 rounded-full bg-skeleton" />
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(19rem,0.6fr)]">
+          <div className="h-52 rounded-lg bg-skeleton-strong" />
+          <div className="h-52 rounded-lg bg-skeleton" />
+        </div>
+      </div>
+      <span className="sr-only">Loading your landlord dashboard</span>
+    </main>
+  );
+}
+
+function OnboardingDashboardSkeleton({
+  animate,
+}: DashboardSkeletonProps): ReactElement {
   return (
     <main
       className="min-h-screen px-5 py-14 sm:px-8 lg:px-10 lg:py-20 xl:px-14"
       aria-busy="true"
     >
-      <div className="mx-auto w-full max-w-4xl animate-pulse text-center motion-reduce:animate-none">
+      <div
+        className={`mx-auto w-full max-w-4xl text-center ${
+          animate ? "animate-pulse motion-reduce:animate-none" : ""
+        }`}
+      >
         <div className="mx-auto h-3 w-36 rounded-full bg-skeleton" />
 
         <div className="relative mt-12 grid grid-cols-3">
@@ -732,9 +780,9 @@ export default function LandlordDashboardPage(): ReactElement {
   const [loadedSummaryKey, setLoadedSummaryKey] = useState(-1);
 
   const shouldLoadOnboardingData =
-    requestedViewState === "empty" || summary?.listings.live === 0;
+    requestedViewState === "empty" || summary?.listings.total === 0;
   const shouldLoadOperationalData =
-    requestedViewState === "populated" || (summary?.listings.live ?? 0) > 0;
+    requestedViewState === "populated" || (summary?.listings.total ?? 0) > 0;
 
   useEffect(() => {
     let active = true;
@@ -899,7 +947,7 @@ export default function LandlordDashboardPage(): ReactElement {
             ? "loading"
             : summaryError || summary === null
               ? "error"
-              : summary.listings.live === 0
+              : summary.listings.total === 0
                 ? "onboarding"
                 : "operational";
   const onboardingBusy =
@@ -909,14 +957,6 @@ export default function LandlordDashboardPage(): ReactElement {
       isVerificationLoading ||
       isDraftsLoading ||
       isPortfolioLoading);
-  const operationalBusy =
-    dashboardMode === "operational" &&
-    (isAccountLoading ||
-      isVerificationLoading ||
-      isPortfolioLoading ||
-      isBookingsLoading ||
-      isEscrowLoading ||
-      summary === null);
   const onboardingError = forceError
     ? "Your landlord setup could not be loaded."
     : ([
@@ -929,8 +969,12 @@ export default function LandlordDashboardPage(): ReactElement {
         draftsError,
       ].find(Boolean) ?? "");
 
-  if (dashboardMode === "loading" || onboardingBusy || operationalBusy) {
-    return <DashboardBootstrapSkeleton />;
+  if (dashboardMode === "loading") {
+    return <DashboardClassificationSkeleton animate={showSkeletons} />;
+  }
+
+  if (onboardingBusy) {
+    return <OnboardingDashboardSkeleton animate={showSkeletons} />;
   }
 
   if (dashboardMode === "error") {
@@ -1248,12 +1292,13 @@ export default function LandlordDashboardPage(): ReactElement {
                 className="grid gap-5 p-5 transition-colors hover:bg-surface-soft sm:grid-cols-[8rem_1fr] sm:items-center sm:px-6 lg:grid-cols-[9rem_minmax(12rem,1.2fr)_minmax(9rem,0.75fr)_minmax(9rem,0.75fr)_auto]"
               >
                 <div className="relative h-28 overflow-hidden rounded-lg bg-surface-soft sm:h-24">
-                  <Image
+                  <ResilientPropertyImage
                     src={property.imageUrl}
                     alt={property.title}
                     fill
                     sizes="(max-width: 640px) 100vw, 144px"
                     className="object-cover"
+                    compactPlaceholder
                   />
                 </div>
                 <div className="min-w-0">

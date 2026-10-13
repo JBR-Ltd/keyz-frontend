@@ -15,7 +15,6 @@ import {
   ChevronRight,
   FileCheck2,
   FileText,
-  ImageOff,
   KeyRound,
   Loader2,
   MapPin,
@@ -26,10 +25,10 @@ import {
   WalletCards,
   X,
 } from "lucide-react";
-import Image from "next/image";
 import ChatThread from "@/components/chat/ChatThread";
 import OverlayPortal from "@/components/ui/OverlayPortal";
 import PropertyPrice from "@/components/property/PropertyPrice";
+import ResilientPropertyImage from "@/components/property/ResilientPropertyImage";
 import TenancyDocumentsDialog from "@/components/tenant/TenancyDocumentsDialog";
 import TenancyRecordsDialog from "@/components/tenancy/TenancyRecordsDialog";
 import { IconTile } from "@/components/ui/icon-tile";
@@ -44,7 +43,6 @@ import {
   type Booking,
   type BookingStatus,
 } from "@/lib/bookings";
-import { TENANT_ACTIVITY_IMAGES } from "@/lib/tenantActivity";
 import AcceptBookingDialog, {
   type AcceptDialogMode,
 } from "@/components/bookings/AcceptBookingDialog";
@@ -70,7 +68,6 @@ interface TenancyTabItem {
 
 interface BookingCoverProps {
   booking: Booking;
-  fallbackIndex: number;
 }
 
 interface BookingDetailsDrawerProps {
@@ -225,38 +222,15 @@ function matchesSearch(booking: Booking, query: string): boolean {
 
 function BookingCover({
   booking,
-  fallbackIndex,
 }: BookingCoverProps): ReactElement {
-  const fallback =
-    TENANT_ACTIVITY_IMAGES[fallbackIndex % TENANT_ACTIVITY_IMAGES.length];
-  const [imageSrc, setImageSrc] = useState(
-    booking.propertyImageUrl ?? fallback,
-  );
-  const [hasFailed, setHasFailed] = useState(false);
-
-  if (hasFailed && imageSrc === fallback) {
-    return (
-      <span className="flex h-full w-full items-center justify-center bg-surface-soft text-muted">
-        <ImageOff size={20} aria-hidden="true" />
-      </span>
-    );
-  }
-
   return (
-    <Image
-      src={imageSrc}
+    <ResilientPropertyImage
+      src={booking.propertyImageUrl}
       alt={booking.propertyTitle}
       fill
       sizes="(max-width: 767px) 100vw, 104px"
       className="object-cover"
-      onError={() => {
-        if (imageSrc !== fallback) {
-          setImageSrc(fallback);
-          return;
-        }
-
-        setHasFailed(true);
-      }}
+      compactPlaceholder
     />
   );
 }
@@ -319,7 +293,7 @@ function BookingDetailsDrawer({
               transition={{ duration: 0.28, ease: "easeOut" }}
             >
               <div className="relative aspect-[16/7] bg-surface-soft">
-                <BookingCover booking={booking} fallbackIndex={0} />
+                <BookingCover booking={booking} />
                 <div className="absolute inset-0 bg-gradient-to-t from-primary/60 to-transparent" />
                 <button
                   type="button"
@@ -721,6 +695,7 @@ export default function HostTenanciesWorkspace({
 
     notify({
       title: `Tenancy ${STATUS_LABELS[status].toLowerCase()}`,
+      description: "The tenant can see the updated status in their bookings.",
       variant: "success",
     });
   };
@@ -905,7 +880,7 @@ export default function HostTenanciesWorkspace({
             </div>
 
             <div className="divide-y divide-primary/10">
-              {visibleBookings.map((booking, index) => {
+              {visibleBookings.map((booking) => {
                 const tenantName = booking.tenant?.name ?? "Tenant";
                 const isBusy = pendingId === booking.id;
 
@@ -916,7 +891,7 @@ export default function HostTenanciesWorkspace({
                   >
                     <div className="flex min-w-0 items-start gap-4 md:col-span-2 xl:col-span-1">
                       <div className="relative aspect-[4/3] w-24 shrink-0 overflow-hidden rounded-xl bg-surface-soft">
-                        <BookingCover booking={booking} fallbackIndex={index} />
+                        <BookingCover booking={booking} />
                       </div>
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">

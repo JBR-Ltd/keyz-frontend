@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -27,6 +26,7 @@ import {
   Trash2,
 } from "lucide-react";
 import PropertyPrice from "@/components/property/PropertyPrice";
+import ResilientPropertyImage from "@/components/property/ResilientPropertyImage";
 import ConfirmActionModal from "@/components/settings/ConfirmActionModal";
 import TourSummaryPanel from "@/components/tour/TourSummaryPanel";
 import { AsyncButtonContent } from "@/components/ui/async-button-content";
@@ -1219,7 +1219,7 @@ function PhotosPanel({
               className="overflow-hidden rounded-xl border border-border bg-bg shadow-sm"
             >
               <div className="relative aspect-video bg-surface-soft">
-                <Image
+                <ResilientPropertyImage
                   src={photo.url}
                   alt={photo.caption ?? "Listing photo"}
                   fill

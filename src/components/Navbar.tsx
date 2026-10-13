@@ -8,6 +8,7 @@ import { useState } from "react";
 import relloLogo from "../../public/rello-logo.svg";
 
 const NAV_LINKS = [
+  { label: "Browse Homes", href: "/browse" },
   { label: "Why Rello", href: "/#why-rello" },
   { label: "How It Works", href: "/#how-it-works" },
   { label: "Cities", href: "/#cities" },

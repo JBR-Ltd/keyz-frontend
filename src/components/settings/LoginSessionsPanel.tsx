@@ -61,7 +61,11 @@ export default function LoginSessionsPanel(): ReactElement {
     }
 
     setSessions((current) => current.filter((item) => item.id !== session.id));
-    notify({ title: "That device has been signed out", variant: "success" });
+    notify({
+      title: "That device has been signed out",
+      description: "That session can no longer access your account.",
+      variant: "success",
+    });
   };
 
   const endOthers = async (): Promise<void> => {
@@ -80,7 +84,11 @@ export default function LoginSessionsPanel(): ReactElement {
     }
 
     setSessions((current) => current.filter((session) => session.current));
-    notify({ title: result.message, variant: "success" });
+    notify({
+      title: "Other devices signed out",
+      description: result.message,
+      variant: "success",
+    });
   };
 
   const others = sessions.filter((session) => !session.current);

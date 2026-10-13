@@ -1,8 +1,8 @@
 import type { ReactElement } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { Bath, BedDouble, Heart, Loader2, MapPin } from "lucide-react";
 import PropertyPrice from "@/components/property/PropertyPrice";
+import ResilientPropertyImage from "@/components/property/ResilientPropertyImage";
 import VerifiedBadge from "@/components/ui/VerifiedBadge";
 import { propertyPath } from "@/lib/publicIds";
 import type { RentalMode } from "@/lib/hostListings";
@@ -21,7 +21,7 @@ interface PropertyCardProps {
   listingType: ListingType;
   bedrooms: number;
   bathrooms: number;
-  imageUrl: string;
+  imageUrl?: string | null;
   featured: boolean;
   isSaved?: boolean;
   isSaving?: boolean;
@@ -59,7 +59,7 @@ export default function PropertyCard({
         className="group flex h-full flex-col overflow-hidden rounded-xl bg-[var(--color-bg)] shadow-sm transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
       >
         <div className="relative aspect-video shrink-0 overflow-hidden">
-          <Image
+          <ResilientPropertyImage
             src={imageUrl}
             alt={name}
             fill

@@ -153,7 +153,8 @@ export default function RoomBoardPage({
       } catch (error) {
         notify({
           title: "Could not delete the room",
-          description: error instanceof Error ? error.message : undefined,
+          description:
+            error instanceof Error ? error.message : "Try again in a moment.",
           variant: "error",
         });
       } finally {
@@ -511,7 +512,11 @@ function EditRoomDialog({
 
   const handleSave = async (): Promise<void> => {
     if (!roomName.trim()) {
-      notify({ title: "Name cannot be empty", variant: "error" });
+      notify({
+        title: "Name cannot be empty",
+        description: "Enter a room name before saving.",
+        variant: "error",
+      });
       return;
     }
 
@@ -531,7 +536,8 @@ function EditRoomDialog({
     } catch (error) {
       notify({
         title: "Could not update the room",
-        description: error instanceof Error ? error.message : undefined,
+        description:
+          error instanceof Error ? error.message : "Try again in a moment.",
         variant: "error",
       });
     } finally {

@@ -334,7 +334,13 @@ function SubmittedReport({
     }
 
     onChange(result.data);
-    notify({ title: agree ? "Report acknowledged" : "Report contested", variant: "success" });
+    notify({
+      title: agree ? "Report acknowledged" : "Report contested",
+      description: agree
+        ? "The other party can see that you accepted this report."
+        : "The other party can see your response and notes.",
+      variant: "success",
+    });
   };
 
   return (

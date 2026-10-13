@@ -5,8 +5,8 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { EyeIcon, EyeOffIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
 import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
 import PasswordRequirements from "@/components/auth/PasswordRequirements";
@@ -15,6 +15,7 @@ import { useToast } from "@/components/ui/toast";
 import { resolveApiError } from "@/lib/errors";
 import { getInstallationId } from "@/lib/authSession";
 import { validatePassword } from "@/lib/passwordPolicy";
+import { loginPath, safeReturnTo } from "@/lib/authContinuation";
 
 type UserRole = "LANDLORD" | "AGENT" | "TENANT";
 
@@ -68,12 +69,15 @@ function isApiEnvelope(value: unknown): value is ApiEnvelope<unknown> {
   );
 }
 
-export default function RegisterPage() {
+function RegisterForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const reduceMotion = useReducedMotion();
   const { notify } = useToast();
+  const initialRole: UserRole =
+    searchParams.get("role") === "TENANT" ? "TENANT" : "LANDLORD";
   const [showPassword, setShowPassword] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<UserRole>("LANDLORD");
+  const [selectedRole, setSelectedRole] = useState<UserRole>(initialRole);
   const {
     formState: { errors, isSubmitting },
     control,
@@ -86,7 +90,7 @@ export default function RegisterPage() {
       lastName: "",
       email: "",
       password: "",
-      role: "LANDLORD",
+      role: initialRole,
     },
     mode: "onSubmit",
     reValidateMode: "onSubmit",
@@ -96,6 +100,7 @@ export default function RegisterPage() {
   const fieldAnimate = reduceMotion ? undefined : { opacity: 1, y: 0 };
   const selectedRoleDescription =
     roleOptions.find((role) => role.value === selectedRole)?.description ?? "";
+  const returnTo = safeReturnTo(searchParams.get("returnTo"));
 
   const onSubmit: SubmitHandler<RegisterFormValues> = async (values) => {
     try {
@@ -115,7 +120,11 @@ export default function RegisterPage() {
       }
 
       sessionStorage.setItem(VERIFY_EMAIL_STORAGE_KEY, values.email);
-      router.push(`/verify-email?email=${encodeURIComponent(values.email)}`);
+      const verificationQuery = new URLSearchParams({
+        email: values.email,
+        returnTo,
+      });
+      router.push(`/verify-email?${verificationQuery.toString()}`);
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Registration failed";
@@ -478,6 +487,7 @@ export default function RegisterPage() {
               <GoogleAuthButton
                 label="Sign up with Google"
                 role={selectedRole}
+                returnTo={returnTo}
               />
             </div>
 
@@ -493,7 +503,7 @@ export default function RegisterPage() {
             >
               Already have an account?{" "}
               <Link
-                href="/login"
+                href={loginPath(returnTo)}
                 className="font-body font-medium text-primary transition-all duration-200 ease-in-out hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               >
                 Log in
@@ -503,5 +513,13 @@ export default function RegisterPage() {
         </div>
       </section>
     </main>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen animate-pulse bg-bg" />}>
+      <RegisterForm />
+    </Suspense>
   );
 }

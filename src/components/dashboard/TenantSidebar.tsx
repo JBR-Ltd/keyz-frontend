@@ -28,7 +28,7 @@ import { useDialogFocus } from "@/lib/useDialogFocus";
 import relloLogoMark from "../../../public/rello-logo-cropped.svg";
 
 const TENANT_NAV_ITEMS = [
-  { label: "Browse", href: "/tenant/browse", icon: Search },
+  { label: "Browse", href: "/browse", icon: Search },
   { label: "My Home", href: "/tenant/bookings", icon: House },
 ];
 
@@ -47,7 +47,7 @@ interface TenantNavigationProps {
 function TenantLogo(): ReactElement {
   return (
     <Link
-      href="/tenant/browse"
+      href="/browse"
       className="flex shrink-0 items-center gap-3 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
       aria-label="Rello tenant portal"
     >
@@ -200,7 +200,7 @@ export default function TenantSidebar({
     pathname.startsWith("/tenant/profile") ||
     pathname.startsWith("/tenant/settings");
   const isHeaderSearchVisible =
-    pathname === "/tenant/browse" && isHeaderSearchRequested;
+    pathname === "/browse" && isHeaderSearchRequested;
 
   useEffect(() => {
     return subscribeTenantHeaderSearch(setIsHeaderSearchRequested);

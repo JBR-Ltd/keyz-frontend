@@ -986,3 +986,115 @@ Existing rental catalogue and saved-search contracts remain unchanged.
 - Password reset codes still expire after 15 minutes and verification codes still expire after one hour.
 - Successful password resets still revoke sessions, and successful email verification still signs the account in and uses role-specific navigation.
 - Login, two-step sign-in, BCrypt password storage, and the overall Register design remain unchanged.
+
+## Adaptive Toast Feedback
+
+### What was there before
+
+- Every toast used the same fixed desktop width, large icon, padding, border treatment, and heavy shadow.
+- Short confirmations such as `Logged in` looked empty because they occupied a surface designed for two lines of content.
+- Several consequential actions provided only a title, while some errors placed server details in the title or omitted recovery guidance.
+- A live region around the complete toast stack could cause assistive technology to announce more than the newly added message.
+
+### How it was fixed
+
+- Added a compact, content-sized treatment for self-explanatory success messages and retained the wider layout for detailed feedback.
+- Required error notifications to include a description and normalised blank descriptions to a useful fallback.
+- Added context to tenancy, viewing, dispute, security, payment, and moderation outcomes while keeping simple local confirmations concise.
+- Removed the redundant login confirmation because successful navigation already communicates that the session started.
+- Assigned polite status semantics to successes and assertive alert semantics to errors on each notification.
+
+### Interfaces and behavior preserved
+
+- Toast stacking, duplicate suppression, timed dismissal, timer pausing, reduced motion, and route-aware placement retain their existing behavior.
+- No backend or API contract changed.
+
+## Landlord Dashboard Loading Classification
+
+### What was there before
+
+- One onboarding-shaped skeleton appeared while every landlord dashboard data source loaded.
+- Established landlords therefore saw account setup milestones before their operational dashboard appeared.
+- Dashboard mode depended on live listings, so an existing published property still counted as onboarding until verification completed.
+
+### How it was fixed
+
+- Added a neutral bootstrap for the short period before the dashboard summary identifies the account state.
+- Kept the milestone skeleton only for landlords without a published property.
+- Classified any landlord with a published property as operational, including listings awaiting verification or changes.
+- Allowed the operational dashboard to render its existing section-level loaders while portfolio, booking, escrow, account, and verification data resolve.
+
+### Interfaces and behavior preserved
+
+- Draft-only landlords remain in onboarding and can continue their latest draft.
+- Dashboard summary, portfolio, booking, escrow, and verification contracts remain unchanged.
+
+## Shared Host Escrow Workspace
+
+### What was there before
+
+- The page used an oversized two-card hero that pushed financial activity below the fold.
+- Only the first held booking appeared in the release panel, so additional held payments and disputes were hidden.
+- The selected record was always held, which made the disputed message branch unreachable.
+- Gross booking amounts could be described as host payouts without separating fees, deposits, or the amount received.
+- The ledger used card-like rows with limited metadata, weak mobile labels, and no useful filtering or retry action.
+
+### How it was fixed
+
+- Added a compact role-aware heading with direct links to the statement and payout settings.
+- Replaced the hero with open totals for funds held by Rello, payouts being processed, and completed host payouts.
+- Included disputed funds in the held total and used host amounts or commission-adjusted values for payout totals.
+- Added every active payment in priority order with plain next-step guidance and contextual tenancy, dispute, or receipt links.
+- Added activity filters, a semantic desktop table, labelled mobile records, deposit context, references, receipts, and friendly status badges.
+- Added matching skeletons, retained-data retry behavior, contextual empty states, and one compact escrow explanation strip.
+
+### Interfaces and behavior preserved
+
+- Landlord and agent routes share the redesigned workspace with role-specific navigation.
+- Tenant and administrator escrow pages remain unchanged.
+- No backend, database, payment, receipt, dispute, or escrow payload contract changed.
+
+## Public Browse Marketplace
+
+### What was there before
+
+- The complete interactive catalogue lived under `/tenant/browse`, where the tenant role guard prevented anonymous visitors from searching available homes.
+- The page always requested saved homes, saved searches, and tenant activity even though those features require an authenticated tenant.
+- Guest actions on public property pages could reach tenant APIs without a useful sign-in continuation.
+- Authentication always sent tenants to the portal browse URL and discarded the listing or search they were acting on.
+
+### How it was fixed
+
+- Added `/browse` as the canonical public catalogue with role-aware marketplace or tenant navigation.
+- Kept search, filters, sorting, pagination, and property navigation public while loading personal data only for authenticated tenants.
+- Added accessible sign-in prompts for saving homes, saving searches, contacting hosts, requesting viewings, and starting rental requests.
+- Added validated same-origin return paths and short-lived session continuations across password, two-factor, Google, registration, and email-verification flows.
+- Redirected the legacy tenant browse route and updated internal browse links while preserving saved-search query parameters.
+
+### Interfaces and behavior preserved
+
+- Public listing, search, saved-listing, saved-search, property, and booking API contracts remain unchanged.
+- City rental pages remain the server-rendered location catalogue for search indexing.
+- Backend authorization and tenant identity verification remain authoritative for account and rental actions.
+
+## Resilient Listing Images
+
+### What was there before
+
+- Listing surfaces rendered stored image URLs directly, so a stopped local backend, missing object, or inaccessible S3 file exposed broken image alt text.
+- Previously loaded photographs could remain in the browser cache while uncached photographs failed, making the problem appear inconsistent.
+- Several listing views substituted unrelated stock photographs when a property had no usable image.
+- Public property galleries assumed every published listing contained at least one photograph and still exposed gallery actions for an empty collection.
+
+### How it was fixed
+
+- Added one shared property image component that preserves the requested layout and replaces missing or failed images with an accessible `Photo unavailable` state.
+- Applied the shared behavior to catalogue cards, saved homes, host portfolios, dashboards, bookings, tenancies, listing management, and public property galleries.
+- Removed unrelated photographic fallbacks and allowed published properties to expose an empty image collection.
+- Added intentional zero-photo gallery layouts and hid photo counts and lightbox actions when no image exists.
+
+### Environment behavior
+
+- Local uploads continue to load from the backend `/uploads` resource, so uncached development images require the backend to be running.
+- Production listing media continues to use public S3 object URLs supported by the existing Next.js image allowlist.
+- The production bucket must permit public object reads for public listing media. Private verification evidence remains outside this behavior.

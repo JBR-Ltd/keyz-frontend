@@ -123,7 +123,8 @@ export default function Host3DWalkthroughPage({
         if (!active) return;
         notify({
           title: "Could not load the walkthrough",
-          description: err instanceof Error ? err.message : undefined,
+          description:
+            err instanceof Error ? err.message : "Try again in a moment.",
           variant: "error",
         });
         setIsLoadingBundle(false);

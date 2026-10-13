@@ -115,7 +115,8 @@ export default function AdminVerificationsPage(): ReactElement {
       rejectingKey: null,
     });
     notify({
-      title: approved ? "Approved" : "Rejected",
+      title: approved ? "Verification approved" : "Verification rejected",
+      description: "The applicant can now see this decision.",
       variant: "success",
     });
   };

@@ -84,7 +84,11 @@ export default function SecuritySection(): ReactElement {
     setPendingReference("");
     setCode("");
     setTwoFactorOverride(true);
-    notify({ title: "Two step sign-in is on", variant: "success" });
+    notify({
+      title: "Two step sign-in is on",
+      description: "Future sign-ins will require a code from your email.",
+      variant: "success",
+    });
   };
 
   const turnOff = async (): Promise<void> => {
@@ -105,7 +109,11 @@ export default function SecuritySection(): ReactElement {
 
     setIsTurningOff(false);
     setTwoFactorOverride(false);
-    notify({ title: "Two step sign-in is off", variant: "success" });
+    notify({
+      title: "Two step sign-in is off",
+      description: "Future sign-ins will no longer require an email code.",
+      variant: "success",
+    });
   };
   const handlePasswordChange = async (
     event: FormEvent<HTMLFormElement>,

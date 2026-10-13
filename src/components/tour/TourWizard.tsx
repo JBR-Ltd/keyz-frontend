@@ -249,7 +249,8 @@ export default function TourWizard({ propertyId, role }: TourWizardProps) {
         if (cancelled) return;
         notify({
           title: "Could not load this tour",
-          description: error instanceof Error ? error.message : undefined,
+          description:
+            error instanceof Error ? error.message : "Try again in a moment.",
           variant: "error",
         });
         setStep("floor-setup");
@@ -380,7 +381,8 @@ export default function TourWizard({ propertyId, role }: TourWizardProps) {
     } catch (error) {
       notify({
         title: "Could not create room",
-        description: error instanceof Error ? error.message : undefined,
+        description:
+          error instanceof Error ? error.message : "Try again in a moment.",
         variant: "error",
       });
     }
@@ -400,7 +402,8 @@ export default function TourWizard({ propertyId, role }: TourWizardProps) {
       } catch (error) {
         notify({
           title: "Could not save the room size",
-          description: error instanceof Error ? error.message : undefined,
+          description:
+            error instanceof Error ? error.message : "Try again in a moment.",
           variant: "error",
         });
         return;
@@ -511,7 +514,8 @@ export default function TourWizard({ propertyId, role }: TourWizardProps) {
       } catch (error) {
         notify({
           title: "Could not open that floor",
-          description: error instanceof Error ? error.message : undefined,
+          description:
+            error instanceof Error ? error.message : "Try again in a moment.",
           variant: "error",
         });
       }
@@ -527,7 +531,11 @@ export default function TourWizard({ propertyId, role }: TourWizardProps) {
         const list = await refreshRooms(targetFloor.id);
         const room = list.find((r) => r.id === roomId);
         if (!room) {
-          notify({ title: "That room could not be found", variant: "error" });
+          notify({
+            title: "That room could not be found",
+            description: "Return to the room list and choose an existing room.",
+            variant: "error",
+          });
           return;
         }
         setCurrentRoom(room);
@@ -540,7 +548,8 @@ export default function TourWizard({ propertyId, role }: TourWizardProps) {
       } catch (error) {
         notify({
           title: "Could not open that room",
-          description: error instanceof Error ? error.message : undefined,
+          description:
+            error instanceof Error ? error.message : "Try again in a moment.",
           variant: "error",
         });
       }
@@ -559,7 +568,8 @@ export default function TourWizard({ propertyId, role }: TourWizardProps) {
       } catch (error) {
         notify({
           title: "Could not open that floor plan",
-          description: error instanceof Error ? error.message : undefined,
+          description:
+            error instanceof Error ? error.message : "Try again in a moment.",
           variant: "error",
         });
       }
@@ -591,7 +601,8 @@ export default function TourWizard({ propertyId, role }: TourWizardProps) {
     } catch (error) {
       notify({
         title: "Could not save the door",
-        description: error instanceof Error ? error.message : undefined,
+        description:
+          error instanceof Error ? error.message : "Try again in a moment.",
         variant: "error",
       });
       return false;
@@ -612,7 +623,8 @@ export default function TourWizard({ propertyId, role }: TourWizardProps) {
     } catch (error) {
       notify({
         title: "Could not move the door",
-        description: error instanceof Error ? error.message : undefined,
+        description:
+          error instanceof Error ? error.message : "Try again in a moment.",
         variant: "error",
       });
     }
@@ -630,7 +642,8 @@ export default function TourWizard({ propertyId, role }: TourWizardProps) {
     } catch (error) {
       notify({
         title: "Could not update the door",
-        description: error instanceof Error ? error.message : undefined,
+        description:
+          error instanceof Error ? error.message : "Try again in a moment.",
         variant: "error",
       });
       return false;
@@ -645,7 +658,8 @@ export default function TourWizard({ propertyId, role }: TourWizardProps) {
     } catch (error) {
       notify({
         title: "Could not delete the door",
-        description: error instanceof Error ? error.message : undefined,
+        description:
+          error instanceof Error ? error.message : "Try again in a moment.",
         variant: "error",
       });
     }
@@ -686,7 +700,8 @@ export default function TourWizard({ propertyId, role }: TourWizardProps) {
     } catch (error) {
       notify({
         title: "Could not create the next room",
-        description: error instanceof Error ? error.message : undefined,
+        description:
+          error instanceof Error ? error.message : "Try again in a moment.",
         variant: "error",
       });
       return null;
@@ -713,7 +728,8 @@ export default function TourWizard({ propertyId, role }: TourWizardProps) {
     } catch (error) {
       notify({
         title: "Could not save the staircase",
-        description: error instanceof Error ? error.message : undefined,
+        description:
+          error instanceof Error ? error.message : "Try again in a moment.",
         variant: "error",
       });
       return false;
@@ -736,7 +752,8 @@ export default function TourWizard({ propertyId, role }: TourWizardProps) {
     } catch (error) {
       notify({
         title: "Could not update the staircase",
-        description: error instanceof Error ? error.message : undefined,
+        description:
+          error instanceof Error ? error.message : "Try again in a moment.",
         variant: "error",
       });
       return false;
@@ -754,7 +771,8 @@ export default function TourWizard({ propertyId, role }: TourWizardProps) {
     } catch (error) {
       notify({
         title: "Could not remove the staircase",
-        description: error instanceof Error ? error.message : undefined,
+        description:
+          error instanceof Error ? error.message : "Try again in a moment.",
         variant: "error",
       });
     }
@@ -771,7 +789,8 @@ export default function TourWizard({ propertyId, role }: TourWizardProps) {
     } catch (error) {
       notify({
         title: "This tour isn't ready to publish yet",
-        description: error instanceof Error ? error.message : undefined,
+        description:
+          error instanceof Error ? error.message : "Try again in a moment.",
         variant: "error",
       });
     } finally {

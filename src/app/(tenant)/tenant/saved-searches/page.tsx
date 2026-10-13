@@ -134,7 +134,7 @@ export default function SavedSearchesPage(): ReactElement {
         <div className="mt-8 rounded-lg bg-surface-soft p-8 text-center">
           <p className="font-body text-sm text-muted">No saved searches yet.</p>
           <Link
-            href="/tenant/browse"
+            href="/browse"
             className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-full bg-primary px-5 font-body text-sm font-bold text-white hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             <Search size={15} aria-hidden="true" />
@@ -183,7 +183,7 @@ export default function SavedSearchesPage(): ReactElement {
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
                 <Link
-                  href={`/tenant/browse?search=${search.id}`}
+                  href={`/browse?search=${search.id}`}
                   className="inline-flex min-h-10 items-center gap-2 rounded-full bg-primary px-4 font-body text-sm font-bold text-white hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 >
                   See homes

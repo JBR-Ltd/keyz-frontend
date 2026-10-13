@@ -78,7 +78,9 @@ export function backendPropertyToPropertyDetail(
     images:
       property.images && property.images.length > 0
         ? property.images.map((image) => image.url)
-        : [property.imageUrl ?? DRAFT_IMAGE_FALLBACK],
+        : property.imageUrl
+          ? [property.imageUrl]
+          : [],
     verified,
     host: {
       id: String(property.host?.id ?? 0),

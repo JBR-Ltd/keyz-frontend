@@ -35,9 +35,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { TouchEvent, useEffect, useRef, useState } from "react";
 import { useAuthentication } from "@/components/auth/AuthProvider";
+import GuestAuthPrompt from "@/components/auth/GuestAuthPrompt";
 import BackButton from "@/components/navigation/BackButton";
 import OverlayPortal from "@/components/ui/OverlayPortal";
 import MessageHostButton from "@/components/property/MessageHostButton";
+import ResilientPropertyImage from "@/components/property/ResilientPropertyImage";
 import { AsyncButtonContent } from "@/components/ui/async-button-content";
 import ReportDialog from "@/components/reports/ReportDialog";
 import PropertyPrice from "@/components/property/PropertyPrice";
@@ -55,6 +57,16 @@ import {
 import { useDialogFocus } from "@/lib/useDialogFocus";
 import { useToast } from "@/components/ui/toast";
 import { getOpenRentalRequest, type Booking } from "@/lib/bookings";
+import {
+  consumePendingAuthAction,
+  pendingPropertyAction,
+  type PendingAuthAction,
+  type PropertyGuestAction,
+} from "@/lib/authContinuation";
+import {
+  isTenantVerified,
+  useTenantVerificationSnapshot,
+} from "@/lib/tenantVerification";
 
 const BookingRequestDialog = dynamic(
   () => import("@/components/property/BookingRequestDialog"),
@@ -277,7 +289,7 @@ function PropertyNotFound(): ReactElement {
           can keep browsing verified homes instead.
         </p>
         <Link
-          href="/tenant/browse"
+          href="/browse"
           className="mt-8 inline-flex min-h-12 items-center justify-center rounded-full bg-accent px-6 py-3 font-body text-sm font-bold text-primary transition-all duration-200 ease-in-out hover:bg-primary hover:text-white hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         >
           Browse other listings
@@ -295,6 +307,7 @@ export default function PropertyPageClient({
   const reduceMotion = useReducedMotion();
   const { notify } = useToast();
   const authentication = useAuthentication();
+  const { state: tenantVerification } = useTenantVerificationSnapshot();
   const [loadingState, setLoadingState] = useState<LoadingState>(
     initialProperty ? "ready" : "loading",
   );
@@ -323,6 +336,11 @@ export default function PropertyPageClient({
   const [isSavedLoading, setIsSavedLoading] = useState(true);
   const isSaved = property ? savedIds.has(property.id) : false;
   const [isSaving, setIsSaving] = useState(false);
+  const [guestAction, setGuestAction] = useState<PendingAuthAction | null>(
+    null,
+  );
+  const [resumeMessage, setResumeMessage] = useState(false);
+  const hasHandledContinuation = useRef(false);
   const lightboxRef = useDialogFocus<HTMLDivElement>(lightboxIndex !== null);
 
   useEffect(() => {
@@ -416,7 +434,7 @@ export default function PropertyPageClient({
     }
 
     if (
-      authentication.status === "authenticated" &&
+      authentication.status !== "authenticated" ||
       authentication.user?.role !== "TENANT"
     ) {
       return;
@@ -439,6 +457,83 @@ export default function PropertyPageClient({
       active = false;
     };
   }, [authentication.status, authentication.user?.role]);
+
+  useEffect(() => {
+    if (
+      hasHandledContinuation.current ||
+      !property ||
+      authentication.status !== "authenticated" ||
+      authentication.user?.role !== "TENANT"
+    ) {
+      return;
+    }
+
+    const query = new URLSearchParams(window.location.search);
+    const resumedAction = query.get("action");
+    const pending = consumePendingAuthAction();
+    const action =
+      pending?.kind === "property-action"
+        ? pending.action
+        : resumedAction === "rent"
+          ? "rent"
+          : null;
+
+    if (!action) {
+      hasHandledContinuation.current = true;
+      return;
+    }
+
+    hasHandledContinuation.current = true;
+    query.delete("action");
+    window.history.replaceState(
+      null,
+      "",
+      `${window.location.pathname}${query.size ? `?${query.toString()}` : ""}${window.location.hash}`,
+    );
+
+    if (action === "save" && /^\d+$/.test(property.id)) {
+      void saveListing(Number(property.id)).then((result) => {
+        if (result.data) {
+          setSavedIds((current) => new Set(current).add(property.id));
+          notify({ title: "Saved to your homes", variant: "success" });
+          return;
+        }
+        notify({
+          title: "Home not saved",
+          description: result.message ?? "Try saving this home again.",
+          variant: "error",
+        });
+      });
+      return;
+    }
+
+    if (action === "viewing") {
+      queueMicrotask(() => setViewingDialogState("open"));
+      return;
+    }
+
+    if (action === "message") {
+      queueMicrotask(() => setResumeMessage(true));
+      return;
+    }
+
+    if (isTenantVerified(tenantVerification)) {
+      queueMicrotask(() => setIsBookingOpen(true));
+      return;
+    }
+
+    const returnTo = `${window.location.pathname}?action=rent`;
+    router.push(
+      `/tenant/verify?source=gate&intent=booking&returnTo=${encodeURIComponent(returnTo)}`,
+    );
+  }, [
+    authentication.status,
+    authentication.user?.role,
+    notify,
+    property,
+    router,
+    tenantVerification,
+  ]);
 
   useEffect(() => {
     const propertyId = Number(property?.id);
@@ -551,6 +646,11 @@ export default function PropertyPageClient({
     });
   };
 
+  const requestGuestAction = (action: PropertyGuestAction): void => {
+    if (!property) return;
+    setGuestAction(pendingPropertyAction(action, window.location.pathname));
+  };
+
   const handleLightboxTouchEnd = (event: TouchEvent<HTMLDivElement>): void => {
     if (touchStartX === null) {
       return;
@@ -598,14 +698,25 @@ export default function PropertyPageClient({
         return;
       }
 
-      notify({ title: "This listing could not be shared", variant: "error" });
+      notify({
+        title: "This listing could not be shared",
+        description: "Copy the page link and try again.",
+        variant: "error",
+      });
     }
   };
 
   const handleSaveToggle = async (): Promise<void> => {
-    if (!property || !/^\d+$/.test(property.id) || isSavedLoading || isSaving) {
+    if (!property || !/^\d+$/.test(property.id) || isSaving) {
       return;
     }
+
+    if (authentication.status === "unauthenticated") {
+      requestGuestAction("save");
+      return;
+    }
+
+    if (isSavedLoading) return;
 
     setIsSaving(true);
     const result = await (
@@ -616,7 +727,8 @@ export default function PropertyPageClient({
 
     if (!result.data) {
       notify({
-        title: result.message ?? "This listing could not be updated",
+        title: "Saved homes not updated",
+        description: result.message ?? "Try again in a moment.",
         variant: "error",
       });
       return;
@@ -659,6 +771,8 @@ export default function PropertyPageClient({
       ? "Check availability"
       : "Request to rent";
   const viewerRole = authentication.user?.role ?? null;
+  const savedActionLoading =
+    (viewerRole === "TENANT" && isSavedLoading) || isSaving;
   const isHostViewer = viewerRole === "LANDLORD" || viewerRole === "AGENT";
   const isOwner =
     isHostViewer &&
@@ -691,6 +805,18 @@ export default function PropertyPageClient({
     (rentalRequestLoadState === "ready" && !currentOpenRentalRequest);
 
   const renderPrimaryAction = (className: string): ReactElement => {
+    if (authentication.status === "unauthenticated") {
+      return (
+        <button
+          type="button"
+          onClick={() => requestGuestAction("rent")}
+          className={className}
+        >
+          {primaryCta}
+        </button>
+      );
+    }
+
     if (currentOpenRentalRequest) {
       return (
         <Link href="/tenant/bookings" className={className}>
@@ -746,12 +872,12 @@ export default function PropertyPageClient({
         }`}
       >
         <BackButton
-          fallbackHref="/tenant/browse"
+          fallbackHref="/browse"
           roleFallbacks={{
             ADMIN: "/admin/dashboard",
             AGENT: "/agent/saved-listings",
             LANDLORD: "/landlord/saved-listings",
-            TENANT: "/tenant/browse",
+            TENANT: "/browse",
           }}
           className="mb-2 hidden min-h-11 items-center gap-2 rounded-full font-body text-sm font-bold text-muted transition-colors hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent lg:inline-flex"
         >
@@ -821,7 +947,7 @@ export default function PropertyPageClient({
               <button
                 type="button"
                 onClick={() => void handleSaveToggle()}
-                disabled={isSavedLoading || isSaving}
+                disabled={savedActionLoading}
                 aria-pressed={isSaved}
                 aria-busy={isSaving}
                 className="inline-flex min-h-10 items-center gap-2 rounded-full border border-border bg-bg px-4 font-body text-sm font-bold text-primary transition-all duration-200 ease-in-out hover:border-primary/30 hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-70"
@@ -874,6 +1000,13 @@ export default function PropertyPageClient({
               property.images.length,
             )}`}
           >
+            {property.images.length === 0 ? (
+              <ResilientPropertyImage
+                src={null}
+                alt={property.title}
+                fill
+              />
+            ) : null}
             {visibleGalleryImages[0] ? (
               <div
                 className={`group relative min-h-0 overflow-hidden bg-surface-soft ${getOuterCornerClass(
@@ -888,7 +1021,7 @@ export default function PropertyPageClient({
                   className="absolute inset-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
                   aria-label={`Open ${property.title} photo 1`}
                 >
-                  <Image
+                  <ResilientPropertyImage
                     src={visibleGalleryImages[0].src}
                     alt={property.title}
                     fill
@@ -920,7 +1053,7 @@ export default function PropertyPageClient({
                       )} ${getSideCellClass(property.images.length, sideIndex)}`}
                       aria-label={`Open ${property.title} photo ${image.index + 1}`}
                     >
-                      <Image
+                      <ResilientPropertyImage
                         src={image.src}
                         alt={`${property.title} photo ${image.index + 1}`}
                         fill
@@ -934,41 +1067,51 @@ export default function PropertyPageClient({
               </div>
             ) : null}
 
-            <button
-              type="button"
-              onClick={() => openLightbox(0)}
-              className="absolute bottom-4 right-4 z-10 inline-flex min-h-11 items-center gap-2 rounded-full border border-white/70 bg-bg/95 px-4 font-body text-sm font-bold text-primary shadow-md backdrop-blur-sm transition-colors hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            >
-              <Images size={17} aria-hidden="true" />
-              View all {formatCount(property.images.length, "photo", "photos")}
-            </button>
+            {property.images.length > 0 ? (
+              <button
+                type="button"
+                onClick={() => openLightbox(0)}
+                className="absolute bottom-4 right-4 z-10 inline-flex min-h-11 items-center gap-2 rounded-full border border-white/70 bg-bg/95 px-4 font-body text-sm font-bold text-primary shadow-md backdrop-blur-sm transition-colors hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                <Images size={17} aria-hidden="true" />
+                View all {formatCount(property.images.length, "photo", "photos")}
+              </button>
+            ) : null}
           </div>
 
           <div className="lg:hidden">
             <div className="group relative aspect-video w-full overflow-hidden rounded-2xl bg-surface-soft shadow-sm">
-              <button
-                type="button"
-                onClick={() => openLightbox(0)}
-                className="absolute inset-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
-                aria-label={`Open ${property.title} photo 1`}
-              >
-                <Image
-                  src={property.images[0]}
+              {property.images.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => openLightbox(0)}
+                  className="absolute inset-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
+                  aria-label={`Open ${property.title} photo 1`}
+                >
+                  <ResilientPropertyImage
+                    src={property.images[0]}
+                    alt={property.title}
+                    fill
+                    priority
+                    sizes="100vw"
+                    className="object-cover transition-all duration-300 ease-in-out group-hover:scale-[1.02]"
+                    style={{ objectFit: "cover" }}
+                  />
+                </button>
+              ) : (
+                <ResilientPropertyImage
+                  src={null}
                   alt={property.title}
                   fill
-                  priority
-                  sizes="100vw"
-                  className="object-cover transition-all duration-300 ease-in-out group-hover:scale-[1.02]"
-                  style={{ objectFit: "cover" }}
                 />
-              </button>
+              )}
               <BackButton
-                fallbackHref="/tenant/browse"
+                fallbackHref="/browse"
                 roleFallbacks={{
                   ADMIN: "/admin/dashboard",
                   AGENT: "/agent/saved-listings",
                   LANDLORD: "/landlord/saved-listings",
-                  TENANT: "/tenant/browse",
+                  TENANT: "/browse",
                 }}
                 aria-label="Go back"
                 className="absolute left-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-primary text-white transition-all duration-200 ease-in-out hover:bg-black/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
@@ -988,7 +1131,7 @@ export default function PropertyPageClient({
                   <button
                     type="button"
                     onClick={() => void handleSaveToggle()}
-                    disabled={isSavedLoading || isSaving}
+                    disabled={savedActionLoading}
                     aria-label={
                       isSaving
                         ? isSaved
@@ -1002,7 +1145,7 @@ export default function PropertyPageClient({
                     aria-pressed={isSaved}
                     className="flex h-11 w-11 items-center justify-center rounded-full border border-white/70 bg-bg/95 text-primary shadow-sm backdrop-blur-sm transition-colors hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-70"
                   >
-                    {isSavedLoading || isSaving ? (
+                    {savedActionLoading ? (
                       <Loader2
                         size={18}
                         className="animate-spin"
@@ -1018,14 +1161,16 @@ export default function PropertyPageClient({
                   </button>
                 ) : null}
               </div>
-              <button
-                type="button"
-                onClick={() => openLightbox(0)}
-                className="absolute bottom-4 right-4 z-10 inline-flex min-h-11 items-center gap-2 rounded-full border border-white/70 bg-bg/95 px-4 font-body text-xs font-bold text-primary shadow-sm backdrop-blur-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-              >
-                <Images size={16} aria-hidden="true" />
-                View all {property.images.length}
-              </button>
+              {property.images.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => openLightbox(0)}
+                  className="absolute bottom-4 right-4 z-10 inline-flex min-h-11 items-center gap-2 rounded-full border border-white/70 bg-bg/95 px-4 font-body text-xs font-bold text-primary shadow-sm backdrop-blur-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                >
+                  <Images size={16} aria-hidden="true" />
+                  View all {property.images.length}
+                </button>
+              ) : null}
             </div>
 
             {mobileThumbnails.length > 0 ? (
@@ -1038,7 +1183,7 @@ export default function PropertyPageClient({
                     className="relative aspect-[4/3] min-w-28 snap-start overflow-hidden rounded-lg bg-surface-soft"
                     aria-label={`Open ${property.title} photo ${image.index + 1}`}
                   >
-                    <Image
+                    <ResilientPropertyImage
                       src={image.src}
                       alt={`${property.title} thumbnail ${image.index + 1}`}
                       fill
@@ -1098,7 +1243,7 @@ export default function PropertyPageClient({
                   }
                   transition={{ duration: 0.18, ease: "easeOut" }}
                 >
-                  <Image
+                  <ResilientPropertyImage
                     src={property.images[lightboxIndex]}
                     alt={`${property.title} photo ${lightboxIndex + 1}`}
                     fill
@@ -1226,7 +1371,11 @@ export default function PropertyPageClient({
             {showTenantActions ? (
               <button
                 type="button"
-                onClick={() => setViewingDialogState("open")}
+                onClick={() =>
+                  authentication.status === "unauthenticated"
+                    ? requestGuestAction("viewing")
+                    : setViewingDialogState("open")
+                }
                 className="mt-4 inline-flex min-h-12 w-full items-center justify-center rounded-xl border border-border bg-bg px-5 font-body text-sm font-bold text-primary transition-colors hover:border-primary/30 hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent lg:hidden"
               >
                 Request a viewing
@@ -1320,11 +1469,18 @@ export default function PropertyPageClient({
               <div className="mt-4 flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-4">
                 {showTenantActions ? (
                   <MessageHostButton
+                    key={resumeMessage ? "resumed-message" : "message"}
                     hostId={property.host.id}
                     hostName={property.host.name}
                     hostRole={property.host.role}
                     propertyId={property.id}
                     propertyName={property.title}
+                    openInitially={resumeMessage}
+                    onGuestAction={
+                      authentication.status === "unauthenticated"
+                        ? () => requestGuestAction("message")
+                        : undefined
+                    }
                   />
                 ) : null}
                 <Link
@@ -1557,7 +1713,11 @@ export default function PropertyPageClient({
 
               <button
                 type="button"
-                onClick={() => setViewingDialogState("open")}
+                onClick={() =>
+                  authentication.status === "unauthenticated"
+                    ? requestGuestAction("viewing")
+                    : setViewingDialogState("open")
+                }
                 className="mt-2 inline-flex min-h-11 w-full items-center justify-center rounded-xl px-4 font-body text-sm font-bold text-muted transition-colors hover:bg-surface-soft hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               >
                 Request a viewing
@@ -1616,6 +1776,15 @@ export default function PropertyPageClient({
           </div>
         </div>
       ) : null}
+      <GuestAuthPrompt
+        action={guestAction}
+        title="Sign in to continue"
+        description="Create a tenant account or log in to save homes, contact hosts, request viewings, and start a rental request."
+        returnTo={
+          typeof window === "undefined" ? "/browse" : window.location.pathname
+        }
+        onClose={() => setGuestAction(null)}
+      />
     </main>
   );
 }

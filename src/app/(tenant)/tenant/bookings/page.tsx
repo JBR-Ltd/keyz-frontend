@@ -14,11 +14,11 @@ import {
   ShieldCheck,
   Wrench,
 } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import ChatThread from "@/components/chat/ChatThread";
 import { propertyPath } from "@/lib/publicIds";
 import PropertyPrice from "@/components/property/PropertyPrice";
+import ResilientPropertyImage from "@/components/property/ResilientPropertyImage";
 import { IconTile } from "@/components/ui/icon-tile";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -46,7 +46,6 @@ import {
   getConversationId,
   getCurrentChatUser,
 } from "@/lib/chat/chatStorage";
-import { TENANT_ACTIVITY_IMAGES } from "@/lib/tenantActivity";
 
 // === Types
 
@@ -115,13 +114,6 @@ function formatRelativeTime(value: string | null): string {
   if (days < 30) return `${days} days ago`;
 
   return formatDate(value);
-}
-
-function coverImage(booking: Booking, index: number): string {
-  return (
-    booking.propertyImageUrl ??
-    TENANT_ACTIVITY_IMAGES[index % TENANT_ACTIVITY_IMAGES.length]
-  );
 }
 
 function getHostRole(booking: Booking): ChatPartyRole {
@@ -444,7 +436,7 @@ export default function TenantBookingsPage(): ReactElement {
               manage your tenancy from this page.
             </p>
             <Link
-              href="/tenant/browse"
+              href="/browse"
               className="mt-7 inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-accent px-6 py-3 font-body text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             >
               Browse homes
@@ -456,8 +448,8 @@ export default function TenantBookingsPage(): ReactElement {
             <section className="grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(20rem,0.75fr)]">
               <article className="overflow-hidden rounded-2xl border border-border bg-bg shadow-sm">
                 <div className="relative h-64 bg-primary sm:h-80">
-                  <Image
-                    src={coverImage(primaryBooking, 0)}
+                  <ResilientPropertyImage
+                    src={primaryBooking.propertyImageUrl}
                     alt={primaryBooking.propertyTitle}
                     fill
                     priority
@@ -771,7 +763,7 @@ export default function TenantBookingsPage(): ReactElement {
                 Your requests and previous tenancies
               </p>
             </div>
-            {bookingHistory.map((booking, index) => (
+            {bookingHistory.map((booking) => (
               <Link
                 key={booking.id}
                 href={propertyPath({
@@ -782,12 +774,13 @@ export default function TenantBookingsPage(): ReactElement {
                 className="grid gap-4 border-b border-border p-5 transition-colors hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent sm:grid-cols-[5rem_1fr_auto] sm:items-center sm:px-7"
               >
                 <span className="relative h-20 overflow-hidden rounded-xl bg-surface-soft">
-                  <Image
-                    src={coverImage(booking, index + 1)}
+                  <ResilientPropertyImage
+                    src={booking.propertyImageUrl}
                     alt=""
                     fill
                     sizes="80px"
                     className="object-cover"
+                    compactPlaceholder
                   />
                 </span>
                 <span className="min-w-0">

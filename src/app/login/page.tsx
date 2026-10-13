@@ -14,6 +14,11 @@ import { AsyncButtonContent } from "@/components/ui/async-button-content";
 import { useToast } from "@/components/ui/toast";
 import { resolveApiError } from "@/lib/errors";
 import { establishAuthentication, getInstallationId } from "@/lib/authSession";
+import {
+  consumePendingAuthAction,
+  registerPath,
+  safeReturnTo,
+} from "@/lib/authContinuation";
 
 const loginPhotoUrl =
   "https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=1200&h=1400&fit=crop&auto=format&q=80";
@@ -95,6 +100,13 @@ export default function LoginPage() {
   const [code, setCode] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [returnTo] = useState(() =>
+    safeReturnTo(
+      typeof window === "undefined"
+        ? null
+        : new URLSearchParams(window.location.search).get("returnTo"),
+    ),
+  );
   const [successMessage, setSuccessMessage] = useState(() => {
     if (typeof window === "undefined") {
       return "";
@@ -142,9 +154,9 @@ export default function LoginPage() {
     if (!establishAuthentication(data)) {
       throw new Error("Unable to start your session. Please try again.");
     }
-    notify({ title: "Logged in", variant: "success" });
+    if (role !== "TENANT") consumePendingAuthAction();
     router.replace(
-      role === "TENANT" ? "/tenant/browse" : "/" + rolePath + "/dashboard",
+      role === "TENANT" ? returnTo : "/" + rolePath + "/dashboard",
     );
   };
 
@@ -228,7 +240,7 @@ export default function LoginPage() {
             variant: "error",
           });
           router.push(
-            `/verify-email?email=${encodeURIComponent(values.email)}`,
+            `/verify-email?email=${encodeURIComponent(values.email)}&returnTo=${encodeURIComponent(returnTo)}`,
           );
           return;
         }
@@ -549,7 +561,10 @@ export default function LoginPage() {
             </div>
 
             <div className="mt-6">
-              <GoogleAuthButton label="Continue with Google" />
+              <GoogleAuthButton
+                label="Continue with Google"
+                returnTo={returnTo}
+              />
             </div>
 
             <motion.p
@@ -560,7 +575,7 @@ export default function LoginPage() {
             >
               Don&apos;t have an account?{" "}
               <Link
-                href="/register"
+                href={registerPath(returnTo)}
                 className="font-body font-medium text-primary transition-all duration-200 ease-in-out hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               >
                 Register

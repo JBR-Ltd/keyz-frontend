@@ -119,6 +119,7 @@ export default function AdminReportsPage(): ReactElement {
 
     notify({
       title: status === "ACTIONED" ? "Marked as actioned" : "Dismissed",
+      description: "The report has been removed from the review queue.",
       variant: "success",
     });
     setReloadKey((current) => current + 1);

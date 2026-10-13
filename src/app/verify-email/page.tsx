@@ -13,6 +13,11 @@ import { AsyncButtonContent } from "@/components/ui/async-button-content";
 import { apiRequest } from "@/lib/apiRequest";
 import { establishAuthentication } from "@/lib/authSession";
 import { resolveApiError } from "@/lib/errors";
+import {
+  consumePendingAuthAction,
+  loginPath,
+  safeReturnTo,
+} from "@/lib/authContinuation";
 
 interface VerifyEmailFormValues {
   email: string;
@@ -43,6 +48,7 @@ function VerifyEmailForm() {
     reset,
   } = useForm<VerifyEmailFormValues>({ defaultValues: { email: "" } });
   const destinationEmail = useWatch({ control, name: "email" });
+  const returnTo = safeReturnTo(searchParams.get("returnTo"));
 
   useEffect(() => {
     reset({ email: searchParams.get("email") ?? "" });
@@ -88,10 +94,9 @@ function VerifyEmailForm() {
         establishAuthentication(session)
       ) {
         const role = session.role.toUpperCase();
+        if (role !== "TENANT") consumePendingAuthAction();
         router.replace(
-          role === "TENANT"
-            ? "/tenant/browse"
-            : `/${role.toLowerCase()}/dashboard`,
+          role === "TENANT" ? returnTo : `/${role.toLowerCase()}/dashboard`,
         );
         return;
       }
@@ -243,7 +248,7 @@ function VerifyEmailForm() {
           <p className="mt-6 font-body text-sm text-muted">
             Already verified?{" "}
             <Link
-              href="/login"
+              href={loginPath(returnTo)}
               className="font-bold text-primary underline-offset-4 hover:underline"
             >
               Log in

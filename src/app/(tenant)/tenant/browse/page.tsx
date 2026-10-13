@@ -19,6 +19,8 @@ import {
   X,
 } from "lucide-react";
 import PropertyCard from "@/components/public/PropertyCard";
+import { useAuthentication } from "@/components/auth/AuthProvider";
+import GuestAuthPrompt from "@/components/auth/GuestAuthPrompt";
 import OverlayPortal from "@/components/ui/OverlayPortal";
 import { Select, type SelectOption } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
@@ -43,6 +45,13 @@ import { publishTenantHeaderSearch } from "@/lib/tenantHeaderSearch";
 import { useDialogFocus } from "@/lib/useDialogFocus";
 import { createSavedSearch, getSavedSearches } from "@/lib/marketplace";
 import { LISTING_AMENITIES } from "@/lib/listingAmenities";
+import {
+  consumePendingAuthAction,
+  pendingOpenSavedSearch,
+  pendingSaveListing,
+  pendingSaveSearch,
+  type PendingAuthAction,
+} from "@/lib/authContinuation";
 
 // === Types
 
@@ -170,6 +179,13 @@ function numberFromInput(value: string): number | undefined {
   return Number.isSafeInteger(parsed) ? parsed : undefined;
 }
 
+function sortOptionFromParam(value: string | undefined): SortOption {
+  if (value === "PRICE_ASC") return "price-low";
+  if (value === "PRICE_DESC") return "price-high";
+  if (value === "BEDROOMS") return "bedrooms";
+  return "recommended";
+}
+
 function budgetError(draft: DetailedFilterDraft): string {
   const minPrice = numberFromInput(draft.minPrice);
   const maxPrice = numberFromInput(draft.maxPrice);
@@ -268,6 +284,15 @@ async function requestListings(
 export default function TenantBrowsePage(): ReactElement {
   const reduceMotion = useReducedMotion();
   const { notify } = useToast();
+  const authentication = useAuthentication();
+  const isTenantViewer =
+    authentication.status === "authenticated" &&
+    authentication.user?.role === "TENANT";
+  const isGuestViewer = authentication.status === "unauthenticated";
+  const canUseTenantActions = isTenantViewer || isGuestViewer;
+  const [guestAction, setGuestAction] = useState<PendingAuthAction | null>(
+    null,
+  );
   const [isSearchSheetOpen, setIsSearchSheetOpen] = useState(false);
   const [properties, setProperties] = useState<PropertyDetail[]>([]);
   const [propertiesLoading, setPropertiesLoading] = useState(true);
@@ -299,7 +324,7 @@ export default function TenantBrowsePage(): ReactElement {
   });
   const [isDesktopFiltersOpen, setIsDesktopFiltersOpen] = useState(false);
   const [savedIds, setSavedIds] = useState<Set<string>>(() => new Set());
-  const [isSavedLoading, setIsSavedLoading] = useState(true);
+  const [isSavedLoading, setIsSavedLoading] = useState(isTenantViewer);
   const [savingIds, setSavingIds] = useState<Set<string>>(() => new Set());
   const [isSavingSearch, setIsSavingSearch] = useState(false);
   const [isSubmittingSearch, setIsSubmittingSearch] = useState(false);
@@ -321,7 +346,7 @@ export default function TenantBrowsePage(): ReactElement {
   const dialogRef = useDialogFocus<HTMLDivElement>(isSearchSheetOpen);
 
   /** Every filter is sent before pagination, so later-page matches remain visible. */
-  // An alert email links to /tenant/browse?search={id}; open that search's filters
+  // An alert email may carry the legacy route; its redirect preserves this id
   useEffect(() => {
     const savedSearchId = Number(
       new URLSearchParams(window.location.search).get("search"),
@@ -330,6 +355,13 @@ export default function TenantBrowsePage(): ReactElement {
     if (!savedSearchId) {
       return;
     }
+
+    if (isGuestViewer) {
+      queueMicrotask(() => setGuestAction(pendingOpenSavedSearch()));
+      return;
+    }
+
+    if (!isTenantViewer) return;
 
     let active = true;
 
@@ -379,7 +411,7 @@ export default function TenantBrowsePage(): ReactElement {
     return () => {
       active = false;
     };
-  }, []);
+  }, [isGuestViewer, isTenantViewer]);
 
   const exactRentalMode: RentalMode | undefined =
     stayMode === "short"
@@ -469,6 +501,8 @@ export default function TenantBrowsePage(): ReactElement {
   }, [retryKey, search, searchQuery]);
 
   useEffect(() => {
+    if (!isTenantViewer) return;
+
     let active = true;
 
     void getSavedListings().then((result) => {
@@ -481,7 +515,104 @@ export default function TenantBrowsePage(): ReactElement {
     return () => {
       active = false;
     };
-  }, []);
+  }, [isTenantViewer]);
+
+  useEffect(() => {
+    if (!isTenantViewer) return;
+
+    const pending = consumePendingAuthAction();
+    if (!pending) return;
+
+    const pendingSearch =
+      pending.kind === "save-search" || pending.kind === "save-listing"
+        ? pending.search
+        : undefined;
+
+    if (pendingSearch) {
+      queueMicrotask(() => {
+        setQueryInput(pendingSearch.query ?? "");
+        setSearchQuery(pendingSearch.query ?? "");
+        setMinPrice(pendingSearch.minPrice);
+        setMaxPrice(pendingSearch.maxPrice);
+        setBedroomFilter(
+          pendingSearch.minBedrooms && pendingSearch.minBedrooms <= 4
+            ? (String(pendingSearch.minBedrooms) as BedroomFilter)
+            : "all",
+        );
+        setBathroomFilter(
+          pendingSearch.minBathrooms && pendingSearch.minBathrooms <= 4
+            ? (String(pendingSearch.minBathrooms) as BathroomFilter)
+            : "all",
+        );
+        setAmenities(pendingSearch.amenities ?? []);
+        setSort(sortOptionFromParam(pendingSearch.sort));
+        if (pendingSearch.rentalMode === "SHORT_STAY") {
+          setStayMode("short");
+          setLongTermPeriod("all");
+        } else if (
+          pendingSearch.rentalMode === "ANNUAL" ||
+          pendingSearch.rentalMode === "MONTHLY"
+        ) {
+          setStayMode("long");
+          setLongTermPeriod(pendingSearch.rentalMode);
+        } else if (pendingSearch.stayType === "SHORT_STAY") {
+          setStayMode("short");
+          setLongTermPeriod("all");
+        } else if (pendingSearch.stayType === "LONG_TERM") {
+          setStayMode("long");
+          setLongTermPeriod("all");
+        }
+      });
+    }
+
+    if (pending.kind === "save-listing") {
+      void saveListing(pending.propertyId).then((result) => {
+        if (result.data) {
+          setSavedIds((current) =>
+            new Set(current).add(String(pending.propertyId)),
+          );
+          notify({ title: "Added to saved homes", variant: "success" });
+          return;
+        }
+
+        notify({
+          title: "Home not saved",
+          description: result.message ?? "Try saving this home again.",
+          variant: "error",
+        });
+      });
+      return;
+    }
+
+    if (pending.kind === "save-search") {
+      void createSavedSearch({
+        alerts: true,
+        amenities: pending.search.amenities,
+        city: pending.search.city,
+        maxPrice: pending.search.maxPrice,
+        minBathrooms: pending.search.minBathrooms,
+        minBedrooms: pending.search.minBedrooms,
+        minPrice: pending.search.minPrice,
+        query: pending.search.query,
+        rentalMode: pending.search.rentalMode,
+        stayType: pending.search.stayType,
+      }).then((result) => {
+        notify(
+          result.data
+            ? {
+                title: "Search saved",
+                description: "We will email you when a new home matches it.",
+                variant: "success",
+              }
+            : {
+                title: "Search not saved",
+                description: result.message ?? "Try saving this search again.",
+                variant: "error",
+              },
+        );
+      });
+    }
+  }, [isTenantViewer, notify]);
 
   useEffect(() => {
     if (!isSearchSheetOpen && !isDesktopFiltersOpen) return;
@@ -860,6 +991,13 @@ export default function TenantBrowsePage(): ReactElement {
       return;
     }
 
+    if (isGuestViewer) {
+      setGuestAction(pendingSaveListing(propertyId, search));
+      return;
+    }
+
+    if (!isTenantViewer) return;
+
     const isSaved = savedIds.has(property.id);
     setSavingIds((current) => new Set(current).add(property.id));
     const result = isSaved
@@ -908,6 +1046,13 @@ export default function TenantBrowsePage(): ReactElement {
     searchQuery || "Where or what are you looking for?";
   const searchPlaceholder = "Search by location or describe your ideal home";
   const saveSearch = async (): Promise<void> => {
+    if (isGuestViewer) {
+      setGuestAction(pendingSaveSearch(search));
+      return;
+    }
+
+    if (!isTenantViewer) return;
+
     setIsSavingSearch(true);
     const result = await createSavedSearch({
       alerts: true,
@@ -1429,7 +1574,11 @@ export default function TenantBrowsePage(): ReactElement {
           >
             <form
               onSubmit={submitSearch}
-              className="pointer-events-auto flex h-14 w-[min(56rem,calc(100vw-28rem))] min-w-[32rem] items-center rounded-full border border-primary/10 bg-bg p-1 shadow-[0_12px_36px_-24px_rgba(1,57,81,0.55)] transition-[border-color,box-shadow] focus-within:border-primary/25 focus-within:shadow-[0_14px_40px_-22px_rgba(1,57,81,0.6)] focus-within:ring-2 focus-within:ring-accent/25"
+              className={`pointer-events-auto flex h-14 items-center rounded-full border border-primary/10 bg-bg p-1 shadow-[0_12px_36px_-24px_rgba(1,57,81,0.55)] transition-[border-color,box-shadow] focus-within:border-primary/25 focus-within:shadow-[0_14px_40px_-22px_rgba(1,57,81,0.6)] focus-within:ring-2 focus-within:ring-accent/25 ${
+                isTenantViewer
+                  ? "w-[min(56rem,calc(100vw-28rem))] min-w-[32rem]"
+                  : "w-[min(44rem,calc(100vw-34rem))] min-w-[30rem]"
+              }`}
             >
               <div className="flex min-w-0 flex-1 items-center gap-2.5 px-4 focus-within:text-primary">
                 <Search
@@ -1522,7 +1671,8 @@ export default function TenantBrowsePage(): ReactElement {
             </p>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-3">
-            {!propertiesLoading &&
+            {canUseTenantActions &&
+            !propertiesLoading &&
             searchStrategy !== "INTERPRETED" &&
             !isFallback &&
             appliedFilters.length > 0 ? (
@@ -1648,8 +1798,15 @@ export default function TenantBrowsePage(): ReactElement {
                 verified={property.verified}
                 availableUnitCount={property.availableUnitCount}
                 isSaved={savedIds.has(property.id)}
-                isSaving={isSavedLoading || savingIds.has(property.id)}
-                onSaveToggle={() => void toggleSavedListing(property)}
+                isSaving={
+                  isTenantViewer &&
+                  (isSavedLoading || savingIds.has(property.id))
+                }
+                onSaveToggle={
+                  canUseTenantActions
+                    ? () => void toggleSavedListing(property)
+                    : undefined
+                }
               />
             ))}
           </div>
@@ -1670,9 +1827,11 @@ export default function TenantBrowsePage(): ReactElement {
         ) : null}
       </section>
 
-      <div className="mx-auto max-w-7xl">
-        <ActivityFeed role="tenant" title="Your activity" limit={3} />
-      </div>
+      {isTenantViewer ? (
+        <div className="mx-auto max-w-7xl">
+          <ActivityFeed role="tenant" title="Your activity" limit={3} />
+        </div>
+      ) : null}
 
       <OverlayPortal>
         <AnimatePresence>
@@ -2039,6 +2198,30 @@ export default function TenantBrowsePage(): ReactElement {
           ) : null}
         </AnimatePresence>
       </OverlayPortal>
+
+      <GuestAuthPrompt
+        action={guestAction}
+        title={
+          guestAction?.kind === "open-saved-search"
+            ? "Sign in to open this saved search"
+            : guestAction?.kind === "save-search"
+              ? "Sign in to save this search"
+              : "Sign in to save this home"
+        }
+        description={
+          guestAction?.kind === "open-saved-search"
+            ? "Log in to restore the filters and alerts connected to this saved search."
+            : guestAction?.kind === "save-search"
+              ? "Create a tenant account or log in to receive alerts when matching homes are listed."
+              : "Create a tenant account or log in to keep this home in your saved listings."
+        }
+        returnTo={
+          typeof window === "undefined"
+            ? "/browse"
+            : `${window.location.pathname}${window.location.search}`
+        }
+        onClose={() => setGuestAction(null)}
+      />
     </main>
   );
 }

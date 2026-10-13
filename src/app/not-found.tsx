@@ -25,7 +25,7 @@ export default function NotFound(): ReactElement {
             Go to homepage
           </Link>
           <Link
-            href="/tenant/browse"
+            href="/browse"
             className="inline-flex min-h-12 items-center justify-center gap-2 font-body text-sm font-bold text-primary transition-all duration-200 ease-in-out hover:text-accent-alt hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             <ArrowLeft size={16} aria-hidden="true" />

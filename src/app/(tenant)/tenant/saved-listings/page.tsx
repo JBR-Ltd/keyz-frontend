@@ -11,9 +11,9 @@ import {
   Sparkles,
   Star,
 } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import PropertyPrice from "@/components/property/PropertyPrice";
+import ResilientPropertyImage from "@/components/property/ResilientPropertyImage";
 import TenantVerificationGate from "@/components/tenant/TenantVerificationGate";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
@@ -22,16 +22,6 @@ import {
   removeSavedListing,
   type SavedProperty,
 } from "@/lib/savedListings";
-import propertyOne from "../../../../../public/images/about-interior.jpg";
-import propertyTwo from "../../../../../public/images/cta-house.jpg";
-import propertyThree from "../../../../../public/images/newsletter-house.jpg";
-
-const FALLBACK_IMAGES = [propertyOne, propertyTwo, propertyThree];
-
-function coverImage(listing: SavedProperty, index: number) {
-  return listing.imageUrl ?? FALLBACK_IMAGES[index % FALLBACK_IMAGES.length];
-}
-
 export default function TenantSavedListingsPage(): ReactElement {
   const { notify } = useToast();
   const [listings, setListings] = useState<SavedProperty[]>([]);
@@ -101,7 +91,7 @@ export default function TenantSavedListingsPage(): ReactElement {
           </p>
         </div>
         <Link
-          href="/tenant/browse"
+          href="/browse"
           className="flex w-fit items-center gap-3 rounded-lg bg-primary px-5 py-4 font-accent text-xs font-bold uppercase tracking-[0.16em] text-white transition-all duration-200 ease-in-out hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         >
           <Sparkles size={17} />
@@ -145,7 +135,7 @@ export default function TenantSavedListingsPage(): ReactElement {
             them side by side.
           </p>
           <Link
-            href="/tenant/browse"
+            href="/browse"
             className="mt-6 inline-flex items-center gap-2 rounded bg-primary px-5 py-3 font-accent text-xs font-bold uppercase tracking-[0.16em] text-white transition-all duration-200 ease-in-out hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             Browse verified homes
@@ -157,8 +147,8 @@ export default function TenantSavedListingsPage(): ReactElement {
           <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
             <article className="overflow-hidden rounded-lg bg-primary text-white shadow-sm">
               <div className="relative h-[28rem]">
-                <Image
-                  src={coverImage(featured, 0)}
+                <ResilientPropertyImage
+                  src={featured.imageUrl}
                   alt={featured.title}
                   fill
                   priority
@@ -215,14 +205,14 @@ export default function TenantSavedListingsPage(): ReactElement {
             </article>
 
             <div className="grid gap-6">
-              {rest.map((listing, index) => (
+              {rest.map((listing) => (
                 <article
                   key={listing.id}
                   className="grid overflow-hidden rounded-lg bg-[var(--color-bg)] shadow-sm sm:grid-cols-[11rem_1fr]"
                 >
                   <div className="relative min-h-48">
-                    <Image
-                      src={coverImage(listing, index + 1)}
+                    <ResilientPropertyImage
+                      src={listing.imageUrl}
                       alt={listing.title}
                       fill
                       sizes="(max-width: 640px) 100vw, 176px"

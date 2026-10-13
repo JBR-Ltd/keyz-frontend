@@ -277,7 +277,7 @@ function PropertyNotFound(): ReactElement {
           can keep browsing verified homes instead.
         </p>
         <Link
-          href="/tenant/browse"
+          href="/browse"
           className="mt-8 inline-flex min-h-12 items-center justify-center rounded-full bg-accent px-6 py-3 font-body text-sm font-bold text-primary transition-all duration-200 ease-in-out hover:bg-primary hover:text-white hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         >
           Browse other listings
@@ -598,7 +598,11 @@ export default function PropertyPageClient({
         return;
       }
 
-      notify({ title: "This listing could not be shared", variant: "error" });
+      notify({
+        title: "This listing could not be shared",
+        description: "Copy the page link and try again.",
+        variant: "error",
+      });
     }
   };
 
@@ -616,7 +620,8 @@ export default function PropertyPageClient({
 
     if (!result.data) {
       notify({
-        title: result.message ?? "This listing could not be updated",
+        title: "Saved homes not updated",
+        description: result.message ?? "Try again in a moment.",
         variant: "error",
       });
       return;
@@ -746,12 +751,12 @@ export default function PropertyPageClient({
         }`}
       >
         <BackButton
-          fallbackHref="/tenant/browse"
+          fallbackHref="/browse"
           roleFallbacks={{
             ADMIN: "/admin/dashboard",
             AGENT: "/agent/saved-listings",
             LANDLORD: "/landlord/saved-listings",
-            TENANT: "/tenant/browse",
+            TENANT: "/browse",
           }}
           className="mb-2 hidden min-h-11 items-center gap-2 rounded-full font-body text-sm font-bold text-muted transition-colors hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent lg:inline-flex"
         >
@@ -963,12 +968,12 @@ export default function PropertyPageClient({
                 />
               </button>
               <BackButton
-                fallbackHref="/tenant/browse"
+                fallbackHref="/browse"
                 roleFallbacks={{
                   ADMIN: "/admin/dashboard",
                   AGENT: "/agent/saved-listings",
                   LANDLORD: "/landlord/saved-listings",
-                  TENANT: "/tenant/browse",
+                  TENANT: "/browse",
                 }}
                 aria-label="Go back"
                 className="absolute left-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-primary text-white transition-all duration-200 ease-in-out hover:bg-black/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"

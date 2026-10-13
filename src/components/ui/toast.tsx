@@ -16,16 +16,21 @@ import {
 import { CheckCircle2, X, XCircle } from "lucide-react";
 import { usePathname } from "next/navigation";
 
-type ToastVariant = "success" | "error";
+type ToastInput =
+  | {
+      title: string;
+      description?: string;
+      variant: "success";
+    }
+  | {
+      title: string;
+      description: string;
+      variant: "error";
+    };
 
-type Toast = {
+type Toast = ToastInput & {
   id: string;
-  title: string;
-  description?: string;
-  variant: ToastVariant;
 };
-
-type ToastInput = Omit<Toast, "id">;
 
 type ToastContextValue = {
   notify: (toast: ToastInput) => void;
@@ -47,10 +52,10 @@ const standaloneToastRoutes = new Set([
 
 function getToastDuration(toast: Toast): number {
   if (toast.variant === "error") {
-    return toast.description ? 8000 : 6500;
+    return 8000;
   }
 
-  return 5000;
+  return toast.description?.trim() ? 6000 : 5000;
 }
 
 function createToastId(): string {
@@ -69,6 +74,8 @@ function ToastItem({ dismiss, toast }: ToastItemProps): ReactElement {
   const pointerInsideRef = useRef(false);
   const focusInsideRef = useRef(false);
   const isSuccess = toast.variant === "success";
+  const description = toast.description?.trim();
+  const hasDescription = Boolean(description);
   const Icon = isSuccess ? CheckCircle2 : XCircle;
 
   const clearTimer = useCallback((): void => {
@@ -137,10 +144,13 @@ function ToastItem({ dismiss, toast }: ToastItemProps): ReactElement {
       animate={{ opacity: 1, scale: 1, y: 0 }}
       exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.98, y: -6 }}
       transition={{ duration: reduceMotion ? 0.12 : 0.2, ease: "easeOut" }}
-      className={`pointer-events-auto grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-3 rounded-2xl border border-border/70 border-l-[3px] bg-bg p-4 shadow-[0_18px_50px_rgba(0,47,73,0.16)] ${
-        isSuccess ? "border-l-accent-alt" : "border-l-red-700"
+      className={`pointer-events-auto grid w-full grid-cols-[auto_minmax(0,1fr)_auto] border border-border/70 bg-bg sm:max-w-[22rem] ${
+        hasDescription
+          ? "items-start gap-3 rounded-2xl p-4 shadow-[0_18px_50px_rgba(0,47,73,0.14)] sm:w-[22rem]"
+          : "items-center gap-2 rounded-xl py-1.5 pl-3 pr-1 shadow-[0_10px_30px_rgba(0,47,73,0.12)] sm:w-fit"
       }`}
-      role="status"
+      role={isSuccess ? "status" : "alert"}
+      aria-atomic="true"
       onPointerEnter={() => {
         pointerInsideRef.current = true;
         pauseTimer();
@@ -156,19 +166,21 @@ function ToastItem({ dismiss, toast }: ToastItemProps): ReactElement {
       onBlurCapture={handleBlur}
     >
       <span
-        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
+        className={`flex shrink-0 items-center justify-center rounded-full ${
+          hasDescription ? "h-10 w-10" : "h-8 w-8"
+        } ${
           isSuccess ? "bg-accent/20 text-primary" : "bg-red-700/10 text-red-700"
         }`}
       >
-        <Icon size={17} aria-hidden="true" />
+        <Icon size={hasDescription ? 17 : 16} aria-hidden="true" />
       </span>
-      <div className="min-w-0 py-0.5">
+      <div className={hasDescription ? "min-w-0 py-0.5" : "min-w-0"}>
         <p className="font-body text-sm font-bold leading-5 text-primary">
           {toast.title}
         </p>
-        {toast.description ? (
+        {description ? (
           <p className="mt-1 font-body text-sm leading-5 text-muted">
-            {toast.description}
+            {description}
           </p>
         ) : null}
       </div>
@@ -199,16 +211,26 @@ export function ToastProvider({
 
   const notify = useCallback((toast: ToastInput) => {
     const id = createToastId();
+    const normalizedToast: ToastInput =
+      toast.variant === "error"
+        ? {
+            ...toast,
+            description: toast.description.trim() || "Try again in a moment.",
+          }
+        : {
+            ...toast,
+            description: toast.description?.trim() || undefined,
+          };
 
     setToasts((current) => {
       const withoutDuplicate = current.filter(
         (existing) =>
-          existing.title !== toast.title ||
-          existing.description !== toast.description ||
-          existing.variant !== toast.variant,
+          existing.title !== normalizedToast.title ||
+          existing.description !== normalizedToast.description ||
+          existing.variant !== normalizedToast.variant,
       );
 
-      return [...withoutDuplicate, { ...toast, id }].slice(-3);
+      return [...withoutDuplicate, { ...normalizedToast, id }].slice(-3);
     });
   }, []);
 
@@ -218,12 +240,9 @@ export function ToastProvider({
     <ToastContext.Provider value={value}>
       {children}
       <div
-        className={`pointer-events-none fixed left-4 right-4 z-[140] grid gap-3 sm:left-auto sm:right-6 sm:w-[22rem] sm:max-w-[calc(100vw-3rem)] ${
+        className={`pointer-events-none fixed left-4 right-4 z-[140] grid justify-items-stretch gap-3 sm:left-auto sm:right-6 sm:w-auto sm:max-w-[calc(100vw-3rem)] sm:justify-items-end ${
           usesStandaloneLayout ? "top-4 sm:top-5" : "top-24 sm:top-24"
         }`}
-        aria-live="polite"
-        aria-atomic="true"
-        aria-relevant="additions"
       >
         <AnimatePresence initial={false} mode="popLayout">
           {toasts.map((toast) => (
@@ -235,7 +254,7 @@ export function ToastProvider({
   );
 }
 
-export function useToast() {
+export function useToast(): ToastContextValue {
   const context = useContext(ToastContext);
 
   if (!context) {

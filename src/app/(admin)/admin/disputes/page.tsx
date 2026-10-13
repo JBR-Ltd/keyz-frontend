@@ -61,6 +61,8 @@ export default function AdminDisputesPage(): ReactElement {
         outcome === "RESOLVED_FOR_TENANT"
           ? "Closed for the tenant, funds refunded"
           : "Closed for the host, funds released",
+      description:
+        "The dispute is closed and the payment records have been updated.",
       variant: "success",
     });
   };

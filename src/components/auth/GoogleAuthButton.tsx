@@ -14,6 +14,7 @@ import { useToast } from "@/components/ui/toast";
 import { AsyncButtonContent } from "@/components/ui/async-button-content";
 import { resolveApiError } from "@/lib/errors";
 import { establishAuthentication, getInstallationId } from "@/lib/authSession";
+import { consumePendingAuthAction, safeReturnTo } from "@/lib/authContinuation";
 
 // === Types
 
@@ -25,6 +26,7 @@ interface GoogleAuthButtonProps {
   /** Called instead of signing in, when sign-up needs a role and none is chosen. */
   onRoleRequired?: () => void;
   label: string;
+  returnTo?: string;
 }
 
 interface GoogleCredentialResponse {
@@ -57,6 +59,7 @@ export default function GoogleAuthButton({
   role,
   onRoleRequired,
   label,
+  returnTo,
 }: GoogleAuthButtonProps): ReactElement | null {
   const router = useRouter();
   const { notify } = useToast();
@@ -116,12 +119,13 @@ export default function GoogleAuthButton({
         if (!establishAuthentication(payload)) {
           throw new Error("Google sign-in did not return a valid session.");
         }
+        if (payload.role !== "TENANT") consumePendingAuthAction();
 
         notify({ title: "Signed in with Google", variant: "success" });
 
         router.replace(
           payload.role === "TENANT"
-            ? "/tenant/browse"
+            ? safeReturnTo(returnTo, "/browse")
             : `/${payload.role.toLowerCase()}/dashboard`,
         );
       } catch (error) {
@@ -135,7 +139,7 @@ export default function GoogleAuthButton({
         setIsSigningIn(false);
       }
     },
-    [notify, router],
+    [notify, returnTo, router],
   );
 
   const initialise = useCallback((): void => {

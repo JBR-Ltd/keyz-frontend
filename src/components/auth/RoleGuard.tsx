@@ -16,7 +16,7 @@ interface RoleGuardProps {
 
 function getRoleHomePath(role: AccountRole): string {
   return role === "TENANT"
-    ? "/tenant/browse"
+    ? "/browse"
     : "/" + role.toLowerCase() + "/dashboard";
 }
 

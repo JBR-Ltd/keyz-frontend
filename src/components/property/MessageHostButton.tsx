@@ -18,6 +18,8 @@ interface MessageHostButtonProps {
   hostRole: PropertyHostRole;
   propertyId: string;
   propertyName: string;
+  onGuestAction?: () => void;
+  openInitially?: boolean;
 }
 
 function formatHostRole(role: PropertyHostRole): ChatPartyRole {
@@ -30,8 +32,26 @@ export default function MessageHostButton({
   hostRole,
   propertyId,
   propertyName,
+  onGuestAction,
+  openInitially = false,
 }: MessageHostButtonProps): ReactElement {
-  const [isThreadOpen, setIsThreadOpen] = useState(false);
+  const [isThreadOpen, setIsThreadOpen] = useState(openInitially);
+
+  if (onGuestAction) {
+    return (
+      <Button
+        type="button"
+        variant="utility-secondary"
+        size="utility"
+        onClick={onGuestAction}
+        className="w-full font-bold sm:w-auto"
+      >
+        <MessageSquareText size={17} aria-hidden="true" />
+        Message {formatHostRole(hostRole)}
+      </Button>
+    );
+  }
+
   const currentUser = getCurrentChatUser();
   const hostLabel = formatHostRole(hostRole);
   const conversationId = getConversationId(propertyId, [

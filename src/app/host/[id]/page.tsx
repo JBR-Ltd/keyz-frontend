@@ -24,7 +24,6 @@ interface HostPageProps {
   params: Promise<{ id: string }>;
 }
 
-const LISTING_FALLBACK_IMAGE = "/images/cta-house.jpg";
 const PAGE_SIZE = 12;
 
 function getInitials(name: string): string {
@@ -253,12 +252,12 @@ export default function HostProfilePage({
             {loadError || "This profile is no longer available on Rello."}
           </p>
           <BackButton
-            fallbackHref="/tenant/browse"
+            fallbackHref="/browse"
             roleFallbacks={{
               ADMIN: "/admin/dashboard",
               AGENT: "/agent/dashboard",
               LANDLORD: "/landlord/dashboard",
-              TENANT: "/tenant/browse",
+              TENANT: "/browse",
             }}
             className="mt-8 inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-body text-sm font-bold text-white transition-all duration-200 ease-in-out hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
@@ -282,12 +281,12 @@ export default function HostProfilePage({
     <main className="min-h-screen bg-bg px-5 pb-7 pt-4 sm:px-8 sm:pt-5 lg:px-10 lg:pb-9 lg:pt-5 xl:px-14">
       <div className="mx-auto max-w-7xl">
         <BackButton
-          fallbackHref="/tenant/browse"
+          fallbackHref="/browse"
           roleFallbacks={{
             ADMIN: "/admin/dashboard",
             AGENT: "/agent/dashboard",
             LANDLORD: "/landlord/dashboard",
-            TENANT: "/tenant/browse",
+            TENANT: "/browse",
           }}
           className="inline-flex min-h-11 items-center gap-2 rounded-full px-1 font-body text-sm font-semibold text-muted transition-colors duration-200 hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         >
@@ -468,7 +467,7 @@ export default function HostProfilePage({
                     }
                     bedrooms={listing.bedrooms}
                     bathrooms={listing.bathrooms}
-                    imageUrl={listing.imageUrl ?? LISTING_FALLBACK_IMAGE}
+                    imageUrl={listing.imageUrl}
                     featured={false}
                     verified
                     availableUnitCount={listing.availableUnitCount}

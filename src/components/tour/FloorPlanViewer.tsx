@@ -103,7 +103,8 @@ export default function FloorPlanViewer({
       } catch (error) {
         notify({
           title: "Could not save the floor plan",
-          description: error instanceof Error ? error.message : undefined,
+          description:
+            error instanceof Error ? error.message : "Try again in a moment.",
           variant: "error",
         });
       } finally {
@@ -115,7 +116,11 @@ export default function FloorPlanViewer({
 
   const handleGenerate = useCallback(async () => {
     if (rooms.length === 0) {
-      notify({ title: "Add a room first", variant: "error" });
+      notify({
+        title: "Add a room first",
+        description: "Create a room before opening the floor plan.",
+        variant: "error",
+      });
       return;
     }
     const layout = computeLayout(rooms);
@@ -138,7 +143,8 @@ export default function FloorPlanViewer({
     } catch (error) {
       notify({
         title: "Could not confirm the floor plan",
-        description: error instanceof Error ? error.message : undefined,
+        description:
+          error instanceof Error ? error.message : "Try again in a moment.",
         variant: "error",
       });
     } finally {
@@ -166,7 +172,8 @@ export default function FloorPlanViewer({
     } catch (error) {
       notify({
         title: "Could not delete the floor plan",
-        description: error instanceof Error ? error.message : undefined,
+        description:
+          error instanceof Error ? error.message : "Try again in a moment.",
         variant: "error",
       });
     } finally {
@@ -190,7 +197,8 @@ export default function FloorPlanViewer({
       } catch (error) {
         notify({
           title: "Could not move the room",
-          description: error instanceof Error ? error.message : undefined,
+          description:
+            error instanceof Error ? error.message : "Try again in a moment.",
           variant: "error",
         });
       }

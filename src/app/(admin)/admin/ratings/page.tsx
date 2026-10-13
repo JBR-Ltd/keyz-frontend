@@ -96,6 +96,7 @@ export default function AdminRatingsPage(): ReactElement {
         status === "PUBLISHED"
           ? "Review is back on the listing"
           : "Review taken off the listing",
+      description: "The review visibility has been updated for renters.",
       variant: "success",
     });
   };

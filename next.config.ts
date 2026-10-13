@@ -1,6 +1,15 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  async redirects() {
+    return [
+      {
+        source: "/tenant/browse",
+        destination: "/browse",
+        permanent: true,
+      },
+    ];
+  },
   images: {
     // Local uploads resolve to a private address, so development serves them directly.
     // Production keeps the optimizer and its private-network protection enabled.

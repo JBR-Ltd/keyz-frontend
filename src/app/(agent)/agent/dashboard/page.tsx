@@ -9,7 +9,6 @@ import {
   CircleDollarSign,
   Clock3,
   FileCheck2,
-  ImageOff,
   MapPin,
   MoreHorizontal,
   Plus,
@@ -18,11 +17,11 @@ import {
   UsersRound,
   type LucideIcon,
 } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useState, type ReactElement } from "react";
 import ActivityFeed from "@/components/dashboard/ActivityFeed";
 import PropertyPrice from "@/components/property/PropertyPrice";
+import ResilientPropertyImage from "@/components/property/ResilientPropertyImage";
 import { IconTile } from "@/components/ui/icon-tile";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { utilityCardVariants } from "@/components/ui/utility-card";
@@ -915,19 +914,14 @@ function PropertiesPanel({
               className="grid gap-4 p-5 transition-colors hover:bg-surface-soft md:grid-cols-[minmax(16rem,1.6fr)_minmax(8rem,0.7fr)_minmax(8rem,0.7fr)_minmax(9rem,0.7fr)_2rem] md:items-center md:gap-5 md:px-6"
             >
               <div className="flex min-w-0 items-center gap-4">
-                {property.imageUrl ? (
-                  <Image
-                    src={property.imageUrl}
-                    alt=""
-                    width={64}
-                    height={64}
-                    className="h-16 w-16 shrink-0 rounded-lg object-cover"
-                  />
-                ) : (
-                  <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-surface-soft text-muted">
-                    <ImageOff size={20} aria-hidden="true" />
-                  </span>
-                )}
+                <ResilientPropertyImage
+                  src={property.imageUrl}
+                  alt={property.title}
+                  width={64}
+                  height={64}
+                  className="h-16 w-16 shrink-0 rounded-lg object-cover"
+                  compactPlaceholder
+                />
                 <div className="min-w-0">
                   <h3 className="truncate font-body text-sm font-bold text-primary">
                     {property.title}

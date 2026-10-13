@@ -255,6 +255,7 @@ export default function AdminRiskPage(): ReactElement {
 
     notify({
       title: status === "CLEARED" ? "Flag cleared" : "Flag escalated",
+      description: "The risk queue has been updated with this decision.",
       variant: "success",
     });
     setReloadKey((current) => current + 1);
@@ -298,7 +299,11 @@ export default function AdminRiskPage(): ReactElement {
       return;
     }
 
-    notify({ title: "Deposit settled", variant: "success" });
+    notify({
+      title: "Deposit settled",
+      description: "Both parties can now see the settlement outcome.",
+      variant: "success",
+    });
     setClaimsReloadKey((current) => current + 1);
     setReloadKey((current) => current + 1);
   };

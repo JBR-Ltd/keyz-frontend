@@ -198,6 +198,10 @@ export default function DisputeBoard({
     );
     notify({
       title: action === "escalate" ? "Sent to Rello" : "Dispute withdrawn",
+      description:
+        action === "escalate"
+          ? "Rello can now review the dispute and its evidence."
+          : "The dispute is closed and both sides will be notified.",
       variant: "success",
     });
   };
@@ -228,7 +232,11 @@ export default function DisputeBoard({
     setDisputes((current) =>
       current.map((item) => (item.id === updated.id ? updated : item)),
     );
-    notify({ title: "Evidence added", variant: "success" });
+    notify({
+      title: "Evidence added",
+      description: "The file is now attached to this dispute.",
+      variant: "success",
+    });
   };
 
   const needsAction = lanes.OPEN.length;

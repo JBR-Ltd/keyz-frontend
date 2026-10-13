@@ -98,6 +98,7 @@ export default function HostViewingsView(): ReactElement {
           : status === "COMPLETED"
             ? "Marked as done"
             : "Viewing declined",
+      description: "The tenant can see this update in their viewing request.",
       variant: "success",
     });
   };

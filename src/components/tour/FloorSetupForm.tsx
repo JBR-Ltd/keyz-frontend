@@ -87,7 +87,8 @@ export default function FloorSetupForm({
     } catch (error) {
       notify({
         title: "Could not add the floor",
-        description: error instanceof Error ? error.message : undefined,
+        description:
+          error instanceof Error ? error.message : "Try again in a moment.",
         variant: "error",
       });
     } finally {
@@ -121,7 +122,8 @@ export default function FloorSetupForm({
     } catch (error) {
       notify({
         title: "Could not update the floor",
-        description: error instanceof Error ? error.message : undefined,
+        description:
+          error instanceof Error ? error.message : "Try again in a moment.",
         variant: "error",
       });
     } finally {
@@ -145,7 +147,8 @@ export default function FloorSetupForm({
     } catch (error) {
       notify({
         title: "Could not delete the floor",
-        description: error instanceof Error ? error.message : undefined,
+        description:
+          error instanceof Error ? error.message : "Try again in a moment.",
         variant: "error",
       });
     } finally {
