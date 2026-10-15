@@ -6,8 +6,8 @@ import { propertyPath } from "@/lib/publicIds";
 import {
   ArrowLeft,
   CircleAlert,
+  Clock,
   FileText,
-  Loader2,
   ShieldCheck,
   UploadCloud,
 } from "lucide-react";
@@ -183,7 +183,7 @@ export default function ListingVerificationView({
           className="max-w-2xl rounded-lg bg-surface-soft p-8 shadow-sm"
           aria-live="polite"
         >
-          <Loader2 size={28} className="text-accent-alt" aria-hidden="true" />
+          <Clock size={28} className="text-accent-alt" aria-hidden="true" />
           <h2 className="mt-4 font-display text-2xl font-bold text-primary">
             Your bill is under review
           </h2>
