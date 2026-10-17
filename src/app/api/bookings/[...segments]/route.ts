@@ -1,5 +1,6 @@
 import { clientAddressHeaders } from "@/app/api/_clientAddress";
 import { rejectCrossSiteMutation } from "@/app/api/_csrf";
+import { passThroughFile } from "@/app/api/_fileResponse";
 import { listHeaders } from "@/app/api/_requestId";
 import { getSessionToken } from "@/app/api/_session";
 
@@ -72,9 +73,15 @@ async function handle(
           ...(contentType ? { "Content-Type": contentType } : {}),
         },
         body: method === "GET" ? undefined : await request.arrayBuffer(),
+        redirect: "manual",
         signal: controller.signal,
       },
     );
+    const file = await passThroughFile(response);
+
+    if (file) {
+      return file;
+    }
 
     const body = await response.text();
 

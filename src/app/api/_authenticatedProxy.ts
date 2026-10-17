@@ -1,6 +1,7 @@
 import { clientAddressHeaders } from "@/app/api/_clientAddress";
 import { listHeaders, requestIdHeader } from "@/app/api/_requestId";
 import { rejectCrossSiteMutation } from "@/app/api/_csrf";
+import { passThroughFile } from "@/app/api/_fileResponse";
 import { getSessionToken } from "@/app/api/_session";
 
 const API_BASE_URL = process.env.API_BASE_URL;
@@ -74,25 +75,14 @@ export async function proxyAuthenticatedRequest({
       method,
       headers,
       body: body && body.byteLength > 0 ? body : undefined,
+      redirect: "manual",
       signal: controller.signal,
     });
 
-    const contentDisposition = response.headers.get("Content-Disposition");
+    const file = await passThroughFile(response);
 
-    // A download (a CSV export) passes through as bytes with its filename
-    if (response.ok && contentDisposition) {
-      return new Response(await response.arrayBuffer(), {
-        status: response.status,
-        headers: {
-          "Content-Type":
-            response.headers.get("Content-Type") ?? "application/octet-stream",
-          "Content-Disposition": contentDisposition,
-          "Cache-Control": response.headers.get("Cache-Control") ?? "no-store",
-          "X-Content-Type-Options":
-            response.headers.get("X-Content-Type-Options") ?? "nosniff",
-          ...requestIdHeader(response),
-        },
-      });
+    if (file) {
+      return file;
     }
 
     const responseBody = await response.text();
