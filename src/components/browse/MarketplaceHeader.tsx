@@ -37,13 +37,8 @@ export default function MarketplaceHeader({
               priority
             />
           </span>
-          <span className="hidden sm:block">
-            <span className="block font-display text-2xl font-bold leading-none text-primary">
-              Rello
-            </span>
-            <span className="mt-1 block font-body text-[10px] font-medium uppercase tracking-[0.18em] text-muted">
-              Find a home
-            </span>
+          <span className="hidden font-display text-2xl font-bold leading-none text-primary sm:block">
+            Rello
           </span>
         </Link>
 

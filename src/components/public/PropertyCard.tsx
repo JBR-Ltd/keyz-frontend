@@ -3,7 +3,6 @@ import Link from "next/link";
 import { Bath, BedDouble, Heart, Loader2, MapPin } from "lucide-react";
 import PropertyPrice from "@/components/property/PropertyPrice";
 import ResilientPropertyImage from "@/components/property/ResilientPropertyImage";
-import VerifiedBadge from "@/components/ui/VerifiedBadge";
 import { propertyPath } from "@/lib/publicIds";
 import type { RentalMode } from "@/lib/hostListings";
 
@@ -26,7 +25,6 @@ interface PropertyCardProps {
   isSaved?: boolean;
   isSaving?: boolean;
   onSaveToggle?: () => void;
-  verified?: boolean;
   availableUnitCount?: number;
 }
 
@@ -46,7 +44,6 @@ export default function PropertyCard({
   isSaved = false,
   isSaving = false,
   onSaveToggle,
-  verified = false,
   availableUnitCount,
 }: PropertyCardProps): ReactElement {
   const propertyHref = propertyPath({ id, publicId, slug });
@@ -70,11 +67,6 @@ export default function PropertyCard({
             }
             className="object-cover transition-transform duration-300 ease-in-out group-hover:scale-[1.04]"
           />
-          {verified ? (
-            <span className="absolute left-3 top-3">
-              <VerifiedBadge size="sm" />
-            </span>
-          ) : null}
         </div>
 
         <div className="flex min-h-56 flex-1 flex-col p-5 sm:p-6">

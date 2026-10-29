@@ -469,7 +469,6 @@ export default function HostProfilePage({
                     bathrooms={listing.bathrooms}
                     imageUrl={listing.imageUrl}
                     featured={false}
-                    verified
                     availableUnitCount={listing.availableUnitCount}
                   />
                 ))}

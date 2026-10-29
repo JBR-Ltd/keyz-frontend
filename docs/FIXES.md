@@ -1098,3 +1098,107 @@ Existing rental catalogue and saved-search contracts remain unchanged.
 - Local uploads continue to load from the backend `/uploads` resource, so uncached development images require the backend to be running.
 - Production listing media continues to use public S3 object URLs supported by the existing Next.js image allowlist.
 - The production bucket must permit public object reads for public listing media. Private verification evidence remains outside this behavior.
+
+## Live Marketplace Landing Page
+
+### What was there before
+
+- The homepage still presented Rello as a pre-launch waitlist after the public catalogue, accounts, rental requests, and host workspaces were available.
+- A full-screen stock photograph, animated marquee, fictional properties, and oversized branding did not match the restrained public Browse and account interfaces.
+- The main action sent visitors to the waitlist instead of helping them search the live catalogue.
+- Homepage metadata continued describing luxury property marketing and waitlist access.
+
+### How it was fixed
+
+- Rebuilt the homepage as a tenant-led marketplace entry point with role-aware navigation and a functional catalogue search.
+- Added a validated `/browse?query=...` handoff so homepage searches populate and run through the existing keyword or natural-language search flow.
+- Replaced fictional property examples with up to three available rentals from the public catalogue and a useful fallback when the preview is unavailable.
+- Added concise verified-listing, rental-term, payment, move-in, and host sections using the same typography, spacing, colors, controls, and image behavior as the rest of Rello.
+- Moved the waitlist to the footer and updated the navigation, footer, metadata, canonical URL, and structured search data for the live product.
+
+### Interfaces and behavior preserved
+
+- The waitlist form and API remain available at `/waitlist`.
+- Browse continues using the existing listing and natural-language search APIs.
+- No backend, database, authentication, property, or payment contract changed.
+
+### Editorial design correction
+
+- The first live-marketplace redesign followed the dashboard system too closely, with a large navy information panel, repeated icons, bordered feature groups, and property cards that made the homepage feel like another workspace.
+- Replaced that product-heavy hierarchy with an image-led editorial hero, an overlapping search surface, open listing previews, and more deliberate whitespace.
+- Combined trust and rental steps into one typographic section and moved the host message onto a photographic callout so the page has four focused sections.
+- Added a cinematic hero reveal with a complete reduced-motion fallback while keeping listing data and the remaining page server rendered.
+
+### Marketplace reference redesign
+
+- The editorial revision still made the search secondary to its composition and used unequal property sizes that made direct comparison harder.
+- Studied Zillow's search priority, Airbnb's image-led discovery, and Spleet's clear renter and host pathways without adopting their branding or unrelated product features.
+- Rebuilt the hero around a panoramic property image and the existing natural-language search, with the search placed before the image on mobile and overlapping it on desktop.
+- Standardized live listing previews into equal image proportions, added a mobile snap rail, and surfaced only real catalogue cities as location shortcuts.
+- Reorganized trust information and the rental journey into one open sequence, then changed the host callout from an image overlay to a readable image-and-copy split.
+- Kept role-aware navigation, live catalogue data, resilient images, marketplace metadata, host registration, and footer-only waitlist access unchanged.
+
+### Marketplace-first correction
+
+- The image-led revision still behaved like an editorial brand page. Its decorative hero consumed most of the first viewport, the search felt secondary, and live inventory started too far down the page.
+- Removed the decorative hero photograph and replaced it with a compact search canvas that exposes real catalogue locations and leads directly into available homes.
+- Increased the homepage preview to six real listings, standardized their comparison layout, and centered incomplete desktop rows without leaving reserved empty columns.
+- Compressed trust, rental steps, and the host pathway so marketplace discovery remains the dominant purpose of the page.
+- Preserved role-aware navigation, natural-language search, real listing data, resilient images, city pages, host registration, and the footer-only waitlist.
+
+### Image-backed search hero
+
+- The compact search canvas still divided attention between an eyebrow, headline, description, search, and city shortcuts before visitors reached inventory.
+- Reintroduced the bright interior as a responsive hero background while removing every visible marketing line from the hero.
+- Centered one high-contrast search surface over the photograph and kept a visually hidden page heading for semantic structure and search indexing.
+- Applied only a light navy gradient so the interior remains bright, and moved live catalogue-city links into a separate transition row beneath the image.
+- Reduced the gap before available homes while preserving natural-language search, empty-query behavior, responsive controls, and reduced motion.
+- Restored `Find your next home.` as the single visible page heading above the centered search, using navy display typography and a light contrast shadow without bringing back the removed eyebrow or supporting copy.
+
+### Landing navigation refinement
+
+- The translucent 72px landing navbar could merge visually with the navy trust section, which reduced logo, link, and account-action contrast.
+- Replaced it with a compact 64px opaque marketplace header, a quiet divider and shadow, and consistent contrast at every scroll position.
+- Added section-aware desktop and mobile navigation states for `How it works` and `For hosts`, including direct hash and browser-history synchronization.
+- Added matching sticky-header offsets to both landing anchors and Escape dismissal for the mobile menu.
+
+### Hero location shortcut removal
+
+- Removed the `Explore` city shortcut row beneath the landing hero so available homes follow the search experience directly.
+- Kept city landing pages, sitemap entries, and footer city navigation available.
+
+### Waitlist discoverability and redesign
+
+- The waitlist was available only as a quiet footer link, while its page retained the old full-screen split layout, square controls, and remote image dependency.
+- Added Waitlist to the shared desktop and mobile landing navigation with route-aware active styling.
+- Rebuilt the page as a responsive cream, navy, and gold marketplace composition using a local Rello image, rounded controls, and a compact two-column form.
+- Preserved the early-access positioning, submission contract, recoverable field values, loading and error feedback, toast messages, and compatibility route.
+- Replaced the oversized success panel with a focused confirmation and a route back to available homes.
+
+## Property Verification Badge Cleanup
+
+### What was there before
+
+- Every published property repeated a `Verified` badge even though publication already requires property verification.
+- The repeated badges competed with price, location, and availability across the homepage, Browse, property details, and saved-home comparisons.
+
+### How it was fixed
+
+- Removed property-level verification badges and the redundant saved-home comparison row.
+- Kept marketplace trust messaging so visitors still understand that Rello reviews published homes.
+- Preserved identity, account, payout, and host verification indicators, together with operational property review states.
+- Kept property verification data in place for publication rules and host or administrator workflows.
+
+## Connected Rental Journey
+
+### What was there before
+
+- Trust benefits and rental steps appeared as two consecutive four-column grids inside one navy section.
+- Repeated dividers and equal text treatment made the section feel like stacked data tables instead of one guided story.
+
+### How it was fixed
+
+- Paired each trust benefit with the rental stage it supports and presented the result as one four-step journey.
+- Added a connected gold path that draws once as the section enters view, followed by restrained staggered stage reveals.
+- Used a horizontal path on desktop and a vertical path on smaller screens without introducing card containers or hover effects.
+- Added an immediate final-state presentation for visitors who prefer reduced motion.

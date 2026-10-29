@@ -26,20 +26,23 @@ const syne = Syne({
 });
 
 export const metadata: Metadata = {
-  title: "Rello Estate",
+  title: {
+    default: "Rello",
+    template: "%s | Rello",
+  },
   description:
-    "Luxury property marketing and waitlist access for premium listings.",
+    "Find verified rentals and shortlets, compare clear terms, and manage your move with Rello.",
   openGraph: {
-    title: "Rello Estate",
+    title: "Rello",
     description:
-      "Luxury property marketing and waitlist access for premium listings.",
+      "Find verified rentals and shortlets, compare clear terms, and manage your move with Rello.",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Rello Estate",
+    title: "Rello",
     description:
-      "Luxury property marketing and waitlist access for premium listings.",
+      "Find verified rentals and shortlets, compare clear terms, and manage your move with Rello.",
   },
 };
 

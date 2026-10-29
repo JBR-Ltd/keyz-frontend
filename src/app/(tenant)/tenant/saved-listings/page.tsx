@@ -273,7 +273,6 @@ export default function TenantSavedListingsPage(): ReactElement {
               {[
                 ["Bedrooms", String(featured.bedrooms)],
                 ["Bathrooms", String(featured.bathrooms)],
-                ["Verified", featured.verified ? "Yes" : "Not yet"],
                 [
                   "Host rating",
                   featured.host?.rating

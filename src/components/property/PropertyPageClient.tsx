@@ -770,7 +770,6 @@ export default function PropertyPageClient({
               <h1 className="font-display text-4xl font-bold leading-tight text-primary">
                 {property.title}
               </h1>
-              {property.verified ? <VerifiedBadge size="sm" /> : null}
             </div>
             <p className="mt-2 flex items-center gap-2 font-body text-sm text-muted">
               <MapPin
@@ -1145,7 +1144,6 @@ export default function PropertyPageClient({
                 <h1 className="font-display text-3xl font-bold leading-tight text-primary">
                   {property.title}
                 </h1>
-                {property.verified ? <VerifiedBadge size="sm" /> : null}
               </div>
               <p className="mt-1 flex items-center gap-2 font-body text-sm text-muted">
                 <MapPin

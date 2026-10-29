@@ -1,13 +1,15 @@
 "use client";
 
-import { apiRequest } from "@/lib/apiRequest";
-import { FormEvent, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { Loader2 } from "lucide-react";
+import { ArrowRight, Check, Loader2 } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import { useState, type FormEvent, type ReactElement } from "react";
 import Footer from "@/components/Footer";
 import Navbar from "@/components/Navbar";
 import { Select, toSelectOptions } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
+import { apiRequest } from "@/lib/apiRequest";
 
 const cities = [
   "Abia",
@@ -50,10 +52,10 @@ const cities = [
 
 const roles = ["Tenant", "Agent", "Landlord"];
 
-const waitlistImage =
-  "https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=1800&q=85";
-
 type FormStatus = "idle" | "submitting" | "success" | "error";
+
+const FIELD_CLASS_NAME =
+  "mt-2 min-h-12 w-full rounded-xl border border-border bg-white px-4 py-3 font-body text-base text-primary outline-none transition-colors placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-accent/35";
 
 function getResponseMessage(value: unknown): string | null {
   if (!value || typeof value !== "object" || !("message" in value)) {
@@ -65,7 +67,7 @@ function getResponseMessage(value: unknown): string | null {
   return typeof message === "string" ? message : null;
 }
 
-export default function WaitlistPage() {
+export default function WaitlistPage(): ReactElement {
   const [status, setStatus] = useState<FormStatus>("idle");
   const [message, setMessage] = useState("");
   const reduceMotion = useReducedMotion();
@@ -136,199 +138,215 @@ export default function WaitlistPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[var(--color-bg)] text-slate-950">
+    <main className="min-h-screen bg-bg text-primary">
       <Navbar />
 
-      <section className="grid min-h-[calc(100vh-73px)] lg:grid-cols-2">
-        <div className="relative hidden min-h-full overflow-hidden border-r border-primary lg:block">
-          <div
-            className="absolute inset-0 bg-cover bg-center"
-            style={{ backgroundImage: `url(${waitlistImage})` }}
-          />
-          <div className="absolute inset-0 bg-black/10" />
-          <div className="absolute bottom-10 left-10 h-56 w-56 border-2 border-accent" />
-        </div>
+      <section className="px-5 py-8 sm:px-8 sm:py-12 lg:px-10 lg:py-16">
+        <div className="mx-auto grid max-w-7xl overflow-hidden rounded-[1.75rem] border border-border bg-white shadow-[0_24px_70px_-54px_rgba(4,52,76,0.55)] lg:grid-cols-[0.9fr_1.1fr]">
+          <div className="relative min-h-[22rem] overflow-hidden sm:min-h-[28rem] lg:min-h-full">
+            <Image
+              src="/images/newsletter-house.jpg"
+              alt="A modern home illuminated in the evening"
+              fill
+              priority
+              sizes="(min-width: 1024px) 45vw, 100vw"
+              className="object-cover object-center"
+            />
+            <div
+              className="absolute inset-0 bg-[linear-gradient(180deg,rgba(3,29,43,0.08),rgba(3,29,43,0.82))]"
+              aria-hidden="true"
+            />
+            <div className="absolute inset-x-0 bottom-0 p-7 text-white sm:p-10 lg:p-12">
+              <p className="font-accent text-xs font-bold uppercase tracking-[0.26em] text-accent">
+                Early access
+              </p>
+              <h1 className="mt-4 max-w-lg font-display text-4xl font-bold leading-[0.95] sm:text-5xl lg:text-6xl">
+                Be first through the door.
+              </h1>
+              <p className="mt-5 max-w-lg font-body text-sm leading-6 text-white/75 sm:text-base sm:leading-7">
+                Join renters waiting for verified homes, clear costs, and early
+                launch access in Nigerian cities.
+              </p>
+            </div>
+          </div>
 
-        <div className="flex min-h-[calc(100vh-73px)] items-center bg-[var(--color-bg)] px-4 py-16 sm:px-6 lg:px-12">
           <motion.div
-            className="mx-auto w-full max-w-xl"
-            initial={reduceMotion ? false : { opacity: 0, y: 28 }}
-            whileInView={reduceMotion ? undefined : { opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-100px" }}
-            transition={{ duration: 0.5, ease: "easeOut" }}
+            className="flex min-h-[38rem] items-center bg-bg p-6 sm:p-10 lg:p-12"
+            initial={reduceMotion ? false : { opacity: 0, y: 18 }}
+            animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+            transition={{ duration: reduceMotion ? 0 : 0.4, ease: "easeOut" }}
           >
-            {status === "success" ? (
-              <motion.div
-                className="flex min-h-[32rem] flex-col justify-center border-2 border-primary bg-white p-8"
-                initial={reduceMotion ? false : { opacity: 0, y: 20 }}
-                animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, ease: "easeOut" }}
-                role="status"
-              >
-                <motion.svg
-                  width="128"
-                  height="128"
-                  viewBox="0 0 128 128"
-                  fill="none"
-                  className="text-accent"
-                  aria-hidden="true"
+            <div className="mx-auto w-full max-w-2xl">
+              {status === "success" ? (
+                <motion.div
+                  initial={reduceMotion ? false : { opacity: 0, y: 12 }}
+                  animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+                  transition={{ duration: reduceMotion ? 0 : 0.35 }}
+                  role="status"
+                  aria-live="polite"
                 >
-                  <motion.path
-                    d="M28 67L53 91L101 37"
-                    stroke="currentColor"
-                    strokeWidth="9"
-                    strokeLinecap="square"
-                    strokeLinejoin="miter"
-                    initial={reduceMotion ? false : { pathLength: 0 }}
-                    animate={reduceMotion ? undefined : { pathLength: 1 }}
-                    transition={{ duration: 0.5, ease: "easeOut" }}
-                  />
-                </motion.svg>
-                <h1 className="mt-10 font-display text-5xl font-bold leading-tight text-primary sm:text-6xl">
-                  You&apos;re on the list.
-                </h1>
-                <p className="mt-5 max-w-md font-body text-lg leading-8 text-slate-600">
-                  {message}
-                </p>
-              </motion.div>
-            ) : (
-              <>
-                <p className="font-accent text-xs font-bold uppercase tracking-[0.3em] text-accent">
-                  Early Access
-                </p>
-                <h1 className="mt-5 font-display text-5xl font-bold leading-[0.95] text-primary sm:text-6xl">
-                  Be first through the door.
-                </h1>
-                <p className="mt-6 font-body text-lg leading-8 text-slate-600">
-                  Join renters waiting for verified homes, clear costs, and
-                  early launch access in Nigerian cities.
-                </p>
-
-                <form className="mt-10 grid gap-5" onSubmit={handleSubmit}>
-                  <label className="block">
-                    <span className="font-body text-sm font-bold text-primary">
-                      First Name
-                    </span>
-                    <input
-                      type="text"
-                      name="firstName"
-                      placeholder="Tunde"
-                      autoComplete="given-name"
-                      required
-                      className="mt-2 min-h-14 w-full border border-primary bg-white px-4 py-3 font-body text-base text-slate-950 outline-none transition-all duration-200 ease-in-out placeholder:text-slate-400 focus:border-accent focus:ring-2 focus:ring-accent/30"
-                    />
-                  </label>
-
-                  <label className="block">
-                    <span className="font-body text-sm font-bold text-primary">
-                      Last Name
-                    </span>
-                    <input
-                      type="text"
-                      name="lastName"
-                      placeholder="Musa"
-                      autoComplete="family-name"
-                      required
-                      className="mt-2 min-h-14 w-full border border-primary bg-white px-4 py-3 font-body text-base text-slate-950 outline-none transition-all duration-200 ease-in-out placeholder:text-slate-400 focus:border-accent focus:ring-2 focus:ring-accent/30"
-                    />
-                  </label>
-
-                  <label className="block">
-                    <span className="font-body text-sm font-bold text-primary">
-                      Email
-                    </span>
-                    <input
-                      type="email"
-                      name="email"
-                      placeholder="you@example.com"
-                      autoComplete="email"
-                      required
-                      className="mt-2 min-h-14 w-full border border-primary bg-white px-4 py-3 font-body text-base text-slate-950 outline-none transition-all duration-200 ease-in-out placeholder:text-slate-400 focus:border-accent focus:ring-2 focus:ring-accent/30"
-                    />
-                  </label>
-
-                  <label className="block">
-                    <span className="font-body text-sm font-bold text-primary">
-                      Phone
-                    </span>
-                    <input
-                      type="tel"
-                      name="phone"
-                      placeholder="+2341234567890"
-                      autoComplete="tel"
-                      required
-                      className="mt-2 min-h-14 w-full border border-primary bg-white px-4 py-3 font-body text-base text-slate-950 outline-none transition-all duration-200 ease-in-out placeholder:text-slate-400 focus:border-accent focus:ring-2 focus:ring-accent/30"
-                    />
-                  </label>
-
-                  <label className="block">
-                    <span className="font-body text-sm font-bold text-primary">
-                      City
-                    </span>
-                    <input
-                      list="waitlist-city-options"
-                      name="city"
-                      placeholder="Start typing or select a city"
-                      autoComplete="address-level2"
-                      required
-                      className="mt-2 min-h-14 w-full border border-primary bg-white px-4 py-3 font-body text-base text-slate-950 outline-none transition-all duration-200 ease-in-out focus:border-accent focus:ring-2 focus:ring-accent/30"
-                    />
-                    <datalist id="waitlist-city-options">
-                      {cities.map((city) => (
-                        <option key={city} value={city}>
-                          {city}
-                        </option>
-                      ))}
-                    </datalist>
-                  </label>
-
-                  <label className="block">
-                    <span className="font-body text-sm font-bold text-primary">
-                      Role
-                    </span>
-                    <Select
-                      name="role"
-                      required
-                      ariaLabel="Role"
-                      placeholder="Select your role"
-                      className="mt-2 min-h-14 w-full border border-primary bg-white px-4 py-3 font-body text-base text-slate-950 outline-none transition-all duration-200 ease-in-out focus:border-accent focus:ring-2 focus:ring-accent/30"
-                      options={toSelectOptions([...roles])}
-                    />
-                  </label>
-
-                  {status === "error" && message ? (
-                    <motion.p
-                      className="border border-red-700 bg-red-50 px-4 py-3 font-body text-sm font-bold text-red-700"
-                      initial={reduceMotion ? false : { opacity: 0, y: 8 }}
-                      animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
-                      transition={{ duration: 0.25, ease: "easeOut" }}
-                      role="status"
-                    >
-                      {message}
-                    </motion.p>
-                  ) : null}
-
-                  <motion.button
-                    type="submit"
-                    disabled={status === "submitting"}
-                    className="inline-flex min-h-14 w-full items-center justify-center bg-primary px-5 py-4 font-body text-base font-bold text-white transition-all duration-200 ease-in-out hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-70"
-                    whileTap={reduceMotion ? undefined : { scale: 0.98 }}
+                  <span className="flex h-14 w-14 items-center justify-center rounded-full bg-accent text-primary">
+                    <Check size={26} strokeWidth={2.5} aria-hidden="true" />
+                  </span>
+                  <h2 className="mt-6 font-display text-4xl font-bold leading-tight text-primary sm:text-5xl">
+                    You&apos;re on the list.
+                  </h2>
+                  <p className="mt-4 max-w-lg font-body text-base leading-7 text-muted">
+                    {message}
+                  </p>
+                  <Link
+                    href="/browse"
+                    className="mt-8 inline-flex min-h-12 items-center gap-2 rounded-full bg-primary px-6 font-body text-sm font-bold text-white transition-colors hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
                   >
-                    {status === "submitting" ? (
-                      <span className="inline-flex items-center gap-2">
-                        <Loader2
-                          className="h-4 w-4 animate-spin"
-                          aria-hidden="true"
-                        />
-                        Joining...
+                    Browse available homes
+                    <ArrowRight size={17} aria-hidden="true" />
+                  </Link>
+                </motion.div>
+              ) : (
+                <>
+                  <p className="font-accent text-xs font-bold uppercase tracking-[0.22em] text-accent-alt">
+                    Join the waitlist
+                  </p>
+                  <h2 className="mt-3 font-display text-3xl font-bold leading-tight text-primary sm:text-4xl">
+                    Tell us where you want to move.
+                  </h2>
+                  <p className="mt-3 max-w-xl font-body text-sm leading-6 text-muted">
+                    Share a few details so we can keep you informed about early
+                    access in your city.
+                  </p>
+
+                  <form
+                    className="mt-8 grid gap-x-4 gap-y-5 sm:grid-cols-2"
+                    onSubmit={handleSubmit}
+                    aria-busy={status === "submitting"}
+                  >
+                    <label className="block">
+                      <span className="font-body text-sm font-bold text-primary">
+                        First name
                       </span>
-                    ) : (
-                      "Join Waitlist"
-                    )}
-                  </motion.button>
-                </form>
-              </>
-            )}
+                      <input
+                        type="text"
+                        name="firstName"
+                        placeholder="Tunde"
+                        autoComplete="given-name"
+                        required
+                        className={FIELD_CLASS_NAME}
+                      />
+                    </label>
+
+                    <label className="block">
+                      <span className="font-body text-sm font-bold text-primary">
+                        Last name
+                      </span>
+                      <input
+                        type="text"
+                        name="lastName"
+                        placeholder="Musa"
+                        autoComplete="family-name"
+                        required
+                        className={FIELD_CLASS_NAME}
+                      />
+                    </label>
+
+                    <label className="block">
+                      <span className="font-body text-sm font-bold text-primary">
+                        Email
+                      </span>
+                      <input
+                        type="email"
+                        name="email"
+                        placeholder="you@example.com"
+                        autoComplete="email"
+                        required
+                        className={FIELD_CLASS_NAME}
+                      />
+                    </label>
+
+                    <label className="block">
+                      <span className="font-body text-sm font-bold text-primary">
+                        Phone
+                      </span>
+                      <input
+                        type="tel"
+                        name="phone"
+                        placeholder="+2341234567890"
+                        autoComplete="tel"
+                        required
+                        className={FIELD_CLASS_NAME}
+                      />
+                    </label>
+
+                    <label className="block">
+                      <span className="font-body text-sm font-bold text-primary">
+                        City
+                      </span>
+                      <input
+                        list="waitlist-city-options"
+                        name="city"
+                        placeholder="Start typing or select a city"
+                        autoComplete="address-level2"
+                        required
+                        className={FIELD_CLASS_NAME}
+                      />
+                      <datalist id="waitlist-city-options">
+                        {cities.map((city) => (
+                          <option key={city} value={city}>
+                            {city}
+                          </option>
+                        ))}
+                      </datalist>
+                    </label>
+
+                    <label className="block">
+                      <span className="font-body text-sm font-bold text-primary">
+                        Role
+                      </span>
+                      <Select
+                        name="role"
+                        required
+                        ariaLabel="Role"
+                        placeholder="Select your role"
+                        className={FIELD_CLASS_NAME}
+                        options={toSelectOptions([...roles])}
+                      />
+                    </label>
+
+                    {status === "error" && message ? (
+                      <motion.p
+                        className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 font-body text-sm font-semibold text-red-700 sm:col-span-2"
+                        initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+                        animate={
+                          reduceMotion ? undefined : { opacity: 1, y: 0 }
+                        }
+                        transition={{ duration: 0.25, ease: "easeOut" }}
+                        role="alert"
+                      >
+                        {message}
+                      </motion.p>
+                    ) : null}
+
+                    <motion.button
+                      type="submit"
+                      disabled={status === "submitting"}
+                      className="inline-flex min-h-14 w-full items-center justify-center rounded-full bg-primary px-6 py-4 font-body text-base font-bold text-white transition-colors hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-65 sm:col-span-2"
+                      whileTap={reduceMotion ? undefined : { scale: 0.98 }}
+                    >
+                      {status === "submitting" ? (
+                        <span className="inline-flex items-center gap-2">
+                          <Loader2
+                            className="h-4 w-4 animate-spin"
+                            aria-hidden="true"
+                          />
+                          Joining...
+                        </span>
+                      ) : (
+                        "Join Waitlist"
+                      )}
+                    </motion.button>
+                  </form>
+                </>
+              )}
+            </div>
           </motion.div>
         </div>
       </section>

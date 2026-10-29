@@ -304,6 +304,7 @@ export default function TenantBrowsePage(): ReactElement {
   const [retryKey, setRetryKey] = useState(0);
   const [queryInput, setQueryInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [isPublicQueryReady, setIsPublicQueryReady] = useState(false);
   const [minPrice, setMinPrice] = useState<number | undefined>();
   const [maxPrice, setMaxPrice] = useState<number | undefined>();
   const [bedroomFilter, setBedroomFilter] = useState<BedroomFilter>("all");
@@ -344,6 +345,28 @@ export default function TenantBrowsePage(): ReactElement {
   const desktopFilterTriggerRef = useRef<HTMLButtonElement>(null);
   const resultsHeadingRef = useRef<HTMLHeadingElement>(null);
   const dialogRef = useDialogFocus<HTMLDivElement>(isSearchSheetOpen);
+
+  useEffect(() => {
+    const rawQuery = new URLSearchParams(window.location.search).get("query");
+    const normalizedQuery = rawQuery?.trim() ?? "";
+    const validQuery =
+      normalizedQuery.length <= DESCRIBE_QUERY_MAX_LENGTH
+        ? normalizedQuery
+        : "";
+    let active = true;
+
+    queueMicrotask(() => {
+      if (!active) return;
+
+      setQueryInput(validQuery);
+      setSearchQuery(validQuery);
+      setIsPublicQueryReady(true);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   /** Every filter is sent before pagination, so later-page matches remain visible. */
   // An alert email may carry the legacy route; its redirect preserves this id
@@ -462,6 +485,8 @@ export default function TenantBrowsePage(): ReactElement {
   ]);
 
   useEffect(() => {
+    if (!isPublicQueryReady) return;
+
     let active = true;
     const generation = ++searchGeneration.current;
     paginationGeneration.current = null;
@@ -498,7 +523,7 @@ export default function TenantBrowsePage(): ReactElement {
       active = false;
       searchGeneration.current = generation + 1;
     };
-  }, [retryKey, search, searchQuery]);
+  }, [isPublicQueryReady, retryKey, search, searchQuery]);
 
   useEffect(() => {
     if (!isTenantViewer) return;
@@ -1795,7 +1820,6 @@ export default function TenantBrowsePage(): ReactElement {
                 bathrooms={property.bathrooms}
                 imageUrl={property.images[0]}
                 featured={false}
-                verified={property.verified}
                 availableUnitCount={property.availableUnitCount}
                 isSaved={savedIds.has(property.id)}
                 isSaving={

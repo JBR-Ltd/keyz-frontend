@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { BackendProperty } from "@/lib/hostListings";
+import type { BackendProperty, RentalMode } from "@/lib/hostListings";
 
 /**
  * Server-side reads of the public listing data, for metadata, structured data,
@@ -29,7 +29,7 @@ export interface SeoProperty {
   images: SeoPropertyImage[];
   price: number | null;
   publicId: string | null;
-  rentalMode: string | null;
+  rentalMode: RentalMode | null;
   slug: string | null;
   title: string;
 }
@@ -53,6 +53,12 @@ function asNumber(value: unknown): number | null {
 
 function asText(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function asRentalMode(value: unknown): RentalMode | null {
+  return value === "ANNUAL" || value === "MONTHLY" || value === "SHORT_STAY"
+    ? value
+    : null;
 }
 
 function toSeoProperty(value: unknown): SeoProperty | null {
@@ -91,7 +97,7 @@ function toSeoProperty(value: unknown): SeoProperty | null {
     images,
     price: asNumber(record.price),
     publicId: asText(record.publicId),
-    rentalMode: asText(record.rentalMode),
+    rentalMode: asRentalMode(record.rentalMode),
     slug: asText(record.slug),
     title,
   };
@@ -210,6 +216,29 @@ export async function getPropertiesInCity(
   return items
     .map(toSeoProperty)
     .filter((property): property is SeoProperty => property !== null);
+}
+
+/** A small recommended set for public marketplace entry points. */
+export async function getFeaturedRentals(size = 3): Promise<SeoProperty[]> {
+  const payload = await backendJson(
+    `/api/properties/rent?page=0&size=${size}`,
+    300,
+  );
+  const data = envelopeData(payload);
+  const items =
+    data !== null && typeof data === "object" && "items" in data
+      ? (data as { items: unknown }).items
+      : null;
+
+  if (!Array.isArray(items)) return [];
+
+  return items
+    .map(toSeoProperty)
+    .filter(
+      (property): property is SeoProperty =>
+        property !== null && property.price !== null,
+    )
+    .slice(0, size);
 }
 
 /**

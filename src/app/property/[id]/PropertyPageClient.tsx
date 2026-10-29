@@ -891,7 +891,6 @@ export default function PropertyPageClient({
               <h1 className="font-display text-4xl font-bold leading-tight text-primary">
                 {property.title}
               </h1>
-              {property.verified ? <VerifiedBadge size="sm" /> : null}
             </div>
             <p className="mt-2 flex items-center gap-2 font-body text-sm text-muted">
               <MapPin
@@ -1001,11 +1000,7 @@ export default function PropertyPageClient({
             )}`}
           >
             {property.images.length === 0 ? (
-              <ResilientPropertyImage
-                src={null}
-                alt={property.title}
-                fill
-              />
+              <ResilientPropertyImage src={null} alt={property.title} fill />
             ) : null}
             {visibleGalleryImages[0] ? (
               <div
@@ -1074,7 +1069,8 @@ export default function PropertyPageClient({
                 className="absolute bottom-4 right-4 z-10 inline-flex min-h-11 items-center gap-2 rounded-full border border-white/70 bg-bg/95 px-4 font-body text-sm font-bold text-primary shadow-md backdrop-blur-sm transition-colors hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               >
                 <Images size={17} aria-hidden="true" />
-                View all {formatCount(property.images.length, "photo", "photos")}
+                View all{" "}
+                {formatCount(property.images.length, "photo", "photos")}
               </button>
             ) : null}
           </div>
@@ -1099,11 +1095,7 @@ export default function PropertyPageClient({
                   />
                 </button>
               ) : (
-                <ResilientPropertyImage
-                  src={null}
-                  alt={property.title}
-                  fill
-                />
+                <ResilientPropertyImage src={null} alt={property.title} fill />
               )}
               <BackButton
                 fallbackHref="/browse"
@@ -1285,7 +1277,6 @@ export default function PropertyPageClient({
                 <h1 className="font-display text-3xl font-bold leading-tight text-primary">
                   {property.title}
                 </h1>
-                {property.verified ? <VerifiedBadge size="sm" /> : null}
               </div>
               <p className="mt-1 flex items-center gap-2 font-body text-sm text-muted">
                 <MapPin

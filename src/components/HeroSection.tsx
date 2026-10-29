@@ -1,100 +1,103 @@
 "use client";
 
-import Image from "next/image";
-import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
+import { ArrowRight, Search } from "lucide-react";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { useState, type FormEvent, type ReactElement } from "react";
 
-export default function HeroSection() {
+export default function HeroSection(): ReactElement {
   const reduceMotion = useReducedMotion();
+  const router = useRouter();
+  const [query, setQuery] = useState("");
+  const still = reduceMotion === true;
+
+  function submitSearch(event: FormEvent<HTMLFormElement>): void {
+    event.preventDefault();
+    const trimmedQuery = query.trim();
+
+    router.push(
+      trimmedQuery
+        ? `/browse?query=${encodeURIComponent(trimmedQuery)}`
+        : "/browse",
+    );
+  }
 
   return (
-    <section className="relative w-full min-h-[680px] md:min-h-[720px] flex items-center overflow-hidden">
-      <div className="absolute inset-0 z-0">
+    <section
+      aria-labelledby="landing-hero-heading"
+      className="border-b border-border bg-bg"
+    >
+      <div className="relative min-h-[22rem] overflow-hidden sm:min-h-[25rem] lg:min-h-[28rem]">
         <Image
-          src="/images/hero-house.jpg"
-          alt="Luxury property with pool"
+          src="/images/about-interior.jpg"
+          alt=""
+          aria-hidden="true"
           fill
-          className="object-cover object-center"
-          sizes="100vw"
           priority
+          sizes="100vw"
+          className="object-cover object-[48%_center] sm:object-center"
         />
-        <div className="absolute inset-0 hero-overlay" />
-      </div>
-      <div className="hero-mesh absolute inset-0 z-[1] opacity-70 mix-blend-screen" />
+        <div
+          className="absolute inset-0 bg-[linear-gradient(180deg,rgba(4,52,76,0.08),rgba(4,52,76,0.02)_48%,rgba(4,52,76,0.22))]"
+          aria-hidden="true"
+        />
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 md:py-28 w-full">
-        <div className="max-w-3xl">
-          <motion.p
-            className="mb-5 text-sm font-semibold uppercase tracking-[0.32em] text-accent"
-            initial={
-              reduceMotion ? false : { opacity: 0, y: 18, filter: "blur(8px)" }
-            }
-            animate={
-              reduceMotion
-                ? undefined
-                : { opacity: 1, y: 0, filter: "blur(0px)" }
-            }
-            transition={{ duration: 0.7, ease: "easeOut" }}
-          >
-            Rello Estate
-          </motion.p>
-
-          <motion.h1
-            className="font-display text-5xl font-bold leading-[0.95] text-white sm:text-6xl md:text-7xl lg:text-8xl"
-            initial={
-              reduceMotion ? false : { opacity: 0, y: 26, filter: "blur(10px)" }
-            }
-            animate={
-              reduceMotion
-                ? undefined
-                : { opacity: 1, y: 0, filter: "blur(0px)" }
-            }
-            transition={{ duration: 0.8, ease: "easeOut", delay: 0.08 }}
-          >
-            Find, tour, and secure a home that feels rare.
-          </motion.h1>
-
-          <motion.p
-            className="mt-7 max-w-2xl text-lg font-light leading-8 text-white/[0.78] md:text-xl md:leading-9"
-            initial={
-              reduceMotion ? false : { opacity: 0, y: 22, filter: "blur(8px)" }
-            }
-            animate={
-              reduceMotion
-                ? undefined
-                : { opacity: 1, y: 0, filter: "blur(0px)" }
-            }
-            transition={{ duration: 0.75, ease: "easeOut", delay: 0.18 }}
-          >
-            Rello curates premium apartments, penthouses, and investment-ready
-            homes with verified listings, guided tours, and calm expert support.
-          </motion.p>
-
-          <motion.div
-            className="mt-10 flex flex-row gap-4 sm:flex-col sm:items-center sm:gap-5"
-            initial={
-              reduceMotion ? false : { opacity: 0, y: 20, filter: "blur(8px)" }
-            }
-            animate={
-              reduceMotion
-                ? undefined
-                : { opacity: 1, y: 0, filter: "blur(0px)" }
-            }
-            transition={{ duration: 0.72, ease: "easeOut", delay: 0.28 }}
-          >
-            <Link
-              href="/marketing/waitlist"
-              className="premium-hover inline-flex min-h-14 justify-center rounded-full bg-gradient-to-r from-accent to-accent-alt px-8 py-4 text-base font-semibold text-white"
+        <div className="absolute inset-0 flex items-center justify-center px-5 sm:px-8 lg:px-10">
+          <div className="flex w-full flex-col items-center gap-6 sm:gap-7">
+            <motion.h1
+              id="landing-hero-heading"
+              className="text-center font-display text-4xl font-bold leading-none text-primary [text-shadow:0_2px_20px_rgba(255,255,255,0.95)] sm:text-5xl lg:text-6xl"
+              initial={still ? false : { opacity: 0, y: 12 }}
+              animate={still ? undefined : { opacity: 1, y: 0 }}
+              transition={{ duration: still ? 0 : 0.4, ease: "easeOut" }}
             >
-              Join the waitlist
-            </Link>
-            <Link
-              href="#how-it-works"
-              className="premium-hover inline-flex min-h-14 justify-center rounded-full border border-white bg-white text-primary px-8 py-4 text-base font-semibold text-white"
+              Find your next home.
+            </motion.h1>
+
+            <motion.form
+              action="/browse"
+              method="get"
+              onSubmit={submitSearch}
+              className="flex w-full max-w-5xl flex-col gap-2 rounded-[1.4rem] border-2 border-primary bg-white/95 p-2 shadow-[0_18px_50px_rgba(4,52,76,0.24)] backdrop-blur-sm sm:flex-row sm:rounded-full"
+              initial={still ? false : { opacity: 0, y: 14 }}
+              animate={still ? undefined : { opacity: 1, y: 0 }}
+              transition={{
+                duration: still ? 0 : 0.45,
+                delay: still ? 0 : 0.06,
+                ease: "easeOut",
+              }}
             >
-              See how it works
-            </Link>
-          </motion.div>
+              <label htmlFor="landing-search" className="sr-only">
+                Search by location or describe your ideal home
+              </label>
+              <span className="flex min-h-14 min-w-0 flex-1 items-center gap-3 px-4 sm:px-5">
+                <Search
+                  size={20}
+                  className="shrink-0 text-muted"
+                  aria-hidden="true"
+                />
+                <input
+                  id="landing-search"
+                  name="query"
+                  type="search"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  maxLength={300}
+                  autoComplete="off"
+                  placeholder="Where would you like to live?"
+                  className="min-w-0 flex-1 bg-transparent font-body text-base text-primary outline-none placeholder:text-muted"
+                />
+              </span>
+              <button
+                type="submit"
+                className="inline-flex min-h-14 shrink-0 items-center justify-center gap-2 rounded-full bg-accent px-8 font-body text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+              >
+                Search homes
+                <ArrowRight size={17} aria-hidden="true" />
+              </button>
+            </motion.form>
+          </div>
         </div>
       </div>
     </section>
