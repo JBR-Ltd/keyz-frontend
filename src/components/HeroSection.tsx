@@ -59,7 +59,7 @@ export default function HeroSection(): ReactElement {
               action="/browse"
               method="get"
               onSubmit={submitSearch}
-              className="flex w-full max-w-5xl flex-col gap-2 rounded-[1.4rem] border-2 border-primary bg-white/95 p-2 shadow-[0_18px_50px_rgba(4,52,76,0.24)] backdrop-blur-sm sm:flex-row sm:rounded-full"
+              className="flex w-full max-w-5xl items-center gap-1.5 rounded-full border border-primary/40 bg-white/95 p-1.5 shadow-[0_14px_38px_rgba(4,52,76,0.2)] backdrop-blur-sm transition-[border-color,box-shadow] focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/15"
               initial={still ? false : { opacity: 0, y: 14 }}
               animate={still ? undefined : { opacity: 1, y: 0 }}
               transition={{
@@ -71,7 +71,7 @@ export default function HeroSection(): ReactElement {
               <label htmlFor="landing-search" className="sr-only">
                 Search by location or describe your ideal home
               </label>
-              <span className="flex min-h-14 min-w-0 flex-1 items-center gap-3 px-4 sm:px-5">
+              <span className="flex min-h-12 min-w-0 flex-1 items-center gap-2.5 px-3 sm:min-h-14 sm:gap-3 sm:px-5">
                 <Search
                   size={20}
                   className="shrink-0 text-muted"
@@ -86,14 +86,15 @@ export default function HeroSection(): ReactElement {
                   maxLength={300}
                   autoComplete="off"
                   placeholder="Where would you like to live?"
-                  className="min-w-0 flex-1 bg-transparent font-body text-base text-primary outline-none placeholder:text-muted"
+                  className="min-w-0 flex-1 bg-transparent font-body text-sm text-primary outline-none placeholder:text-muted sm:text-base"
                 />
               </span>
               <button
                 type="submit"
-                className="inline-flex min-h-14 shrink-0 items-center justify-center gap-2 rounded-full bg-accent px-8 font-body text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                aria-label="Search homes"
+                className="inline-flex min-h-12 min-w-12 shrink-0 items-center justify-center gap-2 rounded-full bg-accent p-0 font-body text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 sm:min-h-14 sm:px-8"
               >
-                Search homes
+                <span className="hidden sm:inline">Search homes</span>
                 <ArrowRight size={17} aria-hidden="true" />
               </button>
             </motion.form>
