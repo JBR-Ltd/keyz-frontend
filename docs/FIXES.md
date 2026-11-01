@@ -1202,3 +1202,17 @@ Existing rental catalogue and saved-search contracts remain unchanged.
 - Added a connected gold path that draws once as the section enters view, followed by restrained staggered stage reveals.
 - Used a horizontal path on desktop and a vertical path on smaller screens without introducing card containers or hover effects.
 - Added an immediate final-state presentation for visitors who prefer reduced motion.
+
+## Authentication Route Access
+
+### What was there before
+
+- Frontend middleware protected the login, registration, verification, and password-recovery routes with HTTP Basic Authentication.
+- Next.js could prefetch a protected account route from the public navigation and trigger a native browser sign-in prompt on the homepage.
+- Missing development credentials caused the middleware to reject every request to the protected routes.
+
+### How it was fixed
+
+- Removed the application-level Basic Authentication middleware and its obsolete sample environment variables.
+- Kept Rello's normal account authentication and authorization behavior unchanged.
+- Moved optional staging access control to the hosting platform so production and public staging routes do not show browser-level authentication prompts.
