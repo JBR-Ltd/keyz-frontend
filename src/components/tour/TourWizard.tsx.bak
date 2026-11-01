@@ -1,0 +1,726 @@
+// src/components/tour/TourWizard.tsx
+//
+// The landlord/agent capture wizard.
+//
+//   floor-setup → instructions → room-details → capture → review → door-link
+//     → progress → floor-plan → review-final → publish
+//
+// The server owns room status. When a panorama is accepted, the backend sets
+// the room READY. The wizard never calls PATCH /status.
+//
+// Creating a new room from a door links the door and adds the room to the
+// board without navigating. The host stays on the current room's doors and
+// can add as many as the room has. When they want to capture one of the new
+// rooms, they open the door that points at it and press "Capture X next".
+//
+// Every step has a back button that goes to the previous step in the wizard.
+
+"use client";
+
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { ChevronLeft, Loader2 } from "lucide-react";
+
+import { useToast } from "@/components/ui/toast";
+import CaptureInstructions from "@/components/tour/CaptureInstructions";
+import CaptureProgress from "@/components/tour/CaptureProgress";
+import CaptureReview from "@/components/tour/CaptureReview";
+import DoorLinking from "@/components/tour/DoorLinking";
+import FloorPlanReview from "@/components/tour/FloorPlanReview";
+import FloorPlanViewer from "@/components/tour/FloorPlanViewer";
+import FloorSetupForm from "@/components/tour/FloorSetupForm";
+import PanoramaCapture from "@/components/tour/PanoramaCapture";
+import PublishConfirmation from "@/components/tour/PublishConfirmation";
+import RoomDetailsForm from "@/components/tour/RoomDetailsForm";
+
+import {
+  createRoom,
+  createLinkedRoom,
+  getRoomsForFloor,
+  updateRoom,
+} from "@/lib/api/tours/rooms";
+import { getFloorsForProperty } from "@/lib/api/tours/floors";
+import {
+  createDoor,
+  deleteDoor,
+  getDoorsForRoom,
+  updateDoor,
+} from "@/lib/api/tours/doors";
+import {
+  createStaircase,
+  deleteStaircase,
+  getStaircasesForRoom,
+} from "@/lib/api/tours/staircases";
+import { getTourSummary, publishTour } from "@/lib/api/tours/publish";
+import type { CreateAndLinkInput } from "@/components/tour/RoomDoorEditor";
+import type {
+  CreateDoorRequest,
+  CreateStaircaseRequest,
+  Door,
+  Floor,
+  Room,
+  SizeBucket,
+  Staircase,
+  TourSummary,
+  UpdateDoorRequest,
+  WallSide,
+} from "@/lib/types/tour";
+import type { DoorPinPosition } from "@/components/tour/DoorPin";
+
+interface TourWizardProps {
+  propertyId: number;
+  role: "landlord" | "agent";
+}
+
+type WizardStep =
+  | "loading"
+  | "floor-setup"
+  | "instructions"
+  | "room-details"
+  | "capture"
+  | "review"
+  | "door-link"
+  | "progress"
+  | "floor-plan"
+  | "review-final"
+  | "publish";
+
+const WALL_TO_YAW: Record<WallSide, number> = {
+  TOP: 0,
+  RIGHT: 90,
+  BOTTOM: 180,
+  LEFT: 270,
+};
+
+export default function TourWizard({ propertyId, role }: TourWizardProps) {
+  const reduceMotion = useReducedMotion();
+  const { notify } = useToast();
+  const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const [step, setStep] = useState<WizardStep>("loading");
+  const [floor, setFloor] = useState<Floor | null>(null);
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [currentRoom, setCurrentRoom] = useState<Room | null>(null);
+  const [currentFile, setCurrentFile] = useState<File | null>(null);
+  const [currentDoors, setCurrentDoors] = useState<Door[]>([]);
+  const [currentStaircases, setCurrentStaircases] = useState<Staircase[]>([]);
+  const [tourSummary, setTourSummary] = useState<TourSummary | null>(null);
+
+  const bootstrapped = useRef(false);
+
+  const refreshRooms = useCallback(async (floorId: number): Promise<Room[]> => {
+    const next = await getRoomsForFloor(floorId);
+    setRooms(next);
+    return next;
+  }, []);
+
+  const refreshDoors = useCallback(async (roomId: number): Promise<Door[]> => {
+    const next = await getDoorsForRoom(roomId);
+    setCurrentDoors(next);
+    return next;
+  }, []);
+
+  const refreshStaircases = useCallback(
+    async (roomId: number): Promise<Staircase[]> => {
+      const next = await getStaircasesForRoom(roomId);
+      setCurrentStaircases(next);
+      return next;
+    },
+    [],
+  );
+
+  const refreshSummary = useCallback(async (): Promise<TourSummary | null> => {
+    try {
+      const summary = await getTourSummary(propertyId);
+      setTourSummary(summary);
+      return summary;
+    } catch {
+      return null;
+    }
+  }, [propertyId]);
+
+  // === Bootstrap ===
+
+  useEffect(() => {
+    if (bootstrapped.current) return;
+    bootstrapped.current = true;
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const initialFloor = searchParams.get("floor");
+        const initialRoom = searchParams.get("room");
+        const initialAction = searchParams.get("action");
+
+        const floors = await getFloorsForProperty(propertyId);
+        if (cancelled) return;
+
+        if (floors.length === 0) {
+          setStep("floor-setup");
+          return;
+        }
+
+        const targetFloor =
+          initialFloor && floors.some((f) => f.id === Number(initialFloor))
+            ? floors.find((f) => f.id === Number(initialFloor))!
+            : floors[0];
+
+        setFloor(targetFloor);
+        const targetRooms = await refreshRooms(targetFloor.id);
+        if (cancelled) return;
+
+        if (initialRoom) {
+          const room = targetRooms.find((r) => r.id === Number(initialRoom));
+          if (room) {
+            setCurrentRoom(room);
+            await Promise.all([
+              refreshDoors(room.id),
+              refreshStaircases(room.id),
+            ]);
+            if (cancelled) return;
+            setStep("capture");
+            return;
+          }
+        }
+
+        if (initialAction === "add-room") {
+          setStep("room-details");
+          return;
+        }
+
+        if (initialAction === "floor-plan") {
+          setStep("floor-plan");
+          void refreshSummary();
+          return;
+        }
+
+        setStep("progress");
+        void refreshSummary();
+      } catch (error) {
+        if (cancelled) return;
+        notify({
+          title: "Could not load this tour",
+          description: error instanceof Error ? error.message : undefined,
+          variant: "error",
+        });
+        setStep("floor-setup");
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [propertyId]);
+
+  // === URL sync ===
+
+  useEffect(() => {
+    if (!bootstrapped.current) return;
+    if (step === "loading") return;
+
+    const params = new URLSearchParams();
+    if (floor) params.set("floor", String(floor.id));
+    if (
+      currentRoom &&
+      (step === "capture" || step === "review" || step === "door-link")
+    ) {
+      params.set("room", String(currentRoom.id));
+    }
+    if (step === "room-details") params.set("action", "add-room");
+    if (step === "floor-plan") params.set("action", "floor-plan");
+    if (step === "publish") params.set("action", "publish");
+
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, {
+      scroll: false,
+    });
+  }, [step, floor, currentRoom, pathname, router]);
+
+  // === Back navigation ===
+
+  const backTarget: { step: WizardStep; label: string } | null = (() => {
+    switch (step) {
+      case "instructions":
+        return { step: "floor-setup", label: "Back to floor setup" };
+      case "room-details":
+        return { step: "instructions", label: "Back to instructions" };
+      case "capture":
+        return { step: "progress", label: "Back to rooms" };
+      case "review":
+        return { step: "capture", label: "Back to capture" };
+      case "door-link":
+        return { step: "capture", label: "Back to capture" };
+      case "floor-plan":
+        return { step: "progress", label: "Back to rooms" };
+      case "review-final":
+        return { step: "floor-plan", label: "Back to floor plan" };
+      default:
+        return null;
+    }
+  })();
+
+  const handleBack = (): void => {
+    if (backTarget) setStep(backTarget.step);
+  };
+
+  // === Step handlers ===
+
+  const handleFloorContinue = (created: Floor): void => {
+    setFloor(created);
+    setRooms([]);
+    setCurrentRoom(null);
+    setStep("instructions");
+  };
+
+  const handleRoomDetailsSubmitted = async (values: {
+    roomName: string;
+    roomType: string;
+  }): Promise<void> => {
+    if (!floor) return;
+    try {
+      const created = await createRoom(floor.id, {
+        roomName: values.roomName,
+        roomType: values.roomType,
+      });
+      setCurrentRoom(created);
+      await refreshRooms(floor.id);
+      setStep("capture");
+    } catch (error) {
+      notify({
+        title: "Could not create room",
+        description: error instanceof Error ? error.message : undefined,
+        variant: "error",
+      });
+    }
+  };
+
+  const handleCaptureSubmit = async (
+    file: File | null,
+    sizeBucket: SizeBucket,
+  ): Promise<void> => {
+    if (!currentRoom || !floor) return;
+
+    if (currentRoom.sizeBucket !== sizeBucket) {
+      try {
+        const updated = await updateRoom(currentRoom.id, { sizeBucket });
+        setCurrentRoom(updated);
+        await refreshRooms(floor.id);
+      } catch (error) {
+        notify({
+          title: "Could not save the room size",
+          description: error instanceof Error ? error.message : undefined,
+          variant: "error",
+        });
+        return;
+      }
+    }
+
+    if (file !== null) {
+      setCurrentFile(file);
+      setStep("review");
+    } else {
+      await refreshDoors(currentRoom.id);
+      await refreshStaircases(currentRoom.id);
+      setStep("door-link");
+    }
+  };
+
+  const handlePanoramaAccepted = async (): Promise<void> => {
+    if (!currentRoom || !floor) return;
+    const updated = await refreshRooms(floor.id);
+    const fresh = updated.find((r) => r.id === currentRoom.id) ?? currentRoom;
+    setCurrentRoom(fresh);
+    setCurrentFile(null);
+    await Promise.all([
+      refreshDoors(fresh.id),
+      refreshStaircases(fresh.id),
+    ]);
+    setStep("door-link");
+  };
+
+  const handleDoorLinkContinue = async (): Promise<void> => {
+    if (!floor) return;
+    await refreshRooms(floor.id);
+    setStep("progress");
+  };
+
+  const handleAddAnotherRoom = (): void => {
+    setCurrentRoom(null);
+    setCurrentFile(null);
+    setCurrentDoors([]);
+    setCurrentStaircases([]);
+    setStep("room-details");
+  };
+
+  const handleReviewFloorPlan = async (): Promise<void> => {
+    if (!floor) return;
+    setStep("floor-plan");
+    void refreshSummary();
+  };
+
+  const handleFloorPlanConfirmed = async (): Promise<void> => {
+    await refreshSummary();
+    setStep("review-final");
+  };
+
+  const handleOpenRoomFromProgress = useCallback(
+    (room: Room) => {
+      setCurrentRoom(room);
+      setCurrentFile(null);
+      void Promise.all([
+        refreshDoors(room.id),
+        refreshStaircases(room.id),
+      ]);
+      setStep("capture");
+    },
+    [refreshDoors, refreshStaircases],
+  );
+
+  /**
+   * Navigate to capture a room that already exists (usually because a door
+   * was linked to it). Called from the door editor's "Capture X next".
+   */
+  const handleCaptureLinkedRoom = useCallback(
+    (roomId: number) => {
+      const room = rooms.find((r) => r.id === roomId);
+      if (!room) return;
+      setCurrentRoom(room);
+      setCurrentFile(null);
+      void Promise.all([
+        refreshDoors(roomId),
+        refreshStaircases(roomId),
+      ]);
+      setStep("capture");
+    },
+    [rooms, refreshDoors, refreshStaircases],
+  );
+
+  // === Door operations ===
+
+  const handleCreateDoor = async (
+    input: Omit<CreateDoorRequest, "roomId" | "createReciprocal">,
+  ): Promise<void> => {
+    if (!currentRoom) return;
+    try {
+      await createDoor({
+        ...input,
+        roomId: currentRoom.id,
+        createReciprocal: true,
+      });
+      await refreshDoors(currentRoom.id);
+    } catch (error) {
+      notify({
+        title: "Could not save the door",
+        description: error instanceof Error ? error.message : undefined,
+        variant: "error",
+      });
+    }
+  };
+
+  const handleMoveSavedDoor = async (
+    doorId: number,
+    position: DoorPinPosition,
+  ): Promise<void> => {
+    if (!currentRoom) return;
+    try {
+      await updateDoor(doorId, {
+        wallSide: position.wallSide,
+        alongWallPercent: position.alongWallPercent,
+      });
+      await refreshDoors(currentRoom.id);
+    } catch (error) {
+      notify({
+        title: "Could not move the door",
+        description: error instanceof Error ? error.message : undefined,
+        variant: "error",
+      });
+    }
+  };
+
+  const handleUpdateSavedDoor = async (
+    doorId: number,
+    patch: UpdateDoorRequest,
+  ): Promise<void> => {
+    if (!currentRoom) return;
+    try {
+      await updateDoor(doorId, patch);
+      await refreshDoors(currentRoom.id);
+    } catch (error) {
+      notify({
+        title: "Could not update the door",
+        description: error instanceof Error ? error.message : undefined,
+        variant: "error",
+      });
+    }
+  };
+
+  const handleDeleteDoor = async (doorId: number): Promise<void> => {
+    if (!currentRoom) return;
+    try {
+      await deleteDoor(doorId);
+      await refreshDoors(currentRoom.id);
+    } catch (error) {
+      notify({
+        title: "Could not delete the door",
+        description: error instanceof Error ? error.message : undefined,
+        variant: "error",
+      });
+    }
+  };
+
+  /**
+   * Create a new room and link it in one call, WITHOUT navigating. The host
+   * stays on the current room's door list. DoorLinking clears the draft pin
+   * on success so the new saved door takes its place.
+   */
+  const handleCreateAndLinkNewRoom = async (
+    input: CreateAndLinkInput,
+  ): Promise<void> => {
+    if (!currentRoom || !floor) return;
+
+    try {
+      const created = await createLinkedRoom(currentRoom.id, {
+        roomName: input.roomName,
+        roomType: input.roomType,
+        sizeBucket: "MEDIUM",
+        wallSide: input.doorContext.wallSide,
+        alongWallPercent: input.doorContext.alongWallPercent,
+        kind: input.doorContext.kind,
+      });
+
+      await refreshRooms(floor.id);
+      await refreshDoors(currentRoom.id);
+
+      notify({
+        title: `${created.roomName} added to the board`,
+        description:
+          "Capture it whenever you're ready — its door here already points at it.",
+        variant: "success",
+      });
+    } catch (error) {
+      notify({
+        title: "Could not create the next room",
+        description: error instanceof Error ? error.message : undefined,
+        variant: "error",
+      });
+    }
+  };
+
+  // === Staircase operations ===
+
+  const handleCreateStaircase = async (
+    input: Omit<CreateStaircaseRequest, "hostRoomId">,
+  ): Promise<void> => {
+    if (!currentRoom || !floor) return;
+    try {
+      await createStaircase(floor.id, {
+        ...input,
+        hostRoomId: currentRoom.id,
+      });
+      await refreshStaircases(currentRoom.id);
+    } catch (error) {
+      notify({
+        title: "Could not save the staircase",
+        description: error instanceof Error ? error.message : undefined,
+        variant: "error",
+      });
+    }
+  };
+
+  const handleDeleteStaircase = async (
+    staircaseId: number,
+  ): Promise<void> => {
+    if (!currentRoom) return;
+    try {
+      await deleteStaircase(staircaseId);
+      await refreshStaircases(currentRoom.id);
+    } catch (error) {
+      notify({
+        title: "Could not remove the staircase",
+        description: error instanceof Error ? error.message : undefined,
+        variant: "error",
+      });
+    }
+  };
+
+  // === Publish ===
+
+  const handlePublish = async (): Promise<void> => {
+    try {
+      await publishTour(propertyId);
+      await refreshSummary();
+      setStep("publish");
+    } catch (error) {
+      notify({
+        title: "This tour isn't ready to publish yet",
+        description: error instanceof Error ? error.message : undefined,
+        variant: "error",
+      });
+    }
+  };
+
+  // === Render ===
+
+  return (
+    <main className="min-h-screen overflow-x-hidden px-5 pb-0 pt-12 sm:px-8 lg:px-10 lg:pt-16 xl:px-14">
+      <div className="mx-auto max-w-2xl">
+        <header className="pb-8">
+          <p className="font-accent text-xs font-bold uppercase tracking-[0.3em] text-primary">
+            Virtual Tour
+          </p>
+          <h1 className="mt-4 font-display text-3xl font-bold leading-tight text-primary">
+            Capture this property
+          </h1>
+        </header>
+
+        {backTarget ? (
+          <button
+            type="button"
+            onClick={handleBack}
+            className="mb-4 inline-flex items-center gap-1.5 font-body text-sm font-medium text-muted transition-colors hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          >
+            <ChevronLeft size={15} aria-hidden="true" />
+            {backTarget.label}
+          </button>
+        ) : null}
+
+        <div className="rounded-xl border border-border bg-bg p-5 shadow-sm sm:p-8">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={step}
+              initial={reduceMotion ? false : { opacity: 0, y: 12 }}
+              animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+              exit={reduceMotion ? undefined : { opacity: 0, y: -12 }}
+              transition={{ duration: 0.25, ease: "easeOut" }}
+            >
+              {step === "loading" ? (
+                <div className="flex items-center justify-center py-20">
+                  <Loader2
+                    className="h-6 w-6 animate-spin text-primary"
+                    aria-hidden="true"
+                  />
+                </div>
+              ) : null}
+
+              {step === "floor-setup" ? (
+                <FloorSetupForm
+                  propertyId={propertyId}
+                  onContinue={handleFloorContinue}
+                />
+              ) : null}
+
+              {step === "instructions" ? (
+                <CaptureInstructions
+                  onContinue={() => setStep("room-details")}
+                />
+              ) : null}
+
+              {step === "room-details" ? (
+                <RoomDetailsForm onSubmit={handleRoomDetailsSubmitted} />
+              ) : null}
+
+              {step === "capture" && currentRoom ? (
+                <PanoramaCapture
+                  roomName={currentRoom.roomName}
+                  initialSize={currentRoom.sizeBucket ?? "MEDIUM"}
+                  existingPanorama={currentRoom.panorama}
+                  onSubmit={(file, size) =>
+                    void handleCaptureSubmit(file, size)
+                  }
+                />
+              ) : null}
+
+              {step === "review" && currentRoom && currentFile ? (
+                <CaptureReview
+                  roomId={currentRoom.id}
+                  roomName={currentRoom.roomName}
+                  file={currentFile}
+                  onAccepted={() => void handlePanoramaAccepted()}
+                  onRetake={() => setStep("capture")}
+                />
+              ) : null}
+
+              {step === "door-link" && currentRoom ? (
+                <DoorLinking
+                  room={currentRoom}
+                  allRooms={rooms}
+                  savedDoors={currentDoors}
+                  staircases={currentStaircases}
+                  onCreateDoor={handleCreateDoor}
+                  onMoveSavedDoor={handleMoveSavedDoor}
+                  onUpdateSavedDoor={handleUpdateSavedDoor}
+                  onDeleteDoor={handleDeleteDoor}
+                  onCreateAndLinkNewRoom={handleCreateAndLinkNewRoom}
+                  onCaptureLinkedRoom={handleCaptureLinkedRoom}
+                  onCreateStaircase={handleCreateStaircase}
+                  onDeleteStaircase={handleDeleteStaircase}
+                  onContinue={() => void handleDoorLinkContinue()}
+                />
+              ) : null}
+
+              {step === "progress" ? (
+                <CaptureProgress
+                  rooms={rooms}
+                  onAddAnotherRoom={handleAddAnotherRoom}
+                  onReviewFloorPlan={() => void handleReviewFloorPlan()}
+                  onRoomClick={handleOpenRoomFromProgress}
+                />
+              ) : null}
+
+              {step === "floor-plan" && floor ? (
+                <section>
+                  <p className="font-body text-xs font-medium uppercase tracking-wide text-muted">
+                    Floor plan
+                  </p>
+                  <h2 className="mt-2 font-display text-2xl font-bold text-primary">
+                    Review the schematic
+                  </h2>
+                  <p className="mt-2 font-body text-sm leading-6 text-muted">
+                    The layout runs in your browser from the rooms and doors
+                    you captured. Nudge a room if it isn&apos;t quite right,
+                    then confirm to save it.
+                  </p>
+                  <div className="mt-6">
+                    <FloorPlanViewer
+                      floorId={floor.id}
+                      rooms={rooms}
+                      onConfirm={() => void handleFloorPlanConfirmed()}
+                    />
+                  </div>
+                </section>
+              ) : null}
+
+              {step === "review-final" && floor ? (
+                <FloorPlanReview
+                  floor={floor}
+                  rooms={rooms}
+                  tourSummary={tourSummary}
+                  onPublish={() => void handlePublish()}
+                  onAddAnotherFloor={() => {
+                    setFloor(null);
+                    setRooms([]);
+                    setCurrentRoom(null);
+                    setStep("floor-setup");
+                  }}
+                  onContinueCapturing={() => {
+                    setCurrentRoom(null);
+                    setCurrentFile(null);
+                    setStep("room-details");
+                  }}
+                />
+              ) : null}
+
+              {step === "publish" ? (
+                <PublishConfirmation propertyId={propertyId} role={role} />
+              ) : null}
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      </div>
+    </main>
+  );
+}

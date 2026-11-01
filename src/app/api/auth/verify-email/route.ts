@@ -1,5 +1,9 @@
+import { clientAddressHeaders } from "@/app/api/_clientAddress";
+import { browserAuthResponse } from "@/app/api/_authResponse";
+import { rejectCrossSiteMutation } from "@/app/api/_csrf";
+
 const API_BASE_URL = process.env.API_BASE_URL;
-const AUTH_REQUEST_TIMEOUT_MS = 15000;
+const AUTH_REQUEST_TIMEOUT_MS = 90000;
 
 interface TimeoutSignal {
   signal: AbortSignal;
@@ -22,18 +26,15 @@ function createTimeoutSignal(): TimeoutSignal {
   };
 }
 
-async function proxyJsonResponse(
-  response: Response,
-  backendUrl: string,
-): Promise<Response> {
+async function proxyJsonResponse(response: Response): Promise<Response> {
   const body = await response.text();
-  const contentType = response.headers.get("Content-Type") ?? "application/json";
+  const contentType =
+    response.headers.get("Content-Type") ?? "application/json";
 
   if (!response.ok) {
     console.error("Auth proxy request failed", {
-      backendUrl,
+      endpoint: "/api/auth/verify-email",
       status: response.status,
-      body: body || null,
     });
 
     if (!body) {
@@ -59,36 +60,51 @@ async function proxyJsonResponse(
     }
   }
 
-  return new Response(body || null, {
-    status: response.status,
-    headers: {
-      "Content-Type": contentType,
-    },
-  });
+  return browserAuthResponse(
+    new Response(body || null, {
+      status: response.status,
+      headers: {
+        "Content-Type": contentType,
+      },
+    }),
+  );
 }
 
 export async function POST(request: Request): Promise<Response> {
-  const requestUrl = new URL(request.url);
-  const backendUrl = getBackendUrl(
-    `/api/auth/verify-email${requestUrl.search}`,
-  );
+  const rejected = rejectCrossSiteMutation(request);
+
+  if (rejected) {
+    return rejected;
+  }
+
+  const backendUrl = getBackendUrl("/api/auth/verify-email");
 
   if (!backendUrl) {
     return Response.json(
-      { success: false, message: "API_BASE_URL is not configured.", data: null },
+      {
+        success: false,
+        message: "API_BASE_URL is not configured.",
+        data: null,
+      },
       { status: 500 },
     );
   }
 
   const timeout = createTimeoutSignal();
+  const body = await request.text();
 
   try {
     const response = await fetch(backendUrl, {
       method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...clientAddressHeaders(request),
+      },
       signal: timeout.signal,
+      body,
     });
 
-    return proxyJsonResponse(response, backendUrl);
+    return proxyJsonResponse(response);
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
       return Response.json(
@@ -102,7 +118,7 @@ export async function POST(request: Request): Promise<Response> {
     }
 
     console.error("Auth proxy request could not reach backend", {
-      backendUrl,
+      endpoint: "/api/auth/verify-email",
       error,
     });
 

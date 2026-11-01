@@ -1,0 +1,8609 @@
+{
+  "source": {
+    "countryArchiveUrl": "https://download.geonames.org/export/dump/NG.zip",
+    "licence": "Creative Commons Attribution 4.0",
+    "licenceUrl": "https://creativecommons.org/licenses/by/4.0/",
+    "name": "GeoNames",
+    "sourceModifiedDate": "2026-09-27",
+    "websiteUrl": "https://www.geonames.org/"
+  },
+  "places": [
+    {
+      "id": "2353151",
+      "name": "Aba",
+      "population": 1160000,
+      "region": "Abia State",
+      "searchNames": [
+        "a ba",
+        "aba abya",
+        "aba i nigeria",
+        "qax",
+        "аба",
+        "აბა",
+        "աբա",
+        "אבה",
+        "ابا",
+        "ابا ابیا",
+        "아바",
+        "アハ",
+        "阿巴"
+      ]
+    },
+    {
+      "id": "2353122",
+      "name": "Abagana",
+      "population": 0,
+      "region": "Anambra",
+      "searchNames": []
+    },
+    {
+      "id": "2353104",
+      "name": "Abaji",
+      "population": 0,
+      "region": "FCT",
+      "searchNames": []
+    },
+    {
+      "id": "2353100",
+      "name": "Abak",
+      "population": 12562,
+      "region": "Akwa Ibom State",
+      "searchNames": []
+    },
+    {
+      "id": "2353099",
+      "name": "Abakaliki",
+      "population": 134102,
+      "region": "Ebonyi State",
+      "searchNames": [
+        "a ba ka li ji",
+        "abakariki",
+        "abkalky",
+        "abkalyky",
+        "ʿebakaliki",
+        "абакалики",
+        "ابكاليكي",
+        "ابکالکی",
+        "ابکالیکی",
+        "አባካሊኪ",
+        "अबकलक",
+        "আবকলক",
+        "ਅਬਕਲਕ",
+        "アハカリキ",
+        "阿巴卡利基"
+      ]
+    },
+    {
+      "id": "7054616",
+      "name": "Abat",
+      "population": 0,
+      "region": "Akwa Ibom State",
+      "searchNames": []
+    },
+    {
+      "id": "2352958",
+      "name": "Abejukolo",
+      "population": 0,
+      "region": "Kogi State",
+      "searchNames": [
+        "abajikolo",
+        "abajukolo"
+      ]
+    },
+    {
+      "id": "2352947",
+      "name": "Abeokuta",
+      "population": 735000,
+      "region": "Ogun State",
+      "searchNames": [
+        "a bei ao ku ta",
+        "abe okuta",
+        "abwkata",
+        "abywkwta",
+        "qat",
+        "ʿebeʾokuta",
+        "абеокута",
+        "אבאוקוטה",
+        "ابوکاتا",
+        "ابيوكوتا",
+        "ابیوکوتا",
+        "አቤዖኩታ",
+        "अबओकट",
+        "আবওকট",
+        "ਅਬਓਕਟ",
+        "아베오쿠타",
+        "アヘオクタ",
+        "阿贝奥库塔"
+      ]
+    },
+    {
+      "id": "2352897",
+      "name": "Abigi",
+      "population": 0,
+      "region": "Ogun State",
+      "searchNames": []
+    },
+    {
+      "id": "2352857",
+      "name": "Abocho",
+      "population": 6801,
+      "region": "Kogi State",
+      "searchNames": []
+    },
+    {
+      "id": "2352848",
+      "name": "Aboh",
+      "population": 0,
+      "region": "Delta",
+      "searchNames": [
+        "abo"
+      ]
+    },
+    {
+      "id": "10275569",
+      "name": "Aboh",
+      "population": 0,
+      "region": "Imo State",
+      "searchNames": []
+    },
+    {
+      "id": "2352824",
+      "name": "Abonnema",
+      "population": 0,
+      "region": "Rivers State",
+      "searchNames": [
+        "abonema",
+        "nyemoni"
+      ]
+    },
+    {
+      "id": "2352804",
+      "name": "Abraka",
+      "population": 6940,
+      "region": "Delta",
+      "searchNames": [
+        "kwale"
+      ]
+    },
+    {
+      "id": "2352797",
+      "name": "Abua",
+      "population": 0,
+      "region": "Rivers State",
+      "searchNames": []
+    },
+    {
+      "id": "2352789",
+      "name": "Abudu",
+      "population": 0,
+      "region": "Edo State",
+      "searchNames": []
+    },
+    {
+      "id": "2352778",
+      "name": "Abuja",
+      "population": 2690000,
+      "region": "FCT",
+      "searchNames": [
+        "a bu gu",
+        "a bu jia",
+        "abodza",
+        "abouja",
+        "abuca",
+        "abudz",
+        "abudza",
+        "abudzha",
+        "abugia",
+        "abugo",
+        "abuya",
+        "abuzha",
+        "abv",
+        "abwja",
+        "ampouza",
+        "apuja",
+        "xabu ca",
+        "yەbwwja",
+        "ʼbwgh",
+        "αμπουζα",
+        "абуджа",
+        "абужа",
+        "абуҷа",
+        "абуџа",
+        "აბუჯა",
+        "աբուջա",
+        "אבוגה",
+        "אבודזשא",
+        "ابوجا",
+        "يەبووجا",
+        "አቡጃ",
+        "अबज",
+        "আবজ",
+        "ਅਬਜ",
+        "ଅବଜ",
+        "அபஜ",
+        "അബജ",
+        "อาบจา",
+        "ཨ པ ཅ",
+        "အဘဂမ",
+        "아부자",
+        "アフシャ",
+        "阿布賈",
+        "阿布贾"
+      ]
+    },
+    {
+      "id": "2352730",
+      "name": "Abuochiche",
+      "population": 0,
+      "region": "Cross River State",
+      "searchNames": [
+        "abuochichi"
+      ]
+    },
+    {
+      "id": "2352698",
+      "name": "Achalla",
+      "population": 0,
+      "region": "Anambra",
+      "searchNames": []
+    },
+    {
+      "id": "2352589",
+      "name": "Adani",
+      "population": 6161,
+      "region": "Enugu State",
+      "searchNames": []
+    },
+    {
+      "id": "2352408",
+      "name": "Adikpo",
+      "population": 0,
+      "region": "Benue State",
+      "searchNames": []
+    },
+    {
+      "id": "2352379",
+      "name": "Ado-Ekiti",
+      "population": 435000,
+      "region": "Ekiti State",
+      "searchNames": [
+        "ado",
+        "ado ehkiti",
+        "adw akyty",
+        "adw aykty",
+        "ekk",
+        "lidiyeti lisano",
+        "адо экити",
+        "ادو اكيتي",
+        "ادو اکیتی",
+        "ادو ایکتی",
+        "ሊድየት ሊሳኖ",
+        "अड एकत",
+        "আড একত",
+        "ਅਡ ਏਕਤ",
+        "アト エキティ"
+      ]
+    },
+    {
+      "id": "2352356",
+      "name": "Ado-Odo",
+      "population": 15442,
+      "region": "Ogun State",
+      "searchNames": [
+        "addo",
+        "ado"
+      ]
+    },
+    {
+      "id": "2352375",
+      "name": "Adogo",
+      "population": 0,
+      "region": "Kogi State",
+      "searchNames": []
+    },
+    {
+      "id": "2352352",
+      "name": "Adoru",
+      "population": 8203,
+      "region": "Kogi State",
+      "searchNames": []
+    },
+    {
+      "id": "2338140",
+      "name": "Afaha Ikot Ebak",
+      "population": 0,
+      "region": "Akwa Ibom State",
+      "searchNames": [
+        "afaha iko ebat",
+        "ikot ebak",
+        "ikot ebak efagha"
+      ]
+    },
+    {
+      "id": "2352288",
+      "name": "Afaha Offiong",
+      "population": 0,
+      "region": "Akwa Ibom State",
+      "searchNames": [
+        "afaha obio offiong",
+        "afaha obio ofiong"
+      ]
+    },
+    {
+      "id": "2352281",
+      "name": "Afam",
+      "population": 0,
+      "region": "Rivers State",
+      "searchNames": [
+        "afam uka",
+        "afam uko",
+        "afam uku"
+      ]
+    },
+    {
+      "id": "2352250",
+      "name": "Afikpo",
+      "population": 71866,
+      "region": "Ebonyi State",
+      "searchNames": [
+        "ehugbo"
+      ]
+    },
+    {
+      "id": "2352230",
+      "name": "Afon",
+      "population": 0,
+      "region": "Kwara State",
+      "searchNames": []
+    },
+    {
+      "id": "2325659",
+      "name": "Afor-Oru",
+      "population": 0,
+      "region": "Imo State",
+      "searchNames": [
+        "afororu",
+        "oru"
+      ]
+    },
+    {
+      "id": "2352206",
+      "name": "Afuze",
+      "population": 0,
+      "region": "Edo State",
+      "searchNames": [
+        "afuje",
+        "afuji"
+      ]
+    },
+    {
+      "id": "2352175",
+      "name": "Agaie",
+      "population": 11742,
+      "region": "Niger State",
+      "searchNames": []
+    },
+    {
+      "id": "2352110",
+      "name": "Agbabu",
+      "population": 8611,
+      "region": "Ondo State",
+      "searchNames": []
+    },
+    {
+      "id": "2352075",
+      "name": "Agbani",
+      "population": 0,
+      "region": "Enugu State",
+      "searchNames": []
+    },
+    {
+      "id": "2351979",
+      "name": "Agbor",
+      "population": 67610,
+      "region": "Delta",
+      "searchNames": [
+        "afbor",
+        "agbor boiiboji",
+        "агбор"
+      ]
+    },
+    {
+      "id": "2351943",
+      "name": "Agege",
+      "population": 683600,
+      "region": "Lagos",
+      "searchNames": [
+        "агеге"
+      ]
+    },
+    {
+      "id": "2351927",
+      "name": "Agenebode",
+      "population": 12730,
+      "region": "Edo State",
+      "searchNames": []
+    },
+    {
+      "id": "2351851",
+      "name": "Ago-Amodu",
+      "population": 0,
+      "region": "Oyo State",
+      "searchNames": [
+        "ago amadu",
+        "shepeteri"
+      ]
+    },
+    {
+      "id": "2351850",
+      "name": "Ago-Are",
+      "population": 13919,
+      "region": "Oyo State",
+      "searchNames": [
+        "agaw are"
+      ]
+    },
+    {
+      "id": "2351762",
+      "name": "Aguata",
+      "population": 0,
+      "region": "Anambra",
+      "searchNames": []
+    },
+    {
+      "id": "2351740",
+      "name": "Agulu",
+      "population": 79021,
+      "region": "Anambra",
+      "searchNames": []
+    },
+    {
+      "id": "9181895",
+      "name": "Aguobu-Owa",
+      "population": 0,
+      "region": "Enugu State",
+      "searchNames": []
+    },
+    {
+      "id": "2351695",
+      "name": "Agwara",
+      "population": 0,
+      "region": "Niger State",
+      "searchNames": [
+        "agwarra"
+      ]
+    },
+    {
+      "id": "2351657",
+      "name": "Ahoada",
+      "population": 12848,
+      "region": "Rivers State",
+      "searchNames": [
+        "ahoadao"
+      ]
+    },
+    {
+      "id": "2566637",
+      "name": "Aiyetoro",
+      "population": 5430,
+      "region": "Lagos",
+      "searchNames": []
+    },
+    {
+      "id": "2351449",
+      "name": "Ajaawa",
+      "population": 0,
+      "region": "Oyo State",
+      "searchNames": [
+        "ajawa",
+        "ajowa"
+      ]
+    },
+    {
+      "id": "2351504",
+      "name": "Ajaka",
+      "population": 0,
+      "region": "Kogi State",
+      "searchNames": []
+    },
+    {
+      "id": "2351494",
+      "name": "Ajalli",
+      "population": 0,
+      "region": "Anambra",
+      "searchNames": [
+        "ujali",
+        "ujalli",
+        "ujari"
+      ]
+    },
+    {
+      "id": "2351470",
+      "name": "Ajaokuta",
+      "population": 15144,
+      "region": "Kogi State",
+      "searchNames": [
+        "qjk"
+      ]
+    },
+    {
+      "id": "2351461",
+      "name": "Ajasse Ipo",
+      "population": 12718,
+      "region": "Kwara State",
+      "searchNames": [
+        "ajasse"
+      ]
+    },
+    {
+      "id": "2566636",
+      "name": "Ajegunle",
+      "population": 550000,
+      "region": "Lagos",
+      "searchNames": [
+        "аиегунле"
+      ]
+    },
+    {
+      "id": "2351329",
+      "name": "Ajingi",
+      "population": 0,
+      "region": "Kano State",
+      "searchNames": []
+    },
+    {
+      "id": "2351208",
+      "name": "Akamkpa",
+      "population": 0,
+      "region": "Cross River State",
+      "searchNames": [
+        "akankpa"
+      ]
+    },
+    {
+      "id": "2351209",
+      "name": "Akankpa",
+      "population": 7000,
+      "region": "Cross River State",
+      "searchNames": []
+    },
+    {
+      "id": "2351204",
+      "name": "Akanran",
+      "population": 0,
+      "region": "Oyo State",
+      "searchNames": []
+    },
+    {
+      "id": "2351156",
+      "name": "Ake-Eze",
+      "population": 6537,
+      "region": "Enugu State",
+      "searchNames": [
+        "aka eze",
+        "akeze"
+      ]
+    },
+    {
+      "id": "7101202",
+      "name": "Akinima",
+      "population": 0,
+      "region": "Rivers State",
+      "searchNames": []
+    },
+    {
+      "id": "2351027",
+      "name": "Akko",
+      "population": 6129,
+      "region": "Gombe State",
+      "searchNames": [
+        "ako"
+      ]
+    },
+    {
+      "id": "2351020",
+      "name": "Akodo",
+      "population": 0,
+      "region": "Lagos",
+      "searchNames": [
+        "akawdo"
+      ]
+    },
+    {
+      "id": "2566696",
+      "name": "Akowonjo",
+      "population": 308900,
+      "region": "Lagos",
+      "searchNames": [
+        "akouonijo",
+        "акоуониио"
+      ]
+    },
+    {
+      "id": "10259699",
+      "name": "Akpafa",
+      "population": 0,
+      "region": "Kogi State",
+      "searchNames": []
+    },
+    {
+      "id": "2351810",
+      "name": "Akpet Central",
+      "population": 0,
+      "region": "Cross River State",
+      "searchNames": [
+        "agoi efut"
+      ]
+    },
+    {
+      "id": "2350886",
+      "name": "Aku",
+      "population": 73742,
+      "region": "Enugu State",
+      "searchNames": []
+    },
+    {
+      "id": "2350841",
+      "name": "Akure",
+      "population": 730000,
+      "region": "Ondo State",
+      "searchNames": [
+        "a ku lei",
+        "akr",
+        "akuce",
+        "akule",
+        "akwrh",
+        "akwry",
+        "ʿekure",
+        "акуре",
+        "اكوري",
+        "اکوره",
+        "اکورے",
+        "አኩሬ",
+        "अकर",
+        "আকর",
+        "ਅਕਰ",
+        "아쿠레",
+        "アクレ",
+        "阿庫雷"
+      ]
+    },
+    {
+      "id": "2350806",
+      "name": "Akwanga",
+      "population": 15985,
+      "region": "Nasarawa State",
+      "searchNames": []
+    },
+    {
+      "id": "2350792",
+      "name": "Akwete",
+      "population": 0,
+      "region": "Abia State",
+      "searchNames": [
+        "akvete",
+        "аквете"
+      ]
+    },
+    {
+      "id": "2350785",
+      "name": "Akwukwu-Igbo",
+      "population": 0,
+      "region": "Delta",
+      "searchNames": [
+        "akwukwu"
+      ]
+    },
+    {
+      "id": "2350592",
+      "name": "Alapa",
+      "population": 9584,
+      "region": "Oyo State",
+      "searchNames": []
+    },
+    {
+      "id": "12102562",
+      "name": "Alari-Isadan",
+      "population": 2853,
+      "region": "Ogun State",
+      "searchNames": [
+        "alari"
+      ]
+    },
+    {
+      "id": "2350523",
+      "name": "Alasia",
+      "population": 100000,
+      "region": "Lagos",
+      "searchNames": [
+        "аласиа"
+      ]
+    },
+    {
+      "id": "2350476",
+      "name": "Albasu",
+      "population": 0,
+      "region": "Kano State",
+      "searchNames": []
+    },
+    {
+      "id": "2350436",
+      "name": "Aliade",
+      "population": 10292,
+      "region": "Benue State",
+      "searchNames": [
+        "eleyeddi"
+      ]
+    },
+    {
+      "id": "2350434",
+      "name": "Aliayabiagba",
+      "population": 228000,
+      "region": "Lagos",
+      "searchNames": [
+        "alaiyabiagba",
+        "aliajabiagba",
+        "алиаябиагба"
+      ]
+    },
+    {
+      "id": "2350428",
+      "name": "Aliero",
+      "population": 0,
+      "region": "Kebbi",
+      "searchNames": [
+        "aleiro"
+      ]
+    },
+    {
+      "id": "2566676",
+      "name": "Alimosho",
+      "population": 308290,
+      "region": "Lagos",
+      "searchNames": [
+        "alimoso",
+        "алимошо"
+      ]
+    },
+    {
+      "id": "2350394",
+      "name": "Alkaleri",
+      "population": 0,
+      "region": "Bauchi",
+      "searchNames": [
+        "alkalere"
+      ]
+    },
+    {
+      "id": "2350259",
+      "name": "Amagunze",
+      "population": 9598,
+      "region": "Enugu State",
+      "searchNames": []
+    },
+    {
+      "id": "2350249",
+      "name": "Amaigbo",
+      "population": 127300,
+      "region": "Abia State",
+      "searchNames": [
+        "amaigubo",
+        "amaygbw",
+        "amayqbw",
+        "амаигбо",
+        "امایقبو",
+        "امایگبو",
+        "アマイクホ"
+      ]
+    },
+    {
+      "id": "2350090",
+      "name": "Amaigbo",
+      "population": 0,
+      "region": "Imo State",
+      "searchNames": [
+        "amibo",
+        "amigbo"
+      ]
+    },
+    {
+      "id": "2350172",
+      "name": "Amassoma",
+      "population": 6970,
+      "region": "Bayelsa State",
+      "searchNames": [
+        "amasama",
+        "amassama"
+      ]
+    },
+    {
+      "id": "2350027",
+      "name": "Amper",
+      "population": 12212,
+      "region": "Plateau State",
+      "searchNames": []
+    },
+    {
+      "id": "2349964",
+      "name": "Anaku",
+      "population": 0,
+      "region": "Anambra",
+      "searchNames": []
+    },
+    {
+      "id": "2349951",
+      "name": "Anchau",
+      "population": 15538,
+      "region": "Kaduna State",
+      "searchNames": []
+    },
+    {
+      "id": "2336427",
+      "name": "Angware",
+      "population": 0,
+      "region": "Plateau State",
+      "searchNames": [
+        "jarawa"
+      ]
+    },
+    {
+      "id": "2349797",
+      "name": "Anka",
+      "population": 11641,
+      "region": "Zamfara State",
+      "searchNames": []
+    },
+    {
+      "id": "2349788",
+      "name": "Ankpa",
+      "population": 14630,
+      "region": "Kogi State",
+      "searchNames": [
+        "ank"
+      ]
+    },
+    {
+      "id": "2349656",
+      "name": "Apapa",
+      "population": 0,
+      "region": "Lagos",
+      "searchNames": [
+        "qap"
+      ]
+    },
+    {
+      "id": "2349558",
+      "name": "Apomu",
+      "population": 71656,
+      "region": "Osun State",
+      "searchNames": []
+    },
+    {
+      "id": "13118710",
+      "name": "Apumiri",
+      "population": 0,
+      "region": "Abia State",
+      "searchNames": []
+    },
+    {
+      "id": "2349529",
+      "name": "Aramoko-Ekiti",
+      "population": 74491,
+      "region": "Ekiti State",
+      "searchNames": [
+        "ara",
+        "aramoko",
+        "araomoko ekiti"
+      ]
+    },
+    {
+      "id": "2349473",
+      "name": "Araromi-Opin",
+      "population": 0,
+      "region": "Kwara State",
+      "searchNames": [
+        "araromi osi"
+      ]
+    },
+    {
+      "id": "2349431",
+      "name": "Argungu",
+      "population": 45584,
+      "region": "Kebbi",
+      "searchNames": []
+    },
+    {
+      "id": "2349360",
+      "name": "Arochukwu",
+      "population": 10776,
+      "region": "Abia State",
+      "searchNames": [
+        "arochuku"
+      ]
+    },
+    {
+      "id": "2349276",
+      "name": "Asaba",
+      "population": 73374,
+      "region": "Delta",
+      "searchNames": [
+        "abb",
+        "ʿesaba",
+        "асаба",
+        "اساба",
+        "اسابا",
+        "አሳባ",
+        "असब",
+        "আসব",
+        "ਅਸਬ",
+        "アサハ"
+      ]
+    },
+    {
+      "id": "2349114",
+      "name": "Askira",
+      "population": 0,
+      "region": "Borno State",
+      "searchNames": []
+    },
+    {
+      "id": "10026295",
+      "name": "Atan",
+      "population": 0,
+      "region": "Ogun State",
+      "searchNames": []
+    },
+    {
+      "id": "2349030",
+      "name": "Atan",
+      "population": 3907,
+      "region": "Ogun State",
+      "searchNames": []
+    },
+    {
+      "id": "2349019",
+      "name": "Atani",
+      "population": 230000,
+      "region": "Anambra",
+      "searchNames": [
+        "атани"
+      ]
+    },
+    {
+      "id": "2348892",
+      "name": "Auchi",
+      "population": 62907,
+      "region": "Edo State",
+      "searchNames": []
+    },
+    {
+      "id": "2348881",
+      "name": "Augie",
+      "population": 0,
+      "region": "Kebbi",
+      "searchNames": [
+        "augi"
+      ]
+    },
+    {
+      "id": "2348874",
+      "name": "Auna",
+      "population": 8590,
+      "region": "Niger State",
+      "searchNames": []
+    },
+    {
+      "id": "2334485",
+      "name": "Auyo",
+      "population": 0,
+      "region": "Jigawa State",
+      "searchNames": [
+        "kiggin"
+      ]
+    },
+    {
+      "id": "2348792",
+      "name": "Awe",
+      "population": 0,
+      "region": "Nasarawa State",
+      "searchNames": []
+    },
+    {
+      "id": "2348783",
+      "name": "Awgu",
+      "population": 23175,
+      "region": "Enugu State",
+      "searchNames": []
+    },
+    {
+      "id": "2348773",
+      "name": "Awka",
+      "population": 167738,
+      "region": "Anambra",
+      "searchNames": [
+        "a oka",
+        "akwa",
+        "ao ka",
+        "auka",
+        "avaka",
+        "avka",
+        "oka",
+        "ʿeውka",
+        "авка",
+        "اوكا",
+        "اوکا",
+        "አውካ",
+        "अवक",
+        "আওক",
+        "ਅਵਕ",
+        "아우카",
+        "アウカ",
+        "奧卡"
+      ]
+    },
+    {
+      "id": "2348761",
+      "name": "Awo",
+      "population": 0,
+      "region": "Osun State",
+      "searchNames": []
+    },
+    {
+      "id": "2348755",
+      "name": "Awo-Idemili",
+      "population": 0,
+      "region": "Imo State",
+      "searchNames": [
+        "awo idemiri",
+        "awo ndemini",
+        "awodemili"
+      ]
+    },
+    {
+      "id": "2351549",
+      "name": "Ayete",
+      "population": 0,
+      "region": "Oyo State",
+      "searchNames": [
+        "aiyete"
+      ]
+    },
+    {
+      "id": "2351541",
+      "name": "Ayetoro",
+      "population": 0,
+      "region": "Ogun State",
+      "searchNames": [
+        "aiyetoro"
+      ]
+    },
+    {
+      "id": "2348595",
+      "name": "Azare",
+      "population": 105687,
+      "region": "Bauchi",
+      "searchNames": [
+        "азаре"
+      ]
+    },
+    {
+      "id": "2349213",
+      "name": "Azare",
+      "population": 0,
+      "region": "Borno State",
+      "searchNames": [
+        "asari"
+      ]
+    },
+    {
+      "id": "10322714",
+      "name": "Baap",
+      "population": 0,
+      "region": "Plateau State",
+      "searchNames": [
+        "ba ap"
+      ]
+    },
+    {
+      "id": "2348507",
+      "name": "Babana",
+      "population": 17617,
+      "region": "Niger State",
+      "searchNames": []
+    },
+    {
+      "id": "2348455",
+      "name": "Babban Gida",
+      "population": 0,
+      "region": "Yobe State",
+      "searchNames": [
+        "baban gida",
+        "babangida"
+      ]
+    },
+    {
+      "id": "2348419",
+      "name": "Babura",
+      "population": 7267,
+      "region": "Jigawa State",
+      "searchNames": []
+    },
+    {
+      "id": "2348395",
+      "name": "Badagry",
+      "population": 26383,
+      "region": "Lagos",
+      "searchNames": [
+        "badagri"
+      ]
+    },
+    {
+      "id": "2348365",
+      "name": "Badeggi",
+      "population": 8283,
+      "region": "Niger State",
+      "searchNames": [
+        "badegg"
+      ]
+    },
+    {
+      "id": "2348259",
+      "name": "Bagudo",
+      "population": 6924,
+      "region": "Kebbi",
+      "searchNames": [
+        "tuga"
+      ]
+    },
+    {
+      "id": "2348253",
+      "name": "Bagwai",
+      "population": 0,
+      "region": "Kano State",
+      "searchNames": []
+    },
+    {
+      "id": "2348228",
+      "name": "Baissa",
+      "population": 8911,
+      "region": "Taraba State",
+      "searchNames": [
+        "ba issa",
+        "bdissa"
+      ]
+    },
+    {
+      "id": "2348203",
+      "name": "Bajoga",
+      "population": 0,
+      "region": "Gombe State",
+      "searchNames": []
+    },
+    {
+      "id": "2348118",
+      "name": "Bakori",
+      "population": 12604,
+      "region": "Katsina State",
+      "searchNames": []
+    },
+    {
+      "id": "2348106",
+      "name": "Bakura",
+      "population": 0,
+      "region": "Zamfara State",
+      "searchNames": []
+    },
+    {
+      "id": "2348013",
+      "name": "Balle",
+      "population": 0,
+      "region": "Sokoto",
+      "searchNames": [
+        "bale"
+      ]
+    },
+    {
+      "id": "2347954",
+      "name": "Bama",
+      "population": 118121,
+      "region": "Borno State",
+      "searchNames": [
+        "бама"
+      ]
+    },
+    {
+      "id": "10182318",
+      "name": "Bangi",
+      "population": 0,
+      "region": "Niger State",
+      "searchNames": []
+    },
+    {
+      "id": "6776134",
+      "name": "Banki",
+      "population": 5000,
+      "region": "Borno State",
+      "searchNames": []
+    },
+    {
+      "id": "2347758",
+      "name": "Bara",
+      "population": 11673,
+      "region": "Gombe State",
+      "searchNames": []
+    },
+    {
+      "id": "2347757",
+      "name": "Bara",
+      "population": 0,
+      "region": "Yobe State",
+      "searchNames": []
+    },
+    {
+      "id": "2347712",
+      "name": "Barkin Ladi",
+      "population": 0,
+      "region": "Plateau State",
+      "searchNames": [
+        "b ladi",
+        "bar n ladi",
+        "barakin",
+        "barakin ladi",
+        "barikin ladi"
+      ]
+    },
+    {
+      "id": "2347592",
+      "name": "Baro",
+      "population": 26821,
+      "region": "Niger State",
+      "searchNames": [
+        "barbo",
+        "баро"
+      ]
+    },
+    {
+      "id": "2347528",
+      "name": "Bassa",
+      "population": 0,
+      "region": "Plateau State",
+      "searchNames": []
+    },
+    {
+      "id": "2347511",
+      "name": "Batagarawa",
+      "population": 0,
+      "region": "Katsina State",
+      "searchNames": []
+    },
+    {
+      "id": "2347483",
+      "name": "Batsari",
+      "population": 7445,
+      "region": "Katsina State",
+      "searchNames": []
+    },
+    {
+      "id": "2347470",
+      "name": "Bauchi",
+      "population": 693700,
+      "region": "Bauchi",
+      "searchNames": [
+        "ba uci",
+        "bao qi",
+        "baucis",
+        "bauczi",
+        "baushi",
+        "bawchy",
+        "bawtshy",
+        "baውci",
+        "bcu",
+        "yakoba",
+        "yakubu",
+        "баучи",
+        "бауши",
+        "باوتشي",
+        "باوچی",
+        "ባውቺ",
+        "बउच",
+        "বউচ",
+        "ਬਉਚ",
+        "ハウチ",
+        "包奇"
+      ]
+    },
+    {
+      "id": "2347456",
+      "name": "Baure",
+      "population": 0,
+      "region": "Katsina State",
+      "searchNames": []
+    },
+    {
+      "id": "2347383",
+      "name": "Bebeji",
+      "population": 10987,
+      "region": "Kano State",
+      "searchNames": []
+    },
+    {
+      "id": "2347330",
+      "name": "Beli",
+      "population": 17467,
+      "region": "Taraba State",
+      "searchNames": [
+        "bali"
+      ]
+    },
+    {
+      "id": "2347304",
+      "name": "Bena",
+      "population": 8361,
+      "region": "Kebbi",
+      "searchNames": []
+    },
+    {
+      "id": "2347303",
+      "name": "Bende",
+      "population": 79618,
+      "region": "Abia State",
+      "searchNames": []
+    },
+    {
+      "id": "2347283",
+      "name": "Benin City",
+      "population": 1782000,
+      "region": "Edo State",
+      "searchNames": [
+        "bei ning cheng",
+        "beni n si ti",
+        "benim",
+        "benin",
+        "benin by",
+        "benin səhəri",
+        "benin sici",
+        "benin siti",
+        "benin stad",
+        "benin stadt",
+        "benina sahira",
+        "benina siti",
+        "beninas",
+        "beninborg",
+        "beninshiti",
+        "beninsiti",
+        "beninurbo",
+        "beniዝ siti",
+        "bni",
+        "bnn sˌar",
+        "bnyn",
+        "bnyn syty",
+        "ciudad de benin",
+        "ilu benin",
+        "kota benin",
+        "magaalaa benin",
+        "magaalada benin",
+        "shakhri benin",
+        "thanh pho benin",
+        "бенин",
+        "бенин сити",
+        "бенін сіті",
+        "бенін сіці",
+        "шахри бенин",
+        "בנין סיטי",
+        "بنن ښار",
+        "بنين",
+        "بنین",
+        "بینن شہر",
+        "በንዝ ሲቲ",
+        "बनन सट",
+        "বনন সট",
+        "ਬਨਨ ਸਹਰ",
+        "เบนนซต",
+        "베닌시티",
+        "ヘニンシティ",
+        "贝宁城"
+      ]
+    },
+    {
+      "id": "2347279",
+      "name": "Benisheikh",
+      "population": 9825,
+      "region": "Borno State",
+      "searchNames": [
+        "beni sheik",
+        "benisheik"
+      ]
+    },
+    {
+      "id": "2347238",
+      "name": "Besse",
+      "population": 0,
+      "region": "Kebbi",
+      "searchNames": []
+    },
+    {
+      "id": "2347210",
+      "name": "Bichi",
+      "population": 0,
+      "region": "Kano State",
+      "searchNames": []
+    },
+    {
+      "id": "2347209",
+      "name": "Bida",
+      "population": 400000,
+      "region": "Niger State",
+      "searchNames": [
+        "бида"
+      ]
+    },
+    {
+      "id": "2347155",
+      "name": "Biliri",
+      "population": 15976,
+      "region": "Gombe State",
+      "searchNames": [
+        "billiri"
+      ]
+    },
+    {
+      "id": "2347154",
+      "name": "Billiri",
+      "population": 0,
+      "region": "Gombe State",
+      "searchNames": [
+        "biliri laushi"
+      ]
+    },
+    {
+      "id": "2347109",
+      "name": "Bin Yauri",
+      "population": 11501,
+      "region": "Kebbi",
+      "searchNames": []
+    },
+    {
+      "id": "2347132",
+      "name": "Bindawa",
+      "population": 0,
+      "region": "Katsina State",
+      "searchNames": []
+    },
+    {
+      "id": "2347116",
+      "name": "Binji",
+      "population": 6717,
+      "region": "Sokoto",
+      "searchNames": []
+    },
+    {
+      "id": "2347062",
+      "name": "Birnin Gwari",
+      "population": 0,
+      "region": "Kaduna State",
+      "searchNames": []
+    },
+    {
+      "id": "2347059",
+      "name": "Birnin Kebbi",
+      "population": 108164,
+      "region": "Kebbi",
+      "searchNames": [
+        "biranina kebbi",
+        "biranina kebi",
+        "birinini kebi",
+        "birunin kebbi",
+        "brnn kby",
+        "byrnyn kby",
+        "byrnyn kyby",
+        "бирнин кебби",
+        "برنن کبی",
+        "بيرنين كيبي",
+        "بیرنین کبی",
+        "ቢርኒን ከቢ",
+        "बरनन कबब",
+        "বরনন কবব",
+        "ਬਰਨਨ ਕਬ",
+        "ヒルニン ケッヒ"
+      ]
+    },
+    {
+      "id": "2347057",
+      "name": "Birnin Kudu",
+      "population": 26565,
+      "region": "Jigawa State",
+      "searchNames": []
+    },
+    {
+      "id": "10194293",
+      "name": "Birnin Magaji",
+      "population": 0,
+      "region": "Zamfara State",
+      "searchNames": [
+        "birni magaji"
+      ]
+    },
+    {
+      "id": "2347041",
+      "name": "Birniwa",
+      "population": 9334,
+      "region": "Jigawa State",
+      "searchNames": [
+        "birinawa",
+        "biriniwa"
+      ]
+    },
+    {
+      "id": "2346995",
+      "name": "Biu",
+      "population": 95005,
+      "region": "Borno State",
+      "searchNames": []
+    },
+    {
+      "id": "2346954",
+      "name": "Bode Osi",
+      "population": 0,
+      "region": "Osun State",
+      "searchNames": [
+        "bode olla",
+        "bode olle",
+        "ibede osi",
+        "ibode osi"
+      ]
+    },
+    {
+      "id": "2346951",
+      "name": "Bode Saadu",
+      "population": 16619,
+      "region": "Kwara State",
+      "searchNames": [
+        "bode sadu"
+      ]
+    },
+    {
+      "id": "2346945",
+      "name": "Bodinga",
+      "population": 0,
+      "region": "Sokoto",
+      "searchNames": []
+    },
+    {
+      "id": "2346918",
+      "name": "Bogoro",
+      "population": 0,
+      "region": "Bauchi",
+      "searchNames": [
+        "mogaro"
+      ]
+    },
+    {
+      "id": "10337122",
+      "name": "Boh",
+      "population": 0,
+      "region": "Gombe State",
+      "searchNames": []
+    },
+    {
+      "id": "2346906",
+      "name": "Boi",
+      "population": 6033,
+      "region": "Bauchi",
+      "searchNames": []
+    },
+    {
+      "id": "2346902",
+      "name": "Boje",
+      "population": 0,
+      "region": "Cross River State",
+      "searchNames": [
+        "boji"
+      ]
+    },
+    {
+      "id": "2346896",
+      "name": "Boju",
+      "population": 12814,
+      "region": "Benue State",
+      "searchNames": []
+    },
+    {
+      "id": "2346893",
+      "name": "Bokani",
+      "population": 8624,
+      "region": "Niger State",
+      "searchNames": []
+    },
+    {
+      "id": "2346887",
+      "name": "Bokkos",
+      "population": 12538,
+      "region": "Plateau State",
+      "searchNames": []
+    },
+    {
+      "id": "2330032",
+      "name": "Bolorunduro",
+      "population": 0,
+      "region": "Ondo State",
+      "searchNames": [
+        "mobaolorunduro",
+        "mobolonduro",
+        "mobolorunduro"
+      ]
+    },
+    {
+      "id": "2346843",
+      "name": "Bomadi",
+      "population": 8402,
+      "region": "Delta",
+      "searchNames": [
+        "bomodi"
+      ]
+    },
+    {
+      "id": "2346812",
+      "name": "Bonny",
+      "population": 16868,
+      "region": "Rivers State",
+      "searchNames": [
+        "bonny town"
+      ]
+    },
+    {
+      "id": "2346800",
+      "name": "Bori",
+      "population": 11693,
+      "region": "Rivers State",
+      "searchNames": []
+    },
+    {
+      "id": "2346788",
+      "name": "Bornu Yassu",
+      "population": 5811,
+      "region": "Borno State",
+      "searchNames": []
+    },
+    {
+      "id": "2346719",
+      "name": "Briyel",
+      "population": 0,
+      "region": "Borno State",
+      "searchNames": [
+        "biriyel",
+        "bryel"
+      ]
+    },
+    {
+      "id": "2346632",
+      "name": "Buga",
+      "population": 9913,
+      "region": "Nasarawa State",
+      "searchNames": []
+    },
+    {
+      "id": "2348298",
+      "name": "Bugana",
+      "population": 9737,
+      "region": "Kogi State",
+      "searchNames": [
+        "bagana"
+      ]
+    },
+    {
+      "id": "2346615",
+      "name": "Buguma",
+      "population": 135404,
+      "region": "Rivers State",
+      "searchNames": [
+        "bugama",
+        "бугума"
+      ]
+    },
+    {
+      "id": "2346575",
+      "name": "Bukkuyum",
+      "population": 0,
+      "region": "Zamfara State",
+      "searchNames": [
+        "bukuyum",
+        "bukwium"
+      ]
+    },
+    {
+      "id": "2346561",
+      "name": "Bukuru",
+      "population": 15540,
+      "region": "Plateau State",
+      "searchNames": []
+    },
+    {
+      "id": "2346416",
+      "name": "Bungudu",
+      "population": 0,
+      "region": "Zamfara State",
+      "searchNames": [
+        "bongudu"
+      ]
+    },
+    {
+      "id": "2596833",
+      "name": "Buni Yadi",
+      "population": 0,
+      "region": "Yobe State",
+      "searchNames": [
+        "buniyadi"
+      ]
+    },
+    {
+      "id": "2346412",
+      "name": "Bunkure",
+      "population": 0,
+      "region": "Kano State",
+      "searchNames": []
+    },
+    {
+      "id": "2346399",
+      "name": "Bununu",
+      "population": 6123,
+      "region": "Bauchi",
+      "searchNames": [
+        "bununu kasa",
+        "bununu kassa"
+      ]
+    },
+    {
+      "id": "2322587",
+      "name": "Bunza",
+      "population": 0,
+      "region": "Kebbi",
+      "searchNames": [
+        "takalafian bunza"
+      ]
+    },
+    {
+      "id": "2341326",
+      "name": "Buruku",
+      "population": 0,
+      "region": "Benue State",
+      "searchNames": [
+        "bukuru",
+        "gburuku"
+      ]
+    },
+    {
+      "id": "2346322",
+      "name": "Burumburum",
+      "population": 11689,
+      "region": "Kaduna State",
+      "searchNames": []
+    },
+    {
+      "id": "2346317",
+      "name": "Burutu",
+      "population": 16410,
+      "region": "Delta",
+      "searchNames": []
+    },
+    {
+      "id": "2346245",
+      "name": "Bwari",
+      "population": 0,
+      "region": "FCT",
+      "searchNames": []
+    },
+    {
+      "id": "2346229",
+      "name": "Calabar",
+      "population": 540000,
+      "region": "Cross River State",
+      "searchNames": [
+        "cbq",
+        "ka la ba er",
+        "kalabar",
+        "kalabara",
+        "kalabaras",
+        "kalabari",
+        "kalabaro",
+        "kallabaleu",
+        "karabaru",
+        "калабар",
+        "كالابار",
+        "کالابار",
+        "ካላባር",
+        "कलबर",
+        "কলবর",
+        "ਕਲਬਰ",
+        "칼라바르",
+        "カラハル",
+        "卡拉巴尔"
+      ]
+    },
+    {
+      "id": "12129605",
+      "name": "Chakwama",
+      "population": 200000,
+      "region": "Jigawa State",
+      "searchNames": [
+        "kkhakuama",
+        "кхакуама"
+      ]
+    },
+    {
+      "id": "2346098",
+      "name": "Charanchi",
+      "population": 0,
+      "region": "Katsina State",
+      "searchNames": [
+        "cheranchi"
+      ]
+    },
+    {
+      "id": "2346076",
+      "name": "Chibok",
+      "population": 0,
+      "region": "Borno State",
+      "searchNames": [
+        "chibuk"
+      ]
+    },
+    {
+      "id": "2345872",
+      "name": "Dabai",
+      "population": 6012,
+      "region": "Kebbi",
+      "searchNames": []
+    },
+    {
+      "id": "2345785",
+      "name": "Dadiya",
+      "population": 7152,
+      "region": "Gombe State",
+      "searchNames": []
+    },
+    {
+      "id": "2345643",
+      "name": "Dakingari",
+      "population": 12558,
+      "region": "Kebbi",
+      "searchNames": []
+    },
+    {
+      "id": "2345550",
+      "name": "Damagum",
+      "population": 0,
+      "region": "Yobe State",
+      "searchNames": [
+        "damagun"
+      ]
+    },
+    {
+      "id": "2345526",
+      "name": "Damasak",
+      "population": 13874,
+      "region": "Borno State",
+      "searchNames": [
+        "damask"
+      ]
+    },
+    {
+      "id": "2345521",
+      "name": "Damaturu",
+      "population": 46000,
+      "region": "Yobe State",
+      "searchNames": [
+        "damatouru",
+        "damatwrw",
+        "даматуру",
+        "داماتورو",
+        "ዳማቱሩ",
+        "दमतर",
+        "দমতর",
+        "ਦਮਤਰ",
+        "タマトゥル"
+      ]
+    },
+    {
+      "id": "2345509",
+      "name": "Dambam",
+      "population": 0,
+      "region": "Bauchi",
+      "searchNames": [
+        "damban"
+      ]
+    },
+    {
+      "id": "2345505",
+      "name": "Dambatta",
+      "population": 8940,
+      "region": "Kano State",
+      "searchNames": [
+        "dambarta",
+        "danbata",
+        "danbatta"
+      ]
+    },
+    {
+      "id": "2345498",
+      "name": "Damboa",
+      "population": 21571,
+      "region": "Borno State",
+      "searchNames": [
+        "dumboa"
+      ]
+    },
+    {
+      "id": "2345336",
+      "name": "Dan Gora",
+      "population": 7907,
+      "region": "Kano State",
+      "searchNames": []
+    },
+    {
+      "id": "2345219",
+      "name": "Dan Musa",
+      "population": 0,
+      "region": "Katsina State",
+      "searchNames": [
+        "danimusa",
+        "runka"
+      ]
+    },
+    {
+      "id": "2345213",
+      "name": "Dan Sadau",
+      "population": 7568,
+      "region": "Zamfara State",
+      "searchNames": []
+    },
+    {
+      "id": "2345381",
+      "name": "Dandume",
+      "population": 0,
+      "region": "Katsina State",
+      "searchNames": [
+        "dan dume"
+      ]
+    },
+    {
+      "id": "2345349",
+      "name": "Dange",
+      "population": 12369,
+      "region": "Sokoto",
+      "searchNames": [
+        "denge"
+      ]
+    },
+    {
+      "id": "2345306",
+      "name": "Danja",
+      "population": 9736,
+      "region": "Katsina State",
+      "searchNames": []
+    },
+    {
+      "id": "2345283",
+      "name": "Dankalwa",
+      "population": 5730,
+      "region": "Yobe State",
+      "searchNames": [
+        "dankalwar"
+      ]
+    },
+    {
+      "id": "2345282",
+      "name": "Dankama",
+      "population": 6531,
+      "region": "Katsina State",
+      "searchNames": []
+    },
+    {
+      "id": "2345172",
+      "name": "Dapchi",
+      "population": 14077,
+      "region": "Yobe State",
+      "searchNames": []
+    },
+    {
+      "id": "2345152",
+      "name": "Darazo",
+      "population": 18415,
+      "region": "Bauchi",
+      "searchNames": []
+    },
+    {
+      "id": "2346401",
+      "name": "Dass",
+      "population": 7417,
+      "region": "Bauchi",
+      "searchNames": [
+        "bununu",
+        "bununu dass"
+      ]
+    },
+    {
+      "id": "2345094",
+      "name": "Daura",
+      "population": 25289,
+      "region": "Katsina State",
+      "searchNames": [
+        "даура"
+      ]
+    },
+    {
+      "id": "2345096",
+      "name": "Daura",
+      "population": 78277,
+      "region": "Yobe State",
+      "searchNames": []
+    },
+    {
+      "id": "2345077",
+      "name": "Dawakin Kudu",
+      "population": 0,
+      "region": "Kano State",
+      "searchNames": [
+        "dawaki",
+        "dawaki kudu"
+      ]
+    },
+    {
+      "id": "2345074",
+      "name": "Dawakin Tofa",
+      "population": 0,
+      "region": "Kano State",
+      "searchNames": [
+        "dawaki",
+        "dawakin tofo"
+      ]
+    },
+    {
+      "id": "2345029",
+      "name": "Deba",
+      "population": 17671,
+      "region": "Gombe State",
+      "searchNames": [
+        "deba habe"
+      ]
+    },
+    {
+      "id": "2345003",
+      "name": "Degema",
+      "population": 0,
+      "region": "Rivers State",
+      "searchNames": []
+    },
+    {
+      "id": "2591159",
+      "name": "Degema Hulk",
+      "population": 19223,
+      "region": "Rivers State",
+      "searchNames": [
+        "degema"
+      ]
+    },
+    {
+      "id": "2344981",
+      "name": "Dekina",
+      "population": 11067,
+      "region": "Kogi State",
+      "searchNames": []
+    },
+    {
+      "id": "2344956",
+      "name": "Demsa",
+      "population": 0,
+      "region": "Adamawa",
+      "searchNames": []
+    },
+    {
+      "id": "2344941",
+      "name": "Dengi",
+      "population": 6276,
+      "region": "Plateau State",
+      "searchNames": []
+    },
+    {
+      "id": "2344861",
+      "name": "Dikenafai",
+      "population": 0,
+      "region": "Imo State",
+      "searchNames": [
+        "dikenafia",
+        "dikenefai"
+      ]
+    },
+    {
+      "id": "2344854",
+      "name": "Dikwa",
+      "population": 29026,
+      "region": "Borno State",
+      "searchNames": [
+        "dikoa"
+      ]
+    },
+    {
+      "id": "2344804",
+      "name": "Dindima",
+      "population": 13356,
+      "region": "Bauchi",
+      "searchNames": [
+        "dindawa"
+      ]
+    },
+    {
+      "id": "2344760",
+      "name": "Disina",
+      "population": 5833,
+      "region": "Bauchi",
+      "searchNames": [
+        "дисина"
+      ]
+    },
+    {
+      "id": "2344600",
+      "name": "Doma",
+      "population": 15097,
+      "region": "Nasarawa State",
+      "searchNames": []
+    },
+    {
+      "id": "2344582",
+      "name": "Donga",
+      "population": 0,
+      "region": "Taraba State",
+      "searchNames": []
+    },
+    {
+      "id": "2344418",
+      "name": "Dukku",
+      "population": 16961,
+      "region": "Gombe State",
+      "searchNames": [
+        "duku"
+      ]
+    },
+    {
+      "id": "2344415",
+      "name": "Duku",
+      "population": 8014,
+      "region": "Niger State",
+      "searchNames": [
+        "dukku"
+      ]
+    },
+    {
+      "id": "2344245",
+      "name": "Dutse",
+      "population": 17129,
+      "region": "Jigawa State",
+      "searchNames": [
+        "doutsue",
+        "dutase",
+        "dutise",
+        "dutsi",
+        "dwtsh",
+        "dwtsy",
+        "дутсе",
+        "دوتسه",
+        "دوتسي",
+        "ڈwtsے",
+        "ڈوتسے",
+        "ډwtsې",
+        "ډوتسې",
+        "ዱትሰ",
+        "दतस",
+        "দতস",
+        "ਡਤਸ",
+        "トゥツェ"
+      ]
+    },
+    {
+      "id": "2344229",
+      "name": "Dutsen Wai",
+      "population": 22062,
+      "region": "Kaduna State",
+      "searchNames": [
+        "dutsan wai"
+      ]
+    },
+    {
+      "id": "2344227",
+      "name": "Dutsi",
+      "population": 0,
+      "region": "Katsina State",
+      "searchNames": [
+        "dusti"
+      ]
+    },
+    {
+      "id": "2344217",
+      "name": "Dutsin-Ma",
+      "population": 12595,
+      "region": "Katsina State",
+      "searchNames": [
+        "dutsin wai",
+        "dutsinma"
+      ]
+    },
+    {
+      "id": "2344131",
+      "name": "Ebem Ohafia",
+      "population": 0,
+      "region": "Abia State",
+      "searchNames": [
+        "ebem",
+        "isiama",
+        "isiama ohafia",
+        "ohafia"
+      ]
+    },
+    {
+      "id": "2344128",
+      "name": "Eberi",
+      "population": 0,
+      "region": "Rivers State",
+      "searchNames": []
+    },
+    {
+      "id": "2344082",
+      "name": "Ebute Ikorodu",
+      "population": 535619,
+      "region": "Lagos",
+      "searchNames": [
+        "awja ikoradu",
+        "ebute egga",
+        "ikorodu",
+        "икороду"
+      ]
+    },
+    {
+      "id": "2344078",
+      "name": "Ebute-Metta",
+      "population": 0,
+      "region": "Lagos",
+      "searchNames": [
+        "ebute meta"
+      ]
+    },
+    {
+      "id": "2344053",
+      "name": "Ede",
+      "population": 159866,
+      "region": "Osun State",
+      "searchNames": [
+        "edde",
+        "еде"
+      ]
+    },
+    {
+      "id": "2343985",
+      "name": "Effium",
+      "population": 86945,
+      "region": "Ebonyi State",
+      "searchNames": [
+        "efium",
+        "ефиум"
+      ]
+    },
+    {
+      "id": "2343986",
+      "name": "Effraya",
+      "population": 0,
+      "region": "Cross River State",
+      "searchNames": [
+        "efferaya"
+      ]
+    },
+    {
+      "id": "2343982",
+      "name": "Effurun",
+      "population": 0,
+      "region": "Delta",
+      "searchNames": [
+        "efferun",
+        "effurum"
+      ]
+    },
+    {
+      "id": "2343983",
+      "name": "Efon-Alaaye",
+      "population": 279319,
+      "region": "Ekiti State",
+      "searchNames": [
+        "effon alaiye",
+        "efon",
+        "efon alaae",
+        "efon alaaye ekiti",
+        "efon alaiye",
+        "efon alaye",
+        "ефон алаае"
+      ]
+    },
+    {
+      "id": "2343943",
+      "name": "Egbe",
+      "population": 17612,
+      "region": "Kogi State",
+      "searchNames": [
+        "егбе"
+      ]
+    },
+    {
+      "id": "2343939",
+      "name": "Egbeda",
+      "population": 0,
+      "region": "Oyo State",
+      "searchNames": []
+    },
+    {
+      "id": "10275590",
+      "name": "Egbema",
+      "population": 0,
+      "region": "Imo State",
+      "searchNames": []
+    },
+    {
+      "id": "2343822",
+      "name": "Eha Amufu",
+      "population": 70779,
+      "region": "Enugu State",
+      "searchNames": []
+    },
+    {
+      "id": "2343815",
+      "name": "Ehor",
+      "population": 0,
+      "region": "Edo State",
+      "searchNames": [
+        "iho"
+      ]
+    },
+    {
+      "id": "2343784",
+      "name": "Ejigbo",
+      "population": 138357,
+      "region": "Osun State",
+      "searchNames": [
+        "ehdzhigbo",
+        "эджигбо"
+      ]
+    },
+    {
+      "id": "2343776",
+      "name": "Ejirin",
+      "population": 9204,
+      "region": "Lagos",
+      "searchNames": [
+        "ejinrin",
+        "euni"
+      ]
+    },
+    {
+      "id": "2343725",
+      "name": "Ekeremor",
+      "population": 0,
+      "region": "Bayelsa State",
+      "searchNames": [
+        "ekeremo"
+      ]
+    },
+    {
+      "id": "2343720",
+      "name": "Eket",
+      "population": 25569,
+      "region": "Akwa Ibom State",
+      "searchNames": []
+    },
+    {
+      "id": "2343641",
+      "name": "Ekpoma",
+      "population": 59618,
+      "region": "Edo State",
+      "searchNames": []
+    },
+    {
+      "id": "2343512",
+      "name": "Elele",
+      "population": 20620,
+      "region": "Rivers State",
+      "searchNames": []
+    },
+    {
+      "id": "2343308",
+      "name": "Emuoha",
+      "population": 0,
+      "region": "Rivers State",
+      "searchNames": [
+        "emohua"
+      ]
+    },
+    {
+      "id": "2343299",
+      "name": "Emure-Ekiti",
+      "population": 90645,
+      "region": "Ekiti State",
+      "searchNames": [
+        "emure"
+      ]
+    },
+    {
+      "id": "2343294",
+      "name": "Enagi",
+      "population": 0,
+      "region": "Niger State",
+      "searchNames": []
+    },
+    {
+      "id": "2343279",
+      "name": "Enugu",
+      "population": 950000,
+      "region": "Enugu State",
+      "searchNames": [
+        "ai nu gu",
+        "anwghw",
+        "anwgw",
+        "aynwګw",
+        "ehnugu",
+        "enu",
+        "enuga",
+        "enugwu",
+        "ʿinugu",
+        "енугу",
+        "энугу",
+        "انوغو",
+        "انوگو",
+        "اینوګو",
+        "ኢኑጉ",
+        "एनग",
+        "এনগ",
+        "ਏਨਗ",
+        "에누구",
+        "エヌク",
+        "埃努古"
+      ]
+    },
+    {
+      "id": "2343273",
+      "name": "Enugu-Ezike",
+      "population": 18989,
+      "region": "Enugu State",
+      "searchNames": []
+    },
+    {
+      "id": "2343270",
+      "name": "Enugu-Ukwu",
+      "population": 68785,
+      "region": "Anambra",
+      "searchNames": [
+        "enugu",
+        "enugwu ukwu"
+      ]
+    },
+    {
+      "id": "2343267",
+      "name": "Enwang",
+      "population": 0,
+      "region": "Akwa Ibom State",
+      "searchNames": [
+        "engwang"
+      ]
+    },
+    {
+      "id": "2343252",
+      "name": "Epe",
+      "population": 84711,
+      "region": "Lagos",
+      "searchNames": [
+        "ehpe",
+        "epeh",
+        "эпе"
+      ]
+    },
+    {
+      "id": "2343144",
+      "name": "Eruwa",
+      "population": 34802,
+      "region": "Oyo State",
+      "searchNames": []
+    },
+    {
+      "id": "2343093",
+      "name": "Esuk Oron",
+      "population": 112033,
+      "region": "Akwa Ibom State",
+      "searchNames": [
+        "есук орон"
+      ]
+    },
+    {
+      "id": "2343073",
+      "name": "Ete",
+      "population": 9805,
+      "region": "Enugu State",
+      "searchNames": []
+    },
+    {
+      "id": "12359322",
+      "name": "Eti-Osa",
+      "population": 0,
+      "region": "Lagos",
+      "searchNames": []
+    },
+    {
+      "id": "2343057",
+      "name": "Etinan",
+      "population": 10318,
+      "region": "Akwa Ibom State",
+      "searchNames": []
+    },
+    {
+      "id": "10317589",
+      "name": "Eyofin",
+      "population": 0,
+      "region": "Akwa Ibom State",
+      "searchNames": [
+        "eyo ofin"
+      ]
+    },
+    {
+      "id": "6856235",
+      "name": "Ezillo",
+      "population": 0,
+      "region": "Ebonyi State",
+      "searchNames": [
+        "ezilo",
+        "eziulo"
+      ]
+    },
+    {
+      "id": "2342883",
+      "name": "Ezza-Ohu",
+      "population": 67414,
+      "region": "Ebonyi State",
+      "searchNames": []
+    },
+    {
+      "id": "2342933",
+      "name": "Ezzamgbo",
+      "population": 0,
+      "region": "Ebonyi State",
+      "searchNames": [
+        "ezamgbo"
+      ]
+    },
+    {
+      "id": "2342687",
+      "name": "Faskari",
+      "population": 0,
+      "region": "Katsina State",
+      "searchNames": []
+    },
+    {
+      "id": "10009882",
+      "name": "Festac Town",
+      "population": 0,
+      "region": "Lagos",
+      "searchNames": [
+        "festac"
+      ]
+    },
+    {
+      "id": "2342628",
+      "name": "Fiditi",
+      "population": 71461,
+      "region": "Oyo State",
+      "searchNames": []
+    },
+    {
+      "id": "2342622",
+      "name": "Fika",
+      "population": 0,
+      "region": "Yobe State",
+      "searchNames": [
+        "fike"
+      ]
+    },
+    {
+      "id": "2342515",
+      "name": "Fufore",
+      "population": 0,
+      "region": "Adamawa",
+      "searchNames": []
+    },
+    {
+      "id": "2342513",
+      "name": "Fufu",
+      "population": 0,
+      "region": "Kwara State",
+      "searchNames": []
+    },
+    {
+      "id": "2342512",
+      "name": "Fugar",
+      "population": 0,
+      "region": "Edo State",
+      "searchNames": []
+    },
+    {
+      "id": "2342490",
+      "name": "Funtua",
+      "population": 136811,
+      "region": "Katsina State",
+      "searchNames": [
+        "puntua",
+        "фунтуа"
+      ]
+    },
+    {
+      "id": "2342439",
+      "name": "Gabarin",
+      "population": 10160,
+      "region": "Bauchi",
+      "searchNames": []
+    },
+    {
+      "id": "2342406",
+      "name": "Gada",
+      "population": 0,
+      "region": "Sokoto",
+      "searchNames": []
+    },
+    {
+      "id": "2342340",
+      "name": "Gagarawa",
+      "population": 11450,
+      "region": "Jigawa State",
+      "searchNames": [
+        "gargaraw",
+        "gargarawa"
+      ]
+    },
+    {
+      "id": "2342294",
+      "name": "Gajiram",
+      "population": 0,
+      "region": "Borno State",
+      "searchNames": []
+    },
+    {
+      "id": "2342291",
+      "name": "Gakem",
+      "population": 5865,
+      "region": "Cross River State",
+      "searchNames": []
+    },
+    {
+      "id": "2342199",
+      "name": "Gamawa",
+      "population": 13549,
+      "region": "Bauchi",
+      "searchNames": []
+    },
+    {
+      "id": "2342192",
+      "name": "Gamboru",
+      "population": 84672,
+      "region": "Borno State",
+      "searchNames": [
+        "gambaru",
+        "gambaru ngala",
+        "gamboru ngala"
+      ]
+    },
+    {
+      "id": "2342125",
+      "name": "Gandi",
+      "population": 13940,
+      "region": "Sokoto",
+      "searchNames": []
+    },
+    {
+      "id": "2341969",
+      "name": "Gantsa",
+      "population": 0,
+      "region": "Jigawa State",
+      "searchNames": []
+    },
+    {
+      "id": "2341955",
+      "name": "Ganye",
+      "population": 15178,
+      "region": "Adamawa",
+      "searchNames": []
+    },
+    {
+      "id": "2341926",
+      "name": "Garaku",
+      "population": 0,
+      "region": "Nasarawa State",
+      "searchNames": []
+    },
+    {
+      "id": "2341765",
+      "name": "Garki",
+      "population": 0,
+      "region": "Jigawa State",
+      "searchNames": []
+    },
+    {
+      "id": "2341758",
+      "name": "Garko",
+      "population": 21141,
+      "region": "Gombe State",
+      "searchNames": []
+    },
+    {
+      "id": "2341756",
+      "name": "Garko",
+      "population": 0,
+      "region": "Kano State",
+      "searchNames": []
+    },
+    {
+      "id": "2341695",
+      "name": "Garun Malam",
+      "population": 0,
+      "region": "Kano State",
+      "searchNames": [
+        "garum malam",
+        "garum mallam"
+      ]
+    },
+    {
+      "id": "2341656",
+      "name": "Gashua",
+      "population": 125817,
+      "region": "Yobe State",
+      "searchNames": [
+        "гашуа"
+      ]
+    },
+    {
+      "id": "2341641",
+      "name": "Gassol",
+      "population": 14326,
+      "region": "Taraba State",
+      "searchNames": []
+    },
+    {
+      "id": "10182351",
+      "name": "Gawu Babangida",
+      "population": 0,
+      "region": "Niger State",
+      "searchNames": [
+        "babangida",
+        "gawu"
+      ]
+    },
+    {
+      "id": "2341580",
+      "name": "Gaya",
+      "population": 20959,
+      "region": "Kano State",
+      "searchNames": []
+    },
+    {
+      "id": "2341506",
+      "name": "Gbajimba",
+      "population": 0,
+      "region": "Benue State",
+      "searchNames": [
+        "bajimba"
+      ]
+    },
+    {
+      "id": "2341374",
+      "name": "Gboko",
+      "population": 365000,
+      "region": "Benue State",
+      "searchNames": [
+        "гбоко"
+      ]
+    },
+    {
+      "id": "2341355",
+      "name": "Gbongan",
+      "population": 139485,
+      "region": "Osun State",
+      "searchNames": [
+        "гбонган"
+      ]
+    },
+    {
+      "id": "2341294",
+      "name": "Geidam",
+      "population": 41367,
+      "region": "Yobe State",
+      "searchNames": [
+        "gaidam"
+      ]
+    },
+    {
+      "id": "2341282",
+      "name": "Gella",
+      "population": 0,
+      "region": "Adamawa",
+      "searchNames": [
+        "ouro guela",
+        "uro gela"
+      ]
+    },
+    {
+      "id": "2341275",
+      "name": "Gembu",
+      "population": 19881,
+      "region": "Taraba State",
+      "searchNames": []
+    },
+    {
+      "id": "2341218",
+      "name": "Gezawa",
+      "population": 0,
+      "region": "Kano State",
+      "searchNames": []
+    },
+    {
+      "id": "2341212",
+      "name": "Giade",
+      "population": 0,
+      "region": "Bauchi",
+      "searchNames": []
+    },
+    {
+      "id": "2340908",
+      "name": "Gidan Madi",
+      "population": 0,
+      "region": "Sokoto",
+      "searchNames": []
+    },
+    {
+      "id": "2340618",
+      "name": "Girei",
+      "population": 0,
+      "region": "Adamawa",
+      "searchNames": []
+    },
+    {
+      "id": "2340576",
+      "name": "Giwa",
+      "population": 0,
+      "region": "Kaduna State",
+      "searchNames": []
+    },
+    {
+      "id": "2340451",
+      "name": "Gombe",
+      "population": 560000,
+      "region": "Gombe State",
+      "searchNames": [
+        "gmo",
+        "gomabe",
+        "gonbe",
+        "gwaምbe",
+        "gwmbh",
+        "gwmbے",
+        "jwmby",
+        "гомбе",
+        "جومبي",
+        "ګwmby",
+        "ګومبی",
+        "گومبه",
+        "گومبے",
+        "ጓምቤ",
+        "गमब",
+        "গমব",
+        "ਗਮਬ",
+        "コンヘ"
+      ]
+    },
+    {
+      "id": "2340446",
+      "name": "Gombi",
+      "population": 19616,
+      "region": "Adamawa",
+      "searchNames": [
+        "gombe",
+        "gombi fulani",
+        "little gombi"
+      ]
+    },
+    {
+      "id": "2340404",
+      "name": "Goniri",
+      "population": 11673,
+      "region": "Yobe State",
+      "searchNames": []
+    },
+    {
+      "id": "2340389",
+      "name": "Gora",
+      "population": 5867,
+      "region": "Katsina State",
+      "searchNames": []
+    },
+    {
+      "id": "2340350",
+      "name": "Gorgoram",
+      "population": 12470,
+      "region": "Yobe State",
+      "searchNames": [
+        "gorgorum"
+      ]
+    },
+    {
+      "id": "2340323",
+      "name": "Goronyo",
+      "population": 10460,
+      "region": "Sokoto",
+      "searchNames": []
+    },
+    {
+      "id": "2340249",
+      "name": "Gubio",
+      "population": 0,
+      "region": "Borno State",
+      "searchNames": [
+        "gubiya"
+      ]
+    },
+    {
+      "id": "2340207",
+      "name": "Gudumbali",
+      "population": 0,
+      "region": "Borno State",
+      "searchNames": [
+        "gidimbari"
+      ]
+    },
+    {
+      "id": "2340170",
+      "name": "Gujba",
+      "population": 11359,
+      "region": "Yobe State",
+      "searchNames": []
+    },
+    {
+      "id": "2340151",
+      "name": "Gulak",
+      "population": 0,
+      "region": "Adamawa",
+      "searchNames": []
+    },
+    {
+      "id": "2340132",
+      "name": "Gulma",
+      "population": 6719,
+      "region": "Kebbi",
+      "searchNames": []
+    },
+    {
+      "id": "2340091",
+      "name": "Gumel",
+      "population": 42742,
+      "region": "Jigawa State",
+      "searchNames": []
+    },
+    {
+      "id": "2340086",
+      "name": "Gummi",
+      "population": 38744,
+      "region": "Zamfara State",
+      "searchNames": [
+        "gunmi",
+        "kunmi",
+        "кунми"
+      ]
+    },
+    {
+      "id": "2339964",
+      "name": "Guri",
+      "population": 0,
+      "region": "Jigawa State",
+      "searchNames": [
+        "gurri"
+      ]
+    },
+    {
+      "id": "2339937",
+      "name": "Gusau",
+      "population": 226857,
+      "region": "Zamfara State",
+      "searchNames": [
+        "gusa u",
+        "gusaው",
+        "gwsayw",
+        "jwsaw",
+        "qus",
+        "гусау",
+        "جوساو",
+        "ګwsaw",
+        "ګوساو",
+        "گوسايو",
+        "ጉሳው",
+        "गसऊ",
+        "গসউ",
+        "ਗਸਉ",
+        "クサウ"
+      ]
+    },
+    {
+      "id": "2339914",
+      "name": "Guyuk",
+      "population": 0,
+      "region": "Adamawa",
+      "searchNames": [
+        "guyok"
+      ]
+    },
+    {
+      "id": "2339892",
+      "name": "Gwadabawa",
+      "population": 17486,
+      "region": "Sokoto",
+      "searchNames": []
+    },
+    {
+      "id": "2339863",
+      "name": "Gwagwalada",
+      "population": 0,
+      "region": "FCT",
+      "searchNames": [
+        "gwagwaldda"
+      ]
+    },
+    {
+      "id": "2339811",
+      "name": "Gwandu",
+      "population": 10018,
+      "region": "Kebbi",
+      "searchNames": []
+    },
+    {
+      "id": "2339797",
+      "name": "Gwantu",
+      "population": 0,
+      "region": "Kaduna State",
+      "searchNames": []
+    },
+    {
+      "id": "2339789",
+      "name": "Gwaram",
+      "population": 6700,
+      "region": "Bauchi",
+      "searchNames": []
+    },
+    {
+      "id": "2339786",
+      "name": "Gwaram",
+      "population": 15806,
+      "region": "Jigawa State",
+      "searchNames": [
+        "old gwaram"
+      ]
+    },
+    {
+      "id": "2339756",
+      "name": "Gwarzo",
+      "population": 16303,
+      "region": "Kano State",
+      "searchNames": []
+    },
+    {
+      "id": "2339753",
+      "name": "Gwasoro",
+      "population": 7263,
+      "region": "Kwara State",
+      "searchNames": [
+        "gwasero"
+      ]
+    },
+    {
+      "id": "2339706",
+      "name": "Gwio Kura",
+      "population": 7091,
+      "region": "Yobe State",
+      "searchNames": []
+    },
+    {
+      "id": "2339704",
+      "name": "Gwiwa",
+      "population": 0,
+      "region": "Jigawa State",
+      "searchNames": []
+    },
+    {
+      "id": "2339665",
+      "name": "Gwoza",
+      "population": 15176,
+      "region": "Borno State",
+      "searchNames": []
+    },
+    {
+      "id": "2339631",
+      "name": "Hadejia",
+      "population": 110753,
+      "region": "Jigawa State",
+      "searchNames": [
+        "khadedzhija",
+        "хадеджия"
+      ]
+    },
+    {
+      "id": "2339483",
+      "name": "Hinna",
+      "population": 7826,
+      "region": "Gombe State",
+      "searchNames": []
+    },
+    {
+      "id": "2339468",
+      "name": "Holma",
+      "population": 9199,
+      "region": "Adamawa",
+      "searchNames": []
+    },
+    {
+      "id": "2339460",
+      "name": "Hong",
+      "population": 0,
+      "region": "Adamawa",
+      "searchNames": []
+    },
+    {
+      "id": "2339403",
+      "name": "Hunkuyi",
+      "population": 8465,
+      "region": "Kaduna State",
+      "searchNames": []
+    },
+    {
+      "id": "2339354",
+      "name": "Ibadan",
+      "population": 3649000,
+      "region": "Oyo State",
+      "searchNames": [
+        "abadan",
+        "aybadan",
+        "iba",
+        "ibadan shaary",
+        "ibadana",
+        "ibadanas",
+        "ibadano",
+        "impantan",
+        "yi ba dan",
+        "ʿibadani",
+        "ιμπανταν",
+        "ибадан",
+        "ибадан шаары",
+        "ібадан",
+        "իբադան",
+        "איבדאן",
+        "ابادان",
+        "ايبادان",
+        "ኢባዳን",
+        "इबदन",
+        "ইবদন",
+        "ਇਬਦਨ",
+        "이바단",
+        "イハタン",
+        "伊巴丹"
+      ]
+    },
+    {
+      "id": "2339318",
+      "name": "Ibagwa-Aka",
+      "population": 0,
+      "region": "Enugu State",
+      "searchNames": [
+        "abagwa aka",
+        "ibegwa aka"
+      ]
+    },
+    {
+      "id": "2339293",
+      "name": "Ibeto",
+      "population": 15565,
+      "region": "Niger State",
+      "searchNames": []
+    },
+    {
+      "id": "2339287",
+      "name": "Ibi",
+      "population": 22757,
+      "region": "Taraba State",
+      "searchNames": []
+    },
+    {
+      "id": "7073908",
+      "name": "Ibiaku Ntok Okpo",
+      "population": 0,
+      "region": "Akwa Ibom State",
+      "searchNames": []
+    },
+    {
+      "id": "2339224",
+      "name": "Iboko",
+      "population": 0,
+      "region": "Ebonyi State",
+      "searchNames": []
+    },
+    {
+      "id": "2339220",
+      "name": "Ibokun",
+      "population": 0,
+      "region": "Osun State",
+      "searchNames": []
+    },
+    {
+      "id": "2339170",
+      "name": "Icheu",
+      "population": 14704,
+      "region": "Kogi State",
+      "searchNames": []
+    },
+    {
+      "id": "2339156",
+      "name": "Idah",
+      "population": 68703,
+      "region": "Kogi State",
+      "searchNames": []
+    },
+    {
+      "id": "2339150",
+      "name": "Idanre",
+      "population": 86468,
+      "region": "Ondo State",
+      "searchNames": []
+    },
+    {
+      "id": "2339082",
+      "name": "Idi-Ayunre",
+      "population": 0,
+      "region": "Oyo State",
+      "searchNames": []
+    },
+    {
+      "id": "2339065",
+      "name": "Idiroko",
+      "population": 7487,
+      "region": "Ogun State",
+      "searchNames": [
+        "idi iroko"
+      ]
+    },
+    {
+      "id": "2339142",
+      "name": "Ido",
+      "population": 0,
+      "region": "Oyo State",
+      "searchNames": [
+        "iddo"
+      ]
+    },
+    {
+      "id": "2339139",
+      "name": "Ido-Ekiti",
+      "population": 0,
+      "region": "Ekiti State",
+      "searchNames": [
+        "iddo",
+        "iddo ekiti",
+        "ido"
+      ]
+    },
+    {
+      "id": "2338981",
+      "name": "Idogbo",
+      "population": 0,
+      "region": "Edo State",
+      "searchNames": []
+    },
+    {
+      "id": "2338945",
+      "name": "Idu",
+      "population": 0,
+      "region": "Akwa Ibom State",
+      "searchNames": []
+    },
+    {
+      "id": "2338908",
+      "name": "Ifaki",
+      "population": 9185,
+      "region": "Ekiti State",
+      "searchNames": []
+    },
+    {
+      "id": "2566695",
+      "name": "Ifako",
+      "population": 0,
+      "region": "Lagos",
+      "searchNames": []
+    },
+    {
+      "id": "2338891",
+      "name": "Ifetedo",
+      "population": 0,
+      "region": "Osun State",
+      "searchNames": []
+    },
+    {
+      "id": "2338876",
+      "name": "Ifo",
+      "population": 88272,
+      "region": "Ogun State",
+      "searchNames": [
+        "ifaw"
+      ]
+    },
+    {
+      "id": "2338873",
+      "name": "Ifon",
+      "population": 7623,
+      "region": "Ondo State",
+      "searchNames": []
+    },
+    {
+      "id": "2338872",
+      "name": "Ifon",
+      "population": 0,
+      "region": "Osun State",
+      "searchNames": []
+    },
+    {
+      "id": "2338863",
+      "name": "Igabi",
+      "population": 8840,
+      "region": "Kaduna State",
+      "searchNames": []
+    },
+    {
+      "id": "2338855",
+      "name": "Igangan",
+      "population": 36447,
+      "region": "Oyo State",
+      "searchNames": []
+    },
+    {
+      "id": "2338840",
+      "name": "Igarra",
+      "population": 14647,
+      "region": "Edo State",
+      "searchNames": [
+        "igara"
+      ]
+    },
+    {
+      "id": "2338810",
+      "name": "Igbara-Odo",
+      "population": 74121,
+      "region": "Ekiti State",
+      "searchNames": [
+        "igbarra odo"
+      ]
+    },
+    {
+      "id": "2338809",
+      "name": "Igbara-Oke",
+      "population": 0,
+      "region": "Ondo State",
+      "searchNames": [
+        "igbaraoke"
+      ]
+    },
+    {
+      "id": "2338789",
+      "name": "Igbekebo",
+      "population": 0,
+      "region": "Ondo State",
+      "searchNames": [
+        "gbekebo"
+      ]
+    },
+    {
+      "id": "2338775",
+      "name": "Igbessa",
+      "population": 5619,
+      "region": "Ogun State",
+      "searchNames": []
+    },
+    {
+      "id": "2338772",
+      "name": "Igbeti",
+      "population": 24690,
+      "region": "Oyo State",
+      "searchNames": [
+        "igbetti"
+      ]
+    },
+    {
+      "id": "2338669",
+      "name": "Igbo-Ora",
+      "population": 92719,
+      "region": "Oyo State",
+      "searchNames": [
+        "igbo awra"
+      ]
+    },
+    {
+      "id": "2338640",
+      "name": "Igbo-Ukwu",
+      "population": 75224,
+      "region": "Anambra",
+      "searchNames": [
+        "ibo ukuu",
+        "igbo",
+        "igbo ukvu",
+        "игбо укву",
+        "イホ ウクゥ"
+      ]
+    },
+    {
+      "id": "2338711",
+      "name": "Igboho",
+      "population": 136764,
+      "region": "Oyo State",
+      "searchNames": [
+        "igbokho",
+        "игбохо"
+      ]
+    },
+    {
+      "id": "2338701",
+      "name": "Igbokoda",
+      "population": 0,
+      "region": "Ondo State",
+      "searchNames": []
+    },
+    {
+      "id": "2338660",
+      "name": "Igbor",
+      "population": 17666,
+      "region": "Benue State",
+      "searchNames": []
+    },
+    {
+      "id": "2338630",
+      "name": "Igede-Ekiti",
+      "population": 87282,
+      "region": "Ekiti State",
+      "searchNames": [
+        "igbede",
+        "igede"
+      ]
+    },
+    {
+      "id": "7081212",
+      "name": "Igueben",
+      "population": 0,
+      "region": "Edo State",
+      "searchNames": [
+        "iguegben"
+      ]
+    },
+    {
+      "id": "2338553",
+      "name": "Igumale",
+      "population": 0,
+      "region": "Benue State",
+      "searchNames": []
+    },
+    {
+      "id": "2338548",
+      "name": "Iguobazuwa",
+      "population": 0,
+      "region": "Edo State",
+      "searchNames": [
+        "iguobazowa"
+      ]
+    },
+    {
+      "id": "2338497",
+      "name": "Ihiala",
+      "population": 83265,
+      "region": "Anambra",
+      "searchNames": []
+    },
+    {
+      "id": "2338469",
+      "name": "Iho",
+      "population": 7776,
+      "region": "Imo State",
+      "searchNames": [
+        "ihuo"
+      ]
+    },
+    {
+      "id": "2338400",
+      "name": "Ijebu Ode",
+      "population": 360000,
+      "region": "Ogun State",
+      "searchNames": [
+        "idzhebu ode",
+        "иджебу оде"
+      ]
+    },
+    {
+      "id": "2338404",
+      "name": "Ijebu-Ife",
+      "population": 5733,
+      "region": "Ogun State",
+      "searchNames": []
+    },
+    {
+      "id": "2338403",
+      "name": "Ijebu-Igbo",
+      "population": 109261,
+      "region": "Ogun State",
+      "searchNames": [
+        "idzhebu igbo",
+        "иджебу игбо"
+      ]
+    },
+    {
+      "id": "2338401",
+      "name": "Ijebu-Jesa",
+      "population": 51730,
+      "region": "Osun State",
+      "searchNames": [
+        "ijebu ijesa",
+        "ijebu ijesha",
+        "ijebu jesha"
+      ]
+    },
+    {
+      "id": "2338385",
+      "name": "Ijero-Ekiti",
+      "population": 167632,
+      "region": "Ekiti State",
+      "searchNames": [
+        "ijero",
+        "ииеро екити"
+      ]
+    },
+    {
+      "id": "2338371",
+      "name": "Ijoko",
+      "population": 16529,
+      "region": "Ogun State",
+      "searchNames": [
+        "ijoko station"
+      ]
+    },
+    {
+      "id": "2338334",
+      "name": "Ikang",
+      "population": 13305,
+      "region": "Cross River State",
+      "searchNames": []
+    },
+    {
+      "id": "2338328",
+      "name": "Ikara",
+      "population": 0,
+      "region": "Kaduna State",
+      "searchNames": []
+    },
+    {
+      "id": "2338325",
+      "name": "Ikare",
+      "population": 465000,
+      "region": "Ondo State",
+      "searchNames": [
+        "ikare akoko",
+        "икаре"
+      ]
+    },
+    {
+      "id": "2338313",
+      "name": "Ikeja",
+      "population": 313196,
+      "region": "Lagos",
+      "searchNames": [
+        "akja",
+        "akyja",
+        "aykyja",
+        "ikedzha",
+        "ʿikeja",
+        "икеджа",
+        "اکجا",
+        "اکیجا",
+        "ايكيجا",
+        "ኢከጃ",
+        "इकज",
+        "ইকজ",
+        "ਇਕਜ",
+        "イケシャ"
+      ]
+    },
+    {
+      "id": "2338305",
+      "name": "Ikem",
+      "population": 7282,
+      "region": "Enugu State",
+      "searchNames": []
+    },
+    {
+      "id": "2338300",
+      "name": "Ikenne",
+      "population": 0,
+      "region": "Ogun State",
+      "searchNames": [
+        "ikene"
+      ]
+    },
+    {
+      "id": "2338287",
+      "name": "Ikere-Ekiti",
+      "population": 103054,
+      "region": "Ekiti State",
+      "searchNames": [
+        "ikare",
+        "ikere",
+        "ikerre",
+        "икере екити"
+      ]
+    },
+    {
+      "id": "2338273",
+      "name": "Ikire",
+      "population": 222160,
+      "region": "Osun State",
+      "searchNames": [
+        "икире"
+      ]
+    },
+    {
+      "id": "2338269",
+      "name": "Ikirun",
+      "population": 134240,
+      "region": "Osun State",
+      "searchNames": [
+        "икирун"
+      ]
+    },
+    {
+      "id": "2338246",
+      "name": "Ikole-Ekiti",
+      "population": 0,
+      "region": "Ekiti State",
+      "searchNames": [
+        "ikole"
+      ]
+    },
+    {
+      "id": "2338242",
+      "name": "Ikom",
+      "population": 79103,
+      "region": "Cross River State",
+      "searchNames": []
+    },
+    {
+      "id": "2338229",
+      "name": "Ikorodu",
+      "population": 0,
+      "region": "Lagos",
+      "searchNames": []
+    },
+    {
+      "id": "2325894",
+      "name": "Ikot Abasi",
+      "population": 0,
+      "region": "Akwa Ibom State",
+      "searchNames": [
+        "egwanga",
+        "opobo"
+      ]
+    },
+    {
+      "id": "10317153",
+      "name": "Ikot Akpa Nkuk",
+      "population": 0,
+      "region": "Akwa Ibom State",
+      "searchNames": []
+    },
+    {
+      "id": "10317152",
+      "name": "Ikot Edibon",
+      "population": 0,
+      "region": "Akwa Ibom State",
+      "searchNames": [
+        "ikot edibong"
+      ]
+    },
+    {
+      "id": "2338106",
+      "name": "Ikot Ekpene",
+      "population": 254806,
+      "region": "Akwa Ibom State",
+      "searchNames": [
+        "икот екпене"
+      ]
+    },
+    {
+      "id": "2338057",
+      "name": "Ikot Ibritam",
+      "population": 0,
+      "region": "Akwa Ibom State",
+      "searchNames": [
+        "ikot ibritan"
+      ]
+    },
+    {
+      "id": "2338018",
+      "name": "Ikot Nakanda",
+      "population": 0,
+      "region": "Cross River State",
+      "searchNames": []
+    },
+    {
+      "id": "2337902",
+      "name": "Ikotun",
+      "population": 0,
+      "region": "Lagos",
+      "searchNames": [
+        "iko tun",
+        "ikotan"
+      ]
+    },
+    {
+      "id": "2337889",
+      "name": "Ikoyi",
+      "population": 0,
+      "region": "Lagos",
+      "searchNames": [
+        "okepa"
+      ]
+    },
+    {
+      "id": "2337886",
+      "name": "Ikoyi-Ile",
+      "population": 0,
+      "region": "Oyo State",
+      "searchNames": [
+        "ikoyi"
+      ]
+    },
+    {
+      "id": "2337765",
+      "name": "Ila Orangun",
+      "population": 179192,
+      "region": "Osun State",
+      "searchNames": [
+        "ila",
+        "ила орангун"
+      ]
+    },
+    {
+      "id": "2337762",
+      "name": "Ilare",
+      "population": 7685,
+      "region": "Ondo State",
+      "searchNames": [
+        "ilara"
+      ]
+    },
+    {
+      "id": "2337759",
+      "name": "Ilaro",
+      "population": 46999,
+      "region": "Ogun State",
+      "searchNames": []
+    },
+    {
+      "id": "2337749",
+      "name": "Ilawe-Ekiti",
+      "population": 0,
+      "region": "Ekiti State",
+      "searchNames": [
+        "ilae",
+        "ilawe"
+      ]
+    },
+    {
+      "id": "2338900",
+      "name": "Ile-Ife",
+      "population": 560000,
+      "region": "Osun State",
+      "searchNames": [
+        "ife",
+        "ифе"
+      ]
+    },
+    {
+      "id": "2337735",
+      "name": "Ile-Ogbo",
+      "population": 0,
+      "region": "Osun State",
+      "searchNames": [
+        "ile igbo"
+      ]
+    },
+    {
+      "id": "2337713",
+      "name": "Ile-Oluji",
+      "population": 0,
+      "region": "Ondo State",
+      "searchNames": []
+    },
+    {
+      "id": "2337722",
+      "name": "Ilemona",
+      "population": 0,
+      "region": "Kwara State",
+      "searchNames": [
+        "ilemana"
+      ]
+    },
+    {
+      "id": "2337704",
+      "name": "Ilesa",
+      "population": 325000,
+      "region": "Osun State",
+      "searchNames": [
+        "ilesha",
+        "илеша"
+      ]
+    },
+    {
+      "id": "2337680",
+      "name": "Illela",
+      "population": 17461,
+      "region": "Sokoto",
+      "searchNames": []
+    },
+    {
+      "id": "2337666",
+      "name": "Illushi",
+      "population": 7340,
+      "region": "Edo State",
+      "searchNames": []
+    },
+    {
+      "id": "2337659",
+      "name": "Ilobu",
+      "population": 118089,
+      "region": "Osun State",
+      "searchNames": [
+        "илобу"
+      ]
+    },
+    {
+      "id": "2337655",
+      "name": "Iloffa",
+      "population": 0,
+      "region": "Kwara State",
+      "searchNames": [
+        "ilofa"
+      ]
+    },
+    {
+      "id": "2337652",
+      "name": "Ilogbo",
+      "population": 3996,
+      "region": "Ogun State",
+      "searchNames": []
+    },
+    {
+      "id": "2337639",
+      "name": "Ilorin",
+      "population": 1080000,
+      "region": "Kwara State",
+      "searchNames": [
+        "alwrn",
+        "alwryn",
+        "aylwryn",
+        "illolin",
+        "illorin",
+        "ilorina",
+        "ilorinas",
+        "iloryn",
+        "ilr",
+        "irorin",
+        "yi luo lin",
+        "ʿilorini",
+        "илорин",
+        "ілорын",
+        "אילורין",
+        "الورن",
+        "الورین",
+        "ايلورين",
+        "ኢሎሪን",
+        "इलरन",
+        "ইলরন",
+        "ਇਲਰਨ",
+        "일로린",
+        "イロリン",
+        "伊洛林"
+      ]
+    },
+    {
+      "id": "2330241",
+      "name": "Imeko",
+      "population": 8627,
+      "region": "Ogun State",
+      "searchNames": [
+        "mekkaw",
+        "meko"
+      ]
+    },
+    {
+      "id": "2337540",
+      "name": "Imota",
+      "population": 5240,
+      "region": "Lagos",
+      "searchNames": [
+        "imawte"
+      ]
+    },
+    {
+      "id": "2337500",
+      "name": "Ingawa",
+      "population": 0,
+      "region": "Katsina State",
+      "searchNames": []
+    },
+    {
+      "id": "2337490",
+      "name": "Inisa",
+      "population": 164161,
+      "region": "Osun State",
+      "searchNames": [
+        "иниса"
+      ]
+    },
+    {
+      "id": "2337380",
+      "name": "Iperindo",
+      "population": 0,
+      "region": "Osun State",
+      "searchNames": []
+    },
+    {
+      "id": "2337379",
+      "name": "Iperu",
+      "population": 15935,
+      "region": "Ogun State",
+      "searchNames": [
+        "gwi"
+      ]
+    },
+    {
+      "id": "2337372",
+      "name": "Ipetumodu",
+      "population": 0,
+      "region": "Osun State",
+      "searchNames": [
+        "ipetymodu"
+      ]
+    },
+    {
+      "id": "2337365",
+      "name": "Ipokia",
+      "population": 0,
+      "region": "Ogun State",
+      "searchNames": []
+    },
+    {
+      "id": "2337352",
+      "name": "Ipoti",
+      "population": 82113,
+      "region": "Ekiti State",
+      "searchNames": []
+    },
+    {
+      "id": "2337343",
+      "name": "Iragbiji",
+      "population": 0,
+      "region": "Osun State",
+      "searchNames": []
+    },
+    {
+      "id": "2337319",
+      "name": "Iresa-Adu",
+      "population": 0,
+      "region": "Oyo State",
+      "searchNames": [
+        "iresa",
+        "iresa du",
+        "iresadu",
+        "iressa"
+      ]
+    },
+    {
+      "id": "2337313",
+      "name": "Irewe",
+      "population": 139494,
+      "region": "Lagos",
+      "searchNames": [
+        "ir jue",
+        "ирьюе"
+      ]
+    },
+    {
+      "id": "7081180",
+      "name": "Irrua",
+      "population": 0,
+      "region": "Edo State",
+      "searchNames": []
+    },
+    {
+      "id": "2337275",
+      "name": "Isa",
+      "population": 0,
+      "region": "Sokoto",
+      "searchNames": []
+    },
+    {
+      "id": "2337236",
+      "name": "Isanlu",
+      "population": 0,
+      "region": "Kogi State",
+      "searchNames": [
+        "isanlu itedo",
+        "isanluitedo"
+      ]
+    },
+    {
+      "id": "2337235",
+      "name": "Isanlu-Itedoijowa",
+      "population": 15087,
+      "region": "Kogi State",
+      "searchNames": [
+        "isanluitedoijowa"
+      ]
+    },
+    {
+      "id": "2337227",
+      "name": "Isara",
+      "population": 8205,
+      "region": "Ogun State",
+      "searchNames": [
+        "isara remo",
+        "ishara"
+      ]
+    },
+    {
+      "id": "2337207",
+      "name": "Ise-Ekiti",
+      "population": 190063,
+      "region": "Ekiti State",
+      "searchNames": [
+        "ise",
+        "исе екити"
+      ]
+    },
+    {
+      "id": "2337181",
+      "name": "Iseyin",
+      "population": 365300,
+      "region": "Oyo State",
+      "searchNames": [
+        "isejin",
+        "исеиин"
+      ]
+    },
+    {
+      "id": "10273507",
+      "name": "Isiaka",
+      "population": 0,
+      "region": "Ebonyi State",
+      "searchNames": []
+    },
+    {
+      "id": "10276484",
+      "name": "Isiala Oboro",
+      "population": 0,
+      "region": "Abia State",
+      "searchNames": [
+        "isiala"
+      ]
+    },
+    {
+      "id": "2337148",
+      "name": "Isieke",
+      "population": 89990,
+      "region": "Ebonyi State",
+      "searchNames": []
+    },
+    {
+      "id": "10275683",
+      "name": "Isinweke",
+      "population": 0,
+      "region": "Imo State",
+      "searchNames": []
+    },
+    {
+      "id": "2337132",
+      "name": "Isiokolo",
+      "population": 0,
+      "region": "Delta",
+      "searchNames": [
+        "isiokolo agbon",
+        "islokolo"
+      ]
+    },
+    {
+      "id": "2328691",
+      "name": "Isiokpo",
+      "population": 0,
+      "region": "Rivers State",
+      "searchNames": [
+        "nsokpo"
+      ]
+    },
+    {
+      "id": "2337104",
+      "name": "Issele-Uku",
+      "population": 0,
+      "region": "Delta",
+      "searchNames": []
+    },
+    {
+      "id": "2337101",
+      "name": "Isu",
+      "population": 0,
+      "region": "Ebonyi State",
+      "searchNames": []
+    },
+    {
+      "id": "2337160",
+      "name": "Isua",
+      "population": 0,
+      "region": "Ondo State",
+      "searchNames": [
+        "ishua",
+        "isua akoko"
+      ]
+    },
+    {
+      "id": "2337057",
+      "name": "Ita-Ogbolu",
+      "population": 0,
+      "region": "Ondo State",
+      "searchNames": [
+        "itaogbolu"
+      ]
+    },
+    {
+      "id": "2337046",
+      "name": "Itas",
+      "population": 0,
+      "region": "Bauchi",
+      "searchNames": [
+        "itass"
+      ]
+    },
+    {
+      "id": "2337020",
+      "name": "Itigidi",
+      "population": 0,
+      "region": "Cross River State",
+      "searchNames": []
+    },
+    {
+      "id": "2336992",
+      "name": "Itori",
+      "population": 0,
+      "region": "Ogun State",
+      "searchNames": []
+    },
+    {
+      "id": "2336985",
+      "name": "Itu",
+      "population": 36358,
+      "region": "Akwa Ibom State",
+      "searchNames": []
+    },
+    {
+      "id": "2336984",
+      "name": "Itu",
+      "population": 0,
+      "region": "Imo State",
+      "searchNames": []
+    },
+    {
+      "id": "2336926",
+      "name": "Iwere-Ile",
+      "population": 0,
+      "region": "Oyo State",
+      "searchNames": [
+        "iwere"
+      ]
+    },
+    {
+      "id": "2336905",
+      "name": "Iwo",
+      "population": 250443,
+      "region": "Osun State",
+      "searchNames": [
+        "ivo",
+        "иво"
+      ]
+    },
+    {
+      "id": "10149516",
+      "name": "Iyana-Ofa",
+      "population": 0,
+      "region": "Oyo State",
+      "searchNames": [
+        "iyana offa"
+      ]
+    },
+    {
+      "id": "2336825",
+      "name": "Iyara",
+      "population": 0,
+      "region": "Kogi State",
+      "searchNames": [
+        "ilukpa",
+        "lupa"
+      ]
+    },
+    {
+      "id": "2336813",
+      "name": "Iye-Ekiti",
+      "population": 0,
+      "region": "Ekiti State",
+      "searchNames": [
+        "aye",
+        "iye"
+      ]
+    },
+    {
+      "id": "2336798",
+      "name": "Iyesi",
+      "population": 17220,
+      "region": "Ogun State",
+      "searchNames": []
+    },
+    {
+      "id": "2336696",
+      "name": "Jada",
+      "population": 0,
+      "region": "Adamawa",
+      "searchNames": []
+    },
+    {
+      "id": "2336641",
+      "name": "Jahun",
+      "population": 0,
+      "region": "Jigawa State",
+      "searchNames": []
+    },
+    {
+      "id": "2336621",
+      "name": "Jajimaji",
+      "population": 0,
+      "region": "Yobe State",
+      "searchNames": [
+        "jaji maji",
+        "jajimari"
+      ]
+    },
+    {
+      "id": "2336600",
+      "name": "Jakusko",
+      "population": 0,
+      "region": "Yobe State",
+      "searchNames": [
+        "jasuko"
+      ]
+    },
+    {
+      "id": "2336589",
+      "name": "Jalingo",
+      "population": 117757,
+      "region": "Taraba State",
+      "searchNames": [
+        "dzhalingo",
+        "jaligo",
+        "jalinigo",
+        "jalngw",
+        "jalnګw",
+        "jalyngw",
+        "jalynjw",
+        "jaringo",
+        "джалинго",
+        "جالنګو",
+        "جالنگو",
+        "جالينجو",
+        "جالینگو",
+        "ጃሊንጎ",
+        "जलग",
+        "জলঙগ",
+        "ਜਲਗ",
+        "シャリンコ"
+      ]
+    },
+    {
+      "id": "2336553",
+      "name": "Jama’are",
+      "population": 0,
+      "region": "Bauchi",
+      "searchNames": [
+        "jamaare",
+        "jamaari",
+        "jemma are"
+      ]
+    },
+    {
+      "id": "2336251",
+      "name": "Jebba",
+      "population": 21488,
+      "region": "Kwara State",
+      "searchNames": [
+        "djebba"
+      ]
+    },
+    {
+      "id": "2336237",
+      "name": "Jega",
+      "population": 73495,
+      "region": "Kebbi",
+      "searchNames": []
+    },
+    {
+      "id": "2336137",
+      "name": "Jibia",
+      "population": 14424,
+      "region": "Katsina State",
+      "searchNames": [
+        "djibia",
+        "jibiya"
+      ]
+    },
+    {
+      "id": "2336092",
+      "name": "Jikamshi",
+      "population": 6923,
+      "region": "Katsina State",
+      "searchNames": []
+    },
+    {
+      "id": "2336056",
+      "name": "Jimeta",
+      "population": 248148,
+      "region": "Adamawa",
+      "searchNames": [
+        "dzhimeta",
+        "джимета"
+      ]
+    },
+    {
+      "id": "2335996",
+      "name": "Jobele",
+      "population": 0,
+      "region": "Oyo State",
+      "searchNames": []
+    },
+    {
+      "id": "2335953",
+      "name": "Jos",
+      "population": 1040000,
+      "region": "Plateau State",
+      "searchNames": [
+        "cos",
+        "dzhos",
+        "dzos",
+        "jas",
+        "jasa",
+        "josa",
+        "joseu",
+        "josi",
+        "josu",
+        "jws",
+        "jws nayjyrya",
+        "qiao si",
+        "джос",
+        "иос",
+        "џос",
+        "جاس",
+        "جوس",
+        "جوس نايجیریا",
+        "ጆስ",
+        "जस",
+        "জস",
+        "ਜਸ",
+        "조스",
+        "ショス",
+        "乔斯"
+      ]
+    },
+    {
+      "id": "2335843",
+      "name": "Kabba",
+      "population": 49869,
+      "region": "Kogi State",
+      "searchNames": []
+    },
+    {
+      "id": "2335830",
+      "name": "Kabo",
+      "population": 0,
+      "region": "Kano State",
+      "searchNames": []
+    },
+    {
+      "id": "2335798",
+      "name": "Kachia",
+      "population": 30893,
+      "region": "Kaduna State",
+      "searchNames": []
+    },
+    {
+      "id": "2335727",
+      "name": "Kaduna",
+      "population": 1850000,
+      "region": "Kaduna State",
+      "searchNames": [
+        "ka du na",
+        "kad",
+        "kadouna",
+        "kadun",
+        "kaduno",
+        "kadwna",
+        "qdwnh",
+        "кадуна",
+        "קדונה",
+        "كادونا",
+        "کادونا",
+        "ካዱና",
+        "कदन",
+        "কডন",
+        "ਕਦਨ",
+        "카두나",
+        "カトゥナ",
+        "卡杜納"
+      ]
+    },
+    {
+      "id": "2335713",
+      "name": "Kafanchan",
+      "population": 79522,
+      "region": "Kaduna State",
+      "searchNames": [
+        "kafachan",
+        "kafanchan junction",
+        "kajanchan"
+      ]
+    },
+    {
+      "id": "2335709",
+      "name": "Kafarati",
+      "population": 11535,
+      "region": "Gombe State",
+      "searchNames": [
+        "kafareti"
+      ]
+    },
+    {
+      "id": "2334649",
+      "name": "Kafin Hausa",
+      "population": 12609,
+      "region": "Jigawa State",
+      "searchNames": [
+        "kaffin hausa",
+        "keffin hausa"
+      ]
+    },
+    {
+      "id": "2335665",
+      "name": "Kafin Madaki",
+      "population": 0,
+      "region": "Bauchi",
+      "searchNames": [
+        "keffin madaki",
+        "l makaki",
+        "madaki"
+      ]
+    },
+    {
+      "id": "2335648",
+      "name": "Kafur",
+      "population": 0,
+      "region": "Katsina State",
+      "searchNames": []
+    },
+    {
+      "id": "2335637",
+      "name": "Kagara",
+      "population": 0,
+      "region": "Niger State",
+      "searchNames": []
+    },
+    {
+      "id": "2335628",
+      "name": "Kagarko",
+      "population": 0,
+      "region": "Kaduna State",
+      "searchNames": []
+    },
+    {
+      "id": "2335614",
+      "name": "Kagoro",
+      "population": 77008,
+      "region": "Kaduna State",
+      "searchNames": [
+        "gwoot",
+        "ka ge luo",
+        "卡戈羅"
+      ]
+    },
+    {
+      "id": "2335597",
+      "name": "Kaiama",
+      "population": 0,
+      "region": "Bayelsa State",
+      "searchNames": []
+    },
+    {
+      "id": "2335596",
+      "name": "Kaiama",
+      "population": 21897,
+      "region": "Kwara State",
+      "searchNames": [
+        "kaima"
+      ]
+    },
+    {
+      "id": "2335556",
+      "name": "Kaita",
+      "population": 0,
+      "region": "Katsina State",
+      "searchNames": []
+    },
+    {
+      "id": "2335500",
+      "name": "Kajuru",
+      "population": 14389,
+      "region": "Kaduna State",
+      "searchNames": []
+    },
+    {
+      "id": "2335402",
+      "name": "Kalgo",
+      "population": 0,
+      "region": "Kebbi",
+      "searchNames": []
+    },
+    {
+      "id": "2335369",
+      "name": "Kaltungo",
+      "population": 12357,
+      "region": "Gombe State",
+      "searchNames": [
+        "kalfungo"
+      ]
+    },
+    {
+      "id": "2335333",
+      "name": "Kamba",
+      "population": 25568,
+      "region": "Kebbi",
+      "searchNames": [
+        "kambo",
+        "камба"
+      ]
+    },
+    {
+      "id": "10337567",
+      "name": "Kanamma",
+      "population": 0,
+      "region": "Yobe State",
+      "searchNames": [
+        "kanama",
+        "kanamga"
+      ]
+    },
+    {
+      "id": "2335568",
+      "name": "Kangiwa",
+      "population": 11701,
+      "region": "Kebbi",
+      "searchNames": [
+        "kaingiwa"
+      ]
+    },
+    {
+      "id": "2335219",
+      "name": "Kankara",
+      "population": 9609,
+      "region": "Katsina State",
+      "searchNames": []
+    },
+    {
+      "id": "2335216",
+      "name": "Kankia",
+      "population": 0,
+      "region": "Katsina State",
+      "searchNames": [
+        "kankiya"
+      ]
+    },
+    {
+      "id": "2335204",
+      "name": "Kano",
+      "population": 4910000,
+      "region": "Kano State",
+      "searchNames": [
+        "byen kano",
+        "cano",
+        "ka nuo",
+        "kan",
+        "kanas",
+        "kanw",
+        "kanw nyjryh",
+        "qnw",
+        "кано",
+        "קנו",
+        "كانو",
+        "کانو",
+        "کانو نیجریه",
+        "ካኖ",
+        "कन",
+        "কন",
+        "ਕਨ",
+        "கன",
+        "카노",
+        "カノ",
+        "卡諾"
+      ]
+    },
+    {
+      "id": "2335067",
+      "name": "Karaye",
+      "population": 0,
+      "region": "Kano State",
+      "searchNames": []
+    },
+    {
+      "id": "2335015",
+      "name": "Kari",
+      "population": 18812,
+      "region": "Bauchi",
+      "searchNames": []
+    },
+    {
+      "id": "2335003",
+      "name": "Karim Lamido",
+      "population": 0,
+      "region": "Taraba State",
+      "searchNames": [
+        "karmi lamido",
+        "kogin lamido"
+      ]
+    },
+    {
+      "id": "2334340",
+      "name": "Karkarna",
+      "population": 0,
+      "region": "Jigawa State",
+      "searchNames": [
+        "kirkirna"
+      ]
+    },
+    {
+      "id": "10215205",
+      "name": "Karu",
+      "population": 0,
+      "region": "Nasarawa State",
+      "searchNames": []
+    },
+    {
+      "id": "2334861",
+      "name": "Katagum",
+      "population": 10602,
+      "region": "Bauchi",
+      "searchNames": []
+    },
+    {
+      "id": "2334829",
+      "name": "Katcha",
+      "population": 0,
+      "region": "Niger State",
+      "searchNames": []
+    },
+    {
+      "id": "2334802",
+      "name": "Katsina",
+      "population": 670000,
+      "region": "Katsina State",
+      "searchNames": [
+        "dka",
+        "ka qi na",
+        "kachina",
+        "kacina",
+        "katasina",
+        "katisina",
+        "katsuina",
+        "katsyna",
+        "ktsyna",
+        "катсина",
+        "كاتسينا",
+        "کتسينا",
+        "کتسینا",
+        "ካትሲና",
+        "कतसन",
+        "কতসন",
+        "ਕਤਸਨ",
+        "카치나",
+        "カツィーナ",
+        "卡齐纳"
+      ]
+    },
+    {
+      "id": "2334801",
+      "name": "Katsina-Ala",
+      "population": 36722,
+      "region": "Benue State",
+      "searchNames": [
+        "katsena ala"
+      ]
+    },
+    {
+      "id": "2334775",
+      "name": "Kaugama",
+      "population": 0,
+      "region": "Jigawa State",
+      "searchNames": []
+    },
+    {
+      "id": "10201931",
+      "name": "Kaura",
+      "population": 0,
+      "region": "Kaduna State",
+      "searchNames": []
+    },
+    {
+      "id": "2334756",
+      "name": "Kaura Namoda",
+      "population": 69725,
+      "region": "Zamfara State",
+      "searchNames": []
+    },
+    {
+      "id": "2334747",
+      "name": "Kauru",
+      "population": 0,
+      "region": "Kaduna State",
+      "searchNames": []
+    },
+    {
+      "id": "2334674",
+      "name": "Kazaure",
+      "population": 13169,
+      "region": "Jigawa State",
+      "searchNames": []
+    },
+    {
+      "id": "2334664",
+      "name": "Keana",
+      "population": 0,
+      "region": "Nasarawa State",
+      "searchNames": []
+    },
+    {
+      "id": "2334663",
+      "name": "Kebbe",
+      "population": 0,
+      "region": "Sokoto",
+      "searchNames": [
+        "kebba",
+        "kebbi"
+      ]
+    },
+    {
+      "id": "2334652",
+      "name": "Keffi",
+      "population": 85911,
+      "region": "Nasarawa State",
+      "searchNames": []
+    },
+    {
+      "id": "2334592",
+      "name": "Kende",
+      "population": 7395,
+      "region": "Kebbi",
+      "searchNames": []
+    },
+    {
+      "id": "10364493",
+      "name": "Khaddamari",
+      "population": 0,
+      "region": "Borno State",
+      "searchNames": [
+        "jadamari"
+      ]
+    },
+    {
+      "id": "2334502",
+      "name": "Kibiya",
+      "population": 8500,
+      "region": "Kano State",
+      "searchNames": []
+    },
+    {
+      "id": "2334369",
+      "name": "Kirfi",
+      "population": 0,
+      "region": "Bauchi",
+      "searchNames": [
+        "kirfin kasa",
+        "kirifi"
+      ]
+    },
+    {
+      "id": "2334350",
+      "name": "Kiri Kasamma",
+      "population": 0,
+      "region": "Jigawa State",
+      "searchNames": [
+        "kiri kasama",
+        "kirikasama",
+        "kirikasamma"
+      ]
+    },
+    {
+      "id": "2334334",
+      "name": "Kiru",
+      "population": 0,
+      "region": "Kano State",
+      "searchNames": []
+    },
+    {
+      "id": "2334327",
+      "name": "Kisi",
+      "population": 155510,
+      "region": "Oyo State",
+      "searchNames": [
+        "kishi",
+        "киси"
+      ]
+    },
+    {
+      "id": "2334306",
+      "name": "Kiyawa",
+      "population": 17704,
+      "region": "Jigawa State",
+      "searchNames": []
+    },
+    {
+      "id": "6974495",
+      "name": "Koguna",
+      "population": 0,
+      "region": "Kano State",
+      "searchNames": []
+    },
+    {
+      "id": "2334154",
+      "name": "Koko",
+      "population": 0,
+      "region": "Delta",
+      "searchNames": [
+        "koko town"
+      ]
+    },
+    {
+      "id": "2334153",
+      "name": "Koko",
+      "population": 1560,
+      "region": "Ogun State",
+      "searchNames": [
+        "kawkaw"
+      ]
+    },
+    {
+      "id": "2334044",
+      "name": "Konduga",
+      "population": 13400,
+      "region": "Borno State",
+      "searchNames": [
+        "kanduga"
+      ]
+    },
+    {
+      "id": "2334018",
+      "name": "Konkwesso",
+      "population": 7687,
+      "region": "Niger State",
+      "searchNames": [
+        "konkweso"
+      ]
+    },
+    {
+      "id": "2334008",
+      "name": "Kontagora",
+      "population": 98754,
+      "region": "Niger State",
+      "searchNames": []
+    },
+    {
+      "id": "2333893",
+      "name": "Kosubosu",
+      "population": 0,
+      "region": "Kwara State",
+      "searchNames": []
+    },
+    {
+      "id": "2333884",
+      "name": "Koton-Karfe",
+      "population": 10709,
+      "region": "Kogi State",
+      "searchNames": [
+        "koton karifi"
+      ]
+    },
+    {
+      "id": "2333794",
+      "name": "Kpor",
+      "population": 0,
+      "region": "Rivers State",
+      "searchNames": []
+    },
+    {
+      "id": "2333606",
+      "name": "Kujama",
+      "population": 12967,
+      "region": "Kaduna State",
+      "searchNames": []
+    },
+    {
+      "id": "2333604",
+      "name": "Kuje",
+      "population": 97367,
+      "region": "FCT",
+      "searchNames": []
+    },
+    {
+      "id": "2333563",
+      "name": "Kukawa",
+      "population": 16077,
+      "region": "Borno State",
+      "searchNames": [
+        "koukaoua",
+        "koukawa"
+      ]
+    },
+    {
+      "id": "2333490",
+      "name": "Kumagunnam",
+      "population": 16557,
+      "region": "Yobe State",
+      "searchNames": [
+        "kumaganum",
+        "kumagunam"
+      ]
+    },
+    {
+      "id": "2333470",
+      "name": "Kumbotso",
+      "population": 0,
+      "region": "Kano State",
+      "searchNames": [
+        "kum botso"
+      ]
+    },
+    {
+      "id": "2333451",
+      "name": "Kumo",
+      "population": 35712,
+      "region": "Gombe State",
+      "searchNames": []
+    },
+    {
+      "id": "2333399",
+      "name": "Kunchi",
+      "population": 0,
+      "region": "Kano State",
+      "searchNames": []
+    },
+    {
+      "id": "2333312",
+      "name": "Kura",
+      "population": 9537,
+      "region": "Kano State",
+      "searchNames": []
+    },
+    {
+      "id": "2333238",
+      "name": "Kurfi",
+      "population": 0,
+      "region": "Katsina State",
+      "searchNames": []
+    },
+    {
+      "id": "2333111",
+      "name": "Kusada",
+      "population": 0,
+      "region": "Katsina State",
+      "searchNames": []
+    },
+    {
+      "id": "2333096",
+      "name": "Kusheriki",
+      "population": 6941,
+      "region": "Niger State",
+      "searchNames": [
+        "kusherki"
+      ]
+    },
+    {
+      "id": "2333064",
+      "name": "Kuta",
+      "population": 7528,
+      "region": "Niger State",
+      "searchNames": []
+    },
+    {
+      "id": "2333045",
+      "name": "Kutigi",
+      "population": 0,
+      "region": "Niger State",
+      "searchNames": []
+    },
+    {
+      "id": "10323499",
+      "name": "Kwal",
+      "population": 0,
+      "region": "Plateau State",
+      "searchNames": []
+    },
+    {
+      "id": "2332871",
+      "name": "Kwale",
+      "population": 20226,
+      "region": "Delta",
+      "searchNames": [
+        "kwale station",
+        "obetim"
+      ]
+    },
+    {
+      "id": "2332865",
+      "name": "Kwali",
+      "population": 6229,
+      "region": "FCT",
+      "searchNames": []
+    },
+    {
+      "id": "2332780",
+      "name": "Kware",
+      "population": 0,
+      "region": "Sokoto",
+      "searchNames": []
+    },
+    {
+      "id": "2332733",
+      "name": "Kwatarkwashi",
+      "population": 9084,
+      "region": "Zamfara State",
+      "searchNames": [
+        "kotorkoshi",
+        "kotorkushi"
+      ]
+    },
+    {
+      "id": "2332718",
+      "name": "Kwaya Kusar",
+      "population": 0,
+      "region": "Borno State",
+      "searchNames": [
+        "kawaya tera",
+        "kwaia",
+        "kwaya",
+        "kwaya tera",
+        "kwaya terra"
+      ]
+    },
+    {
+      "id": "2332670",
+      "name": "Kwoi",
+      "population": 0,
+      "region": "Kaduna State",
+      "searchNames": [
+        "fadan kwai"
+      ]
+    },
+    {
+      "id": "2332662",
+      "name": "Kwolla",
+      "population": 8200,
+      "region": "Plateau State",
+      "searchNames": [
+        "kwalla"
+      ]
+    },
+    {
+      "id": "2332515",
+      "name": "Lafia",
+      "population": 127236,
+      "region": "Nasarawa State",
+      "searchNames": [
+        "lafia beriberi",
+        "lafija",
+        "lafya",
+        "laphi a",
+        "laphiya",
+        "laፊya",
+        "rafia",
+        "лафия",
+        "لافيا",
+        "لافیا",
+        "ላፊያ",
+        "लफय",
+        "লফয",
+        "ਲਫਆ",
+        "ラフィア"
+      ]
+    },
+    {
+      "id": "2332504",
+      "name": "Lafiagi",
+      "population": 102779,
+      "region": "Kwara State",
+      "searchNames": [
+        "лафиаги"
+      ]
+    },
+    {
+      "id": "2332459",
+      "name": "Lagos",
+      "population": 15388000,
+      "region": "Lagos",
+      "searchNames": [
+        "eko",
+        "la ge si",
+        "lacupolis",
+        "lagas",
+        "lageas",
+        "laghws",
+        "lagos shaary",
+        "lagosa",
+        "lagosas",
+        "lagoseu",
+        "lagosi",
+        "lagoso",
+        "laguosos",
+        "laguseu",
+        "lagws",
+        "lajws",
+        "lakos",
+        "laqos",
+        "legosa",
+        "lek xs",
+        "logos",
+        "los",
+        "ragosu",
+        "λαγος",
+        "лагас",
+        "лагос",
+        "лаґос",
+        "лагос шаары",
+        "ლაგოსი",
+        "լագոս",
+        "לאגאס",
+        "לאגוס",
+        "لاجوس",
+        "لاغوس",
+        "لاگوس",
+        "لاگۆس",
+        "ሌጎስ",
+        "लगस",
+        "লগস",
+        "ਲਗਸ",
+        "લગસ",
+        "லகஸ",
+        "లగస",
+        "ಲಗಸ",
+        "ലഗസ",
+        "เลกอส",
+        "လဂစမ",
+        "라고스",
+        "라구스",
+        "ラコス",
+        "拉哥斯"
+      ]
+    },
+    {
+      "id": "12359321",
+      "name": "Lagos Island",
+      "population": 0,
+      "region": "Lagos",
+      "searchNames": []
+    },
+    {
+      "id": "2336624",
+      "name": "Lajere",
+      "population": 7356,
+      "region": "Yobe State",
+      "searchNames": [
+        "jajere"
+      ]
+    },
+    {
+      "id": "2332357",
+      "name": "Lalupon",
+      "population": 81130,
+      "region": "Oyo State",
+      "searchNames": []
+    },
+    {
+      "id": "2332337",
+      "name": "Lame",
+      "population": 6705,
+      "region": "Bauchi",
+      "searchNames": [
+        "lemme",
+        "lemmi"
+      ]
+    },
+    {
+      "id": "2332316",
+      "name": "Lamurde",
+      "population": 0,
+      "region": "Adamawa",
+      "searchNames": []
+    },
+    {
+      "id": "2332280",
+      "name": "Langtang",
+      "population": 13172,
+      "region": "Plateau State",
+      "searchNames": []
+    },
+    {
+      "id": "2332249",
+      "name": "Lapai",
+      "population": 16442,
+      "region": "Niger State",
+      "searchNames": [
+        "badeggi",
+        "badeji"
+      ]
+    },
+    {
+      "id": "2332197",
+      "name": "Lau",
+      "population": 12657,
+      "region": "Taraba State",
+      "searchNames": []
+    },
+    {
+      "id": "7732748",
+      "name": "Lekki",
+      "population": 401272,
+      "region": "Lagos",
+      "searchNames": [
+        "lekki peninsula",
+        "лекки"
+      ]
+    },
+    {
+      "id": "2332092",
+      "name": "Lemu",
+      "population": 0,
+      "region": "Niger State",
+      "searchNames": []
+    },
+    {
+      "id": "2332080",
+      "name": "Lere",
+      "population": 14620,
+      "region": "Bauchi",
+      "searchNames": []
+    },
+    {
+      "id": "2332079",
+      "name": "Lere",
+      "population": 93290,
+      "region": "Kaduna State",
+      "searchNames": [
+        "lera",
+        "leri",
+        "лера"
+      ]
+    },
+    {
+      "id": "9637936",
+      "name": "Lessel",
+      "population": 0,
+      "region": "Benue State",
+      "searchNames": [
+        "lesel"
+      ]
+    },
+    {
+      "id": "2335723",
+      "name": "Lissam",
+      "population": 0,
+      "region": "Taraba State",
+      "searchNames": [
+        "kaduna lissam"
+      ]
+    },
+    {
+      "id": "2331939",
+      "name": "Lokoja",
+      "population": 60579,
+      "region": "Kogi State",
+      "searchNames": [
+        "lairdstown",
+        "lokodzha",
+        "lokweja",
+        "lwkwja",
+        "rokoja",
+        "zokoja",
+        "локоджа",
+        "لوكوجا",
+        "لوکوجا",
+        "ሎኮጃ",
+        "लकज",
+        "লকজ",
+        "ਲਕਜ",
+        "ロコシャ"
+      ]
+    },
+    {
+      "id": "10322703",
+      "name": "Mabudi",
+      "population": 0,
+      "region": "Plateau State",
+      "searchNames": [
+        "mabudu"
+      ]
+    },
+    {
+      "id": "2330589",
+      "name": "Machina",
+      "population": 11707,
+      "region": "Yobe State",
+      "searchNames": [
+        "matsena"
+      ]
+    },
+    {
+      "id": "2331715",
+      "name": "Madagali",
+      "population": 12919,
+      "region": "Adamawa",
+      "searchNames": []
+    },
+    {
+      "id": "2331694",
+      "name": "Madala",
+      "population": 11771,
+      "region": "FCT",
+      "searchNames": [
+        "madalla"
+      ]
+    },
+    {
+      "id": "2331686",
+      "name": "Madara",
+      "population": 10015,
+      "region": "Bauchi",
+      "searchNames": []
+    },
+    {
+      "id": "2331648",
+      "name": "Madobi",
+      "population": 0,
+      "region": "Kano State",
+      "searchNames": [
+        "maidobi"
+      ]
+    },
+    {
+      "id": "2331628",
+      "name": "Mafa",
+      "population": 0,
+      "region": "Borno State",
+      "searchNames": [
+        "moufi"
+      ]
+    },
+    {
+      "id": "2331528",
+      "name": "Magumeri",
+      "population": 19363,
+      "region": "Borno State",
+      "searchNames": []
+    },
+    {
+      "id": "2331493",
+      "name": "Mahuta",
+      "population": 9047,
+      "region": "Kebbi",
+      "searchNames": []
+    },
+    {
+      "id": "2331485",
+      "name": "Mai’Adua",
+      "population": 0,
+      "region": "Katsina State",
+      "searchNames": [
+        "maiadua",
+        "maiaduwa"
+      ]
+    },
+    {
+      "id": "2331447",
+      "name": "Maiduguri",
+      "population": 1110000,
+      "region": "Borno State",
+      "searchNames": [
+        "ma iduguri",
+        "mai du gu li",
+        "maidiguri",
+        "maidouguri",
+        "maidugari",
+        "maiduguli",
+        "maiduguris",
+        "majduguri",
+        "maydwghwry",
+        "maydwgwrw",
+        "maydwgwry",
+        "maydwjwry",
+        "maydwګry",
+        "mayiduguri",
+        "mayydwgry",
+        "miu",
+        "mydghry",
+        "mydwgwry",
+        "маидугури",
+        "маидугурі",
+        "מידוגורי",
+        "مايدوجوري",
+        "مايدوغوري",
+        "مايدوګري",
+        "مايدوگورو",
+        "مايیدوگری",
+        "مایدوگوری",
+        "ميدغري",
+        "ማይዱጉሪ",
+        "मदगर",
+        "মইডগর",
+        "ਮਦਗਰ",
+        "마이두구리",
+        "マイトゥクリ",
+        "邁杜古里"
+      ]
+    },
+    {
+      "id": "2331432",
+      "name": "Maigana",
+      "population": 0,
+      "region": "Kaduna State",
+      "searchNames": [
+        "maigama"
+      ]
+    },
+    {
+      "id": "2331421",
+      "name": "Maigatari",
+      "population": 0,
+      "region": "Jigawa State",
+      "searchNames": []
+    },
+    {
+      "id": "2331408",
+      "name": "Maiha",
+      "population": 0,
+      "region": "Adamawa",
+      "searchNames": []
+    },
+    {
+      "id": "2331375",
+      "name": "Maikunkele",
+      "population": 0,
+      "region": "Niger State",
+      "searchNames": [
+        "maikonkele",
+        "maikonkole"
+      ]
+    },
+    {
+      "id": "2331267",
+      "name": "Maiyama",
+      "population": 10014,
+      "region": "Kebbi",
+      "searchNames": [
+        "maiyema"
+      ]
+    },
+    {
+      "id": "2331203",
+      "name": "Makarfi",
+      "population": 0,
+      "region": "Kaduna State",
+      "searchNames": []
+    },
+    {
+      "id": "2331189",
+      "name": "Makera",
+      "population": 0,
+      "region": "Kaduna State",
+      "searchNames": [
+        "makare"
+      ]
+    },
+    {
+      "id": "2331140",
+      "name": "Makurdi",
+      "population": 390000,
+      "region": "Benue State",
+      "searchNames": [
+        "ma ku er di",
+        "makuleudi",
+        "makuradi",
+        "makurdu",
+        "makuridi",
+        "makurudi",
+        "makwrdy",
+        "mdi",
+        "макурди",
+        "макурді",
+        "ماكوردي",
+        "ماکوردي",
+        "ماکوردی",
+        "ማኩርዲ",
+        "मकरद",
+        "মকরদ",
+        "ਮਕਰਦ",
+        "마쿠르디",
+        "マクルティ",
+        "马库尔迪"
+      ]
+    },
+    {
+      "id": "2344337",
+      "name": "Malam Madori",
+      "population": 0,
+      "region": "Jigawa State",
+      "searchNames": [
+        "dunari",
+        "malam maduri",
+        "mallammaduri"
+      ]
+    },
+    {
+      "id": "2347033",
+      "name": "Mallam Fatori",
+      "population": 0,
+      "region": "Borno State",
+      "searchNames": [
+        "bisagana",
+        "bisugana",
+        "malam fatori",
+        "malum fatori",
+        "malumfatori"
+      ]
+    },
+    {
+      "id": "2331030",
+      "name": "Mallam Sidi",
+      "population": 0,
+      "region": "Gombe State",
+      "searchNames": [
+        "malam sidi",
+        "mallamsidi"
+      ]
+    },
+    {
+      "id": "2331037",
+      "name": "Mallammaduri",
+      "population": 11156,
+      "region": "Jigawa State",
+      "searchNames": [
+        "malam maduri",
+        "malamaduri",
+        "malummaduri"
+      ]
+    },
+    {
+      "id": "2331005",
+      "name": "Malumfashi",
+      "population": 70709,
+      "region": "Katsina State",
+      "searchNames": []
+    },
+    {
+      "id": "2330937",
+      "name": "Mando",
+      "population": 7500,
+      "region": "Kaduna State",
+      "searchNames": []
+    },
+    {
+      "id": "2329951",
+      "name": "Mangu",
+      "population": 0,
+      "region": "Plateau State",
+      "searchNames": [
+        "mongu",
+        "mongu hausawa"
+      ]
+    },
+    {
+      "id": "2330910",
+      "name": "Mani",
+      "population": 0,
+      "region": "Katsina State",
+      "searchNames": []
+    },
+    {
+      "id": "2330839",
+      "name": "Maradun",
+      "population": 0,
+      "region": "Zamfara State",
+      "searchNames": []
+    },
+    {
+      "id": "2330719",
+      "name": "Marte",
+      "population": 15707,
+      "region": "Borno State",
+      "searchNames": [
+        "marte kuna"
+      ]
+    },
+    {
+      "id": "2330717",
+      "name": "Maru",
+      "population": 11496,
+      "region": "Zamfara State",
+      "searchNames": []
+    },
+    {
+      "id": "10182317",
+      "name": "Mashegu",
+      "population": 0,
+      "region": "Niger State",
+      "searchNames": [
+        "moshegu"
+      ]
+    },
+    {
+      "id": "2330664",
+      "name": "Mashi",
+      "population": 7845,
+      "region": "Katsina State",
+      "searchNames": []
+    },
+    {
+      "id": "2330600",
+      "name": "Matazu",
+      "population": 0,
+      "region": "Katsina State",
+      "searchNames": [
+        "matasu",
+        "mataza"
+      ]
+    },
+    {
+      "id": "2330543",
+      "name": "Mayo-Belwa",
+      "population": 6304,
+      "region": "Adamawa",
+      "searchNames": [
+        "maya belwa",
+        "mayo balwa"
+      ]
+    },
+    {
+      "id": "2330429",
+      "name": "Mbalano",
+      "population": 0,
+      "region": "Abia State",
+      "searchNames": [
+        "nbalano"
+      ]
+    },
+    {
+      "id": "2330369",
+      "name": "Mberubu",
+      "population": 8904,
+      "region": "Enugu State",
+      "searchNames": []
+    },
+    {
+      "id": "2330336",
+      "name": "Mgbidi",
+      "population": 0,
+      "region": "Imo State",
+      "searchNames": [
+        "mbidi"
+      ]
+    },
+    {
+      "id": "2330157",
+      "name": "Michika",
+      "population": 0,
+      "region": "Adamawa",
+      "searchNames": []
+    },
+    {
+      "id": "2330146",
+      "name": "Miga",
+      "population": 0,
+      "region": "Jigawa State",
+      "searchNames": []
+    },
+    {
+      "id": "2330102",
+      "name": "Minjibir",
+      "population": 0,
+      "region": "Kano State",
+      "searchNames": []
+    },
+    {
+      "id": "2330100",
+      "name": "Minna",
+      "population": 425000,
+      "region": "Niger State",
+      "searchNames": [
+        "min na",
+        "mina",
+        "ming na",
+        "mna",
+        "mxj",
+        "myna",
+        "myna nayjyrya",
+        "минна",
+        "мінна",
+        "منا",
+        "مينا",
+        "مینا",
+        "مینا نايجیریا",
+        "ሚና",
+        "मनन",
+        "মনন",
+        "ਮਨ",
+        "민나",
+        "ミンナ",
+        "明納"
+      ]
+    },
+    {
+      "id": "2330087",
+      "name": "Miringa",
+      "population": 12117,
+      "region": "Borno State",
+      "searchNames": [
+        "maringa",
+        "meringa"
+      ]
+    },
+    {
+      "id": "2330082",
+      "name": "Misau",
+      "population": 13957,
+      "region": "Bauchi",
+      "searchNames": []
+    },
+    {
+      "id": "2328814",
+      "name": "Mkpat Enin",
+      "population": 0,
+      "region": "Akwa Ibom State",
+      "searchNames": [
+        "nkpat enin"
+      ]
+    },
+    {
+      "id": "2330028",
+      "name": "Modakeke",
+      "population": 119529,
+      "region": "Osun State",
+      "searchNames": [
+        "модакеке"
+      ]
+    },
+    {
+      "id": "2329981",
+      "name": "Mokwa",
+      "population": 21128,
+      "region": "Niger State",
+      "searchNames": []
+    },
+    {
+      "id": "2329946",
+      "name": "Monguno",
+      "population": 20297,
+      "region": "Borno State",
+      "searchNames": [
+        "mongono",
+        "mongonu"
+      ]
+    },
+    {
+      "id": "2329943",
+      "name": "Moniya",
+      "population": 0,
+      "region": "Oyo State",
+      "searchNames": [
+        "mawniya"
+      ]
+    },
+    {
+      "id": "2329932",
+      "name": "Mopa",
+      "population": 0,
+      "region": "Kogi State",
+      "searchNames": [
+        "mope"
+      ]
+    },
+    {
+      "id": "2329920",
+      "name": "Moriki",
+      "population": 28735,
+      "region": "Zamfara State",
+      "searchNames": []
+    },
+    {
+      "id": "2329821",
+      "name": "Mubi",
+      "population": 225705,
+      "region": "Adamawa",
+      "searchNames": [
+        "муби"
+      ]
+    },
+    {
+      "id": "2329664",
+      "name": "Musawa",
+      "population": 8904,
+      "region": "Katsina State",
+      "searchNames": []
+    },
+    {
+      "id": "2329660",
+      "name": "Mushin",
+      "population": 199000,
+      "region": "Lagos",
+      "searchNames": [
+        "mushin halt",
+        "mushin nigerija",
+        "мушин нигерия"
+      ]
+    },
+    {
+      "id": "2329639",
+      "name": "Mutum Biyu",
+      "population": 11702,
+      "region": "Taraba State",
+      "searchNames": [
+        "mutum mbiyu",
+        "mutumbiyu"
+      ]
+    },
+    {
+      "id": "2329562",
+      "name": "Nafada",
+      "population": 22920,
+      "region": "Gombe State",
+      "searchNames": []
+    },
+    {
+      "id": "6852642",
+      "name": "Naka",
+      "population": 0,
+      "region": "Benue State",
+      "searchNames": []
+    },
+    {
+      "id": "2329451",
+      "name": "Nasarawa",
+      "population": 30949,
+      "region": "Nasarawa State",
+      "searchNames": [
+        "nassarava",
+        "nassarawa",
+        "нассарава"
+      ]
+    },
+    {
+      "id": "2329419",
+      "name": "Nasarawa Egon",
+      "population": 0,
+      "region": "Nasarawa State",
+      "searchNames": [
+        "nassarawa eggon",
+        "nassarawa egon",
+        "nassarawan eggon"
+      ]
+    },
+    {
+      "id": "7014620",
+      "name": "Nasko",
+      "population": 0,
+      "region": "Niger State",
+      "searchNames": []
+    },
+    {
+      "id": "10371102",
+      "name": "Nchia",
+      "population": 0,
+      "region": "Rivers State",
+      "searchNames": []
+    },
+    {
+      "id": "2329336",
+      "name": "Ndeaboh",
+      "population": 0,
+      "region": "Enugu State",
+      "searchNames": [
+        "ndeaboh station"
+      ]
+    },
+    {
+      "id": "2329150",
+      "name": "Nembe",
+      "population": 0,
+      "region": "Bayelsa State",
+      "searchNames": [
+        "nimbi"
+      ]
+    },
+    {
+      "id": "2329140",
+      "name": "Neni",
+      "population": 0,
+      "region": "Anambra",
+      "searchNames": []
+    },
+    {
+      "id": "2329132",
+      "name": "New Bussa",
+      "population": 0,
+      "region": "Niger State",
+      "searchNames": []
+    },
+    {
+      "id": "2329114",
+      "name": "New Shagunnu",
+      "population": 7349,
+      "region": "Niger State",
+      "searchNames": [
+        "shagunnu"
+      ]
+    },
+    {
+      "id": "2329087",
+      "name": "Ngala",
+      "population": 14031,
+      "region": "Borno State",
+      "searchNames": []
+    },
+    {
+      "id": "2329007",
+      "name": "Ngo",
+      "population": 0,
+      "region": "Rivers State",
+      "searchNames": []
+    },
+    {
+      "id": "2328960",
+      "name": "Ngurore",
+      "population": 8139,
+      "region": "Adamawa",
+      "searchNames": []
+    },
+    {
+      "id": "2328952",
+      "name": "Nguru",
+      "population": 111014,
+      "region": "Yobe State",
+      "searchNames": [
+        "n gourou",
+        "нгуру"
+      ]
+    },
+    {
+      "id": "2328948",
+      "name": "Nguzu Edda",
+      "population": 0,
+      "region": "Ebonyi State",
+      "searchNames": [
+        "ngusu",
+        "nguzu"
+      ]
+    },
+    {
+      "id": "2328904",
+      "name": "Ningi",
+      "population": 0,
+      "region": "Bauchi",
+      "searchNames": []
+    },
+    {
+      "id": "2328811",
+      "name": "Nkpor",
+      "population": 103733,
+      "region": "Anambra",
+      "searchNames": [
+        "mkpor",
+        "нкпор"
+      ]
+    },
+    {
+      "id": "2328790",
+      "name": "Nkwerre",
+      "population": 62973,
+      "region": "Imo State",
+      "searchNames": []
+    },
+    {
+      "id": "10270356",
+      "name": "Nkwo Nike",
+      "population": 0,
+      "region": "Enugu State",
+      "searchNames": []
+    },
+    {
+      "id": "10276482",
+      "name": "Nkwoagu Isuochi",
+      "population": 0,
+      "region": "Abia State",
+      "searchNames": [
+        "isuochi",
+        "nkwoagu",
+        "nwoagu isuochi"
+      ]
+    },
+    {
+      "id": "10275720",
+      "name": "Nnenasa",
+      "population": 0,
+      "region": "Imo State",
+      "searchNames": []
+    },
+    {
+      "id": "2328765",
+      "name": "Nnewi",
+      "population": 193987,
+      "region": "Anambra",
+      "searchNames": [
+        "newi",
+        "nnjuvi",
+        "ннюви"
+      ]
+    },
+    {
+      "id": "2328684",
+      "name": "Nsukka",
+      "population": 111017,
+      "region": "Enugu State",
+      "searchNames": [
+        "qnk",
+        "нсукка"
+      ]
+    },
+    {
+      "id": "2328664",
+      "name": "Nteje",
+      "population": 0,
+      "region": "Anambra",
+      "searchNames": []
+    },
+    {
+      "id": "2328655",
+      "name": "Nto Edino",
+      "population": 0,
+      "region": "Akwa Ibom State",
+      "searchNames": []
+    },
+    {
+      "id": "2328617",
+      "name": "Numan",
+      "population": 77617,
+      "region": "Adamawa",
+      "searchNames": []
+    },
+    {
+      "id": "2328583",
+      "name": "Nung Udoe",
+      "population": 0,
+      "region": "Akwa Ibom State",
+      "searchNames": []
+    },
+    {
+      "id": "10275556",
+      "name": "Nwaorieubi",
+      "population": 0,
+      "region": "Imo State",
+      "searchNames": [
+        "nwaorie ubi",
+        "nworieubi"
+      ]
+    },
+    {
+      "id": "2328409",
+      "name": "Nzam",
+      "population": 0,
+      "region": "Anambra",
+      "searchNames": []
+    },
+    {
+      "id": "2348308",
+      "name": "Obagaji",
+      "population": 0,
+      "region": "Benue State",
+      "searchNames": [
+        "bagagi",
+        "bagaji",
+        "obagiji"
+      ]
+    },
+    {
+      "id": "2566633",
+      "name": "Obalende",
+      "population": 342000,
+      "region": "Lagos",
+      "searchNames": [
+        "обаленде"
+      ]
+    },
+    {
+      "id": "6834204",
+      "name": "Obangede",
+      "population": 0,
+      "region": "Kogi State",
+      "searchNames": []
+    },
+    {
+      "id": "2337014",
+      "name": "Obarike-Ito",
+      "population": 0,
+      "region": "Benue State",
+      "searchNames": [
+        "ito",
+        "oborike ito"
+      ]
+    },
+    {
+      "id": "2328290",
+      "name": "Obi",
+      "population": 0,
+      "region": "Nasarawa State",
+      "searchNames": []
+    },
+    {
+      "id": "2328276",
+      "name": "Obiaruku",
+      "population": 11936,
+      "region": "Delta",
+      "searchNames": [
+        "obiariku",
+        "obiaruku quarters"
+      ]
+    },
+    {
+      "id": "10273508",
+      "name": "Obiozara",
+      "population": 0,
+      "region": "Ebonyi State",
+      "searchNames": []
+    },
+    {
+      "id": "2328194",
+      "name": "Obollo-Afor",
+      "population": 0,
+      "region": "Enugu State",
+      "searchNames": [
+        "obolo"
+      ]
+    },
+    {
+      "id": "2328192",
+      "name": "Obolo-Eke (1)",
+      "population": 5842,
+      "region": "Enugu State",
+      "searchNames": [
+        "obolo eke"
+      ]
+    },
+    {
+      "id": "2328185",
+      "name": "Obonoma",
+      "population": 68584,
+      "region": "Rivers State",
+      "searchNames": [
+        "abonnema",
+        "obonema"
+      ]
+    },
+    {
+      "id": "2328153",
+      "name": "Obubra",
+      "population": 12885,
+      "region": "Cross River State",
+      "searchNames": []
+    },
+    {
+      "id": "2328151",
+      "name": "Obudu",
+      "population": 19668,
+      "region": "Cross River State",
+      "searchNames": []
+    },
+    {
+      "id": "2328113",
+      "name": "Ochobo",
+      "population": 8567,
+      "region": "Benue State",
+      "searchNames": [
+        "ochobu"
+      ]
+    },
+    {
+      "id": "2328090",
+      "name": "Ode",
+      "population": 75463,
+      "region": "Ondo State",
+      "searchNames": [
+        "awde",
+        "oda",
+        "ода"
+      ]
+    },
+    {
+      "id": "2328091",
+      "name": "Ode-Ekiti",
+      "population": 0,
+      "region": "Ekiti State",
+      "searchNames": [
+        "ode"
+      ]
+    },
+    {
+      "id": "2337324",
+      "name": "Ode-Irele",
+      "population": 0,
+      "region": "Ondo State",
+      "searchNames": [
+        "irele"
+      ]
+    },
+    {
+      "id": "2328081",
+      "name": "Odeda",
+      "population": 0,
+      "region": "Ogun State",
+      "searchNames": [
+        "awdeda",
+        "odedah"
+      ]
+    },
+    {
+      "id": "2328007",
+      "name": "Odo-Ere",
+      "population": 0,
+      "region": "Kogi State",
+      "searchNames": [
+        "eri",
+        "odo ore",
+        "odoere"
+      ]
+    },
+    {
+      "id": "2327992",
+      "name": "Odogbolu",
+      "population": 0,
+      "region": "Ogun State",
+      "searchNames": [
+        "odogbolo"
+      ]
+    },
+    {
+      "id": "2327949",
+      "name": "Odoro Ikpe",
+      "population": 0,
+      "region": "Akwa Ibom State",
+      "searchNames": [
+        "ududu ikpe"
+      ]
+    },
+    {
+      "id": "2327943",
+      "name": "Odot",
+      "population": 0,
+      "region": "Akwa Ibom State",
+      "searchNames": []
+    },
+    {
+      "id": "2327921",
+      "name": "Odukpani",
+      "population": 0,
+      "region": "Cross River State",
+      "searchNames": []
+    },
+    {
+      "id": "2327879",
+      "name": "Offa",
+      "population": 113830,
+      "region": "Kwara State",
+      "searchNames": [
+        "оффа"
+      ]
+    },
+    {
+      "id": "2327827",
+      "name": "Ogaminana",
+      "population": 84373,
+      "region": "Kogi State",
+      "searchNames": [
+        "ogaminan"
+      ]
+    },
+    {
+      "id": "2327788",
+      "name": "Ogbede",
+      "population": 0,
+      "region": "Enugu State",
+      "searchNames": []
+    },
+    {
+      "id": "2327775",
+      "name": "Ogbere",
+      "population": 0,
+      "region": "Ogun State",
+      "searchNames": [
+        "alakuko",
+        "alaluko"
+      ]
+    },
+    {
+      "id": "10276592",
+      "name": "Ogbia",
+      "population": 0,
+      "region": "Bayelsa State",
+      "searchNames": [
+        "ogbia town"
+      ]
+    },
+    {
+      "id": "2327735",
+      "name": "Ogbomoso",
+      "population": 433030,
+      "region": "Oyo State",
+      "searchNames": [
+        "ogbomocho",
+        "ogbomosho",
+        "огбомошо"
+      ]
+    },
+    {
+      "id": "7027846",
+      "name": "Oghara",
+      "population": 0,
+      "region": "Delta",
+      "searchNames": [
+        "oghara town",
+        "ogharefe"
+      ]
+    },
+    {
+      "id": "2327689",
+      "name": "Ogidi",
+      "population": 0,
+      "region": "Anambra",
+      "searchNames": [
+        "ogid"
+      ]
+    },
+    {
+      "id": "2327650",
+      "name": "Ogoja",
+      "population": 37466,
+      "region": "Cross River State",
+      "searchNames": []
+    },
+    {
+      "id": "2327623",
+      "name": "Ogu",
+      "population": 0,
+      "region": "Rivers State",
+      "searchNames": []
+    },
+    {
+      "id": "2327607",
+      "name": "Oguma",
+      "population": 0,
+      "region": "Kogi State",
+      "searchNames": [
+        "ogum"
+      ]
+    },
+    {
+      "id": "2327523",
+      "name": "Ogurugu",
+      "population": 9135,
+      "region": "Kogi State",
+      "searchNames": [
+        "ogrugru"
+      ]
+    },
+    {
+      "id": "2327521",
+      "name": "Oguta",
+      "population": 21639,
+      "region": "Imo State",
+      "searchNames": []
+    },
+    {
+      "id": "2327513",
+      "name": "Ogwashi-Uku",
+      "population": 26137,
+      "region": "Delta",
+      "searchNames": [
+        "ogvashi uku",
+        "ugwashi uku",
+        "огваши уку"
+      ]
+    },
+    {
+      "id": "2327494",
+      "name": "Ohafia-Ifigh",
+      "population": 73355,
+      "region": "Abia State",
+      "searchNames": []
+    },
+    {
+      "id": "2327388",
+      "name": "Oji River",
+      "population": 0,
+      "region": "Enugu State",
+      "searchNames": []
+    },
+    {
+      "id": "2566680",
+      "name": "Ojota",
+      "population": 0,
+      "region": "Lagos",
+      "searchNames": []
+    },
+    {
+      "id": "2327356",
+      "name": "Ojoto",
+      "population": 0,
+      "region": "Anambra",
+      "searchNames": []
+    },
+    {
+      "id": "2327354",
+      "name": "Oju",
+      "population": 0,
+      "region": "Benue State",
+      "searchNames": []
+    },
+    {
+      "id": "2327332",
+      "name": "Oka",
+      "population": 0,
+      "region": "Ondo State",
+      "searchNames": [
+        "oka akoko"
+      ]
+    },
+    {
+      "id": "2327326",
+      "name": "Okada",
+      "population": 0,
+      "region": "Edo State",
+      "searchNames": []
+    },
+    {
+      "id": "2327233",
+      "name": "Oke Ila",
+      "population": 35000,
+      "region": "Ekiti State",
+      "searchNames": []
+    },
+    {
+      "id": "2327223",
+      "name": "Oke Mesi",
+      "population": 79563,
+      "region": "Osun State",
+      "searchNames": [
+        "oke messi"
+      ]
+    },
+    {
+      "id": "2327283",
+      "name": "Oke-Agbe",
+      "population": 0,
+      "region": "Ondo State",
+      "searchNames": [
+        "okeagbe"
+      ]
+    },
+    {
+      "id": "10275755",
+      "name": "Oke-Ikpe",
+      "population": 0,
+      "region": "Abia State",
+      "searchNames": [
+        "okeikpe"
+      ]
+    },
+    {
+      "id": "2327180",
+      "name": "Oke-Oyi",
+      "population": 0,
+      "region": "Kwara State",
+      "searchNames": []
+    },
+    {
+      "id": "2327245",
+      "name": "Okehi",
+      "population": 0,
+      "region": "Rivers State",
+      "searchNames": [
+        "okehin"
+      ]
+    },
+    {
+      "id": "2327236",
+      "name": "Okeho",
+      "population": 12964,
+      "region": "Oyo State",
+      "searchNames": [
+        "oke iho"
+      ]
+    },
+    {
+      "id": "2327220",
+      "name": "Okene",
+      "population": 479178,
+      "region": "Kogi State",
+      "searchNames": [
+        "okeni",
+        "окене"
+      ]
+    },
+    {
+      "id": "2327143",
+      "name": "Okigwe",
+      "population": 115499,
+      "region": "Imo State",
+      "searchNames": [
+        "okigue",
+        "okigwi",
+        "окигуе"
+      ]
+    },
+    {
+      "id": "2327089",
+      "name": "Oko Ita",
+      "population": 0,
+      "region": "Akwa Ibom State",
+      "searchNames": [
+        "okolta"
+      ]
+    },
+    {
+      "id": "2327043",
+      "name": "Okopedi",
+      "population": 0,
+      "region": "Akwa Ibom State",
+      "searchNames": []
+    },
+    {
+      "id": "2327025",
+      "name": "Okoroete",
+      "population": 0,
+      "region": "Akwa Ibom State",
+      "searchNames": [
+        "okoro ete"
+      ]
+    },
+    {
+      "id": "2326959",
+      "name": "Okpo",
+      "population": 0,
+      "region": "Kogi State",
+      "searchNames": []
+    },
+    {
+      "id": "2326784",
+      "name": "Okpoga",
+      "population": 0,
+      "region": "Benue State",
+      "searchNames": [
+        "okwoga"
+      ]
+    },
+    {
+      "id": "2326935",
+      "name": "Okpoma",
+      "population": 0,
+      "region": "Cross River State",
+      "searchNames": []
+    },
+    {
+      "id": "10275805",
+      "name": "Okpuala-Ngwa",
+      "population": 0,
+      "region": "Abia State",
+      "searchNames": []
+    },
+    {
+      "id": "2326899",
+      "name": "Okrika",
+      "population": 133271,
+      "region": "Rivers State",
+      "searchNames": [
+        "окрика"
+      ]
+    },
+    {
+      "id": "10033048",
+      "name": "Okuku",
+      "population": 0,
+      "region": "Osun State",
+      "searchNames": []
+    },
+    {
+      "id": "2326811",
+      "name": "Okuta",
+      "population": 26589,
+      "region": "Kwara State",
+      "searchNames": []
+    },
+    {
+      "id": "2326790",
+      "name": "Okwe",
+      "population": 0,
+      "region": "Imo State",
+      "searchNames": []
+    },
+    {
+      "id": "2326727",
+      "name": "Oleh",
+      "population": 0,
+      "region": "Delta",
+      "searchNames": [
+        "ole"
+      ]
+    },
+    {
+      "id": "2326302",
+      "name": "Olupona",
+      "population": 95002,
+      "region": "Osun State",
+      "searchNames": [
+        "olupono"
+      ]
+    },
+    {
+      "id": "10275804",
+      "name": "Omoba",
+      "population": 0,
+      "region": "Abia State",
+      "searchNames": []
+    },
+    {
+      "id": "2326221",
+      "name": "Omoku",
+      "population": 11625,
+      "region": "Rivers State",
+      "searchNames": [
+        "oil city 3",
+        "omoko"
+      ]
+    },
+    {
+      "id": "2326200",
+      "name": "Omu-Aran",
+      "population": 14477,
+      "region": "Kwara State",
+      "searchNames": [
+        "omu"
+      ]
+    },
+    {
+      "id": "2326188",
+      "name": "Omuo-Ekiti",
+      "population": 6317,
+      "region": "Ekiti State",
+      "searchNames": [
+        "omuo",
+        "omuo kota"
+      ]
+    },
+    {
+      "id": "2326171",
+      "name": "Ondo",
+      "population": 375000,
+      "region": "Ondo State",
+      "searchNames": [
+        "ондо"
+      ]
+    },
+    {
+      "id": "2326016",
+      "name": "Onitsha",
+      "population": 1553000,
+      "region": "Anambra",
+      "searchNames": [
+        "ao ni cha",
+        "onicha",
+        "onicjo",
+        "qni",
+        "онитша",
+        "онича",
+        "оніча",
+        "오니차",
+        "オニチャ",
+        "奧尼查"
+      ]
+    },
+    {
+      "id": "10273509",
+      "name": "Onuebonyi Echara",
+      "population": 0,
+      "region": "Ebonyi State",
+      "searchNames": [
+        "echara anuaboyi",
+        "echara onu ebonyi",
+        "echara onuaboyi",
+        "onu ebonyi echara"
+      ]
+    },
+    {
+      "id": "9274242",
+      "name": "Onueke",
+      "population": 0,
+      "region": "Ebonyi State",
+      "searchNames": []
+    },
+    {
+      "id": "2325948",
+      "name": "Onyedega",
+      "population": 0,
+      "region": "Kogi State",
+      "searchNames": [
+        "onyadega"
+      ]
+    },
+    {
+      "id": "2325902",
+      "name": "Opi",
+      "population": 11237,
+      "region": "Enugu State",
+      "searchNames": []
+    },
+    {
+      "id": "2325891",
+      "name": "Opobo",
+      "population": 0,
+      "region": "Rivers State",
+      "searchNames": [
+        "opobo town"
+      ]
+    },
+    {
+      "id": "2325878",
+      "name": "Oporoma",
+      "population": 0,
+      "region": "Bayelsa State",
+      "searchNames": []
+    },
+    {
+      "id": "2325821",
+      "name": "Ore",
+      "population": 13905,
+      "region": "Ondo State",
+      "searchNames": []
+    },
+    {
+      "id": "2325803",
+      "name": "Orerokpe",
+      "population": 5893,
+      "region": "Delta",
+      "searchNames": [
+        "orerukpe"
+      ]
+    },
+    {
+      "id": "2325733",
+      "name": "Orita-Eruwa",
+      "population": 71027,
+      "region": "Oyo State",
+      "searchNames": []
+    },
+    {
+      "id": "2325725",
+      "name": "Orlu",
+      "population": 9351,
+      "region": "Imo State",
+      "searchNames": [
+        "awlu"
+      ]
+    },
+    {
+      "id": "2325713",
+      "name": "Orodo",
+      "population": 8527,
+      "region": "Imo State",
+      "searchNames": [
+        "ородо"
+      ]
+    },
+    {
+      "id": "2325688",
+      "name": "Oron",
+      "population": 0,
+      "region": "Akwa Ibom State",
+      "searchNames": [
+        "oron town"
+      ]
+    },
+    {
+      "id": "2325592",
+      "name": "Oshodi",
+      "population": 170870,
+      "region": "Lagos",
+      "searchNames": [
+        "ошоди"
+      ]
+    },
+    {
+      "id": "10275756",
+      "name": "Osisioma",
+      "population": 0,
+      "region": "Abia State",
+      "searchNames": []
+    },
+    {
+      "id": "2325590",
+      "name": "Osogbo",
+      "population": 645000,
+      "region": "Osun State",
+      "searchNames": [
+        "aswgbw",
+        "aswګbw",
+        "awswgbw",
+        "awswjbw",
+        "eshogbo",
+        "oshogbo",
+        "osogabo",
+        "osogubo",
+        "ʿosoግbo",
+        "осогбо",
+        "اسوګبو",
+        "اسوگبو",
+        "اوسوجبو",
+        "اوسوگبو",
+        "ኦሶግቦ",
+        "ओसगब",
+        "ওসগব",
+        "ਓਸਗਬ",
+        "オソクホ"
+      ]
+    },
+    {
+      "id": "2325535",
+      "name": "Osu",
+      "population": 0,
+      "region": "Osun State",
+      "searchNames": [
+        "oshu"
+      ]
+    },
+    {
+      "id": "2325457",
+      "name": "Ota",
+      "population": 251546,
+      "region": "Ogun State",
+      "searchNames": [
+        "otta",
+        "sango ota",
+        "sango otta",
+        "ота"
+      ]
+    },
+    {
+      "id": "2325506",
+      "name": "Otan Ayegbaju",
+      "population": 37783,
+      "region": "Osun State",
+      "searchNames": [
+        "ota",
+        "otan",
+        "otan aiyegbaju",
+        "oton"
+      ]
+    },
+    {
+      "id": "2325442",
+      "name": "Otor-Udu",
+      "population": 0,
+      "region": "Delta",
+      "searchNames": [
+        "otudu",
+        "udu"
+      ]
+    },
+    {
+      "id": "2325450",
+      "name": "Otu",
+      "population": 0,
+      "region": "Oyo State",
+      "searchNames": []
+    },
+    {
+      "id": "2325438",
+      "name": "Otu-Jeremi",
+      "population": 0,
+      "region": "Delta",
+      "searchNames": [
+        "jeremi town",
+        "otu chievwen",
+        "otu ghievwen",
+        "otu ughievwen",
+        "otughievwen",
+        "otujeremi"
+      ]
+    },
+    {
+      "id": "2325437",
+      "name": "Otukpa",
+      "population": 21686,
+      "region": "Benue State",
+      "searchNames": []
+    },
+    {
+      "id": "2325422",
+      "name": "Otun-Ekiti",
+      "population": 0,
+      "region": "Ekiti State",
+      "searchNames": [
+        "awtun",
+        "otun"
+      ]
+    },
+    {
+      "id": "2325415",
+      "name": "Otuocha",
+      "population": 0,
+      "region": "Anambra",
+      "searchNames": [
+        "otuocha aguleri"
+      ]
+    },
+    {
+      "id": "2325349",
+      "name": "Owa-Oyibu",
+      "population": 0,
+      "region": "Delta",
+      "searchNames": [
+        "owa oyiebu"
+      ]
+    },
+    {
+      "id": "2325330",
+      "name": "Owerri",
+      "population": 545000,
+      "region": "Imo State",
+      "searchNames": [
+        "ao wei li",
+        "awry",
+        "awwyry",
+        "awyry",
+        "oueri",
+        "overi",
+        "overri",
+        "oweli",
+        "owerre",
+        "oyeri",
+        "qow",
+        "ʿoweri",
+        "овери",
+        "оверри",
+        "اوری",
+        "اوویری",
+        "اويري",
+        "اویری",
+        "ኦወሪ",
+        "ओवर",
+        "ওযর",
+        "ਓਵਰ",
+        "오웨리",
+        "オウェリ",
+        "奧韋里"
+      ]
+    },
+    {
+      "id": "2325314",
+      "name": "Owo",
+      "population": 276574,
+      "region": "Ondo State",
+      "searchNames": [
+        "ovo",
+        "ово"
+      ]
+    },
+    {
+      "id": "2325307",
+      "name": "Owode",
+      "population": 8513,
+      "region": "Ogun State",
+      "searchNames": []
+    },
+    {
+      "id": "2325266",
+      "name": "Owu-Isin",
+      "population": 0,
+      "region": "Kwara State",
+      "searchNames": [
+        "owu"
+      ]
+    },
+    {
+      "id": "2325249",
+      "name": "Oyan",
+      "population": 73622,
+      "region": "Osun State",
+      "searchNames": []
+    },
+    {
+      "id": "2325238",
+      "name": "Oye-Ekiti",
+      "population": 0,
+      "region": "Ekiti State",
+      "searchNames": [
+        "oye"
+      ]
+    },
+    {
+      "id": "2325200",
+      "name": "Oyo",
+      "population": 736072,
+      "region": "Oyo State",
+      "searchNames": [
+        "oio",
+        "ojo",
+        "оио"
+      ]
+    },
+    {
+      "id": "2319597",
+      "name": "Ozoro",
+      "population": 0,
+      "region": "Delta",
+      "searchNames": [
+        "usoro"
+      ]
+    },
+    {
+      "id": "2325161",
+      "name": "Ozubulu",
+      "population": 73812,
+      "region": "Anambra",
+      "searchNames": []
+    },
+    {
+      "id": "2325132",
+      "name": "Paiko",
+      "population": 0,
+      "region": "Niger State",
+      "searchNames": []
+    },
+    {
+      "id": "2325060",
+      "name": "Pankshin",
+      "population": 31516,
+      "region": "Plateau State",
+      "searchNames": []
+    },
+    {
+      "id": "2325042",
+      "name": "Pantisawa",
+      "population": 0,
+      "region": "Taraba State",
+      "searchNames": [
+        "panti sawa",
+        "pantishawa"
+      ]
+    },
+    {
+      "id": "2325032",
+      "name": "Panyam",
+      "population": 10715,
+      "region": "Plateau State",
+      "searchNames": []
+    },
+    {
+      "id": "2324962",
+      "name": "Patani",
+      "population": 7327,
+      "region": "Delta",
+      "searchNames": []
+    },
+    {
+      "id": "2324960",
+      "name": "Patigi",
+      "population": 28285,
+      "region": "Kwara State",
+      "searchNames": [
+        "pategi"
+      ]
+    },
+    {
+      "id": "2324857",
+      "name": "Pindiga",
+      "population": 106322,
+      "region": "Gombe State",
+      "searchNames": [
+        "пиндига"
+      ]
+    },
+    {
+      "id": "2324774",
+      "name": "Port Harcourt",
+      "population": 2120000,
+      "region": "Rivers State",
+      "searchNames": [
+        "bwrt harkwrt",
+        "ha ke te gang",
+        "phc",
+        "porata harakorata",
+        "port harkortas",
+        "port harkurt",
+        "port kharkort",
+        "port kharkurt",
+        "port xarcourt",
+        "porta harakorta",
+        "poteuhakeoteu",
+        "potohakoto",
+        "pwrt harkwrt",
+        "pwrt hrqwrt",
+        "pwrٹ ہarkwrٹ",
+        "ugwu ocha",
+        "порт харкорт",
+        "порт харкурт",
+        "פורט הרקורט",
+        "بورت هاركورت",
+        "پورت هاركورت",
+        "پورٹ ہارکورٹ",
+        "ፖriti harikweriti",
+        "ፖርት ሃርኮርት",
+        "परट हरकरट",
+        "পরট হরকরট",
+        "ਪਰਟ ਹਰਕਰਟ",
+        "포트하커트",
+        "ホートハーコート",
+        "哈科特港"
+      ]
+    },
+    {
+      "id": "2324767",
+      "name": "Potiskum",
+      "population": 86002,
+      "region": "Yobe State",
+      "searchNames": [
+        "putuskum"
+      ]
+    },
+    {
+      "id": "2324706",
+      "name": "Rabah",
+      "population": 8707,
+      "region": "Sokoto",
+      "searchNames": []
+    },
+    {
+      "id": "2324576",
+      "name": "Rann",
+      "population": 0,
+      "region": "Borno State",
+      "searchNames": [
+        "ran"
+      ]
+    },
+    {
+      "id": "2324575",
+      "name": "Rano",
+      "population": 17972,
+      "region": "Kano State",
+      "searchNames": []
+    },
+    {
+      "id": "2324534",
+      "name": "Ribah",
+      "population": 0,
+      "region": "Kebbi",
+      "searchNames": []
+    },
+    {
+      "id": "2324504",
+      "name": "Rijau",
+      "population": 16613,
+      "region": "Niger State",
+      "searchNames": []
+    },
+    {
+      "id": "2324477",
+      "name": "Rimi",
+      "population": 0,
+      "region": "Katsina State",
+      "searchNames": []
+    },
+    {
+      "id": "2324473",
+      "name": "Rimin Gado",
+      "population": 0,
+      "region": "Kano State",
+      "searchNames": [
+        "rafin gado"
+      ]
+    },
+    {
+      "id": "2324460",
+      "name": "Ringim",
+      "population": 14463,
+      "region": "Jigawa State",
+      "searchNames": []
+    },
+    {
+      "id": "2324446",
+      "name": "Ririwai",
+      "population": 0,
+      "region": "Kano State",
+      "searchNames": [
+        "riruwai"
+      ]
+    },
+    {
+      "id": "2324439",
+      "name": "Riti",
+      "population": 6875,
+      "region": "Taraba State",
+      "searchNames": []
+    },
+    {
+      "id": "2338356",
+      "name": "River Atuwara",
+      "population": 15937,
+      "region": "Ogun State",
+      "searchNames": [
+        "atuwara"
+      ]
+    },
+    {
+      "id": "2324430",
+      "name": "Riyom",
+      "population": 0,
+      "region": "Plateau State",
+      "searchNames": [
+        "riom"
+      ]
+    },
+    {
+      "id": "2324417",
+      "name": "Rogo",
+      "population": 0,
+      "region": "Kano State",
+      "searchNames": []
+    },
+    {
+      "id": "2324401",
+      "name": "Roni",
+      "population": 0,
+      "region": "Jigawa State",
+      "searchNames": []
+    },
+    {
+      "id": "2324325",
+      "name": "Ruma",
+      "population": 8857,
+      "region": "Katsina State",
+      "searchNames": []
+    },
+    {
+      "id": "10371104",
+      "name": "Rumuodomaya",
+      "population": 0,
+      "region": "Rivers State",
+      "searchNames": [
+        "rumuodamaya",
+        "rumuodo manya",
+        "rumuodomanya"
+      ]
+    },
+    {
+      "id": "2324281",
+      "name": "Runka",
+      "population": 12665,
+      "region": "Katsina State",
+      "searchNames": []
+    },
+    {
+      "id": "10370805",
+      "name": "Saakpenwa",
+      "population": 0,
+      "region": "Rivers State",
+      "searchNames": [
+        "sakpenwa"
+      ]
+    },
+    {
+      "id": "2324178",
+      "name": "Sabon Birni",
+      "population": 0,
+      "region": "Sokoto",
+      "searchNames": [
+        "sobon birni"
+      ]
+    },
+    {
+      "id": "8996492",
+      "name": "Sabon Garin Nangere",
+      "population": 0,
+      "region": "Yobe State",
+      "searchNames": [
+        "sabon gari",
+        "sabon gari nanger",
+        "sabon gari nangere"
+      ]
+    },
+    {
+      "id": "10182387",
+      "name": "Sabon Wuse",
+      "population": 0,
+      "region": "Niger State",
+      "searchNames": [
+        "new wuse",
+        "wuse"
+      ]
+    },
+    {
+      "id": "2324081",
+      "name": "Sabongida-Ora",
+      "population": 0,
+      "region": "Edo State",
+      "searchNames": [
+        "sabon gida",
+        "sabongidda",
+        "sabongidda ora"
+      ]
+    },
+    {
+      "id": "2324038",
+      "name": "Sabuwa",
+      "population": 0,
+      "region": "Katsina State",
+      "searchNames": [
+        "sabua"
+      ]
+    },
+    {
+      "id": "2324024",
+      "name": "Sade",
+      "population": 8223,
+      "region": "Bauchi",
+      "searchNames": []
+    },
+    {
+      "id": "2324011",
+      "name": "Safana",
+      "population": 0,
+      "region": "Katsina State",
+      "searchNames": []
+    },
+    {
+      "id": "2323997",
+      "name": "Sagbama",
+      "population": 0,
+      "region": "Bayelsa State",
+      "searchNames": [
+        "aduezi",
+        "ndiama",
+        "ndiemazi",
+        "obuare"
+      ]
+    },
+    {
+      "id": "2323955",
+      "name": "Sakaba",
+      "population": 0,
+      "region": "Kebbi",
+      "searchNames": []
+    },
+    {
+      "id": "2323390",
+      "name": "Saki",
+      "population": 178677,
+      "region": "Oyo State",
+      "searchNames": [
+        "shaki",
+        "саки"
+      ]
+    },
+    {
+      "id": "2323858",
+      "name": "Samamiya",
+      "population": 8087,
+      "region": "Jigawa State",
+      "searchNames": [
+        "samammiya",
+        "saman"
+      ]
+    },
+    {
+      "id": "2324623",
+      "name": "Saminaka",
+      "population": 0,
+      "region": "Kaduna State",
+      "searchNames": [
+        "саминака"
+      ]
+    },
+    {
+      "id": "2323795",
+      "name": "Sandamu",
+      "population": 0,
+      "region": "Katsina State",
+      "searchNames": []
+    },
+    {
+      "id": "2323715",
+      "name": "Sankera",
+      "population": 0,
+      "region": "Benue State",
+      "searchNames": [
+        "sankara"
+      ]
+    },
+    {
+      "id": "2323709",
+      "name": "Sankwala",
+      "population": 0,
+      "region": "Cross River State",
+      "searchNames": []
+    },
+    {
+      "id": "2323675",
+      "name": "Sapele",
+      "population": 305000,
+      "region": "Delta",
+      "searchNames": [
+        "сапеле"
+      ]
+    },
+    {
+      "id": "2323622",
+      "name": "Sarkin Pawa",
+      "population": 0,
+      "region": "Niger State",
+      "searchNames": []
+    },
+    {
+      "id": "2323579",
+      "name": "Sauri",
+      "population": 13445,
+      "region": "Zamfara State",
+      "searchNames": [
+        "samri"
+      ]
+    },
+    {
+      "id": "2323466",
+      "name": "Serti",
+      "population": 0,
+      "region": "Taraba State",
+      "searchNames": []
+    },
+    {
+      "id": "2323418",
+      "name": "Shaffa",
+      "population": 6508,
+      "region": "Borno State",
+      "searchNames": []
+    },
+    {
+      "id": "2323411",
+      "name": "Shagamu",
+      "population": 214558,
+      "region": "Ogun State",
+      "searchNames": [
+        "sagamu",
+        "шагаму"
+      ]
+    },
+    {
+      "id": "2323409",
+      "name": "Shagari",
+      "population": 0,
+      "region": "Sokoto",
+      "searchNames": []
+    },
+    {
+      "id": "2323349",
+      "name": "Shanga",
+      "population": 7471,
+      "region": "Kebbi",
+      "searchNames": []
+    },
+    {
+      "id": "2323344",
+      "name": "Shani",
+      "population": 14305,
+      "region": "Borno State",
+      "searchNames": []
+    },
+    {
+      "id": "2323338",
+      "name": "Shanono",
+      "population": 0,
+      "region": "Kano State",
+      "searchNames": [
+        "shanomo"
+      ]
+    },
+    {
+      "id": "2323324",
+      "name": "Share",
+      "population": 0,
+      "region": "Kwara State",
+      "searchNames": []
+    },
+    {
+      "id": "2323264",
+      "name": "Shelleng",
+      "population": 0,
+      "region": "Adamawa",
+      "searchNames": [
+        "shellem",
+        "shellen"
+      ]
+    },
+    {
+      "id": "2323244",
+      "name": "Shendam",
+      "population": 0,
+      "region": "Plateau State",
+      "searchNames": []
+    },
+    {
+      "id": "2323146",
+      "name": "Shinkafi",
+      "population": 9324,
+      "region": "Zamfara State",
+      "searchNames": [
+        "shinkafe"
+      ]
+    },
+    {
+      "id": "2323090",
+      "name": "Shomolu",
+      "population": 154390,
+      "region": "Lagos",
+      "searchNames": [
+        "somolu",
+        "шомолу"
+      ]
+    },
+    {
+      "id": "2323013",
+      "name": "Silame",
+      "population": 0,
+      "region": "Sokoto",
+      "searchNames": []
+    },
+    {
+      "id": "2323011",
+      "name": "Siluko",
+      "population": 7920,
+      "region": "Edo State",
+      "searchNames": []
+    },
+    {
+      "id": "2322957",
+      "name": "Soba",
+      "population": 15715,
+      "region": "Kaduna State",
+      "searchNames": []
+    },
+    {
+      "id": "2347061",
+      "name": "Sofo-Birnin-Gwari",
+      "population": 22380,
+      "region": "Kaduna State",
+      "searchNames": [
+        "birni gwari",
+        "birnin gwari"
+      ]
+    },
+    {
+      "id": "2322911",
+      "name": "Sokoto",
+      "population": 1040000,
+      "region": "Sokoto",
+      "searchNames": [
+        "sko",
+        "socoto",
+        "sokotas",
+        "sokoto stad",
+        "sokweto",
+        "suo ke tuo",
+        "swkwtw",
+        "swkwٹw",
+        "сокото",
+        "სოკოტო",
+        "سوكوتو",
+        "سوکوتو",
+        "سوکوٹو",
+        "ሶኮቶ",
+        "सकट",
+        "সকট",
+        "ਸਕਟ",
+        "소코토",
+        "ソコト",
+        "索科托"
+      ]
+    },
+    {
+      "id": "2322880",
+      "name": "Song",
+      "population": 0,
+      "region": "Adamawa",
+      "searchNames": []
+    },
+    {
+      "id": "2322793",
+      "name": "Sule Tankarkar",
+      "population": 0,
+      "region": "Jigawa State",
+      "searchNames": [
+        "sule tankar kar",
+        "sule tankarka"
+      ]
+    },
+    {
+      "id": "2322794",
+      "name": "Suleja",
+      "population": 162135,
+      "region": "Niger State",
+      "searchNames": [
+        "abudzha",
+        "abuja",
+        "sulaija",
+        "suleija",
+        "абуджа"
+      ]
+    },
+    {
+      "id": "2322784",
+      "name": "Sumaila",
+      "population": 0,
+      "region": "Kano State",
+      "searchNames": []
+    },
+    {
+      "id": "10370397",
+      "name": "Sunkani",
+      "population": 0,
+      "region": "Taraba State",
+      "searchNames": []
+    },
+    {
+      "id": "2322733",
+      "name": "Surulere",
+      "population": 191920,
+      "region": "Lagos",
+      "searchNames": [
+        "qsl",
+        "sufu lere",
+        "suru lere",
+        "сурулере"
+      ]
+    },
+    {
+      "id": "2322722",
+      "name": "Suya",
+      "population": 7936,
+      "region": "Kwara State",
+      "searchNames": [
+        "saya",
+        "shiya",
+        "souya"
+      ]
+    },
+    {
+      "id": "2322651",
+      "name": "Tafawa Balewa",
+      "population": 0,
+      "region": "Bauchi",
+      "searchNames": []
+    },
+    {
+      "id": "2322592",
+      "name": "Takai",
+      "population": 10748,
+      "region": "Kano State",
+      "searchNames": []
+    },
+    {
+      "id": "2322552",
+      "name": "Takum",
+      "population": 24822,
+      "region": "Benue State",
+      "searchNames": []
+    },
+    {
+      "id": "2322531",
+      "name": "Talasse",
+      "population": 0,
+      "region": "Gombe State",
+      "searchNames": [
+        "tailase",
+        "tallasa",
+        "tallase"
+      ]
+    },
+    {
+      "id": "2322529",
+      "name": "Talata Mafara",
+      "population": 39045,
+      "region": "Zamfara State",
+      "searchNames": []
+    },
+    {
+      "id": "2322495",
+      "name": "Tambuwal",
+      "population": 20932,
+      "region": "Sokoto",
+      "searchNames": [
+        "tambawal",
+        "tambawel"
+      ]
+    },
+    {
+      "id": "2322305",
+      "name": "Taura",
+      "population": 0,
+      "region": "Jigawa State",
+      "searchNames": []
+    },
+    {
+      "id": "2322269",
+      "name": "Tede",
+      "population": 0,
+      "region": "Oyo State",
+      "searchNames": []
+    },
+    {
+      "id": "2322263",
+      "name": "Tegina",
+      "population": 24037,
+      "region": "Niger State",
+      "searchNames": []
+    },
+    {
+      "id": "2322040",
+      "name": "Tofa",
+      "population": 0,
+      "region": "Kano State",
+      "searchNames": []
+    },
+    {
+      "id": "2322021",
+      "name": "Tokombere",
+      "population": 7092,
+      "region": "Borno State",
+      "searchNames": []
+    },
+    {
+      "id": "2321951",
+      "name": "Toro",
+      "population": 0,
+      "region": "Bauchi",
+      "searchNames": []
+    },
+    {
+      "id": "2321930",
+      "name": "Toto",
+      "population": 0,
+      "region": "Nasarawa State",
+      "searchNames": []
+    },
+    {
+      "id": "2321926",
+      "name": "Toungo",
+      "population": 11759,
+      "region": "Adamawa",
+      "searchNames": []
+    },
+    {
+      "id": "2346199",
+      "name": "Tsafe",
+      "population": 9367,
+      "region": "Zamfara State",
+      "searchNames": [
+        "chafe"
+      ]
+    },
+    {
+      "id": "2321859",
+      "name": "Tsanyawa",
+      "population": 0,
+      "region": "Kano State",
+      "searchNames": []
+    },
+    {
+      "id": "2352040",
+      "name": "Tse-Agberagba",
+      "population": 0,
+      "region": "Benue State",
+      "searchNames": [
+        "agbelagba",
+        "ise agberagba"
+      ]
+    },
+    {
+      "id": "2321688",
+      "name": "Tube",
+      "population": 3088,
+      "region": "Ogun State",
+      "searchNames": []
+    },
+    {
+      "id": "2321636",
+      "name": "Tudun Wada",
+      "population": 0,
+      "region": "Kano State",
+      "searchNames": [
+        "tudan wada",
+        "wada"
+      ]
+    },
+    {
+      "id": "10322706",
+      "name": "Tunkus",
+      "population": 0,
+      "region": "Plateau State",
+      "searchNames": []
+    },
+    {
+      "id": "2321176",
+      "name": "Tureta",
+      "population": 0,
+      "region": "Sokoto",
+      "searchNames": []
+    },
+    {
+      "id": "2346734",
+      "name": "Twon-Brass",
+      "population": 11122,
+      "region": "Bayelsa State",
+      "searchNames": [
+        "brass",
+        "brass town",
+        "bross"
+      ]
+    },
+    {
+      "id": "2321057",
+      "name": "Uba",
+      "population": 11648,
+      "region": "Borno State",
+      "searchNames": []
+    },
+    {
+      "id": "2321031",
+      "name": "Ubiaja",
+      "population": 21782,
+      "region": "Edo State",
+      "searchNames": []
+    },
+    {
+      "id": "2320966",
+      "name": "Udi",
+      "population": 14998,
+      "region": "Enugu State",
+      "searchNames": []
+    },
+    {
+      "id": "2320920",
+      "name": "Uga",
+      "population": 64179,
+      "region": "Anambra",
+      "searchNames": []
+    },
+    {
+      "id": "2320906",
+      "name": "Ugba",
+      "population": 0,
+      "region": "Benue State",
+      "searchNames": []
+    },
+    {
+      "id": "9269455",
+      "name": "Ugbodo",
+      "population": 0,
+      "region": "Ebonyi State",
+      "searchNames": []
+    },
+    {
+      "id": "2346805",
+      "name": "Ugbokpo",
+      "population": 14218,
+      "region": "Benue State",
+      "searchNames": [
+        "bopa",
+        "bopo"
+      ]
+    },
+    {
+      "id": "2320831",
+      "name": "Ugep",
+      "population": 200276,
+      "region": "Cross River State",
+      "searchNames": [
+        "угеп"
+      ]
+    },
+    {
+      "id": "2320829",
+      "name": "Ughelli",
+      "population": 79986,
+      "region": "Delta",
+      "searchNames": []
+    },
+    {
+      "id": "2339686",
+      "name": "Ugwolawo",
+      "population": 0,
+      "region": "Kogi State",
+      "searchNames": [
+        "gwalawo",
+        "gwolawo",
+        "ogwoawo",
+        "ugbwolawo",
+        "ugwalawo"
+      ]
+    },
+    {
+      "id": "2320746",
+      "name": "Ukata",
+      "population": 6188,
+      "region": "Niger State",
+      "searchNames": []
+    },
+    {
+      "id": "2320693",
+      "name": "Ukpo",
+      "population": 0,
+      "region": "Anambra",
+      "searchNames": [
+        "ukpo akpu"
+      ]
+    },
+    {
+      "id": "2319701",
+      "name": "Ukpor",
+      "population": 0,
+      "region": "Anambra",
+      "searchNames": [
+        "upor"
+      ]
+    },
+    {
+      "id": "2320576",
+      "name": "Umuahia",
+      "population": 370000,
+      "region": "Abia State",
+      "searchNames": [
+        "amwahya",
+        "amwhya",
+        "awmwahya",
+        "umu ahi a",
+        "umu ahiya",
+        "umuahia ibeku",
+        "umuakhia",
+        "umuakhija",
+        "wu mu a xi ya",
+        "ʿumuʿehiya",
+        "умуахиа",
+        "умуахия",
+        "умуахія",
+        "امواهیا",
+        "اموهيا",
+        "اومواهيا",
+        "اومواہیا",
+        "ኡሙአሂያ",
+        "उमआहय",
+        "উমআহয",
+        "ਉਮਆਹਆ",
+        "우무아히아",
+        "ウムアヒア",
+        "乌穆阿希亚"
+      ]
+    },
+    {
+      "id": "2320495",
+      "name": "Umuelemai",
+      "population": 0,
+      "region": "Imo State",
+      "searchNames": [
+        "umu elemai",
+        "umulemai"
+      ]
+    },
+    {
+      "id": "7101308",
+      "name": "Umuguma",
+      "population": 0,
+      "region": "Imo State",
+      "searchNames": [
+        "umuoguma"
+      ]
+    },
+    {
+      "id": "2320435",
+      "name": "Umulona",
+      "population": 0,
+      "region": "Enugu State",
+      "searchNames": [
+        "umulokpa",
+        "umuluokpa"
+      ]
+    },
+    {
+      "id": "7098609",
+      "name": "Umumma",
+      "population": 0,
+      "region": "Imo State",
+      "searchNames": [
+        "omuma"
+      ]
+    },
+    {
+      "id": "2350222",
+      "name": "Umundugba",
+      "population": 0,
+      "region": "Imo State",
+      "searchNames": [
+        "amanduba",
+        "amandugba"
+      ]
+    },
+    {
+      "id": "2320417",
+      "name": "Umunede",
+      "population": 8331,
+      "region": "Delta",
+      "searchNames": []
+    },
+    {
+      "id": "2320416",
+      "name": "Umuneke-Ngor",
+      "population": 0,
+      "region": "Imo State",
+      "searchNames": [
+        "nmu neke",
+        "umu neke",
+        "umuneke"
+      ]
+    },
+    {
+      "id": "2343269",
+      "name": "Umunze",
+      "population": 0,
+      "region": "Anambra",
+      "searchNames": [
+        "enugu umunze",
+        "ururow umunze"
+      ]
+    },
+    {
+      "id": "2320298",
+      "name": "Ungogo",
+      "population": 0,
+      "region": "Kano State",
+      "searchNames": []
+    },
+    {
+      "id": "10316974",
+      "name": "Upenekang",
+      "population": 0,
+      "region": "Akwa Ibom State",
+      "searchNames": [
+        "ukpenekang",
+        "ukpenekong"
+      ]
+    },
+    {
+      "id": "2319695",
+      "name": "Uquo",
+      "population": 0,
+      "region": "Akwa Ibom State",
+      "searchNames": []
+    },
+    {
+      "id": "2319668",
+      "name": "Uromi",
+      "population": 108608,
+      "region": "Edo State",
+      "searchNames": [
+        "wu luo mi",
+        "уроми",
+        "乌罗米"
+      ]
+    },
+    {
+      "id": "7073463",
+      "name": "Urua Inyang",
+      "population": 0,
+      "region": "Akwa Ibom State",
+      "searchNames": []
+    },
+    {
+      "id": "2319659",
+      "name": "Urualla",
+      "population": 0,
+      "region": "Imo State",
+      "searchNames": []
+    },
+    {
+      "id": "10317749",
+      "name": "Urue Offong",
+      "population": 0,
+      "region": "Akwa Ibom State",
+      "searchNames": [
+        "udua offong"
+      ]
+    },
+    {
+      "id": "2319642",
+      "name": "Uruobo-Okija",
+      "population": 13898,
+      "region": "Anambra",
+      "searchNames": [
+        "okija"
+      ]
+    },
+    {
+      "id": "2319624",
+      "name": "Uselu",
+      "population": 0,
+      "region": "Edo State",
+      "searchNames": []
+    },
+    {
+      "id": "2319522",
+      "name": "Utu Etim Ekpo",
+      "population": 0,
+      "region": "Akwa Ibom State",
+      "searchNames": [
+        "utu etim"
+      ]
+    },
+    {
+      "id": "2319480",
+      "name": "Uyo",
+      "population": 436606,
+      "region": "Akwa Ibom State",
+      "searchNames": [
+        "awyw",
+        "ayw",
+        "quo",
+        "ujo",
+        "uyо",
+        "yuyo",
+        "yww",
+        "ʿuyo",
+        "уио",
+        "اويو",
+        "اویو",
+        "ایو",
+        "یوو",
+        "ኡዮ",
+        "उय",
+        "উয",
+        "ਯਯ",
+        "ウヨ"
+      ]
+    },
+    {
+      "id": "2319450",
+      "name": "Vandeikya",
+      "population": 0,
+      "region": "Benue State",
+      "searchNames": [
+        "vande ikya"
+      ]
+    },
+    {
+      "id": "2319407",
+      "name": "Vom",
+      "population": 12000,
+      "region": "Plateau State",
+      "searchNames": []
+    },
+    {
+      "id": "2319345",
+      "name": "Wagini",
+      "population": 9986,
+      "region": "Katsina State",
+      "searchNames": [
+        "wagin"
+      ]
+    },
+    {
+      "id": "2319258",
+      "name": "Wamako",
+      "population": 0,
+      "region": "Sokoto",
+      "searchNames": [
+        "wamakka",
+        "wamakko"
+      ]
+    },
+    {
+      "id": "2319257",
+      "name": "Wamba",
+      "population": 27137,
+      "region": "Nasarawa State",
+      "searchNames": []
+    },
+    {
+      "id": "2319189",
+      "name": "Wannune",
+      "population": 0,
+      "region": "Benue State",
+      "searchNames": []
+    },
+    {
+      "id": "2329110",
+      "name": "Wara",
+      "population": 0,
+      "region": "Kebbi",
+      "searchNames": [
+        "new warra",
+        "warra"
+      ]
+    },
+    {
+      "id": "2334835",
+      "name": "Warji",
+      "population": 0,
+      "region": "Bauchi",
+      "searchNames": [
+        "katanga warji",
+        "katangan warji"
+      ]
+    },
+    {
+      "id": "2319133",
+      "name": "Warri",
+      "population": 910000,
+      "region": "Delta",
+      "searchNames": [
+        "bappi",
+        "bаppи",
+        "qrw",
+        "varri",
+        "wa li",
+        "wali",
+        "wari",
+        "wary",
+        "варри",
+        "واري",
+        "واری",
+        "와리",
+        "ワリ",
+        "瓦里"
+      ]
+    },
+    {
+      "id": "2319123",
+      "name": "Wasagu",
+      "population": 8157,
+      "region": "Kebbi",
+      "searchNames": [
+        "wasaga"
+      ]
+    },
+    {
+      "id": "2319115",
+      "name": "Wase",
+      "population": 0,
+      "region": "Plateau State",
+      "searchNames": []
+    },
+    {
+      "id": "2319078",
+      "name": "Wawa",
+      "population": 10200,
+      "region": "Niger State",
+      "searchNames": []
+    },
+    {
+      "id": "2318933",
+      "name": "Wudil",
+      "population": 23066,
+      "region": "Kano State",
+      "searchNames": []
+    },
+    {
+      "id": "2318921",
+      "name": "Wukari",
+      "population": 92933,
+      "region": "Taraba State",
+      "searchNames": [
+        "ukari"
+      ]
+    },
+    {
+      "id": "2318858",
+      "name": "Wurno",
+      "population": 13087,
+      "region": "Sokoto",
+      "searchNames": []
+    },
+    {
+      "id": "2318554",
+      "name": "Wushishi",
+      "population": 0,
+      "region": "Niger State",
+      "searchNames": []
+    },
+    {
+      "id": "2318534",
+      "name": "Wuyo",
+      "population": 9189,
+      "region": "Borno State",
+      "searchNames": []
+    },
+    {
+      "id": "2318514",
+      "name": "Yabo",
+      "population": 0,
+      "region": "Sokoto",
+      "searchNames": []
+    },
+    {
+      "id": "2318480",
+      "name": "Yajiwa",
+      "population": 6880,
+      "region": "Borno State",
+      "searchNames": [
+        "yajua",
+        "yajuao"
+      ]
+    },
+    {
+      "id": "2318399",
+      "name": "Yamrat",
+      "population": 7098,
+      "region": "Bauchi",
+      "searchNames": []
+    },
+    {
+      "id": "2596820",
+      "name": "Yana",
+      "population": 0,
+      "region": "Bauchi",
+      "searchNames": []
+    },
+    {
+      "id": "2318383",
+      "name": "Yanda Bayo",
+      "population": 5927,
+      "region": "Bauchi",
+      "searchNames": [
+        "yando bayo"
+      ]
+    },
+    {
+      "id": "2318374",
+      "name": "Yandev",
+      "population": 7750,
+      "region": "Benue State",
+      "searchNames": []
+    },
+    {
+      "id": "2318238",
+      "name": "Yashikira",
+      "population": 14454,
+      "region": "Kwara State",
+      "searchNames": [
+        "yashikera"
+      ]
+    },
+    {
+      "id": "2318152",
+      "name": "Yelwa",
+      "population": 0,
+      "region": "Kebbi",
+      "searchNames": []
+    },
+    {
+      "id": "2318166",
+      "name": "Yelwa",
+      "population": 13234,
+      "region": "Plateau State",
+      "searchNames": []
+    },
+    {
+      "id": "2318123",
+      "name": "Yenagoa",
+      "population": 365000,
+      "region": "Bayelsa State",
+      "searchNames": [
+        "ienagoa",
+        "iyenagoya",
+        "jenagoa",
+        "yenago a",
+        "yenagwa",
+        "yenaqoa",
+        "yenegoa",
+        "ynagwa",
+        "ynaګwa",
+        "иенагоа",
+        "ينагوا",
+        "یناګوا",
+        "یناگوا",
+        "ዬናጓ",
+        "यनगआ",
+        "ইযনগয",
+        "ਯਨਗਆ",
+        "イェナコア"
+      ]
+    },
+    {
+      "id": "2318044",
+      "name": "Yola",
+      "population": 460000,
+      "region": "Adamawa",
+      "searchNames": [
+        "iyola",
+        "jola",
+        "yol",
+        "yolla",
+        "yora",
+        "yue la",
+        "ywla",
+        "ywla nayjyrya",
+        "ywla nyjryh",
+        "иола",
+        "يولا",
+        "یولا",
+        "یولا نايجیریا",
+        "یولا نیجریه",
+        "ዮላ",
+        "यल",
+        "ইযল",
+        "ਯਲ",
+        "욜라",
+        "ヨラ",
+        "約拉"
+      ]
+    },
+    {
+      "id": "2317982",
+      "name": "Yuli",
+      "population": 9549,
+      "region": "Bauchi",
+      "searchNames": [
+        "anguri"
+      ]
+    },
+    {
+      "id": "2317936",
+      "name": "Zadawa",
+      "population": 7495,
+      "region": "Bauchi",
+      "searchNames": [
+        "zdawa",
+        "زداوا"
+      ]
+    },
+    {
+      "id": "2317899",
+      "name": "Zaki Biam",
+      "population": 10470,
+      "region": "Benue State",
+      "searchNames": [
+        "zaki biyem"
+      ]
+    },
+    {
+      "id": "2317897",
+      "name": "Zakirai",
+      "population": 0,
+      "region": "Kano State",
+      "searchNames": []
+    },
+    {
+      "id": "2317887",
+      "name": "Zalanga",
+      "population": 12070,
+      "region": "Bauchi",
+      "searchNames": []
+    },
+    {
+      "id": "2317818",
+      "name": "Zango",
+      "population": 12371,
+      "region": "Katsina State",
+      "searchNames": []
+    },
+    {
+      "id": "2317765",
+      "name": "Zaria",
+      "population": 980000,
+      "region": "Kaduna State",
+      "searchNames": [
+        "jalia",
+        "zar",
+        "zari a",
+        "zarija",
+        "zariya",
+        "zarja",
+        "zarya",
+        "zha li ya",
+        "зариа",
+        "заря",
+        "زاريا",
+        "ਜਰਆ",
+        "자리아",
+        "サリア",
+        "扎里亚"
+      ]
+    },
+    {
+      "id": "2317675",
+      "name": "Zing",
+      "population": 0,
+      "region": "Taraba State",
+      "searchNames": [
+        "zinna"
+      ]
+    },
+    {
+      "id": "2317630",
+      "name": "Zonkwa",
+      "population": 0,
+      "region": "Kaduna State",
+      "searchNames": [
+        "zankuwa",
+        "zenkuwa"
+      ]
+    },
+    {
+      "id": "2317569",
+      "name": "Zungeru",
+      "population": 24447,
+      "region": "Niger State",
+      "searchNames": [
+        "zong gai lu",
+        "zwngrw",
+        "зунгеру",
+        "זונגרו",
+        "スンケル",
+        "宗盖鲁"
+      ]
+    },
+    {
+      "id": "2317551",
+      "name": "Zurmi",
+      "population": 0,
+      "region": "Zamfara State",
+      "searchNames": []
+    },
+    {
+      "id": "2317548",
+      "name": "Zuru",
+      "population": 24338,
+      "region": "Kebbi",
+      "searchNames": []
+    }
+  ]
+}

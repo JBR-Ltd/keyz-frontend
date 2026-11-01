@@ -1,0 +1,202 @@
+"use client";
+
+import type { ReactElement, ReactNode } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
+import { usePathname } from "next/navigation";
+import IncomingCallWatcher from "@/components/chat/IncomingCallWatcher";
+import MessagesDropdown from "@/components/chat/MessagesDropdown";
+import NotificationsBell from "@/components/notifications/NotificationsBell";
+import AgentHeader from "@/components/dashboard/AgentHeader";
+import LandlordHeader from "@/components/dashboard/LandlordHeader";
+import RoleSidebar from "@/components/dashboard/RoleSidebar";
+import TenantSidebar from "@/components/dashboard/TenantSidebar";
+import {
+  countVerifiedHostSteps,
+  useHostVerification,
+} from "@/lib/hostVerification";
+import { getVerificationStatus } from "@/lib/identityVerification";
+import {
+  countVerifiedTenantSteps,
+  isTenantVerified,
+  saveTenantVerificationState,
+  useTenantVerificationSnapshot,
+} from "@/lib/tenantVerification";
+
+interface DashboardShellProps {
+  children: ReactNode;
+  rolePath: "tenant" | "landlord" | "agent" | "admin";
+  roleLabel: string;
+}
+
+const SIDEBAR_STORAGE_KEY = "rello_sidebar_collapsed";
+const SIDEBAR_EVENT = "rello-sidebar-change";
+
+function subscribeToSidebar(callback: () => void): () => void {
+  window.addEventListener("storage", callback);
+  window.addEventListener(SIDEBAR_EVENT, callback);
+
+  return () => {
+    window.removeEventListener("storage", callback);
+    window.removeEventListener(SIDEBAR_EVENT, callback);
+  };
+}
+
+function getSidebarSnapshot(): boolean {
+  return localStorage.getItem(SIDEBAR_STORAGE_KEY) === "true";
+}
+
+function isListingManagementPath(
+  pathname: string,
+  rolePath: DashboardShellProps["rolePath"],
+): boolean {
+  if (rolePath !== "landlord" && rolePath !== "agent") {
+    return false;
+  }
+
+  const segments = pathname.split("/").filter(Boolean);
+
+  return (
+    segments.length === 3 &&
+    segments[0] === rolePath &&
+    segments[1] === "listings" &&
+    segments[2] !== "create"
+  );
+}
+
+export default function DashboardShell({
+  children,
+  rolePath,
+  roleLabel,
+}: DashboardShellProps): ReactElement {
+  const pathname = usePathname();
+  const { state: tenantVerificationState } = useTenantVerificationSnapshot();
+  const [isTenantStatusLoading, setIsTenantStatusLoading] = useState(
+    rolePath === "tenant",
+  );
+  const { isLoading: isHostStatusLoading, snapshot: hostVerification } =
+    useHostVerification(rolePath === "landlord" || rolePath === "agent");
+
+  useEffect(() => {
+    if (rolePath !== "tenant") {
+      return;
+    }
+
+    let isActive = true;
+
+    void getVerificationStatus().then((result) => {
+      if (!isActive) {
+        return;
+      }
+
+      if (result.data?.role === "TENANT") {
+        saveTenantVerificationState({
+          nin: result.data.ninVerified ? "verified" : "not_started",
+          bvn: result.data.bvnVerified ? "verified" : "not_started",
+        });
+      }
+
+      setIsTenantStatusLoading(false);
+    });
+
+    return () => {
+      isActive = false;
+    };
+  }, [rolePath]);
+
+  const isCollapsed = useSyncExternalStore(
+    subscribeToSidebar,
+    getSidebarSnapshot,
+    () => false,
+  );
+  const verifiedTenantStepCount = countVerifiedTenantSteps(
+    tenantVerificationState,
+  );
+  const showTenantVerificationAction =
+    rolePath === "tenant" &&
+    !isTenantStatusLoading &&
+    !isTenantVerified(tenantVerificationState);
+  const verificationHref =
+    "/tenant/verify?source=dashboard&returnTo=" + encodeURIComponent(pathname);
+  const verifiedHostStepCount = countVerifiedHostSteps(hostVerification);
+  const landlordIdentity = hostVerification?.identity;
+  const verifiedLandlordStepCount = landlordIdentity?.completed.length ?? 0;
+  // Nothing is prompted until the status is known, so the banner cannot flash
+  // "verify your account" at a host who is already verified
+  const showLandlordVerificationAction =
+    !isHostStatusLoading && landlordIdentity?.status !== "approved";
+  const showAgentVerificationAction =
+    !isHostStatusLoading && verifiedHostStepCount < 3;
+  const hideHostHeader = isListingManagementPath(pathname, rolePath);
+
+  const toggleSidebar = (): void => {
+    const nextValue = !isCollapsed;
+
+    localStorage.setItem(SIDEBAR_STORAGE_KEY, String(nextValue));
+    window.dispatchEvent(new Event(SIDEBAR_EVENT));
+  };
+
+  const sidebarOffset = isCollapsed ? "lg:ml-20" : "lg:ml-72";
+  const headerActions = (
+    <div className="flex items-center gap-1">
+      <NotificationsBell />
+      <MessagesDropdown />
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-[var(--color-bg)]">
+      {rolePath === "tenant" ? (
+        <TenantSidebar
+          actions={headerActions}
+          showVerificationAction={showTenantVerificationAction}
+          verificationHref={verificationHref}
+          verifiedStepCount={verifiedTenantStepCount}
+        />
+      ) : rolePath === "landlord" ? (
+        hideHostHeader ? null : (
+          <LandlordHeader
+            actions={headerActions}
+            showVerificationAction={showLandlordVerificationAction}
+            verificationHref="/landlord/verify"
+            verifiedStepCount={verifiedLandlordStepCount}
+          />
+        )
+      ) : rolePath === "agent" ? (
+        hideHostHeader ? null : (
+          <AgentHeader
+            actions={headerActions}
+            showVerificationAction={showAgentVerificationAction}
+            verificationHref="/agent/verify"
+            verifiedStepCount={verifiedHostStepCount}
+          />
+        )
+      ) : (
+        <>
+          <RoleSidebar
+            rolePath={rolePath}
+            roleLabel={roleLabel}
+            isCollapsed={isCollapsed}
+            onCollapseToggle={toggleSidebar}
+          />
+          <div className="fixed right-5 top-24 z-40 sm:right-8 lg:right-10 lg:top-5 xl:right-14">
+            {headerActions}
+          </div>
+        </>
+      )}
+
+      <div
+        className={
+          rolePath === "tenant" ||
+          rolePath === "landlord" ||
+          rolePath === "agent"
+            ? "min-w-0"
+            : `min-w-0 transition-[margin] duration-200 ease-in-out ${sidebarOffset}`
+        }
+      >
+        {children}
+      </div>
+
+      <IncomingCallWatcher />
+    </div>
+  );
+}

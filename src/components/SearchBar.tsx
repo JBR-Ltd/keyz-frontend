@@ -58,7 +58,7 @@ function Dropdown({
       </button>
 
       {open && (
-        <ul className="absolute top-full left-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-[160px]">
+        <ul className="absolute top-full left-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-md z-50 min-w-[160px]">
           {options.map((opt) => (
             <li key={opt}>
               <button
@@ -81,7 +81,7 @@ function Dropdown({
 export default function SearchBar() {
   return (
     <div className="max-w-6xl mx-auto -mt-10 md:-mt-8 relative z-20 px-4">
-      <div className="bg-white/[0.92] rounded-2xl shadow-2xl shadow-slate-950/10 border border-white/70 backdrop-blur-xl px-4 sm:px-6 py-5 flex flex-col lg:flex-row lg:items-center gap-4">
+      <div className="bg-white rounded-2xl shadow-xl border border-white/70 px-4 sm:px-6 py-5 flex flex-col lg:flex-row lg:items-center gap-4">
         {/* Location */}
         <div className="w-full lg:flex-1 flex items-center gap-3 border-b lg:border-b-0 lg:border-r border-gray-200 pb-4 lg:pb-0 lg:pr-4">
           <svg

@@ -1,5 +1,5 @@
 const API_BASE_URL = process.env.API_BASE_URL;
-const AUTH_REQUEST_TIMEOUT_MS = 15000;
+const AUTH_REQUEST_TIMEOUT_MS = 90000;
 
 interface TimeoutSignal {
   signal: AbortSignal;
@@ -27,7 +27,8 @@ async function proxyJsonResponse(
   backendUrl: string,
 ): Promise<Response> {
   const body = await response.text();
-  const contentType = response.headers.get("Content-Type") ?? "application/json";
+  const contentType =
+    response.headers.get("Content-Type") ?? "application/json";
 
   if (!response.ok) {
     console.error("Auth proxy request failed", {
@@ -68,11 +69,18 @@ async function proxyJsonResponse(
 }
 
 export async function POST(request: Request): Promise<Response> {
+  const rejected = rejectCrossSiteMutation(request);
+  if (rejected) return rejected;
+
   const backendUrl = getBackendUrl("/api/auth/reset-password");
 
   if (!backendUrl) {
     return Response.json(
-      { success: false, message: "API_BASE_URL is not configured.", data: null },
+      {
+        success: false,
+        message: "API_BASE_URL is not configured.",
+        data: null,
+      },
       { status: 500 },
     );
   }
@@ -85,6 +93,7 @@ export async function POST(request: Request): Promise<Response> {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        ...clientAddressHeaders(request),
       },
       signal: timeout.signal,
       body,
@@ -120,3 +129,5 @@ export async function POST(request: Request): Promise<Response> {
     timeout.cancel();
   }
 }
+import { clientAddressHeaders } from "@/app/api/_clientAddress";
+import { rejectCrossSiteMutation } from "@/app/api/_csrf";

@@ -36,7 +36,7 @@ export default function AboutUs() {
           <p className="text-gray-500 text-base md:text-lg leading-relaxed mb-5">
             We believe finding the perfect property should feel effortless. Our
             platform combines technology, elegant design and industry expertise
-            to simplify the real estate journey for buyers, renters, agents and
+            to simplify the real estate journey for renters, agents and
             investors.
           </p>
           <p className="text-gray-500 text-base md:text-lg leading-relaxed mb-8">
