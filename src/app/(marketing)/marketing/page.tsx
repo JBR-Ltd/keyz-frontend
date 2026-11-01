@@ -38,7 +38,7 @@ function EditorialListing({ property }: EditorialListingProps): ReactElement {
     property.address;
 
   return (
-    <article className="w-[84vw] shrink-0 snap-start sm:w-[23rem] md:w-[calc(50%_-_0.625rem)] lg:w-[calc(33.333%_-_1.167rem)]">
+    <article className="w-full shrink-0 snap-start sm:w-[23rem] md:w-[calc(50%_-_0.625rem)] lg:w-[calc(33.333%_-_1.167rem)]">
       <Link
         href={propertyPath(property)}
         aria-label={`View ${property.title}`}
@@ -49,7 +49,7 @@ function EditorialListing({ property }: EditorialListingProps): ReactElement {
             src={property.images[0]?.url}
             alt={property.title}
             fill
-            sizes="(min-width: 1024px) 27rem, (min-width: 768px) 50vw, 84vw"
+            sizes="(min-width: 1024px) 27rem, (min-width: 768px) 50vw, calc(100vw - 3rem)"
             className="object-cover transition-transform duration-700 ease-out motion-reduce:transition-none group-hover:scale-[1.025]"
           />
         </div>
@@ -133,7 +133,7 @@ export default async function MarketingLandingPage(): Promise<ReactElement> {
           </div>
 
           {properties.length > 0 ? (
-            <div className="-mx-5 mt-7 flex snap-x snap-mandatory gap-5 overflow-x-auto px-5 pb-5 sm:-mx-8 sm:px-8 md:mx-0 md:flex-wrap md:justify-center md:overflow-visible md:px-0 md:pb-0 lg:gap-7">
+            <div className="mt-7 flex snap-x snap-mandatory scroll-px-1 gap-5 overflow-x-auto px-1 pb-5 md:flex-wrap md:justify-center md:overflow-visible md:px-0 md:pb-0 lg:gap-7">
               {properties.map((property) => (
                 <EditorialListing key={property.id} property={property} />
               ))}

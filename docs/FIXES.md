@@ -1216,3 +1216,16 @@ Existing rental catalogue and saved-search contracts remain unchanged.
 - Removed the application-level Basic Authentication middleware and its obsolete sample environment variables.
 - Kept Rello's normal account authentication and authorization behavior unchanged.
 - Moved optional staging access control to the hosting platform so production and public staging routes do not show browser-level authentication prompts.
+
+## Landing Search and Mobile Listing Spacing
+
+### What was there before
+
+- The mobile hero search stacked a large input row above a full-width action inside another rounded container.
+- Homepage listing widths were tied directly to the viewport and the mobile rail used negative margins, which made snapped cards appear cut against the screen edges.
+
+### How it was fixed
+
+- Reworked the search into one compact pill with a circular mobile action, an expanded desktop label, and a clear focus treatment.
+- Removed the rail's negative margins and aligned full-width mobile cards within consistent page and scroll padding.
+- Preserved horizontal swiping, snap behavior, tablet and desktop wrapping, and the existing search contract.
