@@ -7,11 +7,37 @@ import type { ReactElement } from "react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
-export interface ResilientPropertyImageProps
-  extends Omit<ImageProps, "alt" | "onError" | "src"> {
+export interface ResilientPropertyImageProps extends Omit<
+  ImageProps,
+  "alt" | "onError" | "src"
+> {
   alt: string;
   compactPlaceholder?: boolean;
   src?: string | null;
+}
+
+function isPrivateProductionSource(source: string): boolean {
+  if (process.env.NODE_ENV !== "production" || !/^https?:\/\//i.test(source)) {
+    return false;
+  }
+
+  try {
+    const hostname = new URL(source).hostname.toLowerCase();
+    if (
+      hostname === "localhost" ||
+      hostname === "::1" ||
+      hostname.endsWith(".local") ||
+      hostname.startsWith("127.") ||
+      hostname.startsWith("10.") ||
+      hostname.startsWith("192.168.")
+    ) {
+      return true;
+    }
+    const match = /^172\.(\d+)\./.exec(hostname);
+    return match ? Number(match[1]) >= 16 && Number(match[1]) <= 31 : false;
+  } catch {
+    return true;
+  }
 }
 
 export default function ResilientPropertyImage({
@@ -24,7 +50,10 @@ export default function ResilientPropertyImage({
 }: ResilientPropertyImageProps): ReactElement {
   const normalizedSource = src?.trim() || null;
   const [failedSource, setFailedSource] = useState<string | null>(null);
-  const unavailable = !normalizedSource || failedSource === normalizedSource;
+  const unavailable =
+    !normalizedSource ||
+    failedSource === normalizedSource ||
+    isPrivateProductionSource(normalizedSource);
 
   if (unavailable) {
     return (

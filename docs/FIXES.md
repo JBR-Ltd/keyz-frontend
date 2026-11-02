@@ -1241,3 +1241,19 @@ Existing rental catalogue and saved-search contracts remain unchanged.
 
 - Positioned notifications from the trigger's viewport coordinates, clamped the panel within mobile gutters, and limited its scrollable height to the available visual viewport.
 - Replaced the full-width property footer with a compact safe-area-aware floating action surface for tenant, owner, and loading states.
+- Reserved matching page-bottom space while preserving desktop actions and all existing notification and rental behavior.
+
+## Live Listing Image Delivery
+
+### What was there before
+
+- Published records could retain localhost upload URLs, which point at the visitor's device and cannot be optimized by the deployed frontend.
+- Listing photos passed through a Vercel Function even though the UI allowed files larger than the platform request limit.
+- iPhone HEIC and HEIF photos could be selected but were rejected by the backend.
+
+### How it was fixed
+
+- Added direct, short-lived S3 uploads with authenticated finalization for listing galleries and drafts.
+- Kept the existing multipart path for local development while deployed uploads bypass the frontend function payload limit.
+- Added HEIC and HEIF normalization through the image service and retained binary validation before public storage.
+- Prevented production property views from requesting localhost or private-network image URLs.

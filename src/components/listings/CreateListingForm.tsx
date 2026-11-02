@@ -884,9 +884,15 @@ export default function CreateListingForm({
   const addFiles = async (files: File[]): Promise<void> => {
     const remainingSlots = Math.max(20 - photos.length, 0);
     const imageFiles = files
-      .filter(
-        (file) => file.type.startsWith("image/") && file.size <= 10_000_000,
-      )
+      .filter((file) => {
+        const extension = file.name.split(".").pop()?.toLowerCase();
+        return (
+          (file.type.startsWith("image/") ||
+            extension === "heic" ||
+            extension === "heif") &&
+          file.size <= 10_000_000
+        );
+      })
       .slice(0, remainingSlots);
 
     if (imageFiles.length === 0) {
@@ -1711,7 +1717,8 @@ export default function CreateListingForm({
                           Drop photos here or click to upload
                         </span>
                         <span className="mt-1 block font-body text-xs text-muted">
-                          JPG, PNG, or WEBP. Up to 20 photos, 10 MB each.
+                          JPG, PNG, WEBP, HEIC, or HEIF. Up to 20 photos, 10 MB
+                          each.
                         </span>
                       </span>
                       <input
@@ -2511,7 +2518,7 @@ export default function CreateListingForm({
                   Drop photos here or click to upload
                 </span>
                 <span className="mt-2 font-body text-xs text-muted">
-                  Select multiple JPG, PNG, or WEBP images
+                  Select multiple JPG, PNG, WEBP, HEIC, or HEIF images
                 </span>
                 <input
                   type="file"

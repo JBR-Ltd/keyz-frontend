@@ -94,6 +94,10 @@ function isAllowedRequest(method: PropertyMethod, segments: string[]): boolean {
         (segments[1] === "upload-image" || segments[1] === "images")) ||
       (segments.length === 3 &&
         isNumericId(segments[0]) &&
+        segments[1] === "images" &&
+        (segments[2] === "upload-intent" || segments[2] === "finalize")) ||
+      (segments.length === 3 &&
+        isNumericId(segments[0]) &&
         segments[1] === "availability" &&
         segments[2] === "blocks")
     );

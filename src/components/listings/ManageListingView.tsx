@@ -1169,7 +1169,7 @@ function PhotosPanel({
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/jpeg,image/png,image/webp"
+            accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"
             multiple
             disabled={isUploading || limitReached}
             onChange={(event) => void onUpload(event.target.files)}
