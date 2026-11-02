@@ -235,7 +235,7 @@ function getAmenityIcon(amenity: string): typeof Check {
 function PropertyDetailSkeleton(): ReactElement {
   return (
     <main className="bg-bg text-primary">
-      <div className="mx-auto max-w-7xl px-4 pb-32 pt-3 sm:px-6 sm:pt-4 lg:px-8 lg:pb-10 lg:pt-4">
+      <div className="mx-auto max-w-7xl px-4 pb-[calc(7rem+env(safe-area-inset-bottom))] pt-3 sm:px-6 sm:pt-4 lg:px-8 lg:pb-10 lg:pt-4">
         <div className="aspect-video animate-pulse rounded-2xl bg-skeleton-strong lg:h-[min(58vw,38rem)] lg:aspect-auto" />
         <div className="mt-4 space-y-3 lg:hidden">
           <div className="h-8 w-3/4 animate-pulse rounded-lg bg-skeleton" />
@@ -259,15 +259,10 @@ function PropertyDetailSkeleton(): ReactElement {
           <div className="h-80 animate-pulse rounded-2xl bg-skeleton shadow-sm" />
         </div>
       </div>
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-bg/95 px-4 pt-3 backdrop-blur-md lg:hidden">
-        <div
-          className="mx-auto flex max-w-7xl items-center gap-4"
-          style={{
-            paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))",
-          }}
-        >
-          <div className="h-10 min-w-0 flex-1 animate-pulse rounded-lg bg-skeleton" />
-          <div className="h-12 w-40 animate-pulse rounded-full bg-skeleton-strong" />
+      <div className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 rounded-2xl border border-border/80 bg-bg/95 p-2.5 shadow-[0_14px_35px_-18px_rgba(1,57,81,0.65)] backdrop-blur-md lg:hidden">
+        <div className="mx-auto flex max-w-7xl items-center gap-3">
+          <div className="h-9 min-w-0 flex-1 animate-pulse rounded-lg bg-skeleton" />
+          <div className="h-11 w-36 animate-pulse rounded-full bg-skeleton-strong" />
         </div>
       </div>
     </main>
@@ -867,7 +862,7 @@ export default function PropertyPageClient({
       <div
         className={`mx-auto max-w-7xl px-4 pt-3 sm:px-6 sm:pt-4 lg:px-8 lg:pb-10 lg:pt-4 ${
           showMobileActionBar || authentication.status === "checking"
-            ? "pb-32"
+            ? "pb-[calc(7rem+env(safe-area-inset-bottom))]"
             : "pb-10"
         }`}
       >
@@ -1719,18 +1714,13 @@ export default function PropertyPageClient({
       </div>
 
       {showTenantActions ? (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-bg/95 px-4 pt-3 shadow-[0_-12px_30px_-24px_rgba(1,57,81,0.55)] backdrop-blur-md lg:hidden">
-          <div
-            className="mx-auto flex max-w-7xl items-center gap-3"
-            style={{
-              paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))",
-            }}
-          >
+        <div className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 rounded-2xl border border-border/80 bg-bg/95 p-2.5 shadow-[0_14px_35px_-18px_rgba(1,57,81,0.65)] backdrop-blur-md lg:hidden">
+          <div className="mx-auto flex max-w-7xl items-center gap-3">
             <div className="min-w-0 flex-1">
-              <p className="font-body text-[11px] font-bold uppercase tracking-[0.12em] text-muted">
+              <p className="font-body text-[10px] font-bold uppercase tracking-[0.12em] text-muted sm:text-[11px]">
                 {getRentalPeriodLabel(property.rentalMode)}
               </p>
-              <p className="truncate font-display text-lg font-bold text-primary">
+              <p className="truncate font-display text-base font-bold text-primary sm:text-lg">
                 <PropertyPrice
                   value={property.price}
                   listingType={property.status}
@@ -1739,28 +1729,23 @@ export default function PropertyPageClient({
               </p>
             </div>
             {renderPrimaryAction(
-              "inline-flex min-h-12 shrink-0 items-center justify-center rounded-full bg-accent px-5 font-body text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-70",
+              "inline-flex min-h-11 shrink-0 items-center justify-center rounded-full bg-accent px-4 font-body text-xs font-bold text-primary transition-colors hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-70 sm:min-h-12 sm:px-5 sm:text-sm",
             )}
           </div>
         </div>
       ) : null}
       {isOwner && manageListingHref && editListingHref ? (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-bg/95 px-4 pt-3 shadow-[0_-12px_30px_-24px_rgba(1,57,81,0.55)] backdrop-blur-md lg:hidden">
-          <div
-            className="mx-auto flex max-w-7xl items-center gap-2"
-            style={{
-              paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))",
-            }}
-          >
+        <div className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 rounded-2xl border border-border/80 bg-bg/95 p-2.5 shadow-[0_14px_35px_-18px_rgba(1,57,81,0.65)] backdrop-blur-md lg:hidden">
+          <div className="mx-auto flex max-w-7xl items-center gap-2">
             <Link
               href={editListingHref}
-              className="inline-flex min-h-12 flex-1 items-center justify-center rounded-full border border-primary/20 px-4 font-body text-sm font-bold text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              className="inline-flex min-h-11 flex-1 items-center justify-center rounded-full border border-primary/20 px-4 font-body text-xs font-bold text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent sm:min-h-12 sm:text-sm"
             >
               Edit listing
             </Link>
             <Link
               href={manageListingHref}
-              className="inline-flex min-h-12 flex-1 items-center justify-center rounded-full bg-primary px-4 font-body text-sm font-bold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              className="inline-flex min-h-11 flex-1 items-center justify-center rounded-full bg-primary px-4 font-body text-xs font-bold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent sm:min-h-12 sm:text-sm"
             >
               Manage listing
             </Link>

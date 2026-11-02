@@ -1229,3 +1229,15 @@ Existing rental catalogue and saved-search contracts remain unchanged.
 - Reworked the search into one compact pill with a circular mobile action, an expanded desktop label, and a clear focus treatment.
 - Removed the rail's negative margins and aligned full-width mobile cards within consistent page and scroll padding.
 - Preserved horizontal swiping, snap behavior, tablet and desktop wrapping, and the existing search contract.
+
+## Mobile Notification and Property Action Positioning
+
+### What was there before
+
+- The notification panel was positioned relative to the bell, so mobile headers with controls to the bell's right pushed the panel beyond the left viewport edge.
+- The property action footer covered the full viewport width and occupied a large portion of the visible property content on phones.
+
+### How it was fixed
+
+- Positioned notifications from the trigger's viewport coordinates, clamped the panel within mobile gutters, and limited its scrollable height to the available visual viewport.
+- Replaced the full-width property footer with a compact safe-area-aware floating action surface for tenant, owner, and loading states.
