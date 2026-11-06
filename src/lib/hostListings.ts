@@ -20,6 +20,7 @@ export type HostListingRole = "landlord" | "agent";
 
 export type HostListingWorkflowStatus =
   | "DRAFT"
+  | "ARCHIVED"
   | "READY_TO_VERIFY"
   | "UNDER_REVIEW"
   | "NEEDS_CHANGES"
@@ -58,6 +59,8 @@ export interface PropertyImage {
 
 export interface BackendProperty {
   address: string;
+  archived?: boolean;
+  archivedAt?: string | null;
   /** Immutable and opaque. What public links are built from. */
   publicId?: string;
   /** Readable only. Follows the title. */
@@ -173,6 +176,7 @@ export function toDraftNumber(id: string): number {
 }
 
 export interface HostListingRecord extends HostListingInput {
+  archivedAt?: string | null;
   createdAt: string;
   id: string;
   publicId?: string;
@@ -259,6 +263,7 @@ function isBackendProperty(value: unknown): value is BackendProperty {
     typeof value.title === "string" &&
     "address" in value &&
     typeof value.address === "string" &&
+    (!("archived" in value) || typeof value.archived === "boolean") &&
     "price" in value &&
     typeof value.price === "number" &&
     "bedrooms" in value &&
@@ -309,6 +314,10 @@ function getListingStatus(property: BackendProperty): PropertyListingStatus {
 }
 
 function getReviewStatus(property: BackendProperty): HostListingWorkflowStatus {
+  if (property.archived) {
+    return "ARCHIVED";
+  }
+
   if (property.verified || property.verificationState === "VERIFIED") {
     return "LIVE";
   }
@@ -347,6 +356,7 @@ function mapBackendProperty(
     id: String(property.id),
     publicId: property.publicId,
     slug: property.slug,
+    archivedAt: property.archivedAt,
     ownerRole: getListingRole(property),
     listingType: getListingStatus(property),
     title: property.title,
@@ -432,6 +442,7 @@ function draftToRecord(
 ): HostListingRecord {
   return {
     id: `${DRAFT_ID_PREFIX}${draft.id}`,
+    archivedAt: null,
     ownerRole: role,
     listingType: draft.listingType ?? "FOR_RENT",
     title: draft.title ?? "",
@@ -552,6 +563,50 @@ async function uploadGallery(
 export function subscribeToHostListings(callback: () => void): () => void {
   window.addEventListener(STORAGE_EVENT, callback);
   return () => window.removeEventListener(STORAGE_EVENT, callback);
+}
+
+export async function archiveHostListing(
+  propertyId: number,
+): Promise<HostListingStorageResult<boolean>> {
+  try {
+    const response = await apiRequest(`/api/properties/${propertyId}/archive`, {
+      method: "POST",
+    });
+    await parseApiResponse(response);
+    publishStorageChange();
+    return { data: true, unavailable: false };
+  } catch (error) {
+    return {
+      data: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Listing could not be archived.",
+      unavailable: false,
+    };
+  }
+}
+
+export async function restoreHostListing(
+  propertyId: number,
+): Promise<HostListingStorageResult<boolean>> {
+  try {
+    const response = await apiRequest(`/api/properties/${propertyId}/archive`, {
+      method: "DELETE",
+    });
+    await parseApiResponse(response);
+    publishStorageChange();
+    return { data: true, unavailable: false };
+  } catch (error) {
+    return {
+      data: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Listing could not be restored.",
+      unavailable: false,
+    };
+  }
 }
 
 /**
@@ -866,6 +921,25 @@ export async function getPropertyPortfolio(): Promise<
   }
 }
 
+export async function getManagedBackendPropertyById(
+  id: string,
+): Promise<HostListingStorageResult<BackendProperty | null>> {
+  const portfolioResult = await getPropertyPortfolio();
+  const property = portfolioResult.data?.properties.find(
+    (item) => String(item.id) === id,
+  );
+
+  if (property) {
+    return { data: property, unavailable: false };
+  }
+
+  return {
+    data: null,
+    message: portfolioResult.message ?? "This listing could not be loaded.",
+    unavailable: false,
+  };
+}
+
 export async function getHostListings(
   role: HostListingRole,
 ): Promise<HostListingStorageResult<HostListingRecord[]>> {
@@ -930,7 +1004,7 @@ export async function getHostListingById(
     return { data: null, unavailable: false };
   }
 
-  const propertyResult = await getBackendPropertyById(id);
+  const propertyResult = await getManagedBackendPropertyById(id);
 
   if (!propertyResult.data) {
     return {

@@ -1257,3 +1257,10 @@ Existing rental catalogue and saved-search contracts remain unchanged.
 - Kept the existing multipart path for local development while deployed uploads bypass the frontend function payload limit.
 - Added HEIC and HEIF normalization through the image service and retained binary validation before public storage.
 - Prevented production property views from requesting localhost or private-network image URLs.
+
+# Safe listing archival and draft deletion
+
+- Published listings previously had no owner-controlled removal lifecycle. Hosts could edit them, but could not take them out of public discovery without losing historical context.
+- Landlords and agents can now archive published listings from listing cards or the management page. Archived homes leave public discovery and stop accepting new marketplace activity while existing bookings, tenancies, payments, escrow, disputes, receipts, and audit history remain intact.
+- Archived listings remain manageable in a dedicated filter and can be restored. Restoration respects the current verification and management state.
+- Unpublished drafts now have a confirmed permanent delete action in both the draft card menu and draft editor. Draft media cleanup happens after the database deletion commits.
