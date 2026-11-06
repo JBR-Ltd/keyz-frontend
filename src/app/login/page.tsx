@@ -98,6 +98,8 @@ export default function LoginPage() {
   /** Set when the password was right but the account wants a code as well. */
   const [challengeReference, setChallengeReference] = useState("");
   const [code, setCode] = useState("");
+  /** A recovery code is eight letters and digits, not the app's six digits. */
+  const [isUsingRecoveryCode, setIsUsingRecoveryCode] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [returnTo] = useState(() =>
@@ -158,6 +160,19 @@ export default function LoginPage() {
     router.replace(
       role === "TENANT" ? returnTo : "/" + rolePath + "/dashboard",
     );
+  };
+
+  /** Shared by password and Google sign-in: both stop here when the account has the second step. */
+  const askForCode = (reference: string): void => {
+    setChallengeReference(reference);
+    setCode("");
+    setIsUsingRecoveryCode(false);
+    notify({
+      title: "One more step",
+      description:
+        "Enter the code from your authenticator app to finish signing in.",
+      variant: "success",
+    });
   };
 
   const submitCode = async (): Promise<void> => {
@@ -256,13 +271,7 @@ export default function LoginPage() {
 
       // The password was right, but no session is issued until the code is
       if (isApiEnvelope(data) && isTwoFactorChallenge(data.data)) {
-        setChallengeReference(data.data.challengeReference);
-        setCode("");
-        notify({
-          title: "Check your email",
-          description: "Enter the six digit code to finish signing in.",
-          variant: "success",
-        });
+        askForCode(data.data.challengeReference);
         return;
       }
 
@@ -368,19 +377,22 @@ export default function LoginPage() {
             {challengeReference ? (
               <div className="mt-8 grid gap-5">
                 <p className="font-body text-sm leading-6 text-muted">
-                  Your password was right. We emailed a six digit code to finish
-                  signing in.
+                  {isUsingRecoveryCode
+                    ? "Enter one of the recovery codes you saved when you set up two step sign-in. Each one works once."
+                    : "Open your authenticator app and enter the six digit code it shows for Rello."}
                 </p>
 
                 <label className="block font-body text-sm font-bold text-primary">
-                  Your code
+                  {isUsingRecoveryCode ? "Recovery code" : "Authenticator code"}
                   <input
+                    key={isUsingRecoveryCode ? "recovery" : "app"}
                     value={code}
                     onChange={(event) => setCode(event.target.value)}
-                    inputMode="numeric"
+                    inputMode={isUsingRecoveryCode ? "text" : "numeric"}
                     autoComplete="one-time-code"
-                    maxLength={6}
-                    placeholder="000000"
+                    autoCapitalize={isUsingRecoveryCode ? "characters" : "off"}
+                    maxLength={isUsingRecoveryCode ? 9 : 6}
+                    placeholder={isUsingRecoveryCode ? "XXXX-XXXX" : "000000"}
                     autoFocus
                     className="mt-2 min-h-14 w-full rounded-lg border border-border bg-bg px-4 font-body text-lg tracking-[0.5em] text-primary outline-none focus:border-accent focus:ring-2 focus:ring-accent/30"
                   />
@@ -389,7 +401,10 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => void submitCode()}
-                  disabled={isVerifying || code.trim().length < 6}
+                  disabled={
+                    isVerifying ||
+                    code.trim().length < (isUsingRecoveryCode ? 8 : 6)
+                  }
                   aria-busy={isVerifying}
                   className="min-h-14 rounded-full bg-primary px-6 font-body text-sm font-bold text-white transition-all duration-200 ease-in-out hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-60"
                 >
@@ -399,6 +414,19 @@ export default function LoginPage() {
                   >
                     Finish signing in
                   </AsyncButtonContent>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsUsingRecoveryCode((current) => !current);
+                    setCode("");
+                  }}
+                  className="font-body text-sm font-medium text-primary underline-offset-4 transition-colors hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                >
+                  {isUsingRecoveryCode
+                    ? "Use my authenticator app instead"
+                    : "Lost your phone? Use a recovery code"}
                 </button>
 
                 <button
@@ -564,6 +592,7 @@ export default function LoginPage() {
               <GoogleAuthButton
                 label="Continue with Google"
                 returnTo={returnTo}
+                onTwoFactorRequired={askForCode}
               />
             </div>
 

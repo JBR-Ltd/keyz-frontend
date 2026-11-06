@@ -27,6 +27,8 @@ interface GoogleAuthButtonProps {
   onRoleRequired?: () => void;
   label: string;
   returnTo?: string;
+  /** Receives the sign-in reference when the account still needs its authenticator code. */
+  onTwoFactorRequired?: (reference: string) => void;
 }
 
 interface GoogleCredentialResponse {
@@ -60,6 +62,7 @@ export default function GoogleAuthButton({
   onRoleRequired,
   label,
   returnTo,
+  onTwoFactorRequired,
 }: GoogleAuthButtonProps): ReactElement | null {
   const router = useRouter();
   const { notify } = useToast();
@@ -107,6 +110,29 @@ export default function GoogleAuthButton({
             ? data.data
             : null;
 
+        // Google proves the email, not the phone, so the second step still applies
+        if (
+          payload !== null &&
+          typeof payload === "object" &&
+          "twoFactorRequired" in payload &&
+          payload.twoFactorRequired === true &&
+          "challengeReference" in payload &&
+          typeof payload.challengeReference === "string"
+        ) {
+          if (onTwoFactorRequired) {
+            onTwoFactorRequired(payload.challengeReference);
+          } else {
+            notify({
+              title: "This account uses two step sign-in",
+              description:
+                "Log in with Google from the sign-in page to enter your code.",
+              variant: "error",
+            });
+            router.push("/login");
+          }
+          return;
+        }
+
         if (
           payload === null ||
           typeof payload !== "object" ||
@@ -139,7 +165,7 @@ export default function GoogleAuthButton({
         setIsSigningIn(false);
       }
     },
-    [notify, returnTo, router],
+    [notify, onTwoFactorRequired, returnTo, router],
   );
 
   const initialise = useCallback((): void => {

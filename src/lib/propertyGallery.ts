@@ -4,6 +4,7 @@ import { getBrowserSessionMarker } from "@/lib/authSession";
 
 import { apiRequest } from "@/lib/apiRequest";
 import { resolveApiError } from "@/lib/errors";
+import { uploadListingImage } from "@/lib/listingImageUpload";
 
 // === Types
 
@@ -81,6 +82,27 @@ export async function addGalleryImage(
   }
 
   try {
+    const direct = await uploadListingImage(
+      file,
+      file.name,
+      `/api/properties/${propertyId}/images/upload-intent`,
+      `/api/properties/${propertyId}/images/finalize`,
+    );
+
+    if (direct.direct && direct.response) {
+      const payload: unknown = await direct.response.json().catch(() => null);
+      if (!direct.response.ok) {
+        return {
+          data: null,
+          message: resolveApiError(payload, "That photo was not added."),
+        };
+      }
+      const data = unwrap(payload);
+      return isGalleryImage(data)
+        ? { data }
+        : { data: null, message: "That photo was not added." };
+    }
+
     const body = new FormData();
     body.append("image", file, file.name);
 
