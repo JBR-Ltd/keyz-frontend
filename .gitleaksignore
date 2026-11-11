@@ -1,0 +1,5 @@
+# Gitleaks ignore list for known historical false positives
+faec09d083ed8a008d996e201bdb6dd9ef8c0ff3:src/lib/internalNavigation.ts:generic-api-key:2
+30dd87e9fa86a9dde8cd9adb22bdcc91d8a3eb2b:API_DOCS.md:generic-api-key:153
+e515f95e0e71dce75c3412de6508c9383f8cbc6a:API_DOCS.md:generic-api-key:155
+e515f95e0e71dce75c3412de6508c9383f8cbc6a:API_DOCS.md:generic-api-key:798

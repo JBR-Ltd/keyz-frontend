@@ -1,33 +1,64 @@
 "use client";
 
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   createContext,
+  type FocusEvent,
+  type ReactElement,
   ReactNode,
   useCallback,
   useContext,
   useMemo,
+  useRef,
   useState,
+  useEffect,
 } from "react";
 import { CheckCircle2, X, XCircle } from "lucide-react";
+import { usePathname } from "next/navigation";
 
-type ToastVariant = "success" | "error";
+type ToastInput =
+  | {
+      title: string;
+      description?: string;
+      variant: "success";
+    }
+  | {
+      title: string;
+      description: string;
+      variant: "error";
+    };
 
-type Toast = {
+type Toast = ToastInput & {
   id: string;
-  title: string;
-  description?: string;
-  variant: ToastVariant;
 };
-
-type ToastInput = Omit<Toast, "id">;
 
 type ToastContextValue = {
   notify: (toast: ToastInput) => void;
 };
 
-const ToastContext = createContext<ToastContextValue | null>(null);
+interface ToastItemProps {
+  dismiss: (id: string) => void;
+  toast: Toast;
+}
 
-function createToastId() {
+const ToastContext = createContext<ToastContextValue | null>(null);
+const standaloneToastRoutes = new Set([
+  "/forgot-password",
+  "/login",
+  "/register",
+  "/reset-password",
+  "/verify-email",
+]);
+
+function getToastDuration(toast: Toast): number {
+  if (toast.variant === "error") {
+    return 8000;
+  }
+
+  return toast.description?.trim() ? 6000 : 5000;
+}
+
+function createToastId(): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return crypto.randomUUID();
   }
@@ -35,22 +66,173 @@ function createToastId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-export function ToastProvider({ children }: { children: ReactNode }) {
+function ToastItem({ dismiss, toast }: ToastItemProps): ReactElement {
+  const reduceMotion = useReducedMotion();
+  const remainingMsRef = useRef(getToastDuration(toast));
+  const startedAtRef = useRef(0);
+  const timerRef = useRef<number | null>(null);
+  const pointerInsideRef = useRef(false);
+  const focusInsideRef = useRef(false);
+  const isSuccess = toast.variant === "success";
+  const description = toast.description?.trim();
+  const hasDescription = Boolean(description);
+  const Icon = isSuccess ? CheckCircle2 : XCircle;
+
+  const clearTimer = useCallback((): void => {
+    if (timerRef.current !== null) {
+      window.clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  }, []);
+
+  const pauseTimer = useCallback((): void => {
+    if (timerRef.current === null) {
+      return;
+    }
+
+    remainingMsRef.current = Math.max(
+      0,
+      remainingMsRef.current - (Date.now() - startedAtRef.current),
+    );
+    clearTimer();
+  }, [clearTimer]);
+
+  const resumeTimer = useCallback((): void => {
+    if (
+      pointerInsideRef.current ||
+      focusInsideRef.current ||
+      timerRef.current !== null
+    ) {
+      return;
+    }
+
+    if (remainingMsRef.current <= 0) {
+      dismiss(toast.id);
+      return;
+    }
+
+    startedAtRef.current = Date.now();
+    timerRef.current = window.setTimeout(
+      () => dismiss(toast.id),
+      remainingMsRef.current,
+    );
+  }, [dismiss, toast.id]);
+
+  useEffect(() => {
+    resumeTimer();
+    return clearTimer;
+  }, [clearTimer, resumeTimer]);
+
+  const handleBlur = (event: FocusEvent<HTMLDivElement>): void => {
+    if (
+      event.relatedTarget instanceof Node &&
+      event.currentTarget.contains(event.relatedTarget)
+    ) {
+      return;
+    }
+
+    focusInsideRef.current = false;
+    resumeTimer();
+  };
+
+  return (
+    <motion.div
+      layout={!reduceMotion}
+      initial={
+        reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.98, y: -8 }
+      }
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.98, y: -6 }}
+      transition={{ duration: reduceMotion ? 0.12 : 0.2, ease: "easeOut" }}
+      className={`pointer-events-auto grid w-full grid-cols-[auto_minmax(0,1fr)_auto] border border-border/70 bg-bg sm:max-w-[22rem] ${
+        hasDescription
+          ? "items-start gap-3 rounded-2xl p-4 shadow-[0_18px_50px_rgba(0,47,73,0.14)] sm:w-[22rem]"
+          : "items-center gap-2 rounded-xl py-1.5 pl-3 pr-1 shadow-[0_10px_30px_rgba(0,47,73,0.12)] sm:w-fit"
+      }`}
+      role={isSuccess ? "status" : "alert"}
+      aria-atomic="true"
+      onPointerEnter={() => {
+        pointerInsideRef.current = true;
+        pauseTimer();
+      }}
+      onPointerLeave={() => {
+        pointerInsideRef.current = false;
+        resumeTimer();
+      }}
+      onFocusCapture={() => {
+        focusInsideRef.current = true;
+        pauseTimer();
+      }}
+      onBlurCapture={handleBlur}
+    >
+      <span
+        className={`flex shrink-0 items-center justify-center rounded-full ${
+          hasDescription ? "h-10 w-10" : "h-8 w-8"
+        } ${
+          isSuccess ? "bg-accent/20 text-primary" : "bg-red-700/10 text-red-700"
+        }`}
+      >
+        <Icon size={hasDescription ? 17 : 16} aria-hidden="true" />
+      </span>
+      <div className={hasDescription ? "min-w-0 py-0.5" : "min-w-0"}>
+        <p className="font-body text-sm font-bold leading-5 text-primary">
+          {toast.title}
+        </p>
+        {description ? (
+          <p className="mt-1 font-body text-sm leading-5 text-muted">
+            {description}
+          </p>
+        ) : null}
+      </div>
+      <button
+        type="button"
+        className="-mr-1 -mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted transition-colors duration-200 ease-in-out hover:bg-primary/5 hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        onClick={() => dismiss(toast.id)}
+        aria-label="Dismiss notification"
+      >
+        <X size={17} aria-hidden="true" />
+      </button>
+    </motion.div>
+  );
+}
+
+export function ToastProvider({
+  children,
+}: {
+  children: ReactNode;
+}): ReactElement {
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const pathname = usePathname();
+  const usesStandaloneLayout = standaloneToastRoutes.has(pathname);
 
   const dismiss = useCallback((id: string) => {
     setToasts((current) => current.filter((toast) => toast.id !== id));
   }, []);
 
-  const notify = useCallback(
-    (toast: ToastInput) => {
-      const id = createToastId();
+  const notify = useCallback((toast: ToastInput) => {
+    const id = createToastId();
+    const normalizedToast: ToastInput =
+      toast.variant === "error"
+        ? {
+            ...toast,
+            description: toast.description.trim() || "Try again in a moment.",
+          }
+        : {
+            ...toast,
+            description: toast.description?.trim() || undefined,
+          };
 
-      setToasts((current) => [...current, { ...toast, id }].slice(-3));
-      window.setTimeout(() => dismiss(id), 5000);
-    },
-    [dismiss],
-  );
+    setToasts((current) => {
+      const withoutDuplicate = current.filter(
+        (existing) =>
+          existing.title !== normalizedToast.title ||
+          existing.description !== normalizedToast.description ||
+          existing.variant !== normalizedToast.variant,
+      );
+
+      return [...withoutDuplicate, { ...normalizedToast, id }].slice(-3);
+    });
+  }, []);
 
   const value = useMemo(() => ({ notify }), [notify]);
 
@@ -58,56 +240,21 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <ToastContext.Provider value={value}>
       {children}
       <div
-        className="fixed right-4 top-4 z-50 grid w-[calc(100vw-2rem)] max-w-sm gap-3 sm:right-6 sm:top-6"
-        aria-live="polite"
-        aria-atomic="true"
+        className={`pointer-events-none fixed left-4 right-4 z-[140] grid justify-items-stretch gap-3 sm:left-auto sm:right-6 sm:w-auto sm:max-w-[calc(100vw-3rem)] sm:justify-items-end ${
+          usesStandaloneLayout ? "top-4 sm:top-5" : "top-24 sm:top-24"
+        }`}
       >
-        {toasts.map((toast) => {
-          const isSuccess = toast.variant === "success";
-          const Icon = isSuccess ? CheckCircle2 : XCircle;
-
-          return (
-            <div
-              key={toast.id}
-              className="flex items-start gap-3 border border-primary bg-[var(--color-bg)] p-4 shadow-[4px_4px_0_var(--color-primary)]"
-              role="status"
-            >
-              <span
-                className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center border ${
-                  isSuccess
-                    ? "border-accent text-accent"
-                    : "border-red-500 text-red-500"
-                }`}
-              >
-                <Icon size={18} />
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="font-accent text-xs font-bold uppercase tracking-[0.22em] text-primary">
-                  {toast.title}
-                </p>
-                {toast.description ? (
-                  <p className="mt-2 font-body text-sm leading-5 text-muted">
-                    {toast.description}
-                  </p>
-                ) : null}
-              </div>
-              <button
-                type="button"
-                className="flex h-8 w-8 shrink-0 items-center justify-center border border-surface text-primary transition-all duration-200 ease-in-out hover:border-accent hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                onClick={() => dismiss(toast.id)}
-                aria-label="Dismiss notification"
-              >
-                <X size={16} />
-              </button>
-            </div>
-          );
-        })}
+        <AnimatePresence initial={false} mode="popLayout">
+          {toasts.map((toast) => (
+            <ToastItem key={toast.id} dismiss={dismiss} toast={toast} />
+          ))}
+        </AnimatePresence>
       </div>
     </ToastContext.Provider>
   );
 }
 
-export function useToast() {
+export function useToast(): ToastContextValue {
   const context = useContext(ToastContext);
 
   if (!context) {

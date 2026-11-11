@@ -1,0 +1,278 @@
+"use client";
+
+import { getBrowserSessionMarker } from "@/lib/authSession";
+
+import { apiRequest } from "@/lib/apiRequest";
+import { resolveApiError } from "@/lib/errors";
+
+// === Types
+
+export interface CaptureFix {
+  accuracy: number;
+  latitude: number;
+  longitude: number;
+}
+
+export interface ProofCapture {
+  capturedAt: string;
+  dataUrl: string;
+  fix: CaptureFix | null;
+  name: string;
+  type: string;
+}
+
+export interface ProofSubmissionResult {
+  message: string;
+  success: boolean;
+}
+
+export type PropertyVerificationState =
+  | "NOT_SUBMITTED"
+  | "PENDING_REVIEW"
+  | "REJECTED"
+  | "VERIFIED";
+
+export interface PropertyVerificationResult {
+  listingVerified: boolean;
+  message: string;
+  method: "GEOTAGGED_PHOTO" | "LEGACY" | "UTILITY_BILL" | null;
+  propertyId: number;
+  rejectionReason: string | null;
+  state: PropertyVerificationState;
+  verificationId: number | null;
+}
+
+// === Geolocation
+
+const GEOLOCATION_TIMEOUT_MS = 20000;
+
+/**
+ * The device fix taken at the moment of capture. The backend trusts this over photo
+ * EXIF, so it is read here rather than derived from the file.
+ */
+export function readDeviceLocation(): Promise<CaptureFix | null> {
+  if (typeof navigator === "undefined" || !navigator.geolocation) {
+    return Promise.resolve(null);
+  }
+
+  return new Promise((resolve) => {
+    navigator.geolocation.getCurrentPosition(
+      (position) =>
+        resolve({
+          accuracy: position.coords.accuracy,
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        }),
+      () => resolve(null),
+      {
+        enableHighAccuracy: true,
+        maximumAge: 0,
+        timeout: GEOLOCATION_TIMEOUT_MS,
+      },
+    );
+  });
+}
+
+// === Submission
+
+function getSessionMarker(): string {
+  return getBrowserSessionMarker();
+}
+
+async function dataUrlToBlob(dataUrl: string): Promise<Blob> {
+  const response = await apiRequest(dataUrl);
+
+  if (!response.ok) {
+    throw new Error("The photo could not be prepared for upload.");
+  }
+
+  return response.blob();
+}
+
+export async function submitPropertyProof(
+  propertyId: number,
+  capture: ProofCapture,
+): Promise<ProofSubmissionResult> {
+  const token = getSessionMarker();
+
+  if (!token) {
+    return {
+      success: false,
+      message: "Your session has expired. Log in again.",
+    };
+  }
+
+  try {
+    const formData = new FormData();
+    formData.append(
+      "proofImage",
+      await dataUrlToBlob(capture.dataUrl),
+      capture.name,
+    );
+
+    if (capture.fix) {
+      formData.append("capturedLatitude", String(capture.fix.latitude));
+      formData.append("capturedLongitude", String(capture.fix.longitude));
+    }
+
+    const response = await apiRequest(
+      `/api/verification/property/verify?propertyId=${propertyId}`,
+      {
+        method: "POST",
+        headers: {},
+        body: formData,
+      },
+    );
+
+    const payload: unknown = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      return {
+        success: false,
+        message: resolveApiError(
+          payload,
+          "This listing could not be verified.",
+        ),
+      };
+    }
+
+    return {
+      success: true,
+      message: "Your listing is verified and now live.",
+    };
+  } catch {
+    return {
+      success: false,
+      message: "Unable to reach the verification server right now.",
+    };
+  }
+}
+
+// === Utility bill
+
+/**
+ * What the bill reader accepts. A clear phone photo of a paper bill works as well
+ * as the PDF a provider emails.
+ */
+export const UTILITY_BILL_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "application/pdf",
+];
+
+/** The OCR provider reads documents sent inline only up to this size. */
+export const UTILITY_BILL_MAX_BYTES = 5 * 1024 * 1024;
+
+/**
+ * Verifies a listing from a utility bill, for when the location check cannot work
+ * at the property.
+ *
+ * The server reads the bill and approves the listing only when both the host's
+ * verified name and the listing address appear on it.
+ */
+export async function submitUtilityBill(
+  propertyId: number,
+  bill: File,
+): Promise<{
+  data: PropertyVerificationResult | null;
+  message: string;
+  success: boolean;
+}> {
+  const token = getSessionMarker();
+
+  if (!token) {
+    return {
+      data: null,
+      success: false,
+      message: "Your session has expired. Log in again.",
+    };
+  }
+
+  try {
+    const formData = new FormData();
+    formData.append("utilityBill", bill, bill.name);
+
+    const response = await apiRequest(
+      `/api/verification/property/verify-bill?propertyId=${propertyId}`,
+      {
+        method: "POST",
+        headers: {},
+        body: formData,
+      },
+    );
+    const payload: unknown = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      return {
+        data: null,
+        success: false,
+        message: resolveApiError(
+          payload,
+          "That bill could not verify this listing.",
+        ),
+      };
+    }
+
+    const data = unwrapVerificationResult(payload);
+    return data
+      ? { data, success: true, message: data.message }
+      : {
+          data: null,
+          success: false,
+          message: "The verification server returned an invalid response.",
+        };
+  } catch {
+    return {
+      data: null,
+      success: false,
+      message: "Unable to reach the verification server right now.",
+    };
+  }
+}
+
+export async function getPropertyVerificationStatus(
+  propertyId: number,
+): Promise<{ data: PropertyVerificationResult | null; message: string }> {
+  try {
+    const response = await apiRequest(
+      `/api/verification/property/${propertyId}/status`,
+    );
+    const payload: unknown = await response.json().catch(() => null);
+    const data = unwrapVerificationResult(payload);
+
+    if (!response.ok || !data) {
+      return {
+        data: null,
+        message: resolveApiError(
+          payload,
+          "The verification status could not be loaded.",
+        ),
+      };
+    }
+
+    return { data, message: "" };
+  } catch {
+    return {
+      data: null,
+      message: "The verification status could not be loaded.",
+    };
+  }
+}
+
+function unwrapVerificationResult(
+  payload: unknown,
+): PropertyVerificationResult | null {
+  if (
+    payload === null ||
+    typeof payload !== "object" ||
+    !("data" in payload) ||
+    payload.data === null ||
+    typeof payload.data !== "object" ||
+    !("state" in payload.data) ||
+    typeof payload.data.state !== "string"
+  ) {
+    return null;
+  }
+
+  return payload.data as PropertyVerificationResult;
+}

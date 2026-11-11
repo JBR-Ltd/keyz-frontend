@@ -1,0 +1,81 @@
+name: Update Nigerian cities
+
+on:
+  schedule:
+    - cron: "0 6 1 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: update-nigerian-cities
+  cancel-in-progress: false
+
+jobs:
+  update:
+    name: Refresh GeoNames catalogue
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Regenerate catalogue
+        run: pnpm locations:update
+
+      - name: Test city search
+        run: pnpm locations:test
+
+      - name: Generate Next types
+        run: pnpm exec next typegen
+
+      - name: Typecheck
+        run: pnpm exec tsc --noEmit
+
+      - name: Lint city integration
+        run: pnpm exec eslint scripts/update-geonames-cities.mjs src/app/api/locations/cities/route.ts src/components/ui/city-combobox.tsx src/lib/cities.ts src/lib/cityCatalogue.ts src/lib/__tests__/cityCatalogue.test.ts
+
+      - name: Check for catalogue changes
+        id: changes
+        run: |
+          if git diff --quiet -- src/data/nigerian-cities.json; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create or update pull request
+        if: steps.changes.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          UPDATE_BRANCH: chore/update-geonames-nigeria
+          BASE_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$UPDATE_BRANCH"
+          git add src/data/nigerian-cities.json
+          git commit -m "chore: update Nigerian city data"
+          git push --force origin "$UPDATE_BRANCH"
+
+          OPEN_PR=$(gh pr list --head "$UPDATE_BRANCH" --base "$BASE_BRANCH" --state open --json number --jq '.[0].number')
+
+          if [ -n "$OPEN_PR" ]; then
+            gh pr edit "$OPEN_PR" --title "chore: update Nigerian city data" --body "Refresh the self-hosted Nigerian city catalogue from the official GeoNames data export."
+          else
+            gh pr create --base "$BASE_BRANCH" --head "$UPDATE_BRANCH" --title "chore: update Nigerian city data" --body "Refresh the self-hosted Nigerian city catalogue from the official GeoNames data export."
+          fi

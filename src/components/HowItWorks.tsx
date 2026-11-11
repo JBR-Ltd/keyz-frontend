@@ -1,151 +1,137 @@
-import ScrollReveal from "@/components/ScrollReveal";
+"use client";
 
-const STEPS = [
-  {
-    number: 1,
-    label: "Search",
-    desc: "Use smart filters to compare verified homes by location, budget, amenities and lifestyle fit.",
-    icon: (
-      <svg
-        width="34"
-        height="34"
-        viewBox="0 0 24 24"
-        fill="none"
-        className="stroke-accent text-accent"
-      >
-        <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="1.8" />
-        <path
-          d="M17 17L21 21"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-        />
-      </svg>
-    ),
-  },
-  {
-    number: 2,
-    label: "Connect",
-    desc: "Speak with trusted agents, ask questions and schedule viewings without the usual back and forth.",
-    icon: (
-      <svg
-        width="34"
-        height="34"
-        viewBox="0 0 24 24"
-        fill="none"
-        className="stroke-accent text-accent"
-      >
-        <path
-          d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinejoin="round"
-        />
-      </svg>
-    ),
-  },
-  {
-    number: 3,
-    label: "Tour",
-    desc: "Preview homes virtually, then book guided physical inspections when a place feels right.",
-    icon: (
-      <svg
-        width="34"
-        height="34"
-        viewBox="0 0 24 24"
-        fill="none"
-        className="stroke-accent text-accent"
-      >
-        <path
-          d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinejoin="round"
-        />
-        <polyline
-          points="9 22 9 12 15 12 15 22"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinejoin="round"
-        />
-      </svg>
-    ),
-  },
-  {
-    number: 4,
-    label: "Secure Property",
-    desc: "Move from offer to keys with transparent support, clear documentation and safer payments.",
-    icon: (
-      <svg
-        width="34"
-        height="34"
-        viewBox="0 0 24 24"
-        fill="none"
-        className="stroke-accent text-accent"
-      >
-        <path
-          d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.5C16.5 22.15 20 17.25 20 12V6l-8-4z"
-          stroke="currentColor"
-          strokeWidth="1.8"
-        />
-        <path
-          d="M9 12l2 2 4-4"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    ),
-  },
-];
+import { motion, useReducedMotion } from "framer-motion";
+import type { ReactElement } from "react";
 
-export default function HowItWorks() {
+const JOURNEY_STAGES = [
+  {
+    title: "Search",
+    assurance: "Verified listings",
+    description:
+      "Explore homes and hosts that have passed Rello's checks, then narrow the options around how you want to live.",
+  },
+  {
+    title: "Review",
+    assurance: "Clear rental terms",
+    description:
+      "Compare the price, rental period, move-in terms, photographs, amenities, and available tours.",
+  },
+  {
+    title: "Request",
+    assurance: "Tours before decisions",
+    description:
+      "Request a viewing or send a rental request from the listing when a home feels right.",
+  },
+  {
+    title: "Move in",
+    assurance: "Protected payments",
+    description:
+      "Keep eligible rent payments, tenancy documents, and their status visible in one place.",
+  },
+] as const;
+
+export default function HowItWorks(): ReactElement {
+  const reduceMotion = useReducedMotion();
+  const still = reduceMotion === true;
+
   return (
-    <section id="how-it-works" className="bg-primary-dark py-24 md:py-32 px-4">
-      <div className="max-w-6xl mx-auto">
-        <ScrollReveal className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-14">
-          <div className="max-w-2xl">
-            <p className="text-accent text-base font-bold tracking-[0.25em] uppercase mb-3">
-              How It Works
+    <section
+      id="how-it-works"
+      aria-labelledby="how-it-works-heading"
+      className="scroll-mt-16 overflow-hidden bg-primary px-5 py-14 text-white sm:px-8 sm:py-16 lg:px-10 lg:py-20"
+    >
+      <div className="mx-auto max-w-7xl">
+        <motion.div
+          className="grid gap-5 border-b border-white/20 pb-9 lg:grid-cols-[minmax(0,0.9fr)_minmax(20rem,0.55fr)] lg:items-end lg:gap-16 lg:pb-11"
+          initial={still ? false : { opacity: 0, y: 16 }}
+          whileInView={still ? undefined : { opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.6 }}
+          transition={{ duration: still ? 0 : 0.5, ease: "easeOut" }}
+        >
+          <div>
+            <p className="font-accent text-xs font-bold uppercase tracking-[0.24em] text-accent">
+              How Rello works
             </p>
-            <h2 className="font-display text-white text-4xl md:text-6xl font-semibold leading-tight">
-              From search to keys, without the guesswork.
+            <h2
+              id="how-it-works-heading"
+              className="mt-3 max-w-2xl font-display text-3xl font-bold leading-tight sm:text-4xl lg:text-5xl"
+            >
+              Four clear steps, from search to move-in.
             </h2>
           </div>
-          <p className="text-white/65 text-lg leading-relaxed max-w-md">
-            A guided process built to help you discover, inspect and secure the
-            right property with confidence.
+          <p className="max-w-xl font-body text-sm leading-6 text-white/65 sm:text-base sm:leading-7 lg:justify-self-end">
+            Each stage keeps the home, terms, and next action clear so you can
+            move forward with fewer unknowns.
           </p>
-        </ScrollReveal>
+        </motion.div>
 
-        <div className="relative grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          <div className="hidden lg:block absolute left-[12%] right-[12%] top-12 h-px bg-white/15" />
-          {STEPS.map(({ number, label, desc, icon }, index) => (
-            <ScrollReveal key={number} delay={index * 0.08}>
-              <div className="premium-hover relative rounded-2xl border border-white/10 bg-white/[0.07] p-6 flex flex-col gap-5 backdrop-blur-md hover:border-accent/60 h-full">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="w-16 h-16 rounded-full bg-accent/10 border border-accent/30 flex items-center justify-center text-accent">
-                    {icon}
-                  </div>
-                  <div className="w-11 h-11 rounded-full bg-primary-dark border border-accent flex items-center justify-center flex-shrink-0">
-                    <span className="text-accent font-bold text-lg">
-                      {number}
-                    </span>
-                  </div>
+        <div className="relative mt-10 lg:mt-12">
+          <span
+            className="absolute left-[12.5%] right-[12.5%] top-5 hidden h-px bg-white/20 lg:block"
+            aria-hidden="true"
+          >
+            <motion.span
+              className="block h-full origin-left bg-accent"
+              initial={still ? false : { scaleX: 0 }}
+              whileInView={still ? undefined : { scaleX: 1 }}
+              viewport={{ once: true, amount: 0.6 }}
+              transition={{ duration: still ? 0 : 0.85, ease: "easeOut" }}
+            />
+          </span>
+
+          <ol className="grid gap-y-8 lg:grid-cols-4 lg:gap-x-6">
+            {JOURNEY_STAGES.map((stage, index) => (
+              <motion.li
+                key={stage.title}
+                className="relative grid grid-cols-[2.5rem_minmax(0,1fr)] gap-x-5 lg:block"
+                initial={still ? false : { opacity: 0, y: 18 }}
+                whileInView={still ? undefined : { opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.45 }}
+                transition={{
+                  duration: still ? 0 : 0.45,
+                  delay: still ? 0 : 0.12 + index * 0.09,
+                  ease: "easeOut",
+                }}
+              >
+                <div className="relative z-10 flex h-10 w-10 items-center justify-center rounded-full border border-accent bg-primary font-accent text-xs font-bold text-accent lg:mx-auto">
+                  <span aria-hidden="true">
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
                 </div>
 
-                <div>
-                  <h3 className="font-display text-white font-semibold text-3xl mb-3">
-                    {label}
+                {index < JOURNEY_STAGES.length - 1 ? (
+                  <span
+                    className="absolute bottom-[-3.25rem] left-5 top-10 w-px bg-white/20 lg:hidden"
+                    aria-hidden="true"
+                  >
+                    <motion.span
+                      className="block h-full origin-top bg-accent"
+                      initial={still ? false : { scaleY: 0 }}
+                      whileInView={still ? undefined : { scaleY: 1 }}
+                      viewport={{ once: true, amount: 0.5 }}
+                      transition={{
+                        duration: still ? 0 : 0.45,
+                        delay: still ? 0 : 0.12 + index * 0.09,
+                        ease: "easeOut",
+                      }}
+                    />
+                  </span>
+                ) : null}
+
+                <div className="pb-7 lg:px-4 lg:pb-0 lg:pt-7 lg:text-center">
+                  <p className="font-accent text-[0.7rem] font-bold uppercase tracking-[0.18em] text-accent">
+                    {stage.assurance}
+                  </p>
+                  <h3 className="mt-2 font-display text-2xl font-bold text-white">
+                    {stage.title}
                   </h3>
-                  <p className="text-white/65 text-base leading-relaxed">
-                    {desc}
+                  <p className="mt-3 font-body text-sm leading-6 text-white/65">
+                    {stage.description}
                   </p>
                 </div>
-              </div>
-            </ScrollReveal>
-          ))}
+              </motion.li>
+            ))}
+          </ol>
         </div>
       </div>
     </section>

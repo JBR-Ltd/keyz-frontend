@@ -1,0 +1,2558 @@
+﻿==== C:\Users\Chibuike Richard\OneDrive\Documents\jbr\keyz-frontend\src\lib\types\tour.ts ====
+// src/lib/types/tour.ts
+//
+// Wire types for the virtual tour feature. Every field here mirrors a DTO on
+// the Java backend one-for-one. When a field name looks odd it is because the
+// server serializes it that way (e.g. `isFixed` as a primitive boolean so
+// Jackson emits `"isFixed"` and not `"fixed"`; `compassDirection` derived from
+// `wallSide` on the server, not stored).
+
+// === Enums ===
+
+export type WallSide = "TOP" | "RIGHT" | "BOTTOM" | "LEFT";
+export type CompassDirection = "N" | "E" | "S" | "W";
+export type DoorKind = "DOOR" | "OPENING";
+export type StairDirection = "UP" | "DOWN" | "BOTH";
+export type SizeBucket = "SMALL" | "MEDIUM" | "LARGE";
+
+/**
+ * Room capture lifecycle. Stored lowercase on the wire; the backend maps the
+ * Java enum to lowercase via a converter so these are the literal strings the
+ * server sends.
+ */
+export type RoomStatus =
+  | "empty"
+  | "scanning"
+  | "uploading"
+  | "ready"
+  | "retake";
+
+// === Entities ===
+
+export interface Floor {
+  id: number;
+  propertyId: number;
+  floorNumber: number;
+  name: string;
+  isFloorPlanConfirmed: boolean | null;
+  floorPlanConfirmedAt: string | null;
+}
+
+export interface Room {
+  id: number;
+  floorId: number;
+  roomName: string;
+  roomType: string;
+  sizeBucket: SizeBucket | null;
+  sizeEstimateSqft: number | null;
+  /** Capture lifecycle state. Always present from the API. */
+  status: RoomStatus;
+  /** Horizontal FOV angle in degrees; 0 = not yet measured. */
+  fovAngle: number;
+  /** Primary panorama URL, resolved server-side. Null if none uploaded. */
+  panorama: string | null;
+  panoramas?: Panorama[];
+  doors?: Door[];
+  staircases?: Staircase[];
+  floorPlanPosition?: FloorPlanPosition | null;
+}
+
+export interface FloorPlanPosition {
+  gridX: number | null;
+  gridY: number | null;
+  widthUnits: number | null;
+  depthUnits: number | null;
+}
+
+export interface Panorama {
+  id: number;
+  roomId: number;
+  imageUrl: string;
+  captureOrder: number;
+  isPrimary: boolean;
+  resolution: string | null;
+  topCropPercent: number | null;
+  bottomCropPercent: number | null;
+  processedAt: string | null;
+  isProcessed: boolean | null;
+}
+
+export interface Door {
+  id: number;
+  roomId: number;
+  roomName: string;
+  panoramaId: number | null;
+  /** Panorama-relative placement, for the 360 viewer. */
+  positionYawDeg: number;
+  positionPitchDeg: number;
+  /** Floor-plan wall placement. */
+  wallSide: WallSide | null;
+  /** Derived from wallSide on the server; N/E/S/W. */
+  compassDirection: CompassDirection | null;
+  alongWallPercent: number | null;
+  /** 0-100 x/y coordinates derived from wallSide + alongWallPercent. */
+  x: number | null;
+  y: number | null;
+  kind: DoorKind;
+  /** Jackson serializes this as "isFixed" via @JsonProperty on the DTO. */
+  isFixed: boolean;
+  leadsToRoomId: number | null;
+  leadsToRoomName: string | null;
+  leadsToLabel: string | null;
+  /** ID of the reciprocal door on the other side, when one exists. */
+  isReciprocalOf: number | null;
+  /** Legacy alias kept for older callers; same value as isReciprocalOf. */
+  reciprocalDoorId: number | null;
+  reciprocalDoorRoomName: string | null;
+}
+
+export interface Staircase {
+  id: number;
+  floorId: number;
+  hostRoomId: number;
+  hostRoomName: string;
+  name: string;
+  hostWallSide: WallSide;
+  hostAlongWallPercent: number;
+  kind: DoorKind;
+  direction: StairDirection;
+  footprintGw: number;
+  footprintGh: number;
+}
+
+// === Requests ===
+
+export interface CreateDoorRequest {
+  roomId: number;
+  panoramaId?: number | null;
+  positionYawDeg: number;
+  positionPitchDeg?: number;
+  wallSide?: WallSide | null;
+  alongWallPercent?: number | null;
+  kind?: DoorKind;
+  isFixed?: boolean;
+  leadsToRoomId?: number | null;
+  leadsToLabel?: string | null;
+  createReciprocal?: boolean;
+}
+
+export interface UpdateDoorRequest {
+  positionYawDeg?: number;
+  positionPitchDeg?: number;
+  wallSide?: WallSide;
+  alongWallPercent?: number;
+  kind?: DoorKind;
+  isFixed?: boolean;
+  leadsToRoomId?: number;
+  leadsToLabel?: string;
+}
+
+export interface CreateStaircaseRequest {
+  hostRoomId: number;
+  name?: string;
+  hostWallSide: WallSide;
+  hostAlongWallPercent: number;
+  kind?: DoorKind;
+  direction?: StairDirection;
+  footprintGw?: number;
+  footprintGh?: number;
+}
+
+export interface UpdateStaircaseRequest {
+  name?: string;
+  hostWallSide?: WallSide;
+  hostAlongWallPercent?: number;
+  kind?: DoorKind;
+  direction?: StairDirection;
+  footprintGw?: number;
+  footprintGh?: number;
+}
+
+export interface UpdateRoomStatusRequest {
+  status: RoomStatus;
+}
+
+export interface UpdateRoomFovRequest {
+  fovAngle: number;
+}
+
+// === Floor plan graph ===
+//
+// The backend now emits `nodes` with layout fields merged inline, plus a
+// separate `edges` array and `unplacedRoomIds`. There is no more `layout`
+// array â€” every node either has gridX/gridY or it does not.
+
+export interface FloorPlanGraphNode {
+  roomId: number;
+  name: string;
+  roomType: string;
+  sizeBucket: string;
+  sizeEstimateSqft: number | null;
+  /** Present when the node has been placed; absent means unplaced. */
+  gridX: number | null;
+  gridY: number | null;
+  widthUnits: number | null;
+  heightUnits: number | null;
+  /** Jackson serializes this as "isStaircase" via @JsonProperty. */
+  isStaircase: boolean;
+  /** Only set for staircase nodes: the room that hosts them. */
+  hostRoomId: number | null;
+  doors: Door[];
+}
+
+export interface FloorPlanGraphEdge {
+  doorId: number;
+  fromRoomId: number;
+  toRoomId: number;
+  wallSide: WallSide | null;
+  compassDirection: CompassDirection | null;
+  alongWallPercent: number | null;
+  kind: DoorKind | null;
+}
+
+export interface FloorPlanGraph {
+  floorId: number;
+  floorName: string;
+  nodes: FloorPlanGraphNode[];
+  edges: FloorPlanGraphEdge[];
+  unplacedRoomIds: number[];
+  isConfirmed: boolean | null;
+  disclaimer: string;
+}
+
+// === Full tour (renter-facing read shape) ===
+
+export interface FullTourDoor {
+  id: number;
+  x: number | null;
+  y: number | null;
+  wallSide: WallSide | null;
+  compassDirection: CompassDirection | null;
+  yawDeg: number | null;
+  pitchDeg: number | null;
+  alongWallPercent: number | null;
+  kind: DoorKind | null;
+  isFixed: boolean;
+  leadsToRoomId: number | null;
+  leadsToLabel: string | null;
+  isReciprocalOf: number | null;
+}
+
+export interface FullTourRoom {
+  id: number;
+  name: string;
+  type: string;
+  status: RoomStatus;
+  fovAngle: number;
+  panorama: string | null;
+  doors: FullTourDoor[];
+}
+
+export interface FullTourFloor {
+  id: number;
+  name: string;
+  levelIndex: number;
+  rooms: FullTourRoom[];
+}
+
+export interface FullTour {
+  propertyId: number;
+  propertyName: string;
+  floors: FullTourFloor[];
+}
+
+// === Tour summary (manage-listing page) ===
+
+export interface TourSummary {
+  propertyId: number;
+  floorCount: number;
+  roomCount: number;
+  panoramaCount: number;
+  hasFloorPlan: boolean;
+  isFloorPlanConfirmed: boolean;
+  isPublishable: boolean;
+}
+
+// === Panorama validation (unchanged; still consumed by CaptureReview) ===
+
+export interface ValidationIssue {
+  category: string;
+  code: string;
+  message: string;
+  severity: string;
+}
+
+export interface PanoValidationResult {
+  status: "accepted" | "rejected";
+  validationResults: {
+    passed: boolean;
+    issues: ValidationIssue[];
+  };
+  savedOutputPath?: string;
+}
+
+==== C:\Users\Chibuike Richard\OneDrive\Documents\jbr\keyz-frontend\src\lib\tour.ts ====
+// src/lib/tour.ts
+//
+// The public, renter-facing tour data layer. Formerly three round-trips deep
+// (floors â†’ rooms â†’ panoramas, in parallel per level). It now issues a single
+// call to GET /api/tours/properties/{id}/full-tour and maps the response into
+// the same TourFloorWithRooms shape callers have always used.
+//
+// The export surface is intentionally unchanged:
+//   TourFloor, TourRoom, TourPanorama,
+//   TourRoomWithViews, TourFloorWithRooms,
+//   getPropertyTour, primaryPanorama
+//
+// Consumers do not need to change.
+
+import type {
+  FullTour,
+  FullTourFloor,
+  FullTourRoom,
+} from "@/lib/types/tour";
+import { getFullTour } from "@/lib/api/tours";
+
+// === Types (public shape â€” unchanged) ===
+
+export interface TourFloor {
+  id: number;
+  floorNumber: number;
+  name: string;
+}
+
+export interface TourRoom {
+  floorId: number;
+  id: number;
+  roomName: string;
+  roomType: string | null;
+}
+
+export interface TourPanorama {
+  captureOrder: number;
+  id: number;
+  imageUrl: string;
+  primary: boolean;
+  resolution: string | null;
+}
+
+/** A floor with its rooms, and each room with its panoramas. */
+export interface TourRoomWithViews extends TourRoom {
+  panoramas: TourPanorama[];
+}
+
+export interface TourFloorWithRooms extends TourFloor {
+  rooms: TourRoomWithViews[];
+}
+
+// === Adapter ===
+
+/**
+ * Map one room from the FullTour payload into the shape the viewer expects.
+ * The FullTour endpoint returns one resolved primary panorama URL per room;
+ * we project that into a single-item panoramas array so the existing
+ * `primaryPanorama()` helper keeps working without a change.
+ *
+ * `room.panorama != null` (loose) is deliberate: it catches both `null` and
+ * `undefined`, in case the backend ever omits the field entirely.
+ */
+function toRoomWithViews(room: FullTourRoom): TourRoomWithViews {
+  const panoramas: TourPanorama[] =
+    room.panorama != null
+      ? [
+          {
+            // The FullTour endpoint collapses panoramas to one URL per room.
+            // We reuse the room id as a synthetic panorama id â€” consumers only
+            // ever use it to key a list, and there is only ever one entry.
+            id: room.id,
+            imageUrl: room.panorama,
+            captureOrder: 0,
+            primary: true,
+            resolution: null,
+          },
+        ]
+      : [];
+
+  return {
+    id: room.id,
+    floorId: 0, // not needed by the viewer; the room is already grouped
+    roomName: room.name,
+    roomType: room.type ?? null,
+    panoramas,
+  };
+}
+
+function toFloorWithRooms(floor: FullTourFloor): TourFloorWithRooms {
+  return {
+    id: floor.id,
+    floorNumber: floor.levelIndex,
+    name: floor.name,
+    rooms: floor.rooms.map(toRoomWithViews),
+  };
+}
+
+// === Requests ===
+
+/**
+ * The whole tour in one shape. One call, no per-floor or per-room round
+ * trips. Floors with no photographable room are filtered out here so the
+ * caller never has to think about them.
+ */
+export async function getPropertyTour(
+  propertyId: number,
+): Promise<TourFloorWithRooms[]> {
+  let full: FullTour;
+
+  try {
+    full = await getFullTour(propertyId);
+  } catch {
+    // The public property page tolerates a missing tour by rendering
+    // nothing. Returning an empty list is the contract callers already
+    // rely on.
+    return [];
+  }
+
+  return full.floors
+    .map(toFloorWithRooms)
+    .filter((floor) => floor.rooms.some((room) => room.panoramas.length > 0))
+    .sort((left, right) => left.floorNumber - right.floorNumber);
+}
+
+/** The view a room opens on: the one marked primary, else the first captured. */
+export function primaryPanorama(room: TourRoomWithViews): TourPanorama | null {
+  if (room.panoramas.length === 0) {
+    return null;
+  }
+
+  const primary = room.panoramas.find((panorama) => panorama.primary);
+
+  return (
+    primary ??
+    [...room.panoramas].sort(
+      (left, right) => left.captureOrder - right.captureOrder,
+    )[0]
+  );
+}
+
+==== C:\Users\Chibuike Richard\OneDrive\Documents\jbr\keyz-frontend\src\lib\tourConstants.ts ====
+// src/lib/tourConstants.ts
+//
+// Room type strings shared across the tour wizard. These strings travel to the
+// backend as-is, drive the panorama lookup (TYPE_TO_PANORAMA), and are matched
+// against by the 3D floor-plan classifier. Keep them in lockstep with those
+// consumers or you get empty rooms with default paint.
+
+import type { SizeBucket } from "@/lib/types/tour";
+
+export const ROOM_TYPES = [
+  "Entryway",
+  "Parlour",
+  "Family Dining",
+  "Kitchen",
+  "Bedroom",
+  "Toilet & Bath",
+  "Store",
+  "Balcony",
+  "Compound",
+  "Boys' Quarters",
+  "Corridor",
+  "Laundry",
+  "Office",
+] as const;
+
+export type RoomType = (typeof ROOM_TYPES)[number];
+
+export const SIZE_OPTIONS: ReadonlyArray<{
+  value: SizeBucket;
+  label: string;
+  hint: string;
+}> = [
+  { value: "SMALL", label: "Small", hint: "Bathroom, closet" },
+  { value: "MEDIUM", label: "Medium", hint: "Bedroom, kitchen" },
+  { value: "LARGE", label: "Large", hint: "Parlour, open plan" },
+];
+
+==== C:\Users\Chibuike Richard\OneDrive\Documents\jbr\keyz-frontend\src\lib\simpleBlueprint.ts ====
+// src/lib/simpleBlueprint.ts
+//
+// Renders the SVG blueprint for a floor plan. Consumes the exact shape the
+// backend returns from GET /api/tours/floors/{id}/floor-plan â€” nodes carry
+// their own gridX / gridY / widthUnits / heightUnits / isStaircase, and
+// edges carry compass direction. No frontend layout math needed.
+
+import type {
+  CompassDirection,
+  FloorPlanGraph,
+  FloorPlanGraphEdge,
+  FloorPlanGraphNode,
+  Room,
+  WallSide,
+} from "@/lib/types/tour";
+
+const CELL_PX = 130;
+const WALL_COLOR = "#2C3E50";
+const OUTER_WALL = 8;
+const INNER_WALL = 3;
+
+const ROOM_COLORS = [
+  "#E8F0FE",
+  "#E8F5E9",
+  "#FFF3E0",
+  "#F3E5F5",
+  "#FFFDE7",
+  "#E0F7FA",
+  "#FCE4EC",
+  "#E8EAF6",
+];
+
+function isHorizontalCompass(c: CompassDirection): boolean {
+  return c === "N" || c === "S";
+}
+
+function compassToWall(c: CompassDirection): WallSide {
+  switch (c) {
+    case "N":
+      return "TOP";
+    case "E":
+      return "RIGHT";
+    case "S":
+      return "BOTTOM";
+    case "W":
+      return "LEFT";
+  }
+}
+
+interface PlacedNode {
+  roomId: number;
+  gridX: number;
+  gridY: number;
+  widthUnits: number;
+  heightUnits: number;
+  isStaircase: boolean;
+  name: string;
+  roomType: string;
+  sizeBucket: string;
+}
+
+function isPlaced(
+  node: FloorPlanGraphNode,
+): node is FloorPlanGraphNode & {
+  gridX: number;
+  gridY: number;
+  widthUnits: number;
+  heightUnits: number;
+} {
+  return (
+    node.gridX !== null &&
+    node.gridY !== null &&
+    node.widthUnits !== null &&
+    node.heightUnits !== null
+  );
+}
+
+export function generateSimpleBlueprint(
+  floorPlan: FloorPlanGraph,
+  rooms: Room[],
+): string {
+  const placed: PlacedNode[] = floorPlan.nodes
+    .filter(isPlaced)
+    .map((node) => ({
+      roomId: node.roomId,
+      gridX: node.gridX,
+      gridY: node.gridY,
+      widthUnits: node.widthUnits,
+      heightUnits: node.heightUnits,
+      isStaircase: node.isStaircase,
+      name: node.name,
+      roomType: node.roomType,
+      sizeBucket: node.sizeBucket,
+    }));
+
+  if (placed.length === 0) {
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200">
+      <text x="200" y="100" text-anchor="middle" font-size="13" fill="#8A99A4" font-family="'DM Sans', sans-serif">
+        No rooms placed on this floor plan yet
+      </text>
+    </svg>`;
+  }
+
+  const roomById = new Map(rooms.map((r) => [r.id, r]));
+  const nodeByRoom = new Map(placed.map((n) => [n.roomId, n]));
+
+  // ---- Grid bounds ----
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  placed.forEach((n) => {
+    minX = Math.min(minX, n.gridX);
+    minY = Math.min(minY, n.gridY);
+    maxX = Math.max(maxX, n.gridX + n.widthUnits);
+    maxY = Math.max(maxY, n.gridY + n.heightUnits);
+  });
+
+  const PAD = 90;
+  const viewW = (maxX - minX) * CELL_PX + PAD * 2;
+  const viewH = (maxY - minY) * CELL_PX + PAD * 2 + 90;
+
+  const px = (u: number) => (u - minX) * CELL_PX + PAD;
+  const py = (v: number) => (v - minY) * CELL_PX + PAD;
+
+  const wallX = px(minX);
+  const wallY = py(minY);
+  const wallW = (maxX - minX) * CELL_PX;
+  const wallH = (maxY - minY) * CELL_PX;
+
+  let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${viewW} ${viewH}"
+    style="background: #F5F3EF; font-family: 'DM Sans', sans-serif;">
+    <defs>
+      <pattern id="checker" width="20" height="20" patternUnits="userSpaceOnUse">
+        <rect width="10" height="10" fill="#E8E5DF"/>
+        <rect x="10" y="10" width="10" height="10" fill="#E8E5DF"/>
+        <rect x="10" width="10" height="10" fill="#F2F0EB"/>
+        <rect y="10" width="10" height="10" fill="#F2F0EB"/>
+      </pattern>
+    </defs>
+    <rect width="${viewW}" height="${viewH}" fill="url(#checker)"/>
+  `;
+
+  // ---- 1. Room fills (skip staircases) ----
+  let roomIndex = 0;
+  placed
+    .filter((n) => !n.isStaircase)
+    .forEach((n) => {
+      const x = px(n.gridX);
+      const y = py(n.gridY);
+      const w = n.widthUnits * CELL_PX;
+      const h = n.heightUnits * CELL_PX;
+      svg += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${ROOM_COLORS[roomIndex % ROOM_COLORS.length]}"/>`;
+      roomIndex++;
+    });
+
+  // ---- 1b. Staircase fills + treads + arrow ----
+  placed
+    .filter((n) => n.isStaircase)
+    .forEach((n) => {
+      const x = px(n.gridX);
+      const y = py(n.gridY);
+      const w = n.widthUnits * CELL_PX;
+      const h = n.heightUnits * CELL_PX;
+
+      svg += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#EDEDED"/>`;
+
+      const treadCount = Math.max(4, Math.round((w > h ? w : h) / 22));
+      const stairColor = "#7A7A7A";
+      if (w >= h) {
+        for (let i = 1; i < treadCount; i++) {
+          const tx = x + (w / treadCount) * i;
+          svg += `<line x1="${tx}" y1="${y + 4}" x2="${tx}" y2="${y + h - 4}" stroke="${stairColor}" stroke-width="1" opacity="0.55"/>`;
+        }
+      } else {
+        for (let i = 1; i < treadCount; i++) {
+          const ty = y + (h / treadCount) * i;
+          svg += `<line x1="${x + 4}" y1="${ty}" x2="${x + w - 4}" y2="${ty}" stroke="${stairColor}" stroke-width="1" opacity="0.55"/>`;
+        }
+      }
+
+      const cx = x + w / 2;
+      const cy = y + h / 2;
+      const arrowColor = "#2C3E50";
+      if (w >= h) {
+        svg += `<line x1="${x + 8}" y1="${cy}" x2="${x + w - 8}" y2="${cy}" stroke="${arrowColor}" stroke-width="1.6"/>`;
+        svg += `<polygon points="${x + w - 8},${cy} ${x + w - 16},${cy - 5} ${x + w - 16},${cy + 5}" fill="${arrowColor}"/>`;
+      } else {
+        svg += `<line x1="${cx}" y1="${y + h - 8}" x2="${cx}" y2="${y + 8}" stroke="${arrowColor}" stroke-width="1.6"/>`;
+        svg += `<polygon points="${cx},${y + 8} ${cx - 5},${y + 16} ${cx + 5},${y + 16}" fill="${arrowColor}"/>`;
+      }
+
+      const fontSize = Math.max(9, Math.min(13, Math.min(w, h) / 12));
+      svg += `<text x="${cx}" y="${y + h - 4}" text-anchor="middle" font-size="${fontSize}" font-weight="600" fill="${arrowColor}">Stair</text>`;
+    });
+
+  // ---- 2. Outer wall (thick) ----
+  svg += `<rect x="${wallX}" y="${wallY}" width="${wallW}" height="${wallH}"
+    fill="none" stroke="${WALL_COLOR}" stroke-width="${OUTER_WALL}"/>`;
+
+  // ---- 3. Inner room outlines (skip staircases) ----
+  placed
+    .filter((n) => !n.isStaircase)
+    .forEach((n) => {
+      const x = px(n.gridX);
+      const y = py(n.gridY);
+      const w = n.widthUnits * CELL_PX;
+      const h = n.heightUnits * CELL_PX;
+      svg += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="none"
+        stroke="${WALL_COLOR}" stroke-width="${INNER_WALL}"/>`;
+    });
+
+  // ---- 3b. Staircase outlines: dashed ----
+  placed
+    .filter((n) => n.isStaircase)
+    .forEach((n) => {
+      const x = px(n.gridX);
+      const y = py(n.gridY);
+      const w = n.widthUnits * CELL_PX;
+      const h = n.heightUnits * CELL_PX;
+      svg += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="none"
+        stroke="${WALL_COLOR}" stroke-width="${INNER_WALL}" stroke-dasharray="4,3"/>`;
+    });
+
+  // ---- 4. Doorways ----
+  floorPlan.edges.forEach((edge) => {
+    const node = nodeByRoom.get(edge.fromRoomId);
+    if (!node) return;
+
+    const compass: CompassDirection | null = edge.compassDirection;
+    if (!compass) return;
+
+    const room = roomById.get(edge.fromRoomId);
+    if (!room) return;
+
+    const x = px(node.gridX);
+    const y = py(node.gridY);
+    const w = node.widthUnits * CELL_PX;
+    const h = node.heightUnits * CELL_PX;
+
+    const isOpening = edge.kind === "OPENING";
+    const along =
+      Math.max(0, Math.min(100, edge.alongWallPercent ?? 50)) / 100;
+
+    const onHorizontalWall = isHorizontalCompass(compass);
+    const wallLengthPx = onHorizontalWall ? w : h;
+    const doorSize = Math.max(20, wallLengthPx * (isOpening ? 0.32 : 0.24));
+
+    let dx = x;
+    let dy = y;
+    let cutX = 0;
+    let cutY = 0;
+    let cutW = 0;
+    let cutH = 0;
+    let pivotX = 0;
+    let pivotY = 0;
+    let leafEndX = 0;
+    let leafEndY = 0;
+
+    switch (compass) {
+      case "N":
+        dx = x + along * w - doorSize / 2;
+        dy = y;
+        cutX = dx; cutY = y - INNER_WALL;
+        cutW = doorSize; cutH = INNER_WALL * 2;
+        pivotX = dx; pivotY = y;
+        leafEndX = pivotX; leafEndY = pivotY - doorSize;
+        break;
+      case "S":
+        dx = x + along * w - doorSize / 2;
+        dy = y + h;
+        cutX = dx; cutY = y + h - INNER_WALL;
+        cutW = doorSize; cutH = INNER_WALL * 2;
+        pivotX = dx + doorSize; pivotY = y + h;
+        leafEndX = pivotX; leafEndY = pivotY + doorSize;
+        break;
+      case "W":
+        dx = x;
+        dy = y + along * h - doorSize / 2;
+        cutX = x - INNER_WALL; cutY = dy;
+        cutW = INNER_WALL * 2; cutH = doorSize;
+        pivotX = x; pivotY = dy + doorSize;
+        leafEndX = pivotX - doorSize; leafEndY = pivotY;
+        break;
+      case "E":
+        dx = x + w;
+        dy = y + along * h - doorSize / 2;
+        cutX = x + w - INNER_WALL; cutY = dy;
+        cutW = INNER_WALL * 2; cutH = doorSize;
+        pivotX = x + w; pivotY = dy;
+        leafEndX = pivotX + doorSize; leafEndY = pivotY;
+        break;
+    }
+
+    svg += `<rect x="${cutX}" y="${cutY}" width="${cutW}" height="${cutH}" fill="#FFFFFF" stroke="none"/>`;
+
+    if (isOpening) {
+      const t = 8;
+      if (onHorizontalWall) {
+        svg += `<line x1="${dx}" y1="${dy - t / 2}" x2="${dx}" y2="${dy + t / 2}" stroke="${WALL_COLOR}" stroke-width="1.4"/>`;
+        svg += `<line x1="${dx + doorSize}" y1="${dy - t / 2}" x2="${dx + doorSize}" y2="${dy + t / 2}" stroke="${WALL_COLOR}" stroke-width="1.4"/>`;
+      } else {
+        svg += `<line x1="${dx - t / 2}" y1="${dy}" x2="${dx + t / 2}" y2="${dy}" stroke="${WALL_COLOR}" stroke-width="1.4"/>`;
+        svg += `<line x1="${dx - t / 2}" y1="${dy + doorSize}" x2="${dx + t / 2}" y2="${dy + doorSize}" stroke="${WALL_COLOR}" stroke-width="1.4"/>`;
+      }
+    } else {
+      svg += `<line x1="${pivotX}" y1="${pivotY}" x2="${leafEndX}" y2="${leafEndY}" stroke="${WALL_COLOR}" stroke-width="1.8" stroke-linecap="round"/>`;
+      svg += `<path d="M ${pivotX} ${pivotY} A ${doorSize} ${doorSize} 0 0 1 ${leafEndX} ${leafEndY}" fill="none" stroke="${WALL_COLOR}" stroke-width="1.2" stroke-dasharray="3,3" opacity="0.7"/>`;
+      svg += `<circle cx="${pivotX}" cy="${pivotY}" r="1.8" fill="${WALL_COLOR}"/>`;
+    }
+  });
+
+  // ---- 5. Room labels + size badge (skip staircases) ----
+  placed
+    .filter((n) => !n.isStaircase)
+    .forEach((n) => {
+      const x = px(n.gridX);
+      const y = py(n.gridY);
+      const w = n.widthUnits * CELL_PX;
+      const h = n.heightUnits * CELL_PX;
+
+      const fontSize = Math.max(10, Math.min(15, Math.min(w, h) / 11));
+      const words = n.name.split(" ");
+      const wrap = n.name.length > 14 && words.length > 1;
+
+      if (wrap) {
+        const mid = Math.ceil(words.length / 2);
+        const l1 = words.slice(0, mid).join(" ");
+        const l2 = words.slice(mid).join(" ");
+        const lh = fontSize * 1.25;
+        svg += `<text x="${x + w / 2}" y="${y + h / 2 - lh / 2 + 4}" text-anchor="middle" font-size="${fontSize}" font-weight="600" fill="#2C3E50">${l1}</text>`;
+        svg += `<text x="${x + w / 2}" y="${y + h / 2 + lh / 2 + 4}" text-anchor="middle" font-size="${fontSize}" font-weight="600" fill="#2C3E50">${l2}</text>`;
+      } else {
+        svg += `<text x="${x + w / 2}" y="${y + h / 2 + 4}" text-anchor="middle" font-size="${fontSize}" font-weight="600" fill="#2C3E50">${n.name}</text>`;
+      }
+
+      const typeY = y + h / 2 + fontSize + 8;
+      svg += `<text x="${x + w / 2}" y="${typeY}" text-anchor="middle" font-size="9" fill="#2C3E50" opacity="0.55">${n.roomType}</text>`;
+
+      const sizeLabel =
+        n.sizeBucket === "LARGE" ? "L" : n.sizeBucket === "MEDIUM" ? "M" : "S";
+      const sizeColor =
+        n.sizeBucket === "LARGE"
+          ? "#4A90D9"
+          : n.sizeBucket === "MEDIUM"
+            ? "#5CB85C"
+            : "#F0AD4E";
+      svg += `<rect x="${x + w - 26}" y="${y + 10}" width="16" height="16" rx="8" fill="${sizeColor}" opacity="0.2"/>`;
+      svg += `<text x="${x + w - 18}" y="${y + 22}" text-anchor="middle" font-size="9" font-weight="700" fill="${sizeColor}">${sizeLabel}</text>`;
+    });
+
+  // ---- 6. Dimension line ----
+  const dimY = wallY + wallH + 28;
+  svg += `<line x1="${wallX}" y1="${dimY}" x2="${wallX + wallW}" y2="${dimY}" stroke="#999" stroke-width="1"/>`;
+  svg += `<line x1="${wallX}" y1="${dimY - 6}" x2="${wallX}" y2="${dimY + 6}" stroke="#999" stroke-width="1"/>`;
+  svg += `<line x1="${wallX + wallW}" y1="${dimY - 6}" x2="${wallX + wallW}" y2="${dimY + 6}" stroke="#999" stroke-width="1"/>`;
+  svg += `<text x="${wallX + wallW / 2}" y="${dimY + 18}" text-anchor="middle" font-size="10" fill="#999">~${Math.round(wallW / 45)} m</text>`;
+
+  // ---- 7. Legend ----
+  const legendY = dimY + 50;
+  svg += `<g transform="translate(${wallX}, ${legendY})">
+    <line x1="0" y1="-2" x2="20" y2="-2" stroke="${WALL_COLOR}" stroke-width="1.8"/>
+    <text x="25" y="2" font-size="9" fill="#666">Door</text>
+    <line x1="75" y1="-2" x2="95" y2="-2" stroke="${WALL_COLOR}" stroke-width="1.4" stroke-dasharray="2,2"/>
+    <text x="100" y="2" font-size="9" fill="#666">Opening</text>
+    <circle cx="175" cy="-2" r="5" fill="#4A90D9" opacity="0.35"/>
+    <text x="185" y="2" font-size="9" fill="#666">L</text>
+    <circle cx="205" cy="-2" r="5" fill="#5CB85C" opacity="0.35"/>
+    <text x="215" y="2" font-size="9" fill="#666">M</text>
+    <circle cx="235" cy="-2" r="5" fill="#F0AD4E" opacity="0.35"/>
+    <text x="245" y="2" font-size="9" fill="#666">S</text>
+    <line x1="275" y1="-2" x2="295" y2="-2" stroke="${WALL_COLOR}" stroke-width="1.6" stroke-dasharray="4,3"/>
+    <text x="300" y="2" font-size="9" fill="#666">Staircase</text>
+  </g>`;
+
+  svg += `</svg>`;
+  return svg;
+}
+
+==== C:\Users\Chibuike Richard\OneDrive\Documents\jbr\keyz-frontend\src\lib\api\tours.ts ====
+// src/lib/api/tours.ts
+//
+// Client-side entry for every tour endpoint. Goes through the Next.js proxy at
+// /api/tours/*, which forwards the session cookie to the Java backend. Nothing
+// here carries a bearer token: auth is cookie-based across the whole app.
+
+import type {
+  Floor,
+  FullTour,
+  Panorama,
+  Room,
+  SizeBucket,
+  TourSummary,
+} from "@/lib/types/tour";
+import { tourRequest } from "./tours/utils";
+
+export interface CreateFloorInput {
+  floorNumber: number;
+  name: string;
+}
+
+export interface CreateRoomInput {
+  roomName: string;
+  roomType: string;
+  sizeBucket?: SizeBucket;
+  sizeEstimateSqft?: number | null;
+}
+
+// === Floors ===
+
+export async function createFloor(
+  propertyId: number,
+  payload: CreateFloorInput,
+): Promise<Floor> {
+  return tourRequest<Floor>(`/api/tours/properties/${propertyId}/floors`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getFloorsForProperty(
+  propertyId: number,
+): Promise<Floor[]> {
+  return tourRequest<Floor[]>(`/api/tours/properties/${propertyId}/floors`);
+}
+
+export async function getFloor(floorId: number): Promise<Floor> {
+  return tourRequest<Floor>(`/api/tours/floors/${floorId}`);
+}
+
+// === Rooms ===
+
+export async function createRoom(
+  floorId: number,
+  payload: CreateRoomInput,
+): Promise<Room> {
+  return tourRequest<Room>(`/api/tours/floors/${floorId}/rooms`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getRoomsForFloor(floorId: number): Promise<Room[]> {
+  return tourRequest<Room[]>(`/api/tours/floors/${floorId}/rooms`);
+}
+
+// === Panoramas ===
+
+export async function uploadPanorama(
+  roomId: number,
+  file: File,
+): Promise<Panorama> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  return tourRequest<Panorama>(`/api/tours/rooms/${roomId}/panoramas`, {
+    method: "POST",
+    body: formData,
+  });
+}
+
+export async function getPanoramasForRoom(
+  roomId: number,
+): Promise<Panorama[]> {
+  return tourRequest<Panorama[]>(`/api/tours/rooms/${roomId}/panoramas`);
+}
+
+// === Full tour tree (public viewer + chat share) ===
+
+export async function getFullTour(propertyId: number): Promise<FullTour> {
+  return tourRequest<FullTour>(
+    `/api/tours/properties/${propertyId}/full-tour`,
+  );
+}
+
+// === Tour summary ===
+
+export type { TourSummary } from "@/lib/types/tour";
+
+export async function getTourSummary(
+  propertyId: number,
+): Promise<TourSummary> {
+  return tourRequest<TourSummary>(
+    `/api/tours/properties/${propertyId}/tour-summary`,
+  );
+}
+export interface UpdateFloorInput {
+  name?: string;
+  floorNumber?: number;
+}
+
+export async function updateFloor(
+  floorId: number,
+  payload: UpdateFloorInput,
+): Promise<Floor> {
+  return tourRequest<Floor>(`/api/tours/floors/${floorId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteFloor(floorId: number): Promise<void> {
+  await tourRequest<null>(`/api/tours/floors/${floorId}`, {
+    method: "DELETE",
+  });
+}
+
+export interface UpdateRoomInput {
+  roomName?: string;
+  roomType?: string;
+  sizeBucket?: SizeBucket;
+  sizeEstimateSqft?: number | null;
+}
+
+export async function updateRoom(
+  roomId: number,
+  payload: UpdateRoomInput,
+): Promise<Room> {
+  return tourRequest<Room>(`/api/tours/rooms/${roomId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteRoom(roomId: number): Promise<void> {
+  await tourRequest<null>(`/api/tours/rooms/${roomId}`, {
+    method: "DELETE",
+  });
+}
+
+==== C:\Users\Chibuike Richard\OneDrive\Documents\jbr\keyz-frontend\src\lib\api\tours\doors.ts ====
+// src/lib/api/tours/doors.ts
+import type {
+  CreateDoorRequest,
+  Door,
+  UpdateDoorRequest,
+} from "@/lib/types/tour";
+import { tourRequest } from "./utils";
+
+export async function createDoor(request: CreateDoorRequest): Promise<Door> {
+  return tourRequest<Door>("/api/tours/doors", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(request),
+  });
+}
+
+export async function updateDoor(
+  doorId: number,
+  request: UpdateDoorRequest,
+): Promise<Door> {
+  return tourRequest<Door>(`/api/tours/doors/${doorId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(request),
+  });
+}
+
+export async function deleteDoor(doorId: number): Promise<void> {
+  await tourRequest<null>(`/api/tours/doors/${doorId}`, { method: "DELETE" });
+}
+
+export async function getDoor(doorId: number): Promise<Door> {
+  return tourRequest<Door>(`/api/tours/doors/${doorId}`);
+}
+
+export async function getDoorsForRoom(roomId: number): Promise<Door[]> {
+  return tourRequest<Door[]>(`/api/tours/doors/rooms/${roomId}`);
+}
+
+export async function getDoorsForPanorama(
+  panoramaId: number,
+): Promise<Door[]> {
+  return tourRequest<Door[]>(`/api/tours/doors/panoramas/${panoramaId}`);
+}
+
+==== C:\Users\Chibuike Richard\OneDrive\Documents\jbr\keyz-frontend\src\lib\api\tours\floorPlans.ts ====
+// src/lib/api/tours/floorPlans.ts
+//
+// Client methods for the floor-plan endpoints. The backend response shape
+// changed when nodes absorbed their own layout: `FloorPlanGraph.nodes` now
+// carries gridX/gridY/widthUnits/heightUnits/isStaircase directly. There is
+// no separate `layout` array anymore â€” this client and FloorPlanViewer were
+// updated together.
+
+import type { FloorPlanGraph } from "@/lib/types/tour";
+import { tourRequest } from "./utils";
+
+export async function generateFloorPlan(
+  floorId: number,
+): Promise<FloorPlanGraph> {
+  return tourRequest<FloorPlanGraph>(
+    `/api/tours/floors/${floorId}/floor-plan/generate`,
+    { method: "POST" },
+  );
+}
+
+export async function getFloorPlan(
+  floorId: number,
+): Promise<FloorPlanGraph> {
+  return tourRequest<FloorPlanGraph>(
+    `/api/tours/floors/${floorId}/floor-plan`,
+  );
+}
+
+export interface UpdateRoomPositionInput {
+  gridX?: number;
+  gridY?: number;
+  widthUnits?: number;
+  depthUnits?: number;
+}
+
+export async function updateRoomPosition(
+  roomId: number,
+  data: UpdateRoomPositionInput,
+): Promise<void> {
+  await tourRequest<null>(`/api/tours/floor-plan/rooms/${roomId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+}
+
+export async function confirmFloorPlan(floorId: number): Promise<void> {
+  await tourRequest<null>(`/api/tours/floors/${floorId}/floor-plan/confirm`, {
+    method: "POST",
+  });
+}
+
+export async function deleteFloorPlan(floorId: number): Promise<void> {
+  await tourRequest<null>(`/api/tours/floors/${floorId}/floor-plan`, {
+    method: "DELETE",
+  });
+}
+
+==== C:\Users\Chibuike Richard\OneDrive\Documents\jbr\keyz-frontend\src\lib\api\tours\rooms.ts ====
+// src/lib/api/tours/rooms.ts
+//
+// Room-level mutations that do not fit the floor/room/pano groupings in the
+// parent tours client: capture status and FOV angle. Both go through the
+// same-origin Next.js proxy, which forwards the session cookie to the Java
+// backend â€” no bearer token ever touches this code.
+
+import type { Room, RoomStatus } from "@/lib/types/tour";
+import { tourRequest } from "./utils";
+
+export async function updateRoomStatus(
+  roomId: number,
+  status: RoomStatus,
+): Promise<Room> {
+  return tourRequest<Room>(`/api/tours/rooms/${roomId}/status`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status }),
+  });
+}
+
+export async function updateRoomFov(
+  roomId: number,
+  fovAngle: number,
+): Promise<Room> {
+  return tourRequest<Room>(`/api/tours/rooms/${roomId}/fov`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ fovAngle }),
+  });
+}
+
+==== C:\Users\Chibuike Richard\OneDrive\Documents\jbr\keyz-frontend\src\lib\api\tours\staircases.ts ====
+// src/lib/api/tours/staircases.ts
+import type {
+  CreateStaircaseRequest,
+  Staircase,
+  UpdateStaircaseRequest,
+} from "@/lib/types/tour";
+import { tourRequest } from "./utils";
+
+export async function createStaircase(
+  floorId: number,
+  request: CreateStaircaseRequest,
+): Promise<Staircase> {
+  return tourRequest<Staircase>(`/api/tours/floors/${floorId}/staircases`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(request),
+  });
+}
+
+export async function updateStaircase(
+  staircaseId: number,
+  request: UpdateStaircaseRequest,
+): Promise<Staircase> {
+  return tourRequest<Staircase>(`/api/tours/staircases/${staircaseId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(request),
+  });
+}
+
+export async function deleteStaircase(staircaseId: number): Promise<void> {
+  await tourRequest<null>(`/api/tours/staircases/${staircaseId}`, {
+    method: "DELETE",
+  });
+}
+
+export async function getStaircasesForFloor(
+  floorId: number,
+): Promise<Staircase[]> {
+  return tourRequest<Staircase[]>(`/api/tours/floors/${floorId}/staircases`);
+}
+
+export async function getStaircasesForRoom(
+  roomId: number,
+): Promise<Staircase[]> {
+  return tourRequest<Staircase[]>(`/api/tours/rooms/${roomId}/staircases`);
+}
+
+==== C:\Users\Chibuike Richard\OneDrive\Documents\jbr\keyz-frontend\src\lib\api\tours\utils.ts ====
+// src/lib/api/tours/utils.ts
+import { apiRequest } from "@/lib/apiRequest";
+
+interface ApiEnvelope<TData> {
+  success: boolean;
+  message: string;
+  data: TData;
+}
+
+function isApiEnvelope(value: unknown): value is ApiEnvelope<unknown> {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    "success" in value &&
+    "message" in value
+  );
+}
+
+/**
+ * Parses the standard { success, message, data } envelope every tour endpoint
+ * returns. Throws with the server's own message so callers can show it in a toast.
+ */
+export async function parseEnvelope<TData>(
+  response: Response,
+): Promise<ApiEnvelope<TData>> {
+  const data: unknown = await response.json().catch(() => null);
+
+  if (!isApiEnvelope(data)) {
+    throw new Error("Unexpected response from server");
+  }
+
+  if (!response.ok || !data.success) {
+    throw new Error(data.message || "Request failed");
+  }
+
+  return data as ApiEnvelope<TData>;
+}
+
+/**
+ * Tour endpoints go through the same-origin Next.js proxy, so auth travels on
+ * the session cookie. This helper just calls apiRequest and parses the envelope.
+ */
+export async function tourRequest<TData>(
+  path: string,
+  init?: RequestInit,
+): Promise<TData> {
+  const response = await apiRequest(path, init);
+  const envelope = await parseEnvelope<TData>(response);
+  return envelope.data;
+}
+
+/** Kept for calls that need the raw Response (downloads, streaming, etc.). */
+export function authHeaders(): HeadersInit {
+  return {};
+}
+
+==== C:\Users\Chibuike Richard\OneDrive\Documents\jbr\keyz-frontend\src\lib\apiRequest.ts ====
+"use client";
+
+import {
+  getAuthenticationSnapshot,
+  refreshAuthentication,
+  subscribeToAuthentication,
+} from "@/lib/authSession";
+
+// === Helpers
+
+const pendingReads = new Map<string, Promise<Response>>();
+
+function getSessionScope(): string {
+  const authentication = getAuthenticationSnapshot();
+  return JSON.stringify([
+    authentication.generation,
+    authentication.user?.id ?? null,
+  ]);
+}
+
+subscribeToAuthentication(clearPendingApiReads);
+
+function isAuthenticationEntryPoint(path: string): boolean {
+  return (
+    path.startsWith("/api/auth/login") ||
+    path.startsWith("/api/auth/google") ||
+    path.startsWith("/api/auth/verify-email") ||
+    path.startsWith("/api/auth/register") ||
+    path.startsWith("/api/auth/forgot-password") ||
+    path.startsWith("/api/auth/reset-password") ||
+    path.startsWith("/api/auth/resend-verification") ||
+    path.startsWith("/api/auth/2fa/verify")
+  );
+}
+
+function handleAuthenticationFailure(path: string, response: Response): void {
+  if (response.status !== 401 || isAuthenticationEntryPoint(path)) return;
+
+  // 401 also covers a wrong password on a flow that re-checks it while signed
+  // in, so only the session endpoint decides whether the session really ended.
+  void refreshAuthentication();
+}
+
+export function clearPendingApiReads(): void {
+  pendingReads.clear();
+}
+
+// === Requests
+
+export async function apiRequest(
+  path: string,
+  init: RequestInit = {},
+): Promise<Response> {
+  if (typeof window === "undefined" || !path.startsWith("/api/")) {
+    return fetch(path, init);
+  }
+
+  const scope = getSessionScope();
+  const method = (init.method ?? "GET").toUpperCase();
+  const headers = new Headers(init.headers);
+
+  if (headers.has("Authorization")) {
+    headers.delete("Authorization");
+  }
+
+  const requestInit = { ...init, credentials: "same-origin" as const, headers };
+
+  if (method !== "GET") {
+    // A read begun before a write must not satisfy a refresh following it.
+    clearPendingApiReads();
+
+    try {
+      const response = await fetch(path, requestInit);
+      handleAuthenticationFailure(path, response);
+
+      if (scope !== getSessionScope()) {
+        throw new Error(
+          "Your account changed. Reload to see your current data.",
+        );
+      }
+
+      return response;
+    } finally {
+      clearPendingApiReads();
+    }
+  }
+
+  let response: Response;
+
+  if (
+    requestInit.signal ||
+    requestInit.body ||
+    requestInit.cache === "reload"
+  ) {
+    // Independently cancellable requests cannot share another caller's signal.
+    response = await fetch(path, requestInit);
+  } else {
+    const normalizedHeaders = [...headers.entries()].sort(([a], [b]) =>
+      a.localeCompare(b),
+    );
+    const options = Object.fromEntries(
+      Object.entries({
+        ...requestInit,
+        method,
+        headers: normalizedHeaders,
+      }).sort(([a], [b]) => a.localeCompare(b)),
+    );
+    const key = JSON.stringify([scope, path, options]);
+    let request = pendingReads.get(key);
+
+    if (!request) {
+      request = fetch(path, requestInit);
+      pendingReads.set(key, request);
+    }
+
+    try {
+      response = (await request).clone();
+    } finally {
+      if (pendingReads.get(key) === request) {
+        pendingReads.delete(key);
+      }
+    }
+  }
+
+  handleAuthenticationFailure(path, response);
+
+  if (scope !== getSessionScope()) {
+    throw new Error("Your account changed. Reload to see your current data.");
+  }
+
+  return response;
+}
+
+==== C:\Users\Chibuike Richard\OneDrive\Documents\jbr\keyz-frontend\src\lib\errors.ts ====
+// === Types
+
+/**
+ * Mirrors ErrorCode on the backend. Codes are the contract; the wording below is ours.
+ * Never rename a member without changing the enum in the backend to match.
+ */
+export type ApiErrorCode =
+  | "INVALID_CREDENTIALS"
+  | "EMAIL_NOT_VERIFIED"
+  | "EMAIL_ALREADY_REGISTERED"
+  | "RESET_CODE_INVALID"
+  | "VERIFICATION_CODE_INVALID"
+  | "OLD_PASSWORD_INCORRECT"
+  | "SESSION_EXPIRED"
+  | "IDENTITY_NOT_VERIFIED"
+  | "IDENTITY_NAME_MISMATCH"
+  | "NIN_CHECK_FAILED"
+  | "BVN_CHECK_FAILED"
+  | "SELFIE_CHECK_FAILED"
+  | "PAYOUT_NAME_MISMATCH"
+  | "PAYOUT_CODES_INVALID"
+  | "LISTING_ROLE_MISMATCH"
+  | "LISTING_NOT_OWNED"
+  | "LISTING_COORDINATES_MISSING"
+  | "LISTING_PROOF_NO_GPS"
+  | "LISTING_PROOF_TOO_FAR"
+  | "LISTING_PHOTO_DUPLICATE"
+  | "LISTING_BILL_MISMATCH"
+  | "BOOKING_DATES_INVALID"
+  | "REVIEW_REQUIRES_COMPLETED_STAY"
+  | "NOT_FOUND"
+  | "FORBIDDEN"
+  | "VALIDATION_FAILED"
+  | "RATE_LIMITED"
+  | "INTERNAL_ERROR";
+
+export interface ApiErrorPayload {
+  code?: ApiErrorCode;
+  message?: string;
+}
+
+// === Copy
+
+const GENERIC_MESSAGE = "Something went wrong. Try again in a moment.";
+
+/**
+ * One sentence per code, in the interface's own voice: what happened, and what to do.
+ * Where the backend computes a detail we cannot know here (a distance, a field name),
+ * its message is preferred over these and this acts as the floor.
+ */
+const ERROR_COPY: Record<ApiErrorCode, string> = {
+  INVALID_CREDENTIALS: "Incorrect login credentials. Check your email and password and try again.",
+  EMAIL_NOT_VERIFIED: "Verify your email address before logging in. Check your inbox for the code.",
+  EMAIL_ALREADY_REGISTERED: "An account already uses that email. Log in instead.",
+  RESET_CODE_INVALID: "That reset code is wrong or has expired. Request a new one.",
+  VERIFICATION_CODE_INVALID: "That code is wrong or has expired. Request a new one.",
+  OLD_PASSWORD_INCORRECT: "Your current password is wrong. Try again.",
+  SESSION_EXPIRED: "Your session ended. Log in again to continue.",
+
+  IDENTITY_NOT_VERIFIED: "Finish your identity check before you can do this.",
+  IDENTITY_NAME_MISMATCH: "The name on that ID does not match your account name.",
+  NIN_CHECK_FAILED: "We could not verify that NIN. Check the number and try again.",
+  BVN_CHECK_FAILED: "We could not verify that BVN. Check the number and try again.",
+  SELFIE_CHECK_FAILED: "That selfie did not pass the liveness check. Try again in good lighting.",
+  PAYOUT_NAME_MISMATCH: "The name on that bank account does not match your verified name.",
+  PAYOUT_CODES_INVALID: "Those amounts do not match the deposits we sent. Check your statement.",
+
+  LISTING_ROLE_MISMATCH: "Your account cannot create this kind of listing.",
+  LISTING_NOT_OWNED: "This listing belongs to someone else.",
+  LISTING_COORDINATES_MISSING: "Set the property location on the listing before verifying it.",
+  LISTING_PROOF_NO_GPS: "That photo has no location attached. Take it in the app with location turned on.",
+  LISTING_PROOF_TOO_FAR: "Take the photo while standing at the property.",
+  LISTING_PHOTO_DUPLICATE: "This photo already appears on another listing. Upload photos you took yourself.",
+  LISTING_BILL_MISMATCH: "The name and address on that bill do not match this listing.",
+
+  BOOKING_DATES_INVALID: "Choose an end date that comes after the start date.",
+  REVIEW_REQUIRES_COMPLETED_STAY: "You can review a property once your stay is complete.",
+
+  NOT_FOUND: "We could not find that.",
+  FORBIDDEN: "You do not have access to this.",
+  VALIDATION_FAILED: "Check the highlighted fields and try again.",
+  RATE_LIMITED: "Too many attempts. Wait a minute and try again.",
+  INTERNAL_ERROR: GENERIC_MESSAGE,
+};
+
+// === Helpers
+
+function isApiErrorCode(value: unknown): value is ApiErrorCode {
+  return typeof value === "string" && value in ERROR_COPY;
+}
+
+export function isApiErrorPayload(value: unknown): value is ApiErrorPayload {
+  return value !== null && typeof value === "object";
+}
+
+/**
+ * Turns whatever the API returned into a sentence worth showing someone.
+ * Prefers the backend message when it carries a known code, because those are
+ * already written for humans and may include a computed detail. Anything without a
+ * recognised code is treated as untrusted internal text and never shown.
+ */
+export function resolveApiError(
+  payload: unknown,
+  fallback: string = GENERIC_MESSAGE,
+): string {
+  if (!isApiErrorPayload(payload)) {
+    return fallback;
+  }
+
+  const code = "code" in payload ? payload.code : undefined;
+
+  if (!isApiErrorCode(code)) {
+    return fallback;
+  }
+
+  // A rejected field says exactly what is wrong; the envelope message is "Validation
+  // failed", which leaves someone re-reading a form with no idea which box to fix.
+  const fieldReasons = collectFieldReasons(
+    "data" in payload ? payload.data : undefined,
+  );
+
+  if (fieldReasons) {
+    return fieldReasons;
+  }
+
+  const message = "message" in payload ? payload.message : undefined;
+
+  if (typeof message === "string" && message.trim()) {
+    return message;
+  }
+
+  return ERROR_COPY[code];
+}
+
+/** Bean validation answers with a field-to-reason map. Anything else is not one. */
+function collectFieldReasons(value: unknown): string | null {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+
+  const reasons = Object.values(value).filter(
+    (reason): reason is string => typeof reason === "string" && !!reason.trim(),
+  );
+
+  return reasons.length > 0 ? reasons.join(" ") : null;
+}
+
+export function getErrorCopy(code: ApiErrorCode): string {
+  return ERROR_COPY[code];
+}
+
+==== C:\Users\Chibuike Richard\OneDrive\Documents\jbr\keyz-frontend\src\lib\publicIds.ts ====
+// === Public identifiers
+//
+// Public links carry an opaque identifier rather than the numeric database id, so a
+// link survives a rename and the catalogue cannot be walked by counting. The
+// readable slug in front is presentation only: the identifier at the end is what
+// resolves, which is why an outdated slug still finds the right listing.
+
+const PROPERTY_PUBLIC_ID = /(p_[0-9a-f]{16})$/;
+const HOST_PUBLIC_ID = /(u_[0-9a-f]{16})$/;
+
+/** Anything a public link can be built for. */
+export interface PublicLinkTarget {
+  id: number | string;
+  publicId?: string | null;
+  slug?: string | null;
+}
+
+/** The identifier at the end of a route segment such as `luxury-terrace-p_...`. */
+export function propertyPublicIdFrom(segment: string): string | null {
+  return PROPERTY_PUBLIC_ID.exec(segment)?.[1] ?? null;
+}
+
+export function hostPublicIdFrom(segment: string): string | null {
+  return HOST_PUBLIC_ID.exec(segment)?.[1] ?? null;
+}
+
+/** The route segment a record should live at. */
+export function canonicalSegment(target: PublicLinkTarget): string {
+  if (!target.publicId) {
+    // Data from before identifiers existed still links, and the page redirects it
+    return String(target.id);
+  }
+
+  return target.slug ? `${target.slug}-${target.publicId}` : target.publicId;
+}
+
+export function propertyPath(target: PublicLinkTarget): string {
+  return `/property/${canonicalSegment(target)}`;
+}
+
+export function hostPath(target: PublicLinkTarget): string {
+  return `/host/${canonicalSegment(target)}`;
+}
+
+==== C:\Users\Chibuike Richard\OneDrive\Documents\jbr\keyz-frontend\src\lib\propertyGallery.ts ====
+"use client";
+
+import { getBrowserSessionMarker } from "@/lib/authSession";
+
+import { apiRequest } from "@/lib/apiRequest";
+import { resolveApiError } from "@/lib/errors";
+
+// === Types
+
+export interface GalleryImage {
+  caption: string | null;
+  /** Position zero. The cover is what the whole platform shows for the listing. */
+  cover: boolean;
+  id: number;
+  position: number;
+  url: string;
+}
+
+export interface GalleryResult<TValue> {
+  data: TValue;
+  message?: string;
+}
+
+// === Guards
+
+function isGalleryImage(value: unknown): value is GalleryImage {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    "id" in value &&
+    typeof value.id === "number" &&
+    "url" in value &&
+    typeof value.url === "string"
+  );
+}
+
+function unwrap(payload: unknown): unknown {
+  return payload !== null && typeof payload === "object" && "data" in payload
+    ? payload.data
+    : null;
+}
+
+function getSessionMarker(): string {
+  return getBrowserSessionMarker();
+}
+
+// === Requests
+
+export async function getGallery(
+  propertyId: number,
+): Promise<GalleryResult<GalleryImage[]>> {
+  try {
+    const response = await apiRequest(`/api/properties/${propertyId}/images`);
+    const payload: unknown = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      return {
+        data: [],
+        message: resolveApiError(payload, "The photos could not be loaded."),
+      };
+    }
+
+    const data = unwrap(payload);
+
+    return Array.isArray(data)
+      ? { data: data.filter(isGalleryImage) }
+      : { data: [], message: "The photos could not be loaded." };
+  } catch {
+    return { data: [], message: "The photos could not be loaded." };
+  }
+}
+
+export async function addGalleryImage(
+  propertyId: number,
+  file: File,
+): Promise<GalleryResult<GalleryImage | null>> {
+  const token = getSessionMarker();
+
+  if (!token) {
+    return { data: null, message: "Log in again to add photos." };
+  }
+
+  try {
+    const body = new FormData();
+    body.append("image", file, file.name);
+
+    const response = await apiRequest(`/api/properties/${propertyId}/images`, {
+      method: "POST",
+      headers: {},
+      body,
+    });
+    const payload: unknown = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      return {
+        data: null,
+        message: resolveApiError(payload, "That photo was not added."),
+      };
+    }
+
+    const data = unwrap(payload);
+
+    return isGalleryImage(data)
+      ? { data }
+      : { data: null, message: "That photo was not added." };
+  } catch {
+    return { data: null, message: "That photo was not added." };
+  }
+}
+
+export async function deleteGalleryImage(
+  propertyId: number,
+  imageId: number,
+): Promise<GalleryResult<boolean>> {
+  const token = getSessionMarker();
+
+  if (!token) {
+    return { data: false, message: "Log in again to remove photos." };
+  }
+
+  try {
+    const response = await apiRequest(
+      `/api/properties/${propertyId}/images/${imageId}`,
+      { method: "DELETE", headers: {} },
+    );
+
+    if (!response.ok) {
+      const payload: unknown = await response.json().catch(() => null);
+
+      return {
+        data: false,
+        message: resolveApiError(payload, "That photo was not removed."),
+      };
+    }
+
+    return { data: true };
+  } catch {
+    return { data: false, message: "That photo was not removed." };
+  }
+}
+
+/** The first id given becomes the cover. */
+export async function reorderGallery(
+  propertyId: number,
+  imageIds: number[],
+): Promise<GalleryResult<GalleryImage[]>> {
+  const token = getSessionMarker();
+
+  if (!token) {
+    return { data: [], message: "Log in again to reorder photos." };
+  }
+
+  try {
+    const response = await apiRequest(
+      `/api/properties/${propertyId}/images/order`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(imageIds),
+      },
+    );
+    const payload: unknown = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      return {
+        data: [],
+        message: resolveApiError(payload, "The order was not saved."),
+      };
+    }
+
+    const data = unwrap(payload);
+
+    return Array.isArray(data)
+      ? { data: data.filter(isGalleryImage) }
+      : { data: [], message: "The order was not saved." };
+  } catch {
+    return { data: [], message: "The order was not saved." };
+  }
+}
+
+==== C:\Users\Chibuike Richard\OneDrive\Documents\jbr\keyz-frontend\src\app\api\_authenticatedProxy.ts ====
+import { listHeaders, requestIdHeader } from "@/app/api/_requestId";
+import { rejectCrossSiteMutation } from "@/app/api/_csrf";
+import { getSessionToken } from "@/app/api/_session";
+
+const API_BASE_URL = process.env.API_BASE_URL;
+const REQUEST_TIMEOUT_MS = 90000;
+
+interface AuthenticatedProxyOptions {
+  /** Forward without a token when there is none, for reads the backend serves publicly. */
+  allowAnonymous?: boolean;
+  backendPath: string;
+  method: "DELETE" | "GET" | "PATCH" | "POST" | "PUT";
+  request: Request;
+}
+
+export async function proxyAuthenticatedRequest({
+  allowAnonymous = false,
+  backendPath,
+  method,
+  request,
+}: AuthenticatedProxyOptions): Promise<Response> {
+  if (!API_BASE_URL) {
+    return Response.json(
+      {
+        success: false,
+        message: "API_BASE_URL is not configured.",
+        data: null,
+      },
+      { status: 500 },
+    );
+  }
+
+  const rejected = rejectCrossSiteMutation(request);
+
+  if (rejected) {
+    return rejected;
+  }
+
+  const token = await getSessionToken();
+
+  if (!token && !allowAnonymous) {
+    return Response.json(
+      { success: false, message: "Authorization is required.", data: null },
+      { status: 401 },
+    );
+  }
+
+  const controller = new AbortController();
+  const timeout = globalThis.setTimeout(
+    () => controller.abort(),
+    REQUEST_TIMEOUT_MS,
+  );
+  const backendUrl = `${API_BASE_URL.replace(/\/$/, "")}${backendPath}`;
+  // Bytes, not text: reading a multipart upload as text corrupts every file in it
+  const body =
+    method === "POST" || method === "PATCH" || method === "PUT"
+      ? await request.arrayBuffer()
+      : undefined;
+  const headers = new Headers(
+    token ? { Authorization: `Bearer ${token}` } : {},
+  );
+
+  if (body && body.byteLength > 0) {
+    headers.set(
+      "Content-Type",
+      request.headers.get("Content-Type") ?? "application/json",
+    );
+  }
+
+  try {
+    const response = await fetch(backendUrl, {
+      method,
+      headers,
+      body: body && body.byteLength > 0 ? body : undefined,
+      signal: controller.signal,
+    });
+
+    const contentDisposition = response.headers.get("Content-Disposition");
+
+    // A download (a CSV export) passes through as bytes with its filename
+    if (response.ok && contentDisposition) {
+      return new Response(await response.arrayBuffer(), {
+        status: response.status,
+        headers: {
+          "Content-Type":
+            response.headers.get("Content-Type") ?? "application/octet-stream",
+          "Content-Disposition": contentDisposition,
+          "Cache-Control": response.headers.get("Cache-Control") ?? "no-store",
+          ...requestIdHeader(response),
+        },
+      });
+    }
+
+    const responseBody = await response.text();
+    const contentType =
+      response.headers.get("Content-Type") ?? "application/json";
+
+    if (!response.ok) {
+      let message =
+        response.status === 401 || response.status === 403
+          ? "Your session has expired. Log in again."
+          : "The account request failed.";
+      // The client keys its copy off this, and drops back to a generic line without it
+      let code: string | null = null;
+      // A rejected field carries its reason here, and "Validation failed" alone does not
+      let details: unknown = null;
+
+      if (responseBody && contentType.includes("application/json")) {
+        const errorBody: unknown = JSON.parse(responseBody);
+
+        if (errorBody !== null && typeof errorBody === "object") {
+          if (
+            "message" in errorBody &&
+            typeof errorBody.message === "string" &&
+            errorBody.message
+          ) {
+            message = errorBody.message;
+          }
+
+          if (
+            "code" in errorBody &&
+            typeof errorBody.code === "string" &&
+            errorBody.code
+          ) {
+            code = errorBody.code;
+          }
+
+          if ("data" in errorBody && errorBody.data) {
+            details = errorBody.data;
+          }
+        }
+      } else if (responseBody) {
+        message = responseBody;
+      }
+
+      return Response.json(
+        { success: false, message, data: details, ...(code ? { code } : {}) },
+        {
+          status: response.status,
+          headers: {
+            "Cache-Control": "no-store",
+            ...requestIdHeader(response),
+          },
+        },
+      );
+    }
+
+    return new Response(responseBody || null, {
+      status: response.status,
+      headers: {
+        "Cache-Control": "no-store",
+        "Content-Type": contentType,
+        ...listHeaders(response),
+      },
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      return Response.json(
+        {
+          success: false,
+          message: "The account server timed out. Please try again.",
+          data: null,
+        },
+        { status: 504 },
+      );
+    }
+
+    console.error("Authenticated proxy request could not reach backend", {
+      backendUrl,
+      error,
+    });
+
+    return Response.json(
+      {
+        success: false,
+        message: "Unable to reach the account server right now.",
+        data: null,
+      },
+      { status: 502 },
+    );
+  } finally {
+    globalThis.clearTimeout(timeout);
+  }
+}
+
+==== C:\Users\Chibuike Richard\OneDrive\Documents\jbr\keyz-frontend\src\app\api\_authResponse.ts ====
+import "server-only";
+
+import { setSessionCookie } from "@/app/api/_session";
+import { requestIdHeader } from "@/app/api/_requestId";
+
+interface AuthData {
+  accessToken?: unknown;
+  expiresAt?: unknown;
+  [key: string]: unknown;
+}
+
+interface AuthEnvelope {
+  data?: AuthData | null;
+  [key: string]: unknown;
+}
+
+function isAuthEnvelope(value: unknown): value is AuthEnvelope {
+  return value !== null && typeof value === "object";
+}
+
+export async function browserAuthResponse(
+  response: Response,
+): Promise<Response> {
+  const contentType = response.headers.get("Content-Type") ?? "application/json";
+  const responseHeaders = {
+    "Cache-Control": "no-store",
+    "Content-Type": contentType,
+    ...requestIdHeader(response),
+  };
+  const body = await response.text();
+
+  if (!body || !contentType.includes("application/json")) {
+    return new Response(body || null, {
+      status: response.status,
+      headers: responseHeaders,
+    });
+  }
+
+  let payload: unknown;
+
+  try {
+    payload = JSON.parse(body);
+  } catch {
+    return new Response(body, {
+      status: response.status,
+      headers: responseHeaders,
+    });
+  }
+
+  if (!response.ok || !isAuthEnvelope(payload) || !payload.data) {
+    return Response.json(payload, {
+      status: response.status,
+      headers: responseHeaders,
+    });
+  }
+
+  const { accessToken, expiresAt, ...safeData } = payload.data;
+
+  if (typeof accessToken === "string" && accessToken) {
+    await setSessionCookie(accessToken, {
+      expiresAt: typeof expiresAt === "string" ? expiresAt : undefined,
+    });
+  }
+
+  return Response.json(
+    { ...payload, data: { ...safeData, expiresAt } },
+    { status: response.status, headers: responseHeaders },
+  );
+}
+
+==== C:\Users\Chibuike Richard\OneDrive\Documents\jbr\keyz-frontend\src\app\api\_catchAllProxy.ts ====
+import { proxyAuthenticatedRequest } from "@/app/api/_authenticatedProxy";
+
+// === Types
+
+interface CatchAllContext {
+  params: Promise<{ segments?: string[] }>;
+}
+
+type RouteHandler = (
+  request: Request,
+  context: CatchAllContext,
+) => Promise<Response>;
+
+export interface CatchAllHandlers {
+  DELETE: RouteHandler;
+  GET: RouteHandler;
+  PATCH: RouteHandler;
+  POST: RouteHandler;
+  PUT: RouteHandler;
+}
+
+// === Handlers
+
+/**
+ * Every method for one backend prefix, for an optional catch-all route such as
+ * `app/api/mandates/[[...segments]]`. The authenticated proxy forwards bodies as
+ * bytes, so uploads and JSON both pass through intact.
+ */
+export function createCatchAllHandlers(backendPrefix: string): CatchAllHandlers {
+  const handle =
+    (method: "DELETE" | "GET" | "PATCH" | "POST" | "PUT"): RouteHandler =>
+    async (request, context) => {
+      const { segments } = await context.params;
+      const path = (segments ?? []).map(encodeURIComponent).join("/");
+
+      return proxyAuthenticatedRequest({
+        backendPath: `${backendPrefix}${path ? `/${path}` : ""}${new URL(request.url).search}`,
+        method,
+        request,
+      });
+    };
+
+  return {
+    DELETE: handle("DELETE"),
+    GET: handle("GET"),
+    PATCH: handle("PATCH"),
+    POST: handle("POST"),
+    PUT: handle("PUT"),
+  };
+}
+
+==== C:\Users\Chibuike Richard\OneDrive\Documents\jbr\keyz-frontend\src\app\api\_csrf.ts ====
+import "server-only";
+
+const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+
+export function rejectCrossSiteMutation(request: Request): Response | null {
+  if (SAFE_METHODS.has(request.method.toUpperCase())) {
+    return null;
+  }
+
+  const fetchSite = request.headers.get("Sec-Fetch-Site");
+
+  if (fetchSite === "cross-site") {
+    return Response.json(
+      { success: false, message: "Cross-site requests are not allowed.", data: null },
+      { status: 403 },
+    );
+  }
+
+  const origin = request.headers.get("Origin");
+
+  if (origin && origin !== new URL(request.url).origin) {
+    return Response.json(
+      { success: false, message: "Request origin is not allowed.", data: null },
+      { status: 403 },
+    );
+  }
+
+  return null;
+}
+
+==== C:\Users\Chibuike Richard\OneDrive\Documents\jbr\keyz-frontend\src\app\api\_requestId.ts ====
+/**
+ * The backend names every request in an X-Request-Id header.
+ *
+ * The proxies used to rebuild each response with only a content type, so that name
+ * never reached the browser. Passing it through lets a slow or failed screen be
+ * matched to the server log lines that explain it.
+ */
+export function requestIdHeader(response: Response): Record<string, string> {
+  const requestId = response.headers.get("X-Request-Id");
+
+  return requestId ? { "X-Request-Id": requestId } : {};
+}
+
+/**
+ * The request id plus what a paged list reports about the rest of it: the full count
+ * for page numbers, or the next cursor for a list that grows while it is read.
+ */
+export function listHeaders(response: Response): Record<string, string> {
+  const total = response.headers.get("X-Total-Count");
+  const nextCursor = response.headers.get("X-Next-Cursor");
+
+  return {
+    ...requestIdHeader(response),
+    ...(total ? { "X-Total-Count": total } : {}),
+    ...(nextCursor ? { "X-Next-Cursor": nextCursor } : {}),
+  };
+}
+
+/**
+ * The validators a cacheable response carries. Without them the browser never has
+ * a tag to send back, so the backend's 304 could never happen through a proxy.
+ */
+export function cacheHeaders(response: Response): Record<string, string> {
+  const headers: Record<string, string> = {};
+
+  for (const name of ["ETag", "Cache-Control", "Last-Modified"]) {
+    const value = response.headers.get(name);
+
+    if (value) {
+      headers[name] = value;
+    }
+  }
+
+  return headers;
+}
+
+==== C:\Users\Chibuike Richard\OneDrive\Documents\jbr\keyz-frontend\src\app\api\_session.ts ====
+import "server-only";
+
+import { cookies } from "next/headers";
+
+const SESSION_COOKIE_NAME = "rello_session";
+const DEFAULT_SESSION_SECONDS = 24 * 60 * 60;
+
+interface SessionCookieOptions {
+  expiresAt?: string;
+}
+
+function getExpiry(expiresAt?: string): Date {
+  const parsed = expiresAt ? new Date(expiresAt) : null;
+
+  return parsed && Number.isFinite(parsed.getTime())
+    ? parsed
+    : new Date(Date.now() + DEFAULT_SESSION_SECONDS * 1000);
+}
+
+export async function getSessionToken(): Promise<string | null> {
+  return (await cookies()).get(SESSION_COOKIE_NAME)?.value ?? null;
+}
+
+export async function setSessionCookie(
+  token: string,
+  options: SessionCookieOptions = {},
+): Promise<void> {
+  const expires = getExpiry(options.expiresAt);
+
+  (await cookies()).set(SESSION_COOKIE_NAME, token, {
+    expires,
+    httpOnly: true,
+    path: "/",
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+  });
+}
+
+export async function clearSessionCookie(): Promise<void> {
+  (await cookies()).set(SESSION_COOKIE_NAME, "", {
+    expires: new Date(0),
+    httpOnly: true,
+    maxAge: 0,
+    path: "/",
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+  });
+}
+
+==== C:\Users\Chibuike Richard\OneDrive\Documents\jbr\keyz-frontend\src\app\globals.css ====
+@import "tailwindcss";
+@plugin "@iconify/tailwind4";
+
+:root {
+  --font-display: var(--rello-font-display);
+  --font-body: var(--rello-font-body);
+  --font-accent: var(--rello-font-accent);
+  --color-primary: #04344c;
+  --color-primary-dark: #04344c;
+  --color-primary-soft: #04344c;
+  --color-accent: #c9913a;
+  --color-accent-alt: #b57e2e;
+  --color-bg: #fafaf8;
+  --color-surface: #04344c;
+  --color-surface-soft: #faf8f5;
+  --color-footer: #04344c;
+  --color-text: #111827;
+  --color-text-muted: #6b7280;
+  --color-border: #e5e7eb;
+  --color-skeleton: #dce1e2;
+  --color-skeleton-strong: #cbd3d6;
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: var(--font-body), sans-serif;
+    font-optical-sizing: auto;
+    font-style: normal;
+    color: var(--color-text);
+    background: var(--color-bg);
+  }
+
+  :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display), serif;
+    font-optical-sizing: auto;
+    font-style: normal;
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: var(--font-display), serif;
+    font-optical-sizing: auto;
+    font-style: normal;
+  }
+
+  .font-body {
+    font-family: var(--font-body), sans-serif;
+    font-optical-sizing: auto;
+    font-style: normal;
+  }
+
+  .font-accent {
+    font-family: var(--font-accent), sans-serif;
+    font-optical-sizing: auto;
+    font-style: normal;
+  }
+
+  .bg-bg {
+    background-color: var(--color-bg);
+  }
+
+  .bg-border {
+    background-color: var(--color-border);
+  }
+
+  .bg-skeleton {
+    background-color: var(--color-skeleton);
+  }
+
+  .bg-skeleton-strong {
+    background-color: var(--color-skeleton-strong);
+  }
+
+  .bg-primary {
+    background-color: var(--color-primary);
+  }
+
+  .bg-primary-dark {
+    background-color: var(--color-primary-dark);
+  }
+
+  .bg-primary-soft {
+    background-color: var(--color-primary-soft);
+  }
+
+  .bg-accent {
+    background-color: var(--color-accent);
+  }
+
+  .bg-accent-alt {
+    background-color: var(--color-accent-alt);
+  }
+
+  .bg-surface {
+    background-color: var(--color-surface);
+  }
+
+  .bg-surface-soft {
+    background-color: var(--color-surface-soft);
+  }
+
+  .bg-footer {
+    background-color: var(--color-footer);
+  }
+
+  .modal-backdrop {
+    background-color: rgb(4 52 76 / 60%);
+    -webkit-backdrop-filter: blur(2px);
+    backdrop-filter: blur(2px);
+  }
+
+  .text-primary-soft {
+    color: var(--color-primary-soft);
+  }
+
+  .text-primary {
+    color: var(--color-primary);
+  }
+
+  .text-accent {
+    color: var(--color-accent);
+  }
+
+  .text-accent-alt {
+    color: var(--color-accent-alt);
+  }
+
+  .text-muted {
+    color: var(--color-text-muted);
+  }
+
+  .border-border {
+    border-color: var(--color-border);
+  }
+
+  .border-accent {
+    border-color: var(--color-accent);
+  }
+
+  .border-primary {
+    border-color: var(--color-primary);
+  }
+
+  .border-surface {
+    border-color: var(--color-border);
+  }
+
+  .fill-accent {
+    fill: var(--color-accent);
+  }
+
+  .stroke-accent {
+    stroke: var(--color-accent);
+  }
+
+  .stroke-muted {
+    stroke: var(--color-text-muted);
+  }
+
+  .from-primary {
+    --tw-gradient-from: var(--color-primary) var(--tw-gradient-from-position);
+    --tw-gradient-to: rgb(4 52 76 / 0) var(--tw-gradient-to-position);
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+  }
+
+  .to-primary-dark {
+    --tw-gradient-to: var(--color-primary-dark) var(--tw-gradient-to-position);
+  }
+
+  .nav-link {
+    position: relative;
+    display: inline-block;
+    padding-block: 0.25rem;
+  }
+
+  .nav-link::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -0.125rem;
+    width: 100%;
+    height: 2px;
+    background-color: var(--color-accent);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 300ms ease;
+  }
+
+  .nav-link:hover::after,
+  .nav-link:focus-visible::after {
+    transform: scaleX(1);
+  }
+
+  .button-fill-hover {
+    position: relative;
+    overflow: hidden;
+    transition: color 300ms ease;
+  }
+
+  .button-fill-hover::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background-color: var(--color-accent);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 300ms ease;
+  }
+
+  .button-fill-hover:hover::before,
+  .button-fill-hover:focus-visible::before {
+    transform: scaleX(1);
+  }
+
+  .hero-overlay {
+    background: linear-gradient(
+      to right,
+      rgba(4, 52, 76, 0.95),
+      rgba(4, 52, 76, 0.7) 48%,
+      rgba(4, 52, 76, 0.1)
+    );
+  }
+
+  .settings-hero-surface {
+    background: linear-gradient(
+      135deg,
+      var(--color-primary),
+      var(--color-primary-dark)
+    );
+  }
+
+  .premium-hover {
+    transition-property: all;
+    transition-duration: 200ms;
+    transition-timing-function: ease-in-out;
+  }
+
+  .premium-hover:hover,
+  .premium-hover:focus-visible {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+  }
+
+  .hero-mesh {
+    background:
+      radial-gradient(
+        circle at 16% 18%,
+        rgba(201, 145, 58, 0.28),
+        transparent 28%
+      ),
+      radial-gradient(
+        circle at 78% 18%,
+        rgba(4, 52, 76, 0.18),
+        transparent 30%
+      ),
+      radial-gradient(
+        circle at 48% 82%,
+        rgba(201, 145, 58, 0.18),
+        transparent 34%
+      ),
+      linear-gradient(135deg, rgba(4, 52, 76, 0.92), rgba(4, 52, 76, 0.34));
+    animation: hero-mesh-shift 14s ease-in-out infinite alternate;
+    background-size: 120% 120%;
+  }
+
+  .page-mesh {
+    background:
+      radial-gradient(
+        circle at 12% 10%,
+        rgba(201, 145, 58, 0.16),
+        transparent 26%
+      ),
+      radial-gradient(
+        circle at 86% 12%,
+        rgba(4, 52, 76, 0.12),
+        transparent 26%
+      ),
+      var(--color-bg);
+  }
+
+  .newsletter-overlay {
+    background: linear-gradient(
+      to right,
+      transparent,
+      var(--color-primary-dark)
+    );
+  }
+
+  .cta-overlay {
+    background: rgba(4, 52, 76, 0.75);
+  }
+
+  .rello-marquee {
+    animation: rello-marquee 24s linear infinite;
+  }
+}
+
+@keyframes rello-marquee {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-33.333%);
+  }
+}
+
+@keyframes hero-mesh-shift {
+  from {
+    background-position: 0% 0%;
+  }
+
+  to {
+    background-position: 100% 70%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .hero-mesh,
+  .rello-marquee {
+    animation: none;
+  }
+}
+
