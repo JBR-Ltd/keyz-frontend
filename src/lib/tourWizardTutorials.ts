@@ -1,7 +1,7 @@
 // src/lib/tourWizardTutorials.ts
 //
 // Spotlight scripts for each wizard step, keyed by the current step id
-// ("floor-setup", "capture", ...). Each script is short — 1 to 3 stops —
+// ("floor-setup", "capture", ...). Each script is short — 1 to 6 stops —
 // and targets a `data-tour` attribute stamped on a child component. The
 // tutorials never reference CSS classes or DOM structure, so refactoring
 // the markup does not break them.
@@ -77,10 +77,28 @@ export const WIZARD_STEP_TUTORIALS: Record<string, ProductTourStep[]> = {
 
   "door-link": [
     {
+      target: '[data-tour="door-pin-board"]',
+      title: "Meet your door board",
+      body: "The room you captured appears here. Each pin you place represents one doorway — and its position on the room reflects where the doorway actually is. A door on the north wall sits on the north side of the board, and so on.",
+      placement: "bottom",
+    },
+    {
       target: '[data-tour="door-add"]',
-      title: "Pin every opening",
-      body: "Tap + Add another door for each doorway. Drag the pin along the wall, then say where it leads — another room, outside, or a staircase.",
+      title: "Add a pin for every opening",
+      body: "Tap + Add another door for each doorway, arch, or functional opening you can see. Don't worry about the exact spot yet — you'll drag it into place next.",
       placement: "top",
+    },
+    {
+      target: '[data-tour="door-pin-board"]',
+      title: "Drag the pin to the right spot",
+      body: "Drag each pin along the walls until it lines up with the real doorway. Draft pins are always draggable. A saved door stays put until you open it and press Edit connection — that keeps a stray touch from shifting a door you already linked.",
+      placement: "bottom",
+    },
+    {
+      target: '[data-tour="door-pin-board"]',
+      title: "Tap a pin to answer what's through it",
+      body: "Once a pin is placed, tap it to open its editor and say where it leads: another room in this tour, outside / compound, or a staircase. That answer is what makes the walkthrough work — a door that points nowhere is a dead end.",
+      placement: "bottom",
     },
     {
       target: '[data-tour="door-staircases"]',
@@ -90,8 +108,8 @@ export const WIZARD_STEP_TUTORIALS: Record<string, ProductTourStep[]> = {
     },
     {
       target: '[data-tour="door-continue"]',
-      title: "Continue when you're done",
-      body: "Every door should have a linked destination. Press Continue to return to the room board.",
+      title: "Continue once every door has an answer",
+      body: "The counter above the board tracks how many doors you've linked. When they all point somewhere, press Continue to return to the room board.",
       placement: "top",
     },
   ],

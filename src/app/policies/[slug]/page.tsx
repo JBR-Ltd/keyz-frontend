@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactElement } from "react";
 import { POLICIES, findPolicy } from "@/lib/policies";
+import { siteUrl } from "@/lib/seoProperties";
 
 interface PolicyPageProps {
   params: Promise<{ slug: string }>;
@@ -15,8 +16,17 @@ export async function generateMetadata({ params }: PolicyPageProps) {
   const policy = findPolicy((await params).slug);
 
   return policy
-    ? { title: `${policy.title} | Rello`, description: policy.summary }
-    : { title: "Policy | Rello" };
+    ? {
+        title: policy.title,
+        description: policy.summary,
+        alternates: {
+          canonical: `${siteUrl()}/policies/${policy.slug}`,
+        },
+      }
+    : {
+        title: "Policy",
+        robots: { follow: false, index: false },
+      };
 }
 
 export default async function PolicyPage({

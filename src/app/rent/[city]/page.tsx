@@ -8,6 +8,7 @@ import {
   getRentalCities,
   propertyPath,
   siteUrl,
+  structuredDataJson,
   type SeoProperty,
 } from "@/lib/seoProperties";
 
@@ -62,7 +63,10 @@ export async function generateMetadata({
   const city = await resolveCity(slug);
 
   if (!city) {
-    return { title: "Area not found" };
+    return {
+      title: "Area not found",
+      robots: { follow: false, index: false },
+    };
   }
 
   const title = `Property for Rent in ${city}`;
@@ -101,27 +105,80 @@ export default async function CityRentalsPage({
   }
 
   const properties = await getPropertiesInCity(city);
+  const canonical = `${siteUrl()}/rent/${slug}`;
   const structuredData = {
     "@context": "https://schema.org",
-    "@type": "ItemList",
-    name: `Property for rent in ${city}`,
-    numberOfItems: properties.length,
-    itemListElement: properties.map((property, index) => ({
-      "@type": "ListItem",
-      position: index + 1,
-      url: `${siteUrl()}${propertyPath(property)}`,
-      name: property.title,
-    })),
+    "@graph": [
+      {
+        "@type": "ItemList",
+        name: `Property for rent in ${city}`,
+        numberOfItems: properties.length,
+        itemListElement: properties.map((property, index) => ({
+          "@type": "ListItem",
+          position: index + 1,
+          url: `${siteUrl()}${propertyPath(property)}`,
+          name: property.title,
+        })),
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            item: siteUrl(),
+            name: "Home",
+            position: 1,
+          },
+          {
+            "@type": "ListItem",
+            item: `${siteUrl()}/browse`,
+            name: "Browse homes",
+            position: 2,
+          },
+          {
+            "@type": "ListItem",
+            item: canonical,
+            name: `Homes in ${city}`,
+            position: 3,
+          },
+        ],
+      },
+    ],
   };
 
   return (
     <main className="min-h-screen bg-[var(--color-bg)] px-5 py-16 sm:px-8 lg:px-10 lg:py-20 xl:px-14">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+        dangerouslySetInnerHTML={{ __html: structuredDataJson(structuredData) }}
       />
 
       <header className="mx-auto max-w-5xl">
+        <nav aria-label="Breadcrumb" className="mb-7 font-body text-sm">
+          <ol className="flex flex-wrap items-center gap-2 text-muted">
+            <li>
+              <Link
+                href="/"
+                className="rounded-sm underline-offset-4 hover:text-primary hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                Home
+              </Link>
+            </li>
+            <li aria-hidden="true">/</li>
+            <li>
+              <Link
+                href="/browse"
+                className="rounded-sm underline-offset-4 hover:text-primary hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                Browse homes
+              </Link>
+            </li>
+            <li aria-hidden="true">/</li>
+            <li aria-current="page" className="text-primary">
+              {city}
+            </li>
+          </ol>
+        </nav>
         <p className="font-accent text-xs font-bold uppercase tracking-[0.3em] text-primary">
           Rentals
         </p>

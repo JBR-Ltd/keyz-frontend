@@ -89,10 +89,10 @@ export default function PanoramaCapture({
   };
 
   const sizeChips = (
-   <div data-tour="capture-size" className="mt-6">
-  <span className="font-body text-sm font-bold text-primary">
-    How big is this room?
-  </span>
+    <div data-tour="capture-size" className="mt-6">
+      <span className="font-body text-sm font-bold text-primary">
+        How big is this room?
+      </span>
       <div className="mt-2 grid grid-cols-3 gap-2">
         {SIZE_OPTIONS.map((option) => {
           const isSelected = sizeBucket === option.value;
@@ -135,7 +135,12 @@ export default function PanoramaCapture({
             : "border-primary/25 hover:border-accent hover:bg-accent/5"
         }`}
       >
-        <input {...getInputProps({ capture: "environment" })} />
+        {/*
+          No `capture` attribute. That forces the OS to open the camera
+          directly on mobile. Without it, the picker offers Photos, Files,
+          Google Drive, and the camera — the user picks the source.
+        */}
+        <input {...getInputProps()} />
         {preview ? (
           // eslint-disable-next-line @next/next/no-img-element -- next/image cannot optimize local blob URLs
           <img
@@ -159,11 +164,11 @@ export default function PanoramaCapture({
       </label>
 
       <button
-  type="button"
-  data-tour="capture-submit"
-  disabled={!selectedFile || isSubmitting}
-  aria-busy={isSubmitting}
-  onClick={() => void submitWithFile()}
+        type="button"
+        data-tour="capture-submit"
+        disabled={!selectedFile || isSubmitting}
+        aria-busy={isSubmitting}
+        onClick={() => void submitWithFile()}
         className="mt-5 inline-flex min-h-12 w-full items-center justify-center rounded-full bg-accent px-7 py-3 font-body text-sm font-bold text-primary transition-all duration-200 hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-50"
       >
         <AsyncButtonContent
@@ -235,12 +240,12 @@ export default function PanoramaCapture({
               <RotateCcw size={15} aria-hidden="true" />
               Retake panorama
             </button>
-           <button
-  type="button"
-  data-tour="capture-submit"
-  disabled={isSubmitting}
-  aria-busy={isSubmitting}
-  onClick={() => void submitWithoutFile()}
+            <button
+              type="button"
+              data-tour="capture-submit"
+              disabled={isSubmitting}
+              aria-busy={isSubmitting}
+              onClick={() => void submitWithoutFile()}
               className="inline-flex min-h-12 flex-1 items-center justify-center rounded-full bg-accent px-6 py-3 font-body text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-white disabled:cursor-wait disabled:opacity-60"
             >
               <AsyncButtonContent

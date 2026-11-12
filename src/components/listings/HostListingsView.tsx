@@ -3,6 +3,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   ArrowRight,
+  Archive,
   CheckCircle2,
   CircleAlert,
   Clock3,
@@ -10,26 +11,34 @@ import {
   Eye,
   Home,
   Plus,
+  RotateCcw,
   Search,
   ShieldQuestion,
+  Trash2,
   X,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 import PropertyPrice from "@/components/property/PropertyPrice";
+import ConfirmActionModal from "@/components/settings/ConfirmActionModal";
 import {
   StatusBadge,
   type StatusBadgeProps,
 } from "@/components/ui/status-badge";
 import {
+  archiveHostListing,
   getHostListings,
+  restoreHostListing,
+  toDraftNumber,
   type HostListingRecord,
   type HostListingRole,
   type HostListingWorkflowStatus,
   subscribeToHostListings,
 } from "@/lib/hostListings";
+import { deleteDraft } from "@/lib/propertyDrafts";
 import { propertyPath } from "@/lib/publicIds";
+import { useToast } from "@/components/ui/toast";
 
 interface HostListingsViewProps {
   role: HostListingRole;
@@ -42,7 +51,15 @@ interface ListingStatusStyle {
   tone: NonNullable<StatusBadgeProps["tone"]>;
 }
 
-type ListingFilter = "ALL" | "DRAFT" | "NEEDS_ACTION" | "UNDER_REVIEW" | "LIVE";
+type ListingFilter =
+  | "ALL"
+  | "DRAFT"
+  | "NEEDS_ACTION"
+  | "UNDER_REVIEW"
+  | "LIVE"
+  | "ARCHIVED";
+
+type ListingRemovalAction = "archive" | "restore" | "delete-draft";
 
 interface FilterOption {
   id: ListingFilter;
@@ -55,9 +72,16 @@ const FILTERS: FilterOption[] = [
   { id: "NEEDS_ACTION", label: "Needs action" },
   { id: "UNDER_REVIEW", label: "Under review" },
   { id: "LIVE", label: "Live" },
+  { id: "ARCHIVED", label: "Archived" },
 ];
 
 const STATUS_STYLES: Record<HostListingWorkflowStatus, ListingStatusStyle> = {
+  ARCHIVED: {
+    description: "Hidden from the marketplace. Existing obligations continue.",
+    icon: Archive,
+    label: "Archived",
+    tone: "neutral",
+  },
   DRAFT: {
     description: "Private until you publish it.",
     icon: Clock3,
@@ -123,6 +147,7 @@ function matchesFilter(
   if (filter === "DRAFT") return status === "DRAFT";
   if (filter === "UNDER_REVIEW") return status === "UNDER_REVIEW";
   if (filter === "LIVE") return status === "LIVE";
+  if (filter === "ARCHIVED") return status === "ARCHIVED";
 
   return status === "READY_TO_VERIFY" || status === "NEEDS_CHANGES";
 }
@@ -166,14 +191,21 @@ function actionDetails(
       return { href: verifyHref, label: "Review and resubmit" };
     case "LIVE":
       return { href: manageHref, label: "Manage listing" };
+    case "ARCHIVED":
+      return { href: manageHref, label: "Manage listing" };
   }
 }
 
 function ListingActionsMenu({
   listing,
+  onRequestAction,
   role,
 }: {
   listing: HostListingRecord;
+  onRequestAction: (
+    listing: HostListingRecord,
+    action: ListingRemovalAction,
+  ) => void;
   role: HostListingRole;
 }): ReactElement {
   const [open, setOpen] = useState(false);
@@ -226,22 +258,70 @@ function ListingActionsMenu({
           role="menu"
           className="absolute bottom-full right-0 z-20 mb-2 min-w-56 overflow-hidden rounded-lg border border-border bg-bg py-2 shadow-lg"
         >
-          <Link
-            role="menuitem"
-            href={`/${role}/listings/create?draft=${listing.id}`}
-            onClick={() => setOpen(false)}
-            className="flex min-h-11 items-center px-4 font-body text-sm font-medium text-primary hover:bg-surface-soft focus:bg-surface-soft focus:outline-none"
-          >
-            Edit listing details
-          </Link>
-          <Link
-            role="menuitem"
-            href={`/${role}/listings/${listing.id}`}
-            onClick={() => setOpen(false)}
-            className="flex min-h-11 items-center px-4 font-body text-sm font-medium text-primary hover:bg-surface-soft focus:bg-surface-soft focus:outline-none"
-          >
-            Manage photos and availability
-          </Link>
+          {listing.reviewStatus === "DRAFT" ? (
+            <>
+              <Link
+                role="menuitem"
+                href={`/${role}/listings/create?draft=${listing.id}`}
+                onClick={() => setOpen(false)}
+                className="flex min-h-11 items-center px-4 font-body text-sm font-medium text-primary hover:bg-surface-soft focus:bg-surface-soft focus:outline-none"
+              >
+                Edit draft
+              </Link>
+              <button
+                role="menuitem"
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  onRequestAction(listing, "delete-draft");
+                }}
+                className="flex min-h-11 w-full items-center gap-2 px-4 text-left font-body text-sm font-medium text-red-700 hover:bg-red-700/5 focus:bg-red-700/5 focus:outline-none"
+              >
+                <Trash2 size={16} aria-hidden="true" />
+                Delete draft
+              </button>
+            </>
+          ) : (
+            <>
+              <Link
+                role="menuitem"
+                href={`/${role}/listings/create?draft=${listing.id}`}
+                onClick={() => setOpen(false)}
+                className="flex min-h-11 items-center px-4 font-body text-sm font-medium text-primary hover:bg-surface-soft focus:bg-surface-soft focus:outline-none"
+              >
+                Edit listing details
+              </Link>
+              <Link
+                role="menuitem"
+                href={`/${role}/listings/${listing.id}`}
+                onClick={() => setOpen(false)}
+                className="flex min-h-11 items-center px-4 font-body text-sm font-medium text-primary hover:bg-surface-soft focus:bg-surface-soft focus:outline-none"
+              >
+                Manage photos and availability
+              </Link>
+              <button
+                role="menuitem"
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  onRequestAction(
+                    listing,
+                    listing.reviewStatus === "ARCHIVED" ? "restore" : "archive",
+                  );
+                }}
+                className="flex min-h-11 w-full items-center gap-2 px-4 text-left font-body text-sm font-medium text-primary hover:bg-surface-soft focus:bg-surface-soft focus:outline-none"
+              >
+                {listing.reviewStatus === "ARCHIVED" ? (
+                  <RotateCcw size={16} aria-hidden="true" />
+                ) : (
+                  <Archive size={16} aria-hidden="true" />
+                )}
+                {listing.reviewStatus === "ARCHIVED"
+                  ? "Restore listing"
+                  : "Archive listing"}
+              </button>
+            </>
+          )}
         </div>
       ) : null}
     </div>
@@ -251,12 +331,18 @@ function ListingActionsMenu({
 export default function HostListingsView({
   role,
 }: HostListingsViewProps): ReactElement {
+  const { notify } = useToast();
   const [listings, setListings] = useState<HostListingRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [activeFilter, setActiveFilter] = useState<ListingFilter>("ALL");
   const [query, setQuery] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
+  const [pendingAction, setPendingAction] = useState<{
+    action: ListingRemovalAction;
+    listing: HostListingRecord;
+  } | null>(null);
+  const [actionPending, setActionPending] = useState(false);
   const createHref = `/${role}/listings/create`;
 
   useEffect(() => {
@@ -314,6 +400,46 @@ export default function HostListingsView({
   const clearFilters = (): void => {
     setActiveFilter("ALL");
     setQuery("");
+  };
+
+  const completeListingAction = async (): Promise<void> => {
+    if (!pendingAction) return;
+
+    setActionPending(true);
+    const { action, listing } = pendingAction;
+    const result =
+      action === "delete-draft"
+        ? await deleteDraft(toDraftNumber(listing.id))
+        : action === "archive"
+          ? await archiveHostListing(Number(listing.id))
+          : await restoreHostListing(Number(listing.id));
+    setActionPending(false);
+
+    if (!result.data) {
+      notify({
+        title:
+          action === "delete-draft"
+            ? "Draft not deleted"
+            : action === "archive"
+              ? "Listing not archived"
+              : "Listing not restored",
+        description: result.message ?? "Try again in a moment.",
+        variant: "error",
+      });
+      return;
+    }
+
+    setPendingAction(null);
+    setReloadKey((current) => current + 1);
+    notify({
+      title:
+        action === "delete-draft"
+          ? "Draft deleted"
+          : action === "archive"
+            ? "Listing archived"
+            : "Listing restored",
+      variant: "success",
+    });
   };
 
   return (
@@ -641,9 +767,13 @@ export default function HostListingsView({
                       </Link>
                     ) : null}
 
-                    {!isDraft ? (
-                      <ListingActionsMenu listing={listing} role={role} />
-                    ) : null}
+                    <ListingActionsMenu
+                      listing={listing}
+                      role={role}
+                      onRequestAction={(selectedListing, action) =>
+                        setPendingAction({ listing: selectedListing, action })
+                      }
+                    />
                   </div>
                 </article>
               );
@@ -651,6 +781,42 @@ export default function HostListingsView({
           </section>
         )}
       </div>
+
+      <ConfirmActionModal
+        mode="confirm"
+        isOpen={pendingAction !== null}
+        title={
+          pendingAction?.action === "delete-draft"
+            ? "Delete this draft?"
+            : pendingAction?.action === "restore"
+              ? "Restore this listing?"
+              : "Archive this listing?"
+        }
+        description={
+          pendingAction?.action === "delete-draft"
+            ? "This draft and its photos will be permanently removed. This cannot be undone."
+            : pendingAction?.action === "restore"
+              ? "The listing will return to the status allowed by its current verification and management state."
+              : "The home will leave the marketplace and stop accepting new activity. Existing requests, bookings, tenancies, payments, and disputes will continue."
+        }
+        confirmLabel={
+          pendingAction?.action === "delete-draft"
+            ? "Delete draft"
+            : pendingAction?.action === "restore"
+              ? "Restore listing"
+              : "Archive listing"
+        }
+        pendingLabel={
+          pendingAction?.action === "delete-draft"
+            ? "Deleting draft..."
+            : pendingAction?.action === "restore"
+              ? "Restoring listing..."
+              : "Archiving listing..."
+        }
+        isLoading={actionPending}
+        onCancel={() => setPendingAction(null)}
+        onConfirm={() => void completeListingAction()}
+      />
     </main>
   );
 }

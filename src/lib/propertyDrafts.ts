@@ -4,6 +4,7 @@ import { getBrowserSessionMarker } from "@/lib/authSession";
 
 import { apiRequest } from "@/lib/apiRequest";
 import { resolveApiError } from "@/lib/errors";
+import { uploadListingImage } from "@/lib/listingImageUpload";
 import type { PropertyListingStatus } from "@/lib/propertyDetails";
 import type { RentalMode } from "@/lib/hostListings";
 
@@ -236,6 +237,33 @@ export async function addDraftImage(
   file: Blob,
   name: string,
 ): Promise<DraftResult<PropertyDraft | null>> {
+  try {
+    const direct = await uploadListingImage(
+      file,
+      name,
+      `/api/property-drafts/${draftId}/images/upload-intent`,
+      `/api/property-drafts/${draftId}/images/finalize`,
+    );
+    if (direct.direct && direct.response) {
+      const payload: unknown = await direct.response.json().catch(() => null);
+      if (!direct.response.ok) {
+        return {
+          data: null,
+          message: resolveApiError(
+            payload,
+            "That photo could not be uploaded.",
+          ),
+        };
+      }
+      const data = unwrap(payload);
+      return isDraft(data)
+        ? { data }
+        : { data: null, message: "That photo could not be uploaded." };
+    }
+  } catch {
+    return { data: null, message: "That photo could not be uploaded." };
+  }
+
   const formData = new FormData();
   formData.append("image", file, name);
 

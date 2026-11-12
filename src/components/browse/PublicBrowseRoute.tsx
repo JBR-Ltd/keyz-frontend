@@ -5,40 +5,39 @@ import { useAuthentication } from "@/components/auth/AuthProvider";
 import MarketplaceHeader from "@/components/browse/MarketplaceHeader";
 import DashboardShell from "@/components/dashboard/DashboardShell";
 import TenantBrowsePage from "@/app/(tenant)/tenant/browse/page";
+import type { PropertyQueryResult } from "@/lib/propertyDetails";
 
-function BrowseRouteSkeleton(): ReactElement {
+interface PublicBrowseRouteProps {
+  initialListings: PropertyQueryResult | null;
+}
+
+function BrowseHeaderSkeleton(): ReactElement {
   return (
-    <div
-      className="min-h-screen bg-bg"
-      role="status"
-      aria-label="Loading browse"
-    >
+    <div role="status" aria-label="Loading account navigation">
       <div className="h-20 border-b border-border px-5 py-4 sm:px-8 lg:px-10">
         <div className="mx-auto flex max-w-7xl items-center justify-between">
           <div className="h-11 w-40 animate-pulse rounded-lg bg-skeleton motion-reduce:animate-none" />
           <div className="h-11 w-32 animate-pulse rounded-full bg-skeleton motion-reduce:animate-none" />
         </div>
       </div>
-      <div className="mx-auto max-w-7xl px-5 py-10 sm:px-8 lg:px-10">
-        <div className="h-16 animate-pulse rounded-full bg-skeleton motion-reduce:animate-none" />
-        <div className="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-          {Array.from({ length: 3 }, (_, index) => (
-            <div
-              key={index}
-              className="h-[28rem] animate-pulse rounded-xl bg-skeleton motion-reduce:animate-none"
-            />
-          ))}
-        </div>
-      </div>
-      <span className="sr-only">Loading browse</span>
+      <span className="sr-only">Loading account navigation</span>
     </div>
   );
 }
 
-export default function PublicBrowseRoute(): ReactElement {
+export default function PublicBrowseRoute({
+  initialListings,
+}: PublicBrowseRouteProps): ReactElement {
   const authentication = useAuthentication();
 
-  if (authentication.status === "checking") return <BrowseRouteSkeleton />;
+  if (authentication.status === "checking") {
+    return (
+      <>
+        <BrowseHeaderSkeleton />
+        <TenantBrowsePage initialListings={initialListings} />
+      </>
+    );
+  }
 
   if (
     authentication.status === "authenticated" &&
@@ -46,7 +45,7 @@ export default function PublicBrowseRoute(): ReactElement {
   ) {
     return (
       <DashboardShell rolePath="tenant" roleLabel="Tenant">
-        <TenantBrowsePage />
+        <TenantBrowsePage initialListings={initialListings} />
       </DashboardShell>
     );
   }
@@ -54,7 +53,7 @@ export default function PublicBrowseRoute(): ReactElement {
   return (
     <>
       <MarketplaceHeader role={authentication.user?.role ?? null} />
-      <TenantBrowsePage />
+      <TenantBrowsePage initialListings={initialListings} />
     </>
   );
 }

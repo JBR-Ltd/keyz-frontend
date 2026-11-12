@@ -13,6 +13,7 @@ import {
 import {
   ArrowLeft,
   ArrowUpRight,
+  Archive,
   Building2,
   CalendarOff,
   CheckCircle2,
@@ -21,6 +22,7 @@ import {
   ImagePlus,
   Loader2,
   MapPin,
+  RotateCcw,
   ShieldQuestion,
   Star,
   Trash2,
@@ -45,7 +47,9 @@ import {
   type UnavailableRange,
 } from "@/lib/availability";
 import {
-  getBackendPropertyById,
+  archiveHostListing,
+  getManagedBackendPropertyById,
+  restoreHostListing,
   type BackendProperty,
 } from "@/lib/hostListings";
 import {
@@ -75,7 +79,10 @@ interface ManageListingViewProps {
 
 type ManagementSection = "availability" | "photos" | "tour";
 type LoadStatus = "idle" | "loading" | "ready" | "error";
-type HeaderVerificationState = PropertyVerificationState | "UNAVAILABLE";
+type HeaderVerificationState =
+  | PropertyVerificationState
+  | "ARCHIVED"
+  | "UNAVAILABLE";
 
 interface ManagementTab {
   id: ManagementSection;
@@ -98,6 +105,11 @@ const VERIFICATION_PRESENTATIONS: Record<
   HeaderVerificationState,
   VerificationPresentation
 > = {
+  ARCHIVED: {
+    icon: Archive,
+    label: "Archived",
+    tone: "neutral",
+  },
   NOT_SUBMITTED: {
     icon: ShieldQuestion,
     label: "Ready to verify",
@@ -141,7 +153,10 @@ function formatRange(range: UnavailableRange): string {
 }
 
 function locationLabel(property: BackendProperty): string {
-  return [property.area, property.city].filter(Boolean).join(", ") || property.address;
+  return (
+    [property.area, property.city].filter(Boolean).join(", ") ||
+    property.address
+  );
 }
 
 function rentalPeriodLabel(property: BackendProperty): string {
@@ -180,6 +195,10 @@ export default function ManageListingView({
   const [pageError, setPageError] = useState("");
   const [verificationError, setVerificationError] = useState("");
   const [pageReloadKey, setPageReloadKey] = useState(0);
+  const [listingAction, setListingAction] = useState<
+    "archive" | "restore" | null
+  >(null);
+  const [listingActionPending, setListingActionPending] = useState(false);
 
   const [units, setUnits] = useState<PropertyUnit[]>([]);
   const [unitsStatus, setUnitsStatus] = useState<LoadStatus>("idle");
@@ -283,7 +302,7 @@ export default function ManageListingView({
       setVerificationError("");
 
       const [propertyResult, verificationResult] = await Promise.all([
-        getBackendPropertyById(propertyId),
+        getManagedBackendPropertyById(propertyId),
         getPropertyVerificationStatus(numericId),
       ]);
 
@@ -319,10 +338,7 @@ export default function ManageListingView({
       requests.push(window.setTimeout(() => void loadUnits(), 0));
     }
 
-    if (
-      property.rentalMode === "SHORT_STAY" &&
-      availabilityStatus === "idle"
-    ) {
+    if (property.rentalMode === "SHORT_STAY" && availabilityStatus === "idle") {
       requests.push(window.setTimeout(() => void loadAvailability(), 0));
     }
 
@@ -401,7 +417,9 @@ export default function ManageListingView({
     }
 
     if (files.length > remainingSlots) {
-      rejected.push(`Only ${remainingSlots} more photo${remainingSlots === 1 ? "" : "s"} can be added.`);
+      rejected.push(
+        `Only ${remainingSlots} more photo${remainingSlots === 1 ? "" : "s"} can be added.`,
+      );
     }
 
     setIsUploading(false);
@@ -423,9 +441,10 @@ export default function ManageListingView({
     if (!photoToDelete) return;
 
     setBusyPhotoKey(`${photoToDelete.id}:remove`);
-    const result = await deleteGalleryImage(numericId, photoToDelete.id).finally(
-      () => setBusyPhotoKey(null),
-    );
+    const result = await deleteGalleryImage(
+      numericId,
+      photoToDelete.id,
+    ).finally(() => setBusyPhotoKey(null));
 
     if (!result.data) {
       notify({
@@ -535,6 +554,46 @@ export default function ManageListingView({
     );
   };
 
+  const updateArchiveState = async (): Promise<void> => {
+    if (!listingAction) return;
+
+    setListingActionPending(true);
+    const result =
+      listingAction === "archive"
+        ? await archiveHostListing(numericId)
+        : await restoreHostListing(numericId);
+    setListingActionPending(false);
+
+    if (!result.data) {
+      notify({
+        title:
+          listingAction === "archive"
+            ? "Listing not archived"
+            : "Listing not restored",
+        description: result.message ?? "Try again in a moment.",
+        variant: "error",
+      });
+      return;
+    }
+
+    setProperty((current) =>
+      current
+        ? {
+            ...current,
+            archived: listingAction === "archive",
+            archivedAt:
+              listingAction === "archive" ? new Date().toISOString() : null,
+          }
+        : current,
+    );
+    setListingAction(null);
+    notify({
+      title:
+        listingAction === "archive" ? "Listing archived" : "Listing restored",
+      variant: "success",
+    });
+  };
+
   if (pageLoading) {
     return <ManagementPageSkeleton role={role} />;
   }
@@ -551,7 +610,11 @@ export default function ManageListingView({
             Back to listings
           </Link>
           <section className="flex min-h-[28rem] flex-col items-center justify-center text-center">
-            <CircleAlert size={34} className="text-red-700" aria-hidden="true" />
+            <CircleAlert
+              size={34}
+              className="text-red-700"
+              aria-hidden="true"
+            />
             <h1 className="mt-5 font-display text-3xl font-bold text-primary">
               This listing could not be loaded
             </h1>
@@ -571,17 +634,20 @@ export default function ManageListingView({
     );
   }
 
-  const verificationState: HeaderVerificationState = verificationError
-    ? property.verified
-      ? "VERIFIED"
-      : "UNAVAILABLE"
-    : (verification?.state ?? (property.verified ? "VERIFIED" : "NOT_SUBMITTED"));
+  const verificationState: HeaderVerificationState = property.archived
+    ? "ARCHIVED"
+    : verificationError
+      ? property.verified
+        ? "VERIFIED"
+        : "UNAVAILABLE"
+      : (verification?.state ??
+        (property.verified ? "VERIFIED" : "NOT_SUBMITTED"));
   const verificationPresentation =
     VERIFICATION_PRESENTATIONS[verificationState];
   const VerificationIcon = verificationPresentation.icon;
   const editHref = `/${role}/listings/create?draft=${property.id}`;
   const verificationHref = `/${role}/listings/${property.id}/verify`;
-  const isLive = verificationState === "VERIFIED";
+  const isLive = verificationState === "VERIFIED" && !property.archived;
   const blocks = ranges.filter((range) => range.source === "BLOCK");
   const booked = ranges.filter((range) => range.source === "BOOKING");
   const availableUnits = units.filter(
@@ -614,13 +680,19 @@ export default function ManageListingView({
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 font-body text-sm text-muted">
               <span className="inline-flex items-center gap-1.5">
-                <MapPin size={15} className="text-accent-alt" aria-hidden="true" />
+                <MapPin
+                  size={15}
+                  className="text-accent-alt"
+                  aria-hidden="true"
+                />
                 {locationLabel(property)}
               </span>
               <span className="font-bold text-primary">
                 <PropertyPrice
                   value={property.price}
-                  listingType={property.status === "FOR_SALE" ? "FOR_SALE" : "FOR_RENT"}
+                  listingType={
+                    property.status === "FOR_SALE" ? "FOR_SALE" : "FOR_RENT"
+                  }
                   rentalMode={property.rentalMode ?? undefined}
                 />
               </span>
@@ -629,7 +701,7 @@ export default function ManageListingView({
           </div>
 
           <div className="flex flex-wrap gap-3">
-            {!isLive ? (
+            {!isLive && !property.archived ? (
               <Link
                 href={verificationHref}
                 className="inline-flex min-h-11 items-center justify-center rounded-full bg-primary px-5 font-body text-sm font-bold text-white transition-colors hover:bg-primary/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
@@ -657,6 +729,20 @@ export default function ManageListingView({
                 <ArrowUpRight size={16} aria-hidden="true" />
               </Link>
             ) : null}
+            <button
+              type="button"
+              onClick={() =>
+                setListingAction(property.archived ? "restore" : "archive")
+              }
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-primary/20 px-5 font-body text-sm font-bold text-primary transition-colors hover:border-accent hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            >
+              {property.archived ? (
+                <RotateCcw size={16} aria-hidden="true" />
+              ) : (
+                <Archive size={16} aria-hidden="true" />
+              )}
+              {property.archived ? "Restore listing" : "Archive listing"}
+            </button>
           </div>
         </header>
 
@@ -804,6 +890,31 @@ export default function ManageListingView({
         onCancel={() => setPhotoToDelete(null)}
         onConfirm={() => void removePhoto()}
       />
+      <ConfirmActionModal
+        mode="confirm"
+        isOpen={listingAction !== null}
+        title={
+          listingAction === "restore"
+            ? "Restore this listing?"
+            : "Archive this listing?"
+        }
+        description={
+          listingAction === "restore"
+            ? "The listing will return to the status allowed by its current verification and management state."
+            : "The home will leave the marketplace and stop accepting new activity. Existing requests, bookings, tenancies, payments, and disputes will continue."
+        }
+        confirmLabel={
+          listingAction === "restore" ? "Restore listing" : "Archive listing"
+        }
+        pendingLabel={
+          listingAction === "restore"
+            ? "Restoring listing..."
+            : "Archiving listing..."
+        }
+        isLoading={listingActionPending}
+        onCancel={() => setListingAction(null)}
+        onConfirm={() => void updateArchiveState()}
+      />
     </main>
   );
 }
@@ -829,7 +940,10 @@ function UnitsPanel({
 }: UnitsPanelProps): ReactElement {
   if (status === "idle" || status === "loading") {
     return (
-      <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-label="Loading units">
+      <div
+        className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+        aria-label="Loading units"
+      >
         {[0, 1, 2].map((item) => (
           <Skeleton key={item} className="h-24 w-full" />
         ))}
@@ -962,12 +1076,19 @@ function BlockedDatesPanel({
   status,
 }: BlockedDatesPanelProps): ReactElement {
   return (
-    <section className="mt-10 border-t border-border pt-8" aria-labelledby="blocked-dates-heading">
-      <h2 id="blocked-dates-heading" className="font-display text-2xl font-bold text-primary">
+    <section
+      className="mt-10 border-t border-border pt-8"
+      aria-labelledby="blocked-dates-heading"
+    >
+      <h2
+        id="blocked-dates-heading"
+        className="font-display text-2xl font-bold text-primary"
+      >
         Blocked dates
       </h2>
       <p className="mt-2 max-w-2xl font-body text-sm leading-6 text-muted">
-        Hold dates for repairs or personal use. Existing guest bookings cannot be blocked.
+        Hold dates for repairs or personal use. Existing guest bookings cannot
+        be blocked.
       </p>
 
       <div className="mt-6 grid gap-4 rounded-xl border border-border bg-bg p-5 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto] sm:items-end">
@@ -1009,7 +1130,10 @@ function BlockedDatesPanel({
       </div>
 
       {status === "idle" || status === "loading" ? (
-        <div className="mt-6 grid gap-4 sm:grid-cols-2" aria-label="Loading blocked dates">
+        <div
+          className="mt-6 grid gap-4 sm:grid-cols-2"
+          aria-label="Loading blocked dates"
+        >
           <Skeleton className="h-24 w-full" />
           <Skeleton className="h-24 w-full" />
         </div>
@@ -1148,9 +1272,12 @@ function PhotosPanel({
     >
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h2 className="font-display text-2xl font-bold text-primary">Photos</h2>
+          <h2 className="font-display text-2xl font-bold text-primary">
+            Photos
+          </h2>
           <p className="mt-2 font-body text-sm leading-6 text-muted">
-            {photos.length} {photos.length === 1 ? "photo" : "photos"}. Add up to 20 and choose the image renters see first.
+            {photos.length} {photos.length === 1 ? "photo" : "photos"}. Add up
+            to 20 and choose the image renters see first.
           </p>
         </div>
         <label
@@ -1161,15 +1288,23 @@ function PhotosPanel({
           }`}
         >
           {isUploading ? (
-            <Loader2 size={16} className="animate-spin motion-reduce:animate-none" aria-hidden="true" />
+            <Loader2
+              size={16}
+              className="animate-spin motion-reduce:animate-none"
+              aria-hidden="true"
+            />
           ) : (
             <ImagePlus size={16} aria-hidden="true" />
           )}
-          {isUploading ? "Adding photos..." : limitReached ? "Photo limit reached" : "Add photos"}
+          {isUploading
+            ? "Adding photos..."
+            : limitReached
+              ? "Photo limit reached"
+              : "Add photos"}
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/jpeg,image/png,image/webp"
+            accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"
             multiple
             disabled={isUploading || limitReached}
             onChange={(event) => void onUpload(event.target.files)}
@@ -1179,7 +1314,10 @@ function PhotosPanel({
       </div>
 
       {status === "idle" || status === "loading" ? (
-        <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3" aria-label="Loading photos">
+        <div
+          className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3"
+          aria-label="Loading photos"
+        >
           {[0, 1, 2].map((item) => (
             <Skeleton key={item} className="aspect-video w-full" />
           ))}
@@ -1206,7 +1344,8 @@ function PhotosPanel({
             Add your first photo
           </h3>
           <p className="mt-2 max-w-md font-body text-sm leading-6 text-muted">
-            Clear, well-lit images help renters understand the home before they request it.
+            Clear, well-lit images help renters understand the home before they
+            request it.
           </p>
         </div>
       ) : null}
@@ -1281,7 +1420,10 @@ function ManagementPageSkeleton({
   role,
 }: Pick<ManageListingViewProps, "role">): ReactElement {
   return (
-    <main className="min-h-screen px-5 py-7 sm:px-8 lg:px-10 xl:px-14" aria-busy="true">
+    <main
+      className="min-h-screen px-5 py-7 sm:px-8 lg:px-10 xl:px-14"
+      aria-busy="true"
+    >
       <div className="mx-auto max-w-[1440px]">
         <Link
           href={`/${role}/saved-listings`}
@@ -1290,7 +1432,10 @@ function ManagementPageSkeleton({
           <ArrowLeft size={16} aria-hidden="true" />
           Back to listings
         </Link>
-        <div className="flex flex-col gap-5 pb-6 pt-3 lg:flex-row lg:items-end lg:justify-between" aria-hidden="true">
+        <div
+          className="flex flex-col gap-5 pb-6 pt-3 lg:flex-row lg:items-end lg:justify-between"
+          aria-hidden="true"
+        >
           <div>
             <Skeleton className="h-10 w-72 max-w-full" />
             <Skeleton className="mt-3 h-5 w-96 max-w-full" />
@@ -1300,7 +1445,10 @@ function ManagementPageSkeleton({
             <Skeleton className="h-11 w-40" />
           </div>
         </div>
-        <div className="flex gap-3 border-y border-border py-2" aria-hidden="true">
+        <div
+          className="flex gap-3 border-y border-border py-2"
+          aria-hidden="true"
+        >
           <Skeleton className="h-11 w-32" />
           <Skeleton className="h-11 w-24" />
           <Skeleton className="h-11 w-32" />

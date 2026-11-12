@@ -24,6 +24,13 @@ import {
 /** The badge refreshes on this cadence; an open panel refreshes on open. */
 const UNREAD_POLL_MS = 30000;
 
+interface NotificationPanelPosition {
+  maxHeight: number;
+  right: number;
+  top: number;
+  width: number;
+}
+
 function formatWhen(value: string, now: number): string {
   const minutes = Math.max(
     1,
@@ -74,6 +81,36 @@ export default function NotificationsBell(): ReactElement {
   const [readingId, setReadingId] = useState<number | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [now, setNow] = useState(0);
+  const [panelPosition, setPanelPosition] =
+    useState<NotificationPanelPosition | null>(null);
+
+  const updatePanelPosition = useCallback((): void => {
+    const trigger = triggerRef.current;
+
+    if (!trigger) {
+      return;
+    }
+
+    const viewport = window.visualViewport;
+    const viewportWidth = window.innerWidth;
+    const viewportTop = viewport?.offsetTop ?? 0;
+    const viewportHeight = viewport?.height ?? window.innerHeight;
+    const viewportBottom = viewportTop + viewportHeight;
+    const gutter = 12;
+    const triggerBounds = trigger.getBoundingClientRect();
+    const width = Math.min(416, viewportWidth - gutter * 2);
+    const preferredRight = viewportWidth - triggerBounds.right;
+    const maximumRight = Math.max(gutter, viewportWidth - width - gutter);
+    const right = Math.min(Math.max(gutter, preferredRight), maximumRight);
+    const maximumTop = Math.max(gutter, viewportBottom - 172);
+    const top = Math.min(
+      Math.max(viewportTop + gutter, triggerBounds.bottom + 8),
+      maximumTop,
+    );
+    const maxHeight = Math.max(160, viewportBottom - top - gutter);
+
+    setPanelPosition({ maxHeight, right, top, width });
+  }, []);
 
   const refreshUnread = useCallback(async (): Promise<void> => {
     if (readingRef.current) return;
@@ -119,6 +156,7 @@ export default function NotificationsBell(): ReactElement {
       return;
     }
 
+    updatePanelPosition();
     const session = ++sessionRef.current;
     const controller = new AbortController();
     const token = getBrowserSessionMarker();
@@ -166,6 +204,9 @@ export default function NotificationsBell(): ReactElement {
 
     window.addEventListener("pointerdown", closeOnOutside);
     window.addEventListener("keydown", closeOnEscape);
+    window.addEventListener("resize", updatePanelPosition);
+    window.addEventListener("orientationchange", updatePanelPosition);
+    window.visualViewport?.addEventListener("resize", updatePanelPosition);
 
     return () => {
       controller.abort();
@@ -173,8 +214,11 @@ export default function NotificationsBell(): ReactElement {
       olderRequestRef.current = null;
       window.removeEventListener("pointerdown", closeOnOutside);
       window.removeEventListener("keydown", closeOnEscape);
+      window.removeEventListener("resize", updatePanelPosition);
+      window.removeEventListener("orientationchange", updatePanelPosition);
+      window.visualViewport?.removeEventListener("resize", updatePanelPosition);
     };
-  }, [isOpen, reloadKey, close]);
+  }, [isOpen, reloadKey, close, updatePanelPosition]);
 
   const toggle = (): void => {
     if (isOpen) {
@@ -186,6 +230,7 @@ export default function NotificationsBell(): ReactElement {
     setIsLoadingMore(false);
     setError("");
     setOlderError("");
+    updatePanelPosition();
     setIsOpen(true);
   };
 
@@ -321,11 +366,21 @@ export default function NotificationsBell(): ReactElement {
       {isOpen ? (
         <div
           ref={panelRef}
-          className="absolute right-0 top-12 z-[110] isolate w-[26rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-border/70 bg-bg shadow-2xl"
+          className="fixed z-[110] isolate flex flex-col overflow-hidden rounded-2xl border border-border/70 bg-bg shadow-2xl"
+          style={
+            panelPosition
+              ? {
+                  maxHeight: panelPosition.maxHeight,
+                  right: panelPosition.right,
+                  top: panelPosition.top,
+                  width: panelPosition.width,
+                }
+              : undefined
+          }
           role="region"
           aria-label="Notifications"
         >
-          <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-border px-4 py-3 sm:flex-nowrap sm:px-5 sm:py-4">
             <div className="flex min-w-0 items-center gap-2.5">
               <h2 className="font-body text-base font-bold text-primary">
                 Notifications
@@ -341,7 +396,7 @@ export default function NotificationsBell(): ReactElement {
                 type="button"
                 onClick={() => void readAll()}
                 disabled={isReading || isLoadingMore}
-                className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-full px-2.5 font-body text-xs font-bold text-accent-alt transition-colors hover:bg-accent/10 hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-60"
+                className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full px-2.5 font-body text-xs font-bold text-accent-alt transition-colors hover:bg-accent/10 hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-60"
                 aria-busy={isReading}
               >
                 <AsyncButtonContent
@@ -379,7 +434,7 @@ export default function NotificationsBell(): ReactElement {
               Nothing yet. Booking updates, payments and reminders show up here.
             </p>
           ) : (
-            <div className="max-h-[26rem] overflow-y-auto">
+            <div className="min-h-0 flex-1 overscroll-contain overflow-y-auto sm:max-h-[26rem] sm:flex-none">
               <ul className="divide-y divide-border">
                 {items.map((item) => (
                   <li key={item.id}>

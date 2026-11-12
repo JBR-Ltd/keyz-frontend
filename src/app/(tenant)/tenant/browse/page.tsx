@@ -35,6 +35,7 @@ import {
   interpretProperties,
   type InterpretedPropertyQueryResult,
   type PropertyDetail,
+  type PropertyQueryResult,
 } from "@/lib/propertyDetails";
 import {
   getSavedListings,
@@ -84,6 +85,10 @@ interface DetailedFilterDraft {
   minPrice: string;
   sort: SortOption;
   stayMode: StayMode;
+}
+
+interface TenantBrowsePageProps {
+  initialListings?: PropertyQueryResult | null;
 }
 
 // === Constants
@@ -281,7 +286,9 @@ async function requestListings(
 
 // === Component
 
-export default function TenantBrowsePage(): ReactElement {
+export default function TenantBrowsePage({
+  initialListings = null,
+}: TenantBrowsePageProps): ReactElement {
   const reduceMotion = useReducedMotion();
   const { notify } = useToast();
   const authentication = useAuthentication();
@@ -294,13 +301,17 @@ export default function TenantBrowsePage(): ReactElement {
     null,
   );
   const [isSearchSheetOpen, setIsSearchSheetOpen] = useState(false);
-  const [properties, setProperties] = useState<PropertyDetail[]>([]);
-  const [propertiesLoading, setPropertiesLoading] = useState(true);
+  const [properties, setProperties] = useState<PropertyDetail[]>(
+    initialListings?.data ?? [],
+  );
+  const [propertiesLoading, setPropertiesLoading] = useState(!initialListings);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [propertyError, setPropertyError] = useState("");
-  const [hasNext, setHasNext] = useState(false);
+  const [hasNext, setHasNext] = useState(initialListings?.hasNext ?? false);
   const [page, setPage] = useState(0);
-  const [totalItems, setTotalItems] = useState(0);
+  const [totalItems, setTotalItems] = useState(
+    initialListings?.totalItems ?? 0,
+  );
   const [retryKey, setRetryKey] = useState(0);
   const [queryInput, setQueryInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -330,6 +341,7 @@ export default function TenantBrowsePage(): ReactElement {
   const [isSavingSearch, setIsSavingSearch] = useState(false);
   const [isSubmittingSearch, setIsSubmittingSearch] = useState(false);
   const searchGeneration = useRef(0);
+  const hasInitialListings = useRef(Boolean(initialListings));
   const paginationGeneration = useRef<number | null>(null);
   const shouldFocusResults = useRef(false);
   const hasOpenedDetailedFilters = useRef(false);
@@ -492,6 +504,22 @@ export default function TenantBrowsePage(): ReactElement {
     paginationGeneration.current = null;
 
     const loadProperties = async (): Promise<void> => {
+      const hasNoAppliedSearch = Object.values(search).every(
+        (value) => value === undefined,
+      );
+
+      if (
+        hasInitialListings.current &&
+        !searchQuery &&
+        hasNoAppliedSearch &&
+        retryKey === 0
+      ) {
+        hasInitialListings.current = false;
+        setPropertiesLoading(false);
+        return;
+      }
+
+      hasInitialListings.current = false;
       setPropertiesLoading(true);
       setIsLoadingMore(false);
       setPropertyError("");

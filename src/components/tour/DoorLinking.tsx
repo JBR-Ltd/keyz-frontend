@@ -447,46 +447,52 @@ export default function DoorLinking({
         room, outside, or a staircase. A saved door stays put until you press
         Edit connection on it.
       </p>
+      <p className="mt-2 font-body text-sm leading-6 text-muted">
+        Drag each pin to show where a doorway is in the {room.roomName}. Tap
+        the pin to answer what is through it.
+      </p>
 
-      <DoorPin
-        roomName={room.roomName}
-        pins={[...savedPins, ...draftPinsForRender]}
-        onMove={(pinId, position) => {
-          if (pinId.startsWith("pin-")) {
-            handleMoveDraftPin(pinId, position);
-          } else {
-            handleMoveSavedPin(pinId, position);
-          }
-        }}
-        onDragEnd={handleDragEnd}
-        onSelect={(pinId) => {
-          if (pinId.startsWith("pin-")) {
-            setActiveDraftId(pinId);
-            setActiveSavedId(null);
-            setEditingSavedDoorId(null);
-          } else {
-            const id = Number(pinId);
-            setActiveSavedId(id);
+      <div data-tour="door-pin-board">
+        <DoorPin
+          roomName={room.roomName}
+          pins={[...savedPins, ...draftPinsForRender]}
+          onMove={(pinId, position) => {
+            if (pinId.startsWith("pin-")) {
+              handleMoveDraftPin(pinId, position);
+            } else {
+              handleMoveSavedPin(pinId, position);
+            }
+          }}
+          onDragEnd={handleDragEnd}
+          onSelect={(pinId) => {
+            if (pinId.startsWith("pin-")) {
+              setActiveDraftId(pinId);
+              setActiveSavedId(null);
+              setEditingSavedDoorId(null);
+            } else {
+              const id = Number(pinId);
+              setActiveSavedId(id);
+              setActiveDraftId(null);
+              // Selecting a different pin leaves the previous one's edit
+              // mode. Dragging turns off until Edit connection is pressed
+              // again on this door.
+              setEditingSavedDoorId(null);
+            }
+          }}
+          onSelectFixed={(pinId) => {
+            setActiveSavedId(Number(pinId));
             setActiveDraftId(null);
-            // Selecting a different pin leaves the previous one's edit
-            // mode. Dragging turns off until Edit connection is pressed
-            // again on this door.
             setEditingSavedDoorId(null);
-          }
-        }}
-        onSelectFixed={(pinId) => {
-          setActiveSavedId(Number(pinId));
-          setActiveDraftId(null);
-          setEditingSavedDoorId(null);
-        }}
-        onRemove={(pinId) => {
-          if (pinId.startsWith("pin-")) {
-            handleRemoveDraftPin(pinId);
-          } else {
-            handleRemoveSavedPin(pinId);
-          }
-        }}
-      />
+          }}
+          onRemove={(pinId) => {
+            if (pinId.startsWith("pin-")) {
+              handleRemoveDraftPin(pinId);
+            } else {
+              handleRemoveSavedPin(pinId);
+            }
+          }}
+        />
+      </div>
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
         <p className="font-body text-xs text-muted">
@@ -498,19 +504,19 @@ export default function DoorLinking({
         </p>
         <div className="flex flex-wrap gap-2">
           <button
-  type="button"
-  data-tour="door-add"
-  onClick={handleAddDraftPin}
-  className="inline-flex min-h-10 items-center justify-center rounded-full border border-border bg-bg px-5 font-body text-sm font-bold text-primary transition-colors hover:bg-surface-soft"
->
-  + Add another door
-</button>
+            type="button"
+            data-tour="door-add"
+            onClick={handleAddDraftPin}
+            className="inline-flex min-h-10 items-center justify-center rounded-full border border-border bg-bg px-5 font-body text-sm font-bold text-primary transition-colors hover:bg-surface-soft"
+          >
+            + Add another door
+          </button>
           <button
-  type="button"
-  data-tour="door-staircases"
-  onClick={() => setShowStaircaseForm((current) => !current)}
-  className="inline-flex min-h-10 items-center justify-center rounded-full border border-border bg-bg px-5 font-body text-sm font-bold text-primary transition-colors hover:bg-surface-soft"
->
+            type="button"
+            data-tour="door-staircases"
+            onClick={() => setShowStaircaseForm((current) => !current)}
+            className="inline-flex min-h-10 items-center justify-center rounded-full border border-border bg-bg px-5 font-body text-sm font-bold text-primary transition-colors hover:bg-surface-soft"
+          >
             {showStaircaseForm
               ? "Hide staircases"
               : staircases.length > 0
@@ -612,14 +618,14 @@ export default function DoorLinking({
       ) : null}
 
       <div className="mt-6 flex justify-end">
-       <button
-  type="button"
-  data-tour="door-continue"
-  disabled={isSaving || isContinuing}
-  aria-busy={isContinuing}
-  onClick={() => void handleContinue()}
-  className="inline-flex min-h-12 items-center justify-center rounded-full bg-accent px-7 py-3 font-body text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-white disabled:cursor-wait disabled:opacity-60"
->
+        <button
+          type="button"
+          data-tour="door-continue"
+          disabled={isSaving || isContinuing}
+          aria-busy={isContinuing}
+          onClick={() => void handleContinue()}
+          className="inline-flex min-h-12 items-center justify-center rounded-full bg-accent px-7 py-3 font-body text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-white disabled:cursor-wait disabled:opacity-60"
+        >
           <AsyncButtonContent
             isPending={isContinuing}
             pendingLabel="Loading rooms…"

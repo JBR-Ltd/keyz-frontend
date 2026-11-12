@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { siteUrl } from "@/lib/seoProperties";
+import { getSiteEnvironment } from "@/lib/siteEnvironment";
 
 /**
  * Signed-in areas are disallowed because they hold nothing a searcher wants and
@@ -9,6 +10,12 @@ import { siteUrl } from "@/lib/seoProperties";
  */
 export default function robots(): MetadataRoute.Robots {
   const base = siteUrl();
+  const site = getSiteEnvironment();
+
+  if (!site.indexable) {
+    return { rules: [{ userAgent: "*", disallow: "/" }] };
+  }
+
   const disallow = [
     "/api/",
     "/admin/",
@@ -20,6 +27,8 @@ export default function robots(): MetadataRoute.Robots {
     "/forgot-password",
     "/reset-password",
     "/verify-email",
+    "/receipts/",
+    "/tours/",
   ];
 
   return {

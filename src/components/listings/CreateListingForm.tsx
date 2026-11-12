@@ -21,6 +21,7 @@ import {
   MapPin,
   Minus,
   Plus,
+  Trash2,
   Upload,
   X,
 } from "lucide-react";
@@ -28,6 +29,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import BackButton from "@/components/navigation/BackButton";
+import ConfirmActionModal from "@/components/settings/ConfirmActionModal";
 import { AsyncButtonContent } from "@/components/ui/async-button-content";
 import { CityCombobox } from "@/components/ui/city-combobox";
 import { Select } from "@/components/ui/select";
@@ -35,13 +37,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import {
   getHostListingById,
+  isDraftId,
   saveHostListingDraft,
   submitHostListing,
+  toDraftNumber,
   type HostListingInput,
   type HostListingPhoto,
   type HostListingRole,
   type RentalMode,
 } from "@/lib/hostListings";
+import { deleteDraft } from "@/lib/propertyDrafts";
 import { LISTING_AMENITIES } from "@/lib/listingAmenities";
 import type { PropertyListingStatus } from "@/lib/propertyDetails";
 import {
@@ -512,6 +517,8 @@ export default function CreateListingForm({
   const [draftId, setDraftId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isDeletingDraft, setIsDeletingDraft] = useState(false);
   const [isLoadingDraft, setIsLoadingDraft] = useState(
     Boolean(initialListingId),
   );
@@ -533,6 +540,7 @@ export default function CreateListingForm({
   );
   const showGuidedSummary = listingStepIndex >= 3;
   const coverPhoto = photos[0];
+  const canDeleteDraft = draftId !== null && isDraftId(draftId);
 
   useEffect(() => {
     if (role !== "agent") {
@@ -884,9 +892,15 @@ export default function CreateListingForm({
   const addFiles = async (files: File[]): Promise<void> => {
     const remainingSlots = Math.max(20 - photos.length, 0);
     const imageFiles = files
-      .filter(
-        (file) => file.type.startsWith("image/") && file.size <= 10_000_000,
-      )
+      .filter((file) => {
+        const extension = file.name.split(".").pop()?.toLowerCase();
+        return (
+          (file.type.startsWith("image/") ||
+            extension === "heic" ||
+            extension === "heif") &&
+          file.size <= 10_000_000
+        );
+      })
       .slice(0, remainingSlots);
 
     if (imageFiles.length === 0) {
@@ -1096,6 +1110,28 @@ export default function CreateListingForm({
     notify({ title: "Draft saved", variant: "success" });
   };
 
+  const handleDeleteDraft = async (): Promise<void> => {
+    if (!draftId || !isDraftId(draftId)) return;
+
+    setIsDeletingDraft(true);
+    const result = await deleteDraft(toDraftNumber(draftId));
+    setIsDeletingDraft(false);
+
+    if (!result.data) {
+      notify({
+        title: "Draft not deleted",
+        description: result.message ?? "Try again in a moment.",
+        variant: "error",
+      });
+      return;
+    }
+
+    setDeleteDialogOpen(false);
+    setIsDirty(false);
+    notify({ title: "Draft deleted", variant: "success" });
+    router.push(`/${role}/saved-listings`);
+  };
+
   const handleSubmit = async (
     event: FormEvent<HTMLFormElement>,
   ): Promise<void> => {
@@ -1245,6 +1281,16 @@ export default function CreateListingForm({
                 </p>
               </div>
             </div>
+            {canDeleteDraft ? (
+              <button
+                type="button"
+                onClick={() => setDeleteDialogOpen(true)}
+                className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-full px-4 font-body text-sm font-bold text-red-700 hover:bg-red-700/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                <Trash2 size={16} aria-hidden="true" />
+                Delete draft
+              </button>
+            ) : null}
           </header>
 
           <div
@@ -1711,7 +1757,8 @@ export default function CreateListingForm({
                           Drop photos here or click to upload
                         </span>
                         <span className="mt-1 block font-body text-xs text-muted">
-                          JPG, PNG, or WEBP. Up to 20 photos, 10 MB each.
+                          JPG, PNG, WEBP, HEIC, or HEIF. Up to 20 photos, 10 MB
+                          each.
                         </span>
                       </span>
                       <input
@@ -2220,6 +2267,17 @@ export default function CreateListingForm({
             ) : null}
           </div>
         </div>
+        <ConfirmActionModal
+          mode="confirm"
+          isOpen={deleteDialogOpen}
+          title="Delete this draft?"
+          description="This draft and its photos will be permanently removed. This cannot be undone."
+          confirmLabel="Delete draft"
+          pendingLabel="Deleting draft..."
+          isLoading={isDeletingDraft}
+          onCancel={() => setDeleteDialogOpen(false)}
+          onConfirm={() => void handleDeleteDraft()}
+        />
       </main>
     );
   }
@@ -2237,6 +2295,16 @@ export default function CreateListingForm({
           <p className="mt-4 max-w-2xl font-body text-base leading-7 text-muted">
             Add the property information and photos required for verification.
           </p>
+          {canDeleteDraft ? (
+            <button
+              type="button"
+              onClick={() => setDeleteDialogOpen(true)}
+              className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-full px-4 font-body text-sm font-bold text-red-700 hover:bg-red-700/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            >
+              <Trash2 size={16} aria-hidden="true" />
+              Delete draft
+            </button>
+          ) : null}
         </header>
 
         {storageUnavailable ? (
@@ -2511,7 +2579,7 @@ export default function CreateListingForm({
                   Drop photos here or click to upload
                 </span>
                 <span className="mt-2 font-body text-xs text-muted">
-                  Select multiple JPG, PNG, or WEBP images
+                  Select multiple JPG, PNG, WEBP, HEIC, or HEIF images
                 </span>
                 <input
                   type="file"
@@ -2653,6 +2721,17 @@ export default function CreateListingForm({
             </div>
           </footer>
         </form>
+        <ConfirmActionModal
+          mode="confirm"
+          isOpen={deleteDialogOpen}
+          title="Delete this draft?"
+          description="This draft and its photos will be permanently removed. This cannot be undone."
+          confirmLabel="Delete draft"
+          pendingLabel="Deleting draft..."
+          isLoading={isDeletingDraft}
+          onCancel={() => setDeleteDialogOpen(false)}
+          onConfirm={() => void handleDeleteDraft()}
+        />
       </div>
     </main>
   );
