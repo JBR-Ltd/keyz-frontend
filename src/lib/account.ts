@@ -17,6 +17,8 @@ export interface AuthenticatedUser {
   firstName: string;
   id: number;
   emailVerified: boolean;
+  /** False for an account that only signs in with Google. */
+  hasPassword?: boolean;
   identityVerified: boolean;
   lastName: string;
   phone: string | null;
@@ -373,9 +375,27 @@ export async function savePreferences(
 
 // === Two step sign-in
 
-/** Sends a code to the account email and returns the reference to send back. */
+export interface TwoFactorSetup {
+  /** Typed in by hand when the QR code cannot be scanned. */
+  secret: string;
+  /** What the QR code encodes. Opens the authenticator app directly on a phone. */
+  otpauthUri: string;
+}
+
+function isTwoFactorSetup(value: unknown): value is TwoFactorSetup {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    "secret" in value &&
+    typeof value.secret === "string" &&
+    "otpauthUri" in value &&
+    typeof value.otpauthUri === "string"
+  );
+}
+
+/** A new authenticator secret to scan. Sign-in is unchanged until it is confirmed. */
 export async function startTwoFactorSetup(): Promise<
-  AccountActionResult & { reference: string }
+  AccountActionResult & { setup: TwoFactorSetup | null }
 > {
   try {
     const envelope = await authenticatedRequest("/api/auth/2fa/start", {
@@ -385,52 +405,65 @@ export async function startTwoFactorSetup(): Promise<
     });
 
     return {
-      success: true,
+      success: isTwoFactorSetup(envelope.data),
       message: envelope.message,
-      reference: typeof envelope.data === "string" ? envelope.data : "",
+      setup: isTwoFactorSetup(envelope.data) ? envelope.data : null,
     };
   } catch (error) {
     return {
       success: false,
       message:
-        error instanceof Error ? error.message : "That code was not sent.",
-      reference: "",
+        error instanceof Error
+          ? error.message
+          : "Two step sign-in could not be set up.",
+      setup: null,
     };
   }
 }
 
+/** Confirms the first code. The recovery codes come back once and are never shown again. */
 export async function enableTwoFactor(
-  reference: string,
   code: string,
-): Promise<AccountActionResult> {
+): Promise<AccountActionResult & { recoveryCodes: string[] }> {
   try {
     const envelope = await authenticatedRequest("/api/auth/2fa/enable", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ reference, code }),
+      body: JSON.stringify({ code }),
     });
 
     userVersion += 1;
     userRequest = null;
     cachedUser = null;
-    return { success: true, message: envelope.message };
+    return {
+      success: true,
+      message: envelope.message,
+      recoveryCodes: Array.isArray(envelope.data)
+        ? envelope.data.filter(
+            (item): item is string => typeof item === "string",
+          )
+        : [],
+    };
   } catch (error) {
     return {
       success: false,
       message:
         error instanceof Error ? error.message : "That code is not right.",
+      recoveryCodes: [],
     };
   }
 }
 
-export async function disableTwoFactor(
-  password: string,
-): Promise<AccountActionResult> {
+/** The password, or for a Google-only account, a code from the app or a recovery code. */
+export async function disableTwoFactor(proof: {
+  code?: string;
+  password?: string;
+}): Promise<AccountActionResult> {
   try {
     const envelope = await authenticatedRequest("/api/auth/2fa/disable", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password }),
+      body: JSON.stringify(proof),
     });
 
     userVersion += 1;
