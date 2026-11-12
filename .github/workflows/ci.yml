@@ -13,6 +13,10 @@ jobs:
   verify:
     name: Typecheck, lint and build
     runs-on: ubuntu-latest
+    env:
+      API_BASE_URL: http://localhost:8080
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+      RELLO_SITE_ENVIRONMENT: local
     steps:
       - uses: actions/checkout@v4
 
@@ -44,12 +48,8 @@ jobs:
       - name: Lint
         run: pnpm exec eslint src --max-warnings=0
 
-      # API_BASE_URL is read at request time by the route handlers, not at build
-      # time, so a placeholder is enough to build
       - name: Build
         run: pnpm build
-        env:
-          API_BASE_URL: http://localhost:8080
 
   secret-scan:
     name: Secret scan
