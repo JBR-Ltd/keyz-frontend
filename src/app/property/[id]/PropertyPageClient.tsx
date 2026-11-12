@@ -866,6 +866,41 @@ export default function PropertyPageClient({
             : "pb-10"
         }`}
       >
+        <nav
+          aria-label="Breadcrumb"
+          className="mb-2 font-body text-xs sm:text-sm"
+        >
+          <ol className="flex flex-wrap items-center gap-2 text-muted">
+            <li>
+              <Link
+                href="/browse"
+                className="rounded-sm underline-offset-4 hover:text-primary hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                Browse homes
+              </Link>
+            </li>
+            <li aria-hidden="true">/</li>
+            <li>
+              <Link
+                href={`/rent/${property.location.city
+                  .trim()
+                  .toLowerCase()
+                  .replace(/[^a-z0-9]+/g, "-")
+                  .replace(/^-|-$/g, "")}`}
+                className="rounded-sm underline-offset-4 hover:text-primary hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                {property.location.city}
+              </Link>
+            </li>
+            <li aria-hidden="true">/</li>
+            <li
+              aria-current="page"
+              className="max-w-48 truncate text-primary sm:max-w-80"
+            >
+              {property.title}
+            </li>
+          </ol>
+        </nav>
         <BackButton
           fallbackHref="/browse"
           roleFallbacks={{

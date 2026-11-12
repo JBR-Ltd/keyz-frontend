@@ -1,6 +1,11 @@
 import "server-only";
 
-import type { BackendProperty, RentalMode } from "@/lib/hostListings";
+import type {
+  BackendPage,
+  BackendProperty,
+  RentalMode,
+} from "@/lib/hostListings";
+import { getSiteEnvironment } from "@/lib/siteEnvironment";
 
 /**
  * Server-side reads of the public listing data, for metadata, structured data,
@@ -18,6 +23,12 @@ export interface SeoPropertyImage {
   url: string;
 }
 
+export interface SeoPropertyHost {
+  id: number;
+  name: string;
+  publicId: string | null;
+}
+
 export interface SeoProperty {
   address: string;
   area: string | null;
@@ -26,6 +37,7 @@ export interface SeoProperty {
   city: string | null;
   description: string | null;
   id: number;
+  host: SeoPropertyHost | null;
   images: SeoPropertyImage[];
   price: number | null;
   publicId: string | null;
@@ -38,13 +50,14 @@ export interface SeoProperty {
 
 const API_BASE_URL = process.env.API_BASE_URL;
 
+export interface BackendJsonResult {
+  data: unknown;
+  status: number;
+}
+
 /** Every absolute link the crawler is given has to agree, so this is the one source. */
 export function siteUrl(): string {
-  const configured = process.env.NEXT_PUBLIC_SITE_URL;
-
-  return (
-    (configured && configured.replace(/\/$/, "")) || "https://rello.online"
-  );
+  return getSiteEnvironment().url;
 }
 
 function asNumber(value: unknown): number | null {
@@ -81,6 +94,12 @@ function toSeoProperty(value: unknown): SeoProperty | null {
         .filter((image): image is SeoPropertyImage => image !== null)
     : [];
   const cover = asText(record.imageUrl);
+  const hostRecord =
+    record.host !== null && typeof record.host === "object"
+      ? (record.host as Record<string, unknown>)
+      : null;
+  const hostId = hostRecord ? asNumber(hostRecord.id) : null;
+  const hostName = hostRecord ? asText(hostRecord.name) : null;
 
   if (cover && !images.some((image) => image.url === cover)) {
     images.unshift({ caption: null, url: cover });
@@ -94,6 +113,14 @@ function toSeoProperty(value: unknown): SeoProperty | null {
     city: asText(record.city),
     description: asText(record.description),
     id,
+    host:
+      hostId !== null && hostName
+        ? {
+            id: hostId,
+            name: hostName,
+            publicId: asText(hostRecord?.publicId),
+          }
+        : null,
     images,
     price: asNumber(record.price),
     publicId: asText(record.publicId),
@@ -109,22 +136,35 @@ function envelopeData(payload: unknown): unknown {
     : null;
 }
 
-async function backendJson(
+export async function backendJson(
   path: string,
   revalidateSeconds: number,
 ): Promise<unknown> {
-  if (!API_BASE_URL) return null;
+  return (await backendJsonResult(path, revalidateSeconds)).data;
+}
+
+export async function backendJsonResult(
+  path: string,
+  revalidateSeconds: number,
+): Promise<BackendJsonResult> {
+  if (!API_BASE_URL) return { data: null, status: 0 };
 
   try {
     const response = await fetch(`${API_BASE_URL.replace(/\/$/, "")}${path}`, {
       next: { revalidate: revalidateSeconds },
     });
 
-    return response.ok ? await response.json() : null;
+    return {
+      data: response.ok ? await response.json() : null,
+      status: response.status,
+    };
   } catch {
-    // A crawler getting a page without structured data beats it getting a 500
-    return null;
+    return { data: null, status: 0 };
   }
+}
+
+export function structuredDataJson(value: unknown): string {
+  return JSON.stringify(value).replace(/</g, "\\u003c");
 }
 
 // === Requests
@@ -162,19 +202,26 @@ export async function getSeoProperty(
 export async function getBackendListing(
   idOrPublicId: string,
 ): Promise<BackendProperty | null> {
-  const data = envelopeData(
-    await backendJson(propertyPathFor(idOrPublicId), 300),
-  );
+  return (await getBackendListingResult(idOrPublicId)).data;
+}
 
-  if (data === null || typeof data !== "object") return null;
+export async function getBackendListingResult(
+  idOrPublicId: string,
+): Promise<{ data: BackendProperty | null; status: number }> {
+  const result = await backendJsonResult(propertyPathFor(idOrPublicId), 300);
+  const data = envelopeData(result.data);
+
+  if (data === null || typeof data !== "object") {
+    return { data: null, status: result.status };
+  }
 
   const record = data as Record<string, unknown>;
 
   if (typeof record.id !== "number" || typeof record.title !== "string") {
-    return null;
+    return { data: null, status: result.status };
   }
 
-  return data as BackendProperty;
+  return { data: data as BackendProperty, status: result.status };
 }
 
 /** A city as it appears in a URL. "Port Harcourt" becomes "port-harcourt". */
@@ -239,6 +286,31 @@ export async function getFeaturedRentals(size = 3): Promise<SeoProperty[]> {
         property !== null && property.price !== null,
     )
     .slice(0, size);
+}
+
+export async function getInitialBrowseProperties(
+  size = 12,
+): Promise<BackendPage<BackendProperty> | null> {
+  const payload = await backendJson(
+    `/api/properties/rent?page=0&size=${size}`,
+    300,
+  );
+  const data = envelopeData(payload);
+
+  if (
+    data === null ||
+    typeof data !== "object" ||
+    !("items" in data) ||
+    !Array.isArray(data.items) ||
+    !("hasNext" in data) ||
+    typeof data.hasNext !== "boolean" ||
+    !("totalItems" in data) ||
+    typeof data.totalItems !== "number"
+  ) {
+    return null;
+  }
+
+  return data as BackendPage<BackendProperty>;
 }
 
 /**

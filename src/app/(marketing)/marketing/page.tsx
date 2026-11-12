@@ -14,6 +14,7 @@ import {
   getRentalCities,
   propertyPath,
   siteUrl,
+  structuredDataJson,
   type SeoProperty,
 } from "@/lib/seoProperties";
 
@@ -92,14 +93,30 @@ export default async function MarketingLandingPage(): Promise<ReactElement> {
     }));
   const structuredData = {
     "@context": "https://schema.org",
-    "@type": "WebSite",
-    name: "Rello",
-    url: siteUrl(),
-    potentialAction: {
-      "@type": "SearchAction",
-      target: `${siteUrl()}/browse?query={search_term_string}`,
-      "query-input": "required name=search_term_string",
-    },
+    "@graph": [
+      {
+        "@type": "WebSite",
+        name: "Rello",
+        url: siteUrl(),
+        potentialAction: {
+          "@type": "SearchAction",
+          target: `${siteUrl()}/browse?query={search_term_string}`,
+          "query-input": "required name=search_term_string",
+        },
+      },
+      {
+        "@type": "Organization",
+        name: "Rello",
+        url: siteUrl(),
+        logo: `${siteUrl()}/icon.svg`,
+        sameAs: [
+          "https://www.linkedin.com/company/rello-jbr/",
+          "https://www.instagram.com/rello.jbr",
+          "https://www.facebook.com/profile.php?id=61590472272578",
+          "https://x.com/rello_online",
+        ],
+      },
+    ],
   };
   return (
     <main className="min-h-screen bg-bg text-primary">
@@ -207,7 +224,7 @@ export default async function MarketingLandingPage(): Promise<ReactElement> {
 
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+        dangerouslySetInnerHTML={{ __html: structuredDataJson(structuredData) }}
       />
     </main>
   );

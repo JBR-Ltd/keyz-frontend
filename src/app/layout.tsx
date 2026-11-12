@@ -7,6 +7,7 @@ import InternalNavigationTracker from "@/components/navigation/InternalNavigatio
 import { ToastProvider } from "@/components/ui/toast";
 import { Analytics } from "@vercel/analytics/next";
 import { AuthProvider } from "@/components/auth/AuthProvider";
+import { getSiteEnvironment } from "@/lib/siteEnvironment";
 
 const dmSans = DM_Sans({
   subsets: ["latin"],
@@ -25,24 +26,38 @@ const syne = Syne({
   weight: ["500", "600", "700", "800"],
 });
 
+const site = getSiteEnvironment();
+
 export const metadata: Metadata = {
+  metadataBase: new URL(site.url),
   title: {
     default: "Rello",
     template: "%s | Rello",
   },
   description:
     "Find verified rentals and shortlets, compare clear terms, and manage your move with Rello.",
+  icons: {
+    apple: "/apple-icon",
+    icon: "/icon.svg",
+  },
+  manifest: "/manifest.webmanifest",
+  robots: site.indexable
+    ? { follow: true, index: true }
+    : { follow: false, index: false },
   openGraph: {
     title: "Rello",
     description:
       "Find verified rentals and shortlets, compare clear terms, and manage your move with Rello.",
     type: "website",
+    images: ["/opengraph-image"],
+    url: site.url,
   },
   twitter: {
     card: "summary_large_image",
     title: "Rello",
     description:
       "Find verified rentals and shortlets, compare clear terms, and manage your move with Rello.",
+    images: ["/opengraph-image"],
   },
 };
 

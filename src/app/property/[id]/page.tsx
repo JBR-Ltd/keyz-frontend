@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import type { ReactElement } from "react";
+import { notFound, permanentRedirect } from "next/navigation";
 import PropertyPageClient from "@/app/property/[id]/PropertyPageClient";
 import {
-  getBackendListing,
+  getBackendListingResult,
   getSeoProperty,
   propertyPath,
   siteUrl,
+  structuredDataJson,
   type SeoProperty,
 } from "@/lib/seoProperties";
 import { backendPropertyToPropertyDetail } from "@/lib/propertyMapping";
@@ -71,7 +73,10 @@ export async function generateMetadata({
   const property = await getSeoProperty(lookupKey(id));
 
   if (!property) {
-    return { title: "Listing not found" };
+    return {
+      title: "Listing not found",
+      robots: { follow: false, index: false },
+    };
   }
 
   const where = [property.area, property.city].filter(Boolean).join(", ");
@@ -94,6 +99,7 @@ export async function generateMetadata({
       card: "summary_large_image",
       title,
       description,
+      images: property.images[0]?.url ? [property.images[0].url] : undefined,
     },
   };
 }
@@ -105,13 +111,27 @@ export default async function PropertyPage({
 }: PropertyPageProps): Promise<ReactElement> {
   const { id } = await params;
   const key = lookupKey(id);
-  const [property, listing] = await Promise.all([
+  const [property, listingResult] = await Promise.all([
     getSeoProperty(key),
-    getBackendListing(key),
+    getBackendListingResult(key),
   ]);
+  const listing = listingResult.data;
   const initialProperty = listing
     ? backendPropertyToPropertyDetail(listing)
     : null;
+
+  if (listingResult.status === 404) notFound();
+
+  if (listingResult.status === 0 || listingResult.status >= 500) {
+    throw new Error("The public listing service is unavailable.");
+  }
+
+  if (!property || !initialProperty) notFound();
+
+  const canonicalPath = propertyPath(property);
+  const canonicalId = canonicalPath.slice("/property/".length);
+
+  if (id !== canonicalId) permanentRedirect(canonicalPath);
 
   /**
    * Structured data alongside the rendered listing, not instead of it.
@@ -120,13 +140,15 @@ export default async function PropertyPage({
    * in the markup a person reads. This repeats them in the form a crawler and an
    * answer engine can lift without executing anything.
    */
-  const structuredData = property
-    ? {
-        "@context": "https://schema.org",
+  const canonical = `${siteUrl()}${canonicalPath}`;
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
         "@type": "RealEstateListing",
         name: property.title,
         description: property.description ?? describe(property),
-        url: `${siteUrl()}${propertyPath(property)}`,
+        url: canonical,
         image: property.images.map((image) => image.url),
         numberOfBedrooms: property.bedrooms,
         numberOfBathroomsTotal: property.bathrooms,
@@ -137,6 +159,14 @@ export default async function PropertyPage({
           addressRegion: property.city ?? undefined,
           addressCountry: "NG",
         },
+        ...(property.host
+          ? {
+              seller: {
+                "@type": "Person",
+                name: property.host.name,
+              },
+            }
+          : {}),
         ...(property.price === null
           ? {}
           : {
@@ -147,17 +177,53 @@ export default async function PropertyPage({
                 availability: "https://schema.org/InStock",
               },
             }),
-      }
-    : null;
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            item: siteUrl(),
+            name: "Home",
+            position: 1,
+          },
+          {
+            "@type": "ListItem",
+            item: `${siteUrl()}/browse`,
+            name: "Browse homes",
+            position: 2,
+          },
+          ...(property.city
+            ? [
+                {
+                  "@type": "ListItem",
+                  item: `${siteUrl()}/rent/${property.city
+                    .trim()
+                    .toLowerCase()
+                    .replace(/[^a-z0-9]+/g, "-")
+                    .replace(/^-|-$/g, "")}`,
+                  name: `Homes in ${property.city}`,
+                  position: 3,
+                },
+              ]
+            : []),
+          {
+            "@type": "ListItem",
+            item: canonical,
+            name: property.title,
+            position: property.city ? 4 : 3,
+          },
+        ],
+      },
+    ],
+  };
 
   return (
     <>
-      {structuredData ? (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
-        />
-      ) : null}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: structuredDataJson(structuredData) }}
+      />
       <PropertyPageClient id={id} initialProperty={initialProperty} />
     </>
   );

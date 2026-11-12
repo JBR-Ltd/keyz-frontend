@@ -1,11 +1,13 @@
 import Link from "next/link";
 import type { ReactElement } from "react";
 import { POLICIES, POLICY_UPDATED } from "@/lib/policies";
+import { siteUrl } from "@/lib/seoProperties";
 
 export const metadata = {
-  title: "Policies | Rello",
+  title: "Policies",
   description:
     "How Rello handles money, deposits, cancellations, disputes, verification and your data.",
+  alternates: { canonical: `${siteUrl()}/policies` },
 };
 
 export default function PoliciesPage(): ReactElement {
@@ -20,9 +22,9 @@ export default function PoliciesPage(): ReactElement {
         </h1>
         <p className="mt-4 max-w-2xl font-body text-base leading-7 text-muted">
           Every figure below is a setting the platform actually runs on: the
-          window to pay, the day the host is paid, the deposit clock and the fee.
-          If the product and this page ever disagree, the product is wrong and we
-          want to hear about it.
+          window to pay, the day the host is paid, the deposit clock and the
+          fee. If the product and this page ever disagree, the product is wrong
+          and we want to hear about it.
         </p>
         <p className="mt-2 font-body text-sm text-muted">
           Last updated {POLICY_UPDATED}

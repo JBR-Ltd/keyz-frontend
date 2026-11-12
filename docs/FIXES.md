@@ -1264,3 +1264,25 @@ Existing rental catalogue and saved-search contracts remain unchanged.
 - Landlords and agents can now archive published listings from listing cards or the management page. Archived homes leave public discovery and stop accepting new marketplace activity while existing bookings, tenancies, payments, escrow, disputes, receipts, and audit history remain intact.
 - Archived listings remain manageable in a dedicated filter and can be restored. Restoration respects the current verification and management state.
 - Unpublished drafts now have a confirmed permanent delete action in both the draft card menu and draft editor. Draft media cleanup happens after the database deletion commits.
+
+## Marketplace SEO and canonical deployment
+
+### What was there before
+
+- Production redirected to the `www` host while generated canonicals and sitemap URLs defaulted to the non-`www` origin.
+- Public staging could be crawled and advertised production sitemap URLs, which exposed duplicate pages to search engines.
+- Browse and public host profiles depended on client-side requests, so their initial HTML contained loading states instead of marketplace content.
+- Missing listings and hosts could return an application error with a successful page status instead of a real 404 response.
+- The sitemap assigned the current build time to every URL, even when the underlying record had not changed.
+- Compatibility marketing routes rendered duplicate content and private account routes relied only on robots exclusions.
+
+### How it was fixed
+
+- Added an explicit site-environment contract and made `https://www.rello.online` the only accepted production origin.
+- Blocked all staging indexing through metadata, robots rules, and an `X-Robots-Tag` response header while leaving staging available for product testing.
+- Server-rendered the initial Browse catalogue and public host profile data without removing existing filters, saved actions, authentication behavior, or pagination.
+- Added real 404 handling and permanent redirects to canonical property and host identifiers.
+- Added branded social images, a web manifest, route-specific metadata, and structured data for the website, organization, listing collections, properties, hosts, and breadcrumbs.
+- Removed artificial sitemap modification dates, added public hosts, and kept sitemap entries limited to canonical production destinations.
+- Redirected duplicate marketing paths and added no-index metadata to authentication, portal, and standalone tour routes.
+- Documented the required production and staging environment values plus the post-deployment Search Console and Bing verification steps.

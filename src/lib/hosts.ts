@@ -4,21 +4,11 @@ import { apiRequest } from "@/lib/apiRequest";
 import { resolveApiError } from "@/lib/errors";
 import type { BackendPage, BackendProperty } from "@/lib/hostListings";
 import { hostPublicIdFrom } from "@/lib/publicIds";
+import type { HostProfile } from "@/lib/types/host";
+
+export type { HostProfile } from "@/lib/types/host";
 
 // === Types
-
-export interface HostProfile {
-  id: number;
-  publicId?: string;
-  slug?: string;
-  avatarUrl?: string | null;
-  identityVerified: boolean;
-  listingCount: number;
-  name: string;
-  rating: number | null;
-  reviewCount: number;
-  role: "AGENT" | "LANDLORD";
-}
 
 export interface HostResult<TValue> {
   data: TValue;
