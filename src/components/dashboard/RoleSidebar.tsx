@@ -6,6 +6,8 @@ import {
   CalendarClock,
   FileSpreadsheet,
   Flag,
+  Inbox,
+  LifeBuoy,
   Megaphone,
   CalendarDays,
   ChevronRight,
@@ -39,6 +41,7 @@ const HOST_NAV_ITEMS = [
   { label: "Bookings", slug: "bookings", icon: CalendarDays },
   { label: "Viewings", slug: "viewings", icon: CalendarClock },
   { label: "Repairs", slug: "maintenance", icon: Wrench },
+  { label: "Help & support", slug: "support", icon: LifeBuoy },
 ];
 
 // Landlords and agents run the same day to day, so they get the same navigation
@@ -54,6 +57,7 @@ const ADMIN_NAV_ITEMS = [
   { label: "Escrow", slug: "escrow", icon: Landmark },
   { label: "Risk", slug: "risk", icon: ShieldAlert },
   { label: "Reports", slug: "reports", icon: Flag },
+  { label: "Support", slug: "support", icon: Inbox },
   { label: "Announcements", slug: "announcements", icon: Megaphone },
   { label: "Compliance", slug: "compliance", icon: FileSpreadsheet },
   { label: "Ratings", slug: "ratings", icon: Star },

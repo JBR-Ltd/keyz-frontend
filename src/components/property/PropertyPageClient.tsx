@@ -1435,7 +1435,7 @@ export default function PropertyPageClient({
                 ) : null}
               </div>
               {property.reviews.count > 0 ? (
-                <div className="mt-4 divide-y divide-border">
+                <div className="mt-4 divide-y divide-[var(--color-border)]">
                   {property.reviews.items.map((review) => (
                     <article
                       key={review.id}

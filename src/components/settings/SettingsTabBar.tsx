@@ -18,8 +18,8 @@ import { logOutAccount } from "@/lib/account";
 interface SettingsTabBarProps {
   activeSection: SettingsSectionId;
   basePath: string;
-  /** "list" is the phone's settings home; "sidebar" is the desktop menu beside the content. */
-  variant: "list" | "sidebar";
+  /** "list" is the phone's settings home; "tabs" runs across the top of the desktop page. */
+  variant: "list" | "tabs";
 }
 
 interface SettingsTab {
@@ -112,7 +112,7 @@ export default function SettingsTabBar({
             <h2 className="px-1 font-body text-xs font-bold uppercase tracking-[0.14em] text-muted">
               {group.title}
             </h2>
-            <ul className="mt-2 divide-y divide-border overflow-hidden rounded-2xl border border-border bg-bg">
+            <ul className="mt-2 divide-y divide-[var(--color-border)] overflow-hidden rounded-2xl border border-border bg-bg">
               {group.ids.map((id) => {
                 const tab = SETTINGS_TABS.find((item) => item.id === id);
 
@@ -155,10 +155,10 @@ export default function SettingsTabBar({
 
   return (
     <nav
-      className="rounded-2xl border border-border bg-bg p-2 shadow-sm"
+      className="flex gap-1 border-b border-[var(--color-border)]"
       aria-label="Account settings sections"
     >
-      {SETTINGS_TABS.map(({ id, label, description, icon: Icon }) => {
+      {SETTINGS_TABS.map(({ id, label, icon: Icon }) => {
         const isActive = id === activeSection;
 
         return (
@@ -167,31 +167,14 @@ export default function SettingsTabBar({
             href={`${basePath}?section=${id}`}
             scroll={false}
             aria-current={isActive ? "page" : undefined}
-            className={`grid min-h-16 grid-cols-[2.25rem_1fr] items-start gap-3 rounded-xl px-3 py-3 transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+            className={`relative -mb-px flex min-h-12 items-center gap-2 border-b-2 px-4 font-body text-sm font-bold transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent ${
               isActive
-                ? "bg-primary text-white"
-                : "text-primary hover:bg-surface-soft"
+                ? "border-accent text-primary"
+                : "border-transparent text-muted hover:text-primary"
             }`}
           >
-            <span
-              className={`flex h-9 w-9 items-center justify-center rounded-lg ${
-                isActive
-                  ? "bg-white/10 text-accent"
-                  : "bg-surface-soft text-primary"
-              }`}
-            >
-              <Icon size={18} strokeWidth={1.8} aria-hidden="true" />
-            </span>
-            <span className="min-w-0 pt-0.5">
-              <span className="block font-body text-sm font-bold">{label}</span>
-              <span
-                className={`mt-1 block font-body text-xs leading-4 ${
-                  isActive ? "text-white/70" : "text-muted"
-                }`}
-              >
-                {description}
-              </span>
-            </span>
+            <Icon size={17} strokeWidth={1.8} aria-hidden="true" />
+            {label}
           </Link>
         );
       })}

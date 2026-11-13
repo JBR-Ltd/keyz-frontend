@@ -4,13 +4,16 @@ import type { ReactElement, ReactNode } from "react";
 import UserAvatar from "@/components/ui/user-avatar";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
+  ChevronRight,
+  CircleCheck,
   House,
+  LifeBuoy,
   LoaderCircle,
   LogOut,
   Menu,
   Search,
   Settings,
-  ShieldCheck,
+  IdCard,
   UserRound,
   BellRing,
   ReceiptText,
@@ -32,16 +35,82 @@ const TENANT_NAV_ITEMS = [
   { label: "My Home", href: "/tenant/bookings", icon: House },
 ];
 
+const TENANT_ACCOUNT_ITEMS = [
+  { label: "Saved searches", href: "/tenant/saved-searches", icon: BellRing },
+  { label: "Statement", href: "/tenant/statement", icon: ReceiptText },
+  { label: "Settings", href: "/tenant/settings", icon: Settings },
+  { label: "Help & support", href: "/tenant/support", icon: LifeBuoy },
+];
+
+function DrawerGroup({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}): ReactElement {
+  return (
+    <section className="mb-6 last:mb-0">
+      <h2 className="px-2 font-body text-xs font-bold uppercase tracking-[0.14em] text-muted">
+        {title}
+      </h2>
+      <ul className="mt-2 grid gap-1">{children}</ul>
+    </section>
+  );
+}
+
+interface DrawerRowProps {
+  href: string;
+  icon: typeof Search;
+  label: string;
+  isActive: boolean;
+  onNavigate: () => void;
+}
+
+function DrawerRow({
+  href,
+  icon: Icon,
+  label,
+  isActive,
+  onNavigate,
+}: DrawerRowProps): ReactElement {
+  return (
+    <li>
+      <Link
+        href={href}
+        onClick={onNavigate}
+        aria-current={isActive ? "page" : undefined}
+        className={`flex min-h-13 items-center gap-3 rounded-xl px-2 py-1.5 font-body text-base font-bold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+          isActive
+            ? "bg-primary/5 text-primary"
+            : "text-primary hover:bg-primary/5"
+        }`}
+      >
+        <span
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+            isActive ? "bg-primary text-accent" : "bg-surface-soft text-primary"
+          }`}
+        >
+          <PendingIconSwap size={18}>
+            <Icon size={18} strokeWidth={1.8} aria-hidden="true" />
+          </PendingIconSwap>
+        </span>
+        <span className="min-w-0 flex-1 truncate">{label}</span>
+        <ChevronRight
+          size={18}
+          className="shrink-0 text-muted"
+          aria-hidden="true"
+        />
+      </Link>
+    </li>
+  );
+}
+
 interface TenantSidebarProps {
   actions: ReactNode;
   showVerificationAction: boolean;
   verificationHref: string;
   verifiedStepCount: number;
-}
-
-interface TenantNavigationProps {
-  onNavigate?: () => void;
-  mobile?: boolean;
 }
 
 function TenantLogo(): ReactElement {
@@ -72,41 +141,25 @@ function TenantLogo(): ReactElement {
   );
 }
 
-function TenantNavigation({
-  onNavigate,
-  mobile = false,
-}: TenantNavigationProps): ReactElement {
+function TenantNavigation(): ReactElement {
   const pathname = usePathname();
 
   return (
     <nav aria-label="Tenant navigation">
-      <ul
-        className={
-          mobile ? "space-y-2" : "flex h-20 items-stretch gap-1 xl:gap-3"
-        }
-      >
+      <ul className="flex h-20 items-stretch gap-1 xl:gap-3">
         {TENANT_NAV_ITEMS.map(({ label, href, icon: Icon }) => {
           const isActive = pathname === href;
 
           return (
-            <li key={href} className={mobile ? undefined : "flex"}>
+            <li key={href} className="flex">
               <Link
                 href={href}
-                onClick={onNavigate}
                 aria-current={isActive ? "page" : undefined}
-                className={
-                  mobile
-                    ? `flex min-h-12 items-center gap-3 rounded-xl px-4 py-3 font-body text-sm font-bold transition-all duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
-                        isActive
-                          ? "bg-primary text-white"
-                          : "text-primary hover:bg-primary/5"
-                      }`
-                    : `relative flex items-center gap-2 px-3 font-body text-sm font-bold transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent xl:px-4 ${
-                        isActive
-                          ? "text-primary after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:bg-accent xl:after:inset-x-4"
-                          : "text-muted hover:text-primary"
-                      }`
-                }
+                className={`relative flex items-center gap-2 px-3 font-body text-sm font-bold transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent xl:px-4 ${
+                  isActive
+                    ? "text-primary after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:bg-accent xl:after:inset-x-4"
+                    : "text-muted hover:text-primary"
+                }`}
               >
                 <PendingIconSwap size={18}>
                   <Icon
@@ -147,7 +200,7 @@ function VerificationMenuCard({
     <div className="mb-2 rounded-lg bg-accent/10 p-3">
       <div className="flex items-start gap-2.5">
         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent text-primary">
-          <ShieldCheck size={16} strokeWidth={2} aria-hidden="true" />
+          <IdCard size={16} strokeWidth={2} aria-hidden="true" />
         </span>
         <span className="min-w-0">
           <span className="block font-body text-xs font-bold text-primary">
@@ -190,6 +243,7 @@ export default function TenantSidebar({
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const drawerRef = useDialogFocus<HTMLElement>(isMobileOpen);
   const { user } = useAuthenticatedUser();
+  const isIdentityVerified = user?.identityVerified === true;
   const profileName = user
     ? `${user.firstName} ${user.lastName}`.trim()
     : "Tenant";
@@ -381,6 +435,17 @@ export default function TenantSidebar({
                       </PendingIconSwap>
                       Settings
                     </Link>
+                    <Link
+                      href="/tenant/support"
+                      role="menuitem"
+                      onClick={() => setIsProfileOpen(false)}
+                      className="flex items-center gap-3 rounded-lg px-4 py-3 font-body text-sm font-medium text-primary transition-colors hover:bg-primary/5"
+                    >
+                      <PendingIconSwap size={17}>
+                        <LifeBuoy size={17} strokeWidth={1.9} />
+                      </PendingIconSwap>
+                      Help & support
+                    </Link>
                     <button
                       type="button"
                       role="menuitem"
@@ -437,104 +502,118 @@ export default function TenantSidebar({
                 exit={reduceMotion ? undefined : { x: "100%" }}
                 transition={{ duration: 0.25, ease: "easeOut" }}
               >
-                <div className="flex h-20 items-center justify-between border-b border-border px-5">
-                  <TenantLogo />
+                <div className="flex items-center gap-3 border-b border-border px-5 py-5">
+                  <Link
+                    href="/tenant/profile"
+                    onClick={() => setIsMobileOpen(false)}
+                    className="flex min-w-0 flex-1 items-center gap-3 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  >
+                    <UserAvatar
+                      avatarUrl={user?.avatarUrl}
+                      className="h-12 w-12 text-sm"
+                      initials={profileInitials}
+                      sizes="48px"
+                    />
+                    <span className="min-w-0">
+                      <span className="flex min-w-0 items-center gap-1.5">
+                        <span className="truncate font-body text-base font-bold text-primary">
+                          {profileName}
+                        </span>
+                        {isIdentityVerified ? (
+                          <CircleCheck
+                            size={18}
+                            strokeWidth={2.2}
+                            className="shrink-0 fill-emerald-600 text-white"
+                            aria-label="Identity verified"
+                          />
+                        ) : null}
+                      </span>
+                      <span className="mt-0.5 block font-body text-xs text-muted">
+                        View profile
+                      </span>
+                    </span>
+                  </Link>
                   <button
                     type="button"
                     onClick={() => setIsMobileOpen(false)}
                     aria-label="Close navigation"
-                    className="flex h-10 w-10 items-center justify-center rounded-full text-primary transition-colors hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-primary transition-colors hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                   >
                     <X size={20} aria-hidden="true" />
                   </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-5">
-                  <TenantNavigation
-                    mobile
-                    onNavigate={() => setIsMobileOpen(false)}
-                  />
+                <div className="flex-1 overflow-y-auto px-4 py-5">
+                  {showVerificationAction ? (
+                    <PendingLink
+                      href={verificationHref}
+                      onClick={() => setIsMobileOpen(false)}
+                      className="mb-6 flex items-center gap-3 rounded-2xl bg-accent/10 p-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                      pendingLabel="Opening…"
+                    >
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent text-primary">
+                        <IdCard size={18} strokeWidth={2} aria-hidden="true" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block font-body text-sm font-bold text-primary">
+                          {verifiedStepCount > 0
+                            ? "Continue verification"
+                            : "Verify your identity"}
+                        </span>
+                        <span className="block font-body text-xs text-muted">
+                          {verifiedStepCount > 0
+                            ? `${verifiedStepCount} of 2 completed`
+                            : "You need this before you book"}
+                        </span>
+                      </span>
+                      <ChevronRight
+                        size={18}
+                        className="shrink-0 text-primary"
+                        aria-hidden="true"
+                      />
+                    </PendingLink>
+                  ) : null}
+
+                  <DrawerGroup title="Explore">
+                    {TENANT_NAV_ITEMS.map(({ label, href, icon }) => (
+                      <DrawerRow
+                        key={href}
+                        href={href}
+                        icon={icon}
+                        label={label}
+                        isActive={pathname === href}
+                        onNavigate={() => setIsMobileOpen(false)}
+                      />
+                    ))}
+                  </DrawerGroup>
+
+                  <DrawerGroup title="Account">
+                    {TENANT_ACCOUNT_ITEMS.map(({ label, href, icon }) => (
+                      <DrawerRow
+                        key={href}
+                        href={href}
+                        icon={icon}
+                        label={label}
+                        isActive={pathname.startsWith(href)}
+                        onNavigate={() => setIsMobileOpen(false)}
+                      />
+                    ))}
+                  </DrawerGroup>
                 </div>
 
-                <div className="border-t border-border p-5">
-                  <div className="mb-4 flex items-center gap-3">
-                    <UserAvatar
-                      avatarUrl={user?.avatarUrl}
-                      className="h-11 w-11 text-sm"
-                      initials={profileInitials}
-                      sizes="44px"
-                    >
-                      {showVerificationAction ? (
-                        <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-accent ring-2 ring-bg" />
-                      ) : null}
-                    </UserAvatar>
-                    <span className="min-w-0">
-                      <span className="block truncate font-body text-sm font-bold text-primary">
-                        {profileName}
-                      </span>
-                      <span className="mt-0.5 block font-body text-xs text-muted">
-                        Tenant
-                      </span>
-                    </span>
-                  </div>
-                  <VerificationMenuCard
-                    href={verificationHref}
-                    onNavigate={() => setIsMobileOpen(false)}
-                    show={showVerificationAction}
-                    verifiedStepCount={verifiedStepCount}
-                  />
-                  <Link
-                    href="/tenant/saved-searches"
-                    onClick={() => setIsMobileOpen(false)}
-                    className="flex min-h-11 items-center gap-3 rounded-lg px-3 font-body text-sm font-medium text-primary transition-colors hover:bg-primary/5"
-                  >
-                    <PendingIconSwap size={17}>
-                      <BellRing size={17} />
-                    </PendingIconSwap>
-                    Saved searches
-                  </Link>
-                  <Link
-                    href="/tenant/statement"
-                    onClick={() => setIsMobileOpen(false)}
-                    className="flex min-h-11 items-center gap-3 rounded-lg px-3 font-body text-sm font-medium text-primary transition-colors hover:bg-primary/5"
-                  >
-                    <PendingIconSwap size={17}>
-                      <ReceiptText size={17} />
-                    </PendingIconSwap>
-                    Statement
-                  </Link>
-                  <Link
-                    href="/tenant/profile"
-                    onClick={() => setIsMobileOpen(false)}
-                    className="flex min-h-11 items-center gap-3 rounded-lg px-3 font-body text-sm font-medium text-primary transition-colors hover:bg-primary/5"
-                  >
-                    <PendingIconSwap size={17}>
-                      <UserRound size={17} />
-                    </PendingIconSwap>
-                    Profile
-                  </Link>
-                  <Link
-                    href="/tenant/settings"
-                    onClick={() => setIsMobileOpen(false)}
-                    className="flex min-h-11 items-center gap-3 rounded-lg px-3 font-body text-sm font-medium text-primary transition-colors hover:bg-primary/5"
-                  >
-                    <PendingIconSwap size={17}>
-                      <Settings size={17} />
-                    </PendingIconSwap>
-                    Settings
-                  </Link>
+                <div className="border-t border-border p-4">
                   <button
                     type="button"
                     onClick={() => void handleLogout()}
                     disabled={isLoggingOut}
-                    className="mt-1 flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-left font-body text-sm font-medium text-primary transition-colors hover:bg-primary/5 disabled:cursor-wait disabled:opacity-70"
+                    className="flex min-h-12 w-full items-center justify-center gap-2 rounded-full border border-red-700/20 font-body text-sm font-bold text-red-700 transition-colors hover:bg-red-700/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-70"
                   >
                     {isLoggingOut ? (
                       <LoaderCircle className="animate-spin" size={17} />
                     ) : (
-                      <LogOut size={17} />
+                      <LogOut size={17} aria-hidden="true" />
                     )}
-                    {isLoggingOut ? "Logging out" : "Logout"}
+                    {isLoggingOut ? "Logging out" : "Log out"}
                   </button>
                 </div>
               </motion.aside>

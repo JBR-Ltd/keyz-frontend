@@ -355,7 +355,7 @@ function SubmittedReport({
               <th className="px-3 py-2">Note</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border text-primary">
+          <tbody className="divide-y divide-[var(--color-border)] text-primary">
             {inspection.items.map((item, index) => (
               <tr key={`${item.room}-${item.item}-${index}`}>
                 <td className="px-3 py-2">{item.room}</td>

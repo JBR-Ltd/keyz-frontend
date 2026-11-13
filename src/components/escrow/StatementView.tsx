@@ -358,7 +358,7 @@ function DesktopTransactions({
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border/70 text-primary">
+          <tbody className="divide-y divide-[var(--color-border)]/70 text-primary">
             {rows.map((row, index) => (
               <tr
                 key={`${row.reference ?? row.type}-${index}`}

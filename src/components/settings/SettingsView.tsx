@@ -1,6 +1,5 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -37,7 +36,6 @@ export default function SettingsView({
   hasChosenSection = true,
 }: SettingsViewProps): ReactElement {
   const pathname = usePathname();
-  const reduceMotion = useReducedMotion();
   const contentRef = useRef<HTMLDivElement>(null);
   const previousSectionRef = useRef(activeSection);
 
@@ -61,13 +59,8 @@ export default function SettingsView({
     );
 
   return (
-    <motion.main
-      className="min-h-screen overflow-x-hidden bg-surface-soft px-4 pb-28 pt-5 sm:px-8 sm:py-8 lg:px-10 lg:py-10"
-      initial={reduceMotion ? false : { opacity: 0, y: 10 }}
-      animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, ease: "easeOut" }}
-    >
-      <div className="mx-auto max-w-6xl">
+    <main className="min-h-screen overflow-x-hidden bg-surface-soft px-4 pb-28 pt-5 sm:px-8 sm:py-8 lg:px-10 lg:py-10">
+      <div className="mx-auto max-w-5xl">
         {/* Phone: the settings home, a list of sections like a phone's own settings app */}
         {!hasChosenSection ? (
           <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:hidden">
@@ -99,41 +92,39 @@ export default function SettingsView({
           </header>
         ) : null}
 
-        <header className="hidden lg:block">
-          <h1 className="font-display text-4xl font-bold leading-tight text-primary">
-            Account settings
-          </h1>
-          <p className="mt-2 font-body text-base leading-6 text-muted">
-            Manage your account, security, payments, and preferences.
-          </p>
+        {/* Desktop: who is signed in beside the title, then the sections as tabs so the content gets the full width */}
+        <header className="hidden items-center justify-between gap-8 pt-6 lg:flex">
+          <div className="min-w-0">
+            <h1 className="font-display text-4xl font-bold leading-tight text-primary">
+              Account settings
+            </h1>
+            <p className="mt-2 font-body text-base leading-6 text-muted">
+              Manage your account, security, payments, and preferences.
+            </p>
+          </div>
+          <div className="w-80 shrink-0">
+            <SettingsAccountCard />
+          </div>
         </header>
 
-        <div
-          className={`items-start gap-8 lg:mt-7 lg:grid lg:grid-cols-[17rem_minmax(0,1fr)] ${
-            hasChosenSection ? "" : "hidden"
-          }`}
-        >
-          <aside className="sticky top-6 hidden gap-4 lg:grid">
-            <SettingsAccountCard />
-            <SettingsTabBar
-              activeSection={activeSection}
-              basePath={pathname}
-              variant="sidebar"
-            />
-          </aside>
-          <motion.div
+        <div className="mt-8 hidden lg:block">
+          <SettingsTabBar
+            activeSection={activeSection}
+            basePath={pathname}
+            variant="tabs"
+          />
+        </div>
+
+        <div className={`lg:mt-6 lg:block ${hasChosenSection ? "" : "hidden"}`}>
+          <div
             ref={contentRef}
-            key={activeSection}
             tabIndex={-1}
             className="settings-content min-w-0 scroll-mt-6 outline-none"
-            initial={reduceMotion ? false : { opacity: 0, x: 8 }}
-            animate={reduceMotion ? undefined : { opacity: 1, x: 0 }}
-            transition={{ duration: 0.18, ease: "easeOut" }}
           >
             {activeContent}
-          </motion.div>
+          </div>
         </div>
       </div>
-    </motion.main>
+    </main>
   );
 }
