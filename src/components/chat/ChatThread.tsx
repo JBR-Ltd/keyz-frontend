@@ -21,6 +21,7 @@ import type { ChatMessage, ChatPartyRole } from "@/lib/chat/chatStorage";
 import { startCall } from "@/lib/calls";
 import { useDialogFocus } from "@/lib/useDialogFocus";
 import { getInitials } from "@/lib/utils";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface ChatThreadProps {
   conversationId: string | null;
@@ -419,14 +420,13 @@ export default function ChatThread({
 
             <div className="min-h-0 flex-1 overflow-y-auto bg-bg px-4 py-5">
               {messages.length === 0 ? (
-                <div className="flex h-full min-h-[18rem] flex-col items-center justify-center px-8 text-center">
-                  <span className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
-                    <MessageCircle size={24} aria-hidden="true" />
-                  </span>
-                  <p className="mt-4 font-body text-sm font-bold text-primary">
-                    Start the conversation
-                  </p>
-                </div>
+                <EmptyState
+                  icon={MessageCircle}
+                  title="Start the conversation"
+                  description="Say hello, or ask about the home. Keep payments on Rello so they stay protected."
+                  variant="panel"
+                  className="h-full min-h-[18rem] content-center"
+                />
               ) : (
                 <div className="space-y-4">
                   {messages.map((message, index) => {

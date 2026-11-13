@@ -68,6 +68,7 @@ import {
   isTenantVerified,
   useTenantVerificationSnapshot,
 } from "@/lib/tenantVerification";
+import { EmptyState } from "@/components/ui/empty-state";
 
 const BookingRequestDialog = dynamic(
   () => import("@/components/property/BookingRequestDialog"),
@@ -1659,9 +1660,13 @@ export default function PropertyPageClient({
                   ))}
                 </div>
               ) : (
-                <p className="mt-3 font-body text-sm text-muted">
-                  No reviews yet.
-                </p>
+                <EmptyState
+                  icon={Star}
+                  title="No reviews yet"
+                  description="Reviews come from tenants after a completed stay."
+                  variant="compact"
+                  className="mt-3"
+                />
               )}
             </section>
 

@@ -8,12 +8,7 @@ import {
   subMonths,
   subYears,
 } from "date-fns";
-import {
-  AlertCircle,
-  CalendarRange,
-  Download,
-  RotateCcw,
-} from "lucide-react";
+import { AlertCircle, CalendarRange, Download, RotateCcw } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState, type ReactElement } from "react";
 import PropertyPrice from "@/components/property/PropertyPrice";
@@ -30,6 +25,7 @@ import {
   type StatementRow,
 } from "@/lib/instalments";
 import { cn } from "@/lib/utils";
+import { EmptyState } from "@/components/ui/empty-state";
 
 // === Types
 
@@ -482,10 +478,8 @@ export default function StatementView(): ReactElement {
   };
 
   const tenantPaid =
-    statement?.rows.reduce(
-      (total, row) => total + Math.max(row.gross, 0),
-      0,
-    ) ?? 0;
+    statement?.rows.reduce((total, row) => total + Math.max(row.gross, 0), 0) ??
+    0;
   const tenantReturned =
     statement?.rows.reduce(
       (total, row) => total + Math.abs(Math.min(row.gross, 0)),
@@ -672,39 +666,22 @@ export default function StatementView(): ReactElement {
             </div>
 
             {statement.rows.length === 0 ? (
-              <div className="mt-7 border-y border-border/70 py-12 text-center">
-                <CalendarRange
-                  size={32}
-                  className="mx-auto text-accent-alt"
-                  aria-hidden="true"
-                />
-                <h2 className="mt-4 font-display text-2xl font-bold text-primary">
-                  No transactions in this period
-                </h2>
-                <p className="mx-auto mt-2 max-w-md font-body text-sm leading-6 text-muted">
-                  Nothing moved between {formatDate(statement.from)} and{" "}
-                  {formatDate(statement.to)}.
-                </p>
-                {preset !== "1_year" ? (
-                  <button
-                    type="button"
-                    onClick={showWiderRange}
-                    className="mt-5 min-h-11 rounded-full border border-primary/20 px-5 font-body text-sm font-bold text-primary hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                  >
-                    View the last year
-                  </button>
-                ) : null}
-              </div>
+              <EmptyState
+                icon={CalendarRange}
+                title="No transactions in this period"
+                description={`Nothing moved between ${formatDate(statement.from)} and ${formatDate(statement.to)}.`}
+                action={
+                  preset !== "1_year"
+                    ? { label: "View the last year", onClick: showWiderRange }
+                    : undefined
+                }
+                variant="panel"
+                className="mt-7 border-y border-border/70"
+              />
             ) : (
               <>
-                <DesktopTransactions
-                  isHost={isHost}
-                  rows={statement.rows}
-                />
-                <MobileTransactions
-                  isHost={isHost}
-                  rows={statement.rows}
-                />
+                <DesktopTransactions isHost={isHost} rows={statement.rows} />
+                <MobileTransactions isHost={isHost} rows={statement.rows} />
               </>
             )}
           </>

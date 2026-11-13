@@ -21,6 +21,7 @@ import {
   type EscrowEntry,
   type EscrowStatus,
 } from "@/lib/escrow";
+import { EmptyState } from "@/components/ui/empty-state";
 
 const STATUS_LABELS: Record<EscrowStatus, string> = {
   AWAITING_PAYMENT: "Awaiting payment",
@@ -120,7 +121,8 @@ export default function TenantEscrowPage(): ReactElement {
             Escrow command
           </p>
           <h1 className="mt-5 font-display text-5xl font-bold leading-[0.9] sm:text-6xl">
-            {loadError ? "Unavailable" : <PropertyPrice value={totals.held} />} protected right now.
+            {loadError ? "Unavailable" : <PropertyPrice value={totals.held} />}{" "}
+            protected right now.
           </h1>
           <p className="mt-5 max-w-xl font-body text-base leading-7 text-muted">
             Money you pay stays with Rello until you move in. The host is paid
@@ -134,7 +136,11 @@ export default function TenantEscrowPage(): ReactElement {
                 Awaiting payment
               </p>
               <p className="mt-2 font-display text-3xl font-bold">
-                {loadError ? "Unavailable" : <PropertyPrice value={totals.awaiting} />}
+                {loadError ? (
+                  "Unavailable"
+                ) : (
+                  <PropertyPrice value={totals.awaiting} />
+                )}
               </p>
             </div>
             <div className="rounded-lg bg-primary/5 p-5 shadow-sm">
@@ -143,7 +149,11 @@ export default function TenantEscrowPage(): ReactElement {
                 Released to hosts
               </p>
               <p className="mt-2 font-display text-3xl font-bold">
-                {loadError ? "Unavailable" : <PropertyPrice value={totals.released} />}
+                {loadError ? (
+                  "Unavailable"
+                ) : (
+                  <PropertyPrice value={totals.released} />
+                )}
               </p>
             </div>
           </div>
@@ -239,9 +249,13 @@ export default function TenantEscrowPage(): ReactElement {
             Loading...
           </p>
         ) : entries.length === 0 ? (
-          <p className="p-6 text-center font-body text-sm text-muted">
-            No protected bookings yet.
-          </p>
+          <EmptyState
+            icon={ShieldCheck}
+            title="No protected bookings yet"
+            description="When you pay for a home, the money is held here until you move in."
+            action={{ label: "Browse homes", href: "/browse" }}
+            variant="panel"
+          />
         ) : (
           entries.map((entry) => (
             <article
@@ -291,9 +305,8 @@ export default function TenantEscrowPage(): ReactElement {
                   ) : null}
                   {entry.depositAmount ? (
                     <p className="mt-1 font-body text-xs text-muted">
-                      Includes a{" "}
-                      <PropertyPrice value={entry.depositAmount} /> refundable
-                      deposit
+                      Includes a <PropertyPrice value={entry.depositAmount} />{" "}
+                      refundable deposit
                       {entry.depositStatus === "RETURNED"
                         ? ", returned to you"
                         : entry.depositStatus === "CLAIMED"

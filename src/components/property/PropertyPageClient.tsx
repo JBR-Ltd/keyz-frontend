@@ -55,6 +55,7 @@ import {
 import { useDialogFocus } from "@/lib/useDialogFocus";
 import { useToast } from "@/components/ui/toast";
 import { getOpenRentalRequest, type Booking } from "@/lib/bookings";
+import { EmptyState } from "@/components/ui/empty-state";
 
 const BookingRequestDialog = dynamic(
   () => import("@/components/property/BookingRequestDialog"),
@@ -1476,9 +1477,13 @@ export default function PropertyPageClient({
                   ))}
                 </div>
               ) : (
-                <p className="mt-3 font-body text-sm text-muted">
-                  No reviews yet.
-                </p>
+                <EmptyState
+                  icon={Star}
+                  title="No reviews yet"
+                  description="Reviews come from tenants after a completed stay."
+                  variant="compact"
+                  className="mt-3"
+                />
               )}
             </section>
 

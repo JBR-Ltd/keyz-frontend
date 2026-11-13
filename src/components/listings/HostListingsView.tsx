@@ -16,6 +16,7 @@ import {
   ShieldQuestion,
   Trash2,
   X,
+  SearchX,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -39,6 +40,7 @@ import {
 import { deleteDraft } from "@/lib/propertyDrafts";
 import { propertyPath } from "@/lib/publicIds";
 import { useToast } from "@/components/ui/toast";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface HostListingsViewProps {
   role: HostListingRole;
@@ -587,42 +589,23 @@ export default function HostListingsView({
           </section>
         ) : listings.length === 0 && loadError ? null : listings.length ===
           0 ? (
-          <section className="flex min-h-[24rem] flex-col items-center justify-center px-6 py-14 text-center">
-            <span className="flex h-16 w-16 items-center justify-center rounded-full bg-surface-soft text-primary">
-              <Home size={28} aria-hidden="true" />
-            </span>
-            <h2 className="mt-5 font-display text-3xl font-bold text-primary">
-              Create your first listing
-            </h2>
-            <p className="mt-3 max-w-md font-body text-sm leading-6 text-muted">
-              Add a home, publish its details, and complete property
-              verification when you are ready.
-            </p>
-            <Link
-              href={createHref}
-              className="mt-7 inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-accent px-7 py-3 font-body text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            >
-              <Plus size={18} aria-hidden="true" />
-              Create listing
-            </Link>
-          </section>
+          <EmptyState
+            icon={Home}
+            title="Create your first listing"
+            description="Add a home, publish its details, and complete property verification when you are ready."
+            action={{ label: "Create listing", href: createHref }}
+            variant="panel"
+            className="min-h-[24rem] content-center"
+          />
         ) : visibleListings.length === 0 ? (
-          <section className="flex min-h-72 flex-col items-center justify-center px-6 py-12 text-center">
-            <Search size={32} aria-hidden="true" className="text-primary" />
-            <h2 className="mt-4 font-display text-2xl font-bold text-primary">
-              No listings found
-            </h2>
-            <p className="mt-2 font-body text-sm text-muted">
-              Try another title or location, or view all listing states.
-            </p>
-            <button
-              type="button"
-              onClick={clearFilters}
-              className="mt-6 inline-flex min-h-11 items-center justify-center rounded-full border border-primary/20 px-5 font-body text-sm font-bold text-primary hover:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            >
-              Clear filters
-            </button>
-          </section>
+          <EmptyState
+            icon={SearchX}
+            title="No listings found"
+            description="Try another title or location, or view all listing states."
+            action={{ label: "Clear filters", onClick: clearFilters }}
+            variant="panel"
+            className="min-h-72 content-center"
+          />
         ) : (
           <section
             className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3"

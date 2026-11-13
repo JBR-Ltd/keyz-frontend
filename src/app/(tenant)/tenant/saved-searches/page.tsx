@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, BellOff, Loader2, Search, Trash2 } from "lucide-react";
+import { Bell, BellOff, Loader2, Trash2, BellRing } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState, type ReactElement } from "react";
 import PropertyPrice from "@/components/property/PropertyPrice";
@@ -12,6 +12,7 @@ import {
   updateSavedSearch,
   type SavedSearch,
 } from "@/lib/marketplace";
+import { EmptyState } from "@/components/ui/empty-state";
 
 const MODE_LABELS: Record<NonNullable<SavedSearch["rentalMode"]>, string> = {
   ANNUAL: "Annual rent",
@@ -131,16 +132,13 @@ export default function SavedSearchesPage(): ReactElement {
       ) : error ? (
         <p className="mt-8 font-body text-sm text-red-700">{error}</p>
       ) : searches.length === 0 ? (
-        <div className="mt-8 rounded-lg bg-surface-soft p-8 text-center">
-          <p className="font-body text-sm text-muted">No saved searches yet.</p>
-          <Link
-            href="/browse"
-            className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-full bg-primary px-5 font-body text-sm font-bold text-white hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-          >
-            <Search size={15} aria-hidden="true" />
-            Browse homes
-          </Link>
-        </div>
+        <EmptyState
+          icon={BellRing}
+          title="No saved searches yet"
+          description="Save a search on the browse page and we tell you when a new home matches it."
+          action={{ label: "Browse homes", href: "/browse" }}
+          className="mt-8"
+        />
       ) : (
         <ul className="mt-8 grid gap-4 md:grid-cols-2">
           {searches.map((search) => (

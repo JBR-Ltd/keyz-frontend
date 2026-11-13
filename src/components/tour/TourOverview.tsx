@@ -20,6 +20,8 @@ import {
   Loader2,
   Plus,
   Rocket,
+  Layers,
+  DoorOpen,
 } from "lucide-react";
 import { PendingLink } from "@/components/ui/pending-link";
 import { iconForTypeAndName } from "@/lib/tour/roomIcons";
@@ -28,6 +30,7 @@ import type {
   PublicTourFloor,
   TourSummary,
 } from "@/lib/types/tour";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface TourOverviewProps {
   tour: PublicTour;
@@ -106,8 +109,8 @@ export default function TourOverview({
             {tour.propertyName || "Your tour"}
           </h2>
           <p className="mt-2 font-body text-sm leading-6 text-muted">
-            Every floor, every room, in one place. Add a floor, revisit a
-            room, or publish once everything is ready.
+            Every floor, every room, in one place. Add a floor, revisit a room,
+            or publish once everything is ready.
           </p>
         </div>
         <span
@@ -129,14 +132,12 @@ export default function TourOverview({
       </div>
 
       {tour.floors.length === 0 ? (
-        <div className="mt-6 rounded-xl border border-dashed border-primary/20 bg-surface-soft/40 p-8 text-center">
-          <p className="font-body text-sm font-bold text-primary">
-            No floors yet
-          </p>
-          <p className="mt-1 font-body text-xs text-muted">
-            Add a floor, then capture its rooms.
-          </p>
-        </div>
+        <EmptyState
+          icon={Layers}
+          title="No floors yet"
+          description="Add a floor, then capture its rooms."
+          className="mt-6"
+        />
       ) : (
         <ul className="mt-6 space-y-3">
           {tour.floors.map((floor) => {
@@ -252,9 +253,12 @@ export default function TourOverview({
                     })}
                   </ul>
                 ) : (
-                  <p className="px-4 py-3 font-body text-xs text-muted">
-                    No rooms on this floor yet.
-                  </p>
+                  <EmptyState
+                    icon={DoorOpen}
+                    title="No rooms on this floor yet"
+                    variant="compact"
+                    className="m-3"
+                  />
                 )}
               </li>
             );
@@ -277,16 +281,16 @@ export default function TourOverview({
       ) : null}
 
       <div className="mt-6 flex flex-wrap gap-3">
-       <button
-  type="button"
-  data-tour="overview-add-floor"
-  disabled={pendingKey !== null}
-  onClick={onAddAnotherFloor}
-  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-primary/20 bg-bg px-5 font-body text-sm font-bold text-primary transition-colors hover:border-accent hover:bg-accent/10 disabled:cursor-not-allowed disabled:opacity-60"
->
-  <Plus size={14} aria-hidden="true" />
-  Add another floor
-</button>
+        <button
+          type="button"
+          data-tour="overview-add-floor"
+          disabled={pendingKey !== null}
+          onClick={onAddAnotherFloor}
+          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-primary/20 bg-bg px-5 font-body text-sm font-bold text-primary transition-colors hover:border-accent hover:bg-accent/10 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          <Plus size={14} aria-hidden="true" />
+          Add another floor
+        </button>
 
         {previewHref ? (
           <PendingLink
@@ -301,9 +305,9 @@ export default function TourOverview({
         ) : null}
 
         <button
-        type="button"
-  data-tour="overview-publish"
-  onClick={onPublish}
+          type="button"
+          data-tour="overview-publish"
+          onClick={onPublish}
           disabled={!publishable || isPublishing}
           aria-busy={isPublishing}
           title={
@@ -311,7 +315,8 @@ export default function TourOverview({
               ? "Publish this tour"
               : "Fill in the blockers above before publishing"
           }
-           className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-full bg-accent px-6 font-body text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-white disabled:cursor-not-allowed disabled:opacity-50" >
+          className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-full bg-accent px-6 font-body text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+        >
           {isPublishing ? (
             <>
               <Loader2 size={14} className="animate-spin" aria-hidden="true" />

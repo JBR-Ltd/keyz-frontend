@@ -20,6 +20,7 @@ import {
   markNotificationRead,
   type AppNotification,
 } from "@/lib/notifications";
+import { EmptyState } from "@/components/ui/empty-state";
 
 /** The badge refreshes on this cadence; an open panel refreshes on open. */
 const UNREAD_POLL_MS = 30000;
@@ -453,9 +454,12 @@ export default function NotificationsBell(): ReactElement {
               </button>
             </div>
           ) : items.length === 0 ? (
-            <p className="px-5 py-10 text-center font-body text-sm text-muted">
-              Nothing yet. Booking updates, payments and reminders show up here.
-            </p>
+            <EmptyState
+              icon={Bell}
+              title="You are all caught up"
+              description="Booking updates, payments and reminders show up here."
+              variant="panel"
+            />
           ) : (
             <div className="min-h-0 flex-1 overscroll-contain overflow-y-auto sm:max-h-[26rem] sm:flex-none">
               <ul className="divide-y divide-[var(--color-border)]">

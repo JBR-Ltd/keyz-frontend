@@ -26,6 +26,7 @@ import {
   ShieldQuestion,
   Star,
   Trash2,
+  CalendarX2,
 } from "lucide-react";
 import PropertyPrice from "@/components/property/PropertyPrice";
 import ResilientPropertyImage from "@/components/property/ResilientPropertyImage";
@@ -72,6 +73,7 @@ import {
   type PropertyVerificationState,
 } from "@/lib/propertyVerification";
 import type { TourSummary } from "@/lib/types/tour";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface ManageListingViewProps {
   propertyId: string;
@@ -1235,7 +1237,12 @@ function DateRangeList({
         {title}
       </h3>
       {ranges.length === 0 ? (
-        <p className="mt-3 font-body text-sm text-muted">{emptyMessage}</p>
+        <EmptyState
+          icon={CalendarX2}
+          title={emptyMessage}
+          variant="compact"
+          className="mt-3"
+        />
       ) : (
         <ul className="mt-3 grid gap-3">
           {ranges.map((range) => (
@@ -1380,16 +1387,13 @@ function PhotosPanel({
       ) : null}
 
       {status === "ready" && photos.length === 0 ? (
-        <div className="mt-6 flex min-h-64 flex-col items-center justify-center border-y border-border px-6 text-center">
-          <ImagePlus size={30} className="text-primary" aria-hidden="true" />
-          <h3 className="mt-4 font-display text-xl font-bold text-primary">
-            Add your first photo
-          </h3>
-          <p className="mt-2 max-w-md font-body text-sm leading-6 text-muted">
-            Clear, well-lit images help renters understand the home before they
-            request it.
-          </p>
-        </div>
+        <EmptyState
+          icon={ImagePlus}
+          title="Add your first photo"
+          description="Clear, well-lit images help renters understand the home before they request it."
+          variant="panel"
+          className="mt-6 min-h-64 content-center border-y border-border"
+        />
       ) : null}
 
       {status === "ready" && photos.length > 0 ? (

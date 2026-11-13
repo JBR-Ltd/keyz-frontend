@@ -17,6 +17,7 @@ import {
   type RiskStatus,
 } from "@/lib/adminRisk";
 import type { EscrowEntry } from "@/lib/escrow";
+import { EmptyState } from "@/components/ui/empty-state";
 
 // === Constants
 
@@ -366,12 +367,12 @@ export default function AdminRiskPage(): ReactElement {
         {isLoading ? (
           <p className="mt-8 font-body text-sm text-muted">Loading...</p>
         ) : flags.length === 0 ? (
-          <div className="mt-8 rounded-2xl border border-border bg-bg p-8 text-center">
-            <ShieldCheck size={32} className="mx-auto text-accent-alt" />
-            <p className="mt-4 font-body text-sm text-muted">
-              Nothing in this list.
-            </p>
-          </div>
+          <EmptyState
+            icon={ShieldCheck}
+            title="No flags here"
+            description="Flags are raised automatically as money moves and identities are checked."
+            className="mt-8"
+          />
         ) : (
           <ul className="mt-6 grid gap-4">
             {flags.map((flag) => (
@@ -536,12 +537,12 @@ export default function AdminRiskPage(): ReactElement {
             </button>
           </div>
         ) : claims.length === 0 ? (
-          <div className="mt-6 rounded-2xl border border-border bg-bg p-8 text-center">
-            <Scale size={32} className="mx-auto text-accent-alt" />
-            <p className="mt-4 font-body text-sm text-muted">
-              No deposit claims waiting.
-            </p>
-          </div>
+          <EmptyState
+            icon={Scale}
+            title="No deposit claims waiting"
+            description="When a host claims against a deposit, you decide the split here."
+            className="mt-6"
+          />
         ) : (
           <ul className="mt-6 grid gap-4">
             {claims.map((claim) => (

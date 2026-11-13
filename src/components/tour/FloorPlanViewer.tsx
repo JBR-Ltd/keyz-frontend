@@ -1,12 +1,7 @@
 "use client";
 
 import type { ReactElement } from "react";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Check,
@@ -14,6 +9,7 @@ import {
   Layers,
   Loader2,
   RefreshCw,
+  Map as MapIcon,
 } from "lucide-react";
 import BlueprintCanvas from "@/components/tour/BlueprintCanvas";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
@@ -37,6 +33,7 @@ import type {
   Room,
   Staircase,
 } from "@/lib/types/tour";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface FloorPlanViewerProps {
   floorId: number;
@@ -279,14 +276,11 @@ export default function FloorPlanViewer({
   if (!plan || plan.placements.length === 0) {
     return (
       <div className="space-y-4">
-        <div className="rounded-lg border border-border bg-surface-soft p-8 text-center">
-          <p className="font-body text-sm font-bold text-primary">
-            No floor plan yet
-          </p>
-          <p className="mt-2 font-body text-xs text-muted">
-            Generate a schematic from the rooms and doors you captured.
-          </p>
-        </div>
+        <EmptyState
+          icon={MapIcon}
+          title="No floor plan yet"
+          description="Generate a schematic from the rooms and doors you captured."
+        />
         <button
           type="button"
           onClick={() => void handleGenerate()}
@@ -294,10 +288,7 @@ export default function FloorPlanViewer({
           aria-busy={isSaving}
           className="inline-flex min-h-12 w-full items-center justify-center rounded-full bg-accent px-7 py-3 font-body text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
         >
-          <AsyncButtonContent
-            isPending={isSaving}
-            pendingLabel="Generating…"
-          >
+          <AsyncButtonContent isPending={isSaving} pendingLabel="Generating…">
             Generate floor plan
           </AsyncButtonContent>
         </button>
@@ -343,9 +334,9 @@ export default function FloorPlanViewer({
               </button>
             ) : null}
             <div
-  data-tour="plan-tabs"
-  className="flex gap-1 rounded-lg border border-border bg-bg p-0.5"
->
+              data-tour="plan-tabs"
+              className="flex gap-1 rounded-lg border border-border bg-bg p-0.5"
+            >
               <button
                 type="button"
                 onClick={() => setViewMode("blueprint")}
@@ -422,7 +413,11 @@ export default function FloorPlanViewer({
               className="inline-flex min-h-9 items-center justify-center rounded-md border border-border bg-bg font-body text-xs font-bold text-primary hover:border-accent disabled:cursor-wait disabled:opacity-60"
             >
               {pendingNudge === "up" ? (
-                <Loader2 size={12} className="animate-spin" aria-hidden="true" />
+                <Loader2
+                  size={12}
+                  className="animate-spin"
+                  aria-hidden="true"
+                />
               ) : (
                 "Up"
               )}
@@ -434,7 +429,11 @@ export default function FloorPlanViewer({
               className="inline-flex min-h-9 items-center justify-center rounded-md border border-border bg-bg font-body text-xs font-bold text-primary hover:border-accent disabled:cursor-wait disabled:opacity-60"
             >
               {pendingNudge === "down" ? (
-                <Loader2 size={12} className="animate-spin" aria-hidden="true" />
+                <Loader2
+                  size={12}
+                  className="animate-spin"
+                  aria-hidden="true"
+                />
               ) : (
                 "Down"
               )}
@@ -446,7 +445,11 @@ export default function FloorPlanViewer({
               className="inline-flex min-h-9 items-center justify-center rounded-md border border-border bg-bg font-body text-xs font-bold text-primary hover:border-accent disabled:cursor-wait disabled:opacity-60"
             >
               {pendingNudge === "left" ? (
-                <Loader2 size={12} className="animate-spin" aria-hidden="true" />
+                <Loader2
+                  size={12}
+                  className="animate-spin"
+                  aria-hidden="true"
+                />
               ) : (
                 "Left"
               )}
@@ -458,7 +461,11 @@ export default function FloorPlanViewer({
               className="inline-flex min-h-9 items-center justify-center rounded-md border border-border bg-bg font-body text-xs font-bold text-primary hover:border-accent disabled:cursor-wait disabled:opacity-60"
             >
               {pendingNudge === "right" ? (
-                <Loader2 size={12} className="animate-spin" aria-hidden="true" />
+                <Loader2
+                  size={12}
+                  className="animate-spin"
+                  aria-hidden="true"
+                />
               ) : (
                 "Right"
               )}
@@ -483,12 +490,12 @@ export default function FloorPlanViewer({
         </div>
       ) : (
         <p className="text-center font-body text-xs text-muted">
-          In the Walkthrough, click a room to select it. In the Blueprint,
-          drag to pan and pinch or scroll to zoom.
+          In the Walkthrough, click a room to select it. In the Blueprint, drag
+          to pan and pinch or scroll to zoom.
         </p>
       )}
 
-     <div data-tour="plan-actions" className="flex flex-wrap gap-3">
+      <div data-tour="plan-actions" className="flex flex-wrap gap-3">
         <button
           type="button"
           onClick={() => void handleGenerate()}

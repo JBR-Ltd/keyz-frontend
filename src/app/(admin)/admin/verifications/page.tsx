@@ -14,6 +14,7 @@ import {
   type KybSubmission,
   type PropertyVerificationSubmission,
 } from "@/lib/admin";
+import { EmptyState } from "@/components/ui/empty-state";
 
 // === Types
 
@@ -224,12 +225,12 @@ export default function AdminVerificationsPage(): ReactElement {
       </p>
 
       {isEmpty ? (
-        <div className="mt-5 rounded-lg bg-surface-soft p-10 text-center shadow-sm">
-          <ShieldCheck size={26} className="mx-auto text-accent-alt" />
-          <p className="mx-auto mt-3 max-w-md font-body text-base leading-7 text-muted">
-            {emptyMessage}
-          </p>
-        </div>
+        <EmptyState
+          icon={ShieldCheck}
+          title="Queue is clear"
+          description={emptyMessage}
+          className="mt-5"
+        />
       ) : (
         <div className="mt-5 grid gap-5">{rows}</div>
       )}

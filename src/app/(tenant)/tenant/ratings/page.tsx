@@ -15,6 +15,7 @@ import { useToast } from "@/components/ui/toast";
 import RatingsPageSkeleton from "@/components/reviews/RatingsPageSkeleton";
 import { getAllMyBookings, type Booking } from "@/lib/bookings";
 import { getReviewsIWrote, submitReview, type Review } from "@/lib/reviews";
+import { EmptyState } from "@/components/ui/empty-state";
 
 const PROMPTS = [
   "Was the listing accurate?",
@@ -297,11 +298,18 @@ export default function TenantRatingsPage(): ReactElement {
 
       <section className="mt-8 grid gap-5 md:grid-cols-3">
         {reviews.length === 0 ? (
-          <p className="font-body text-sm text-muted">
-            {isLoading
-              ? "Loading your reviews..."
-              : "Reviews you write will appear here."}
-          </p>
+          isLoading ? (
+            <p className="font-body text-sm text-muted">
+              Loading your reviews...
+            </p>
+          ) : (
+            <EmptyState
+              icon={Star}
+              title="No reviews yet"
+              description="After a stay ends you can review the home and the host. What you write appears here."
+              className="md:col-span-3"
+            />
+          )
         ) : (
           reviews.map((review) => (
             <article

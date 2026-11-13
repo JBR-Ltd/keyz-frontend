@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, Inbox } from "lucide-react";
+import { ChevronLeft, Inbox, MessagesSquare } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
@@ -25,6 +25,7 @@ import {
   type SupportThread,
   type SupportTicket,
 } from "@/lib/support";
+import { EmptyState } from "@/components/ui/empty-state";
 
 const FILTERS: SelectOption[] = [
   { value: "OPEN", label: "Needs a reply" },
@@ -159,19 +160,15 @@ function AdminSupportInbox(): ReactElement {
           ) : listError ? (
             <p className="font-body text-sm text-red-700">{listError}</p>
           ) : tickets.length === 0 ? (
-            <div className="grid justify-items-center gap-3 rounded-2xl border border-dashed border-primary/20 px-6 py-10 text-center">
-              <span className="flex h-14 w-14 items-center justify-center rounded-full bg-surface-soft text-primary">
-                <Inbox size={26} strokeWidth={1.6} aria-hidden="true" />
-              </span>
-              <p className="font-body text-sm font-bold text-primary">
-                Nothing here
-              </p>
-              <p className="max-w-xs font-body text-sm leading-6 text-muted">
-                {filter === "OPEN"
+            <EmptyState
+              icon={Inbox}
+              title={filter === "OPEN" ? "All caught up" : "Nothing here"}
+              description={
+                filter === "OPEN"
                   ? "Every conversation has a reply. New messages appear here."
-                  : "No conversations in this view."}
-              </p>
-            </div>
+                  : "No conversations in this view."
+              }
+            />
           ) : (
             <ul className="grid gap-2">
               {tickets.map((ticket) => (
@@ -210,9 +207,12 @@ function AdminSupportInbox(): ReactElement {
           }`}
         >
           {!selected ? (
-            <p className="py-16 text-center font-body text-sm text-muted">
-              Choose a conversation to read and reply.
-            </p>
+            <EmptyState
+              icon={MessagesSquare}
+              title="Pick a conversation"
+              description="Choose one from the list to read it and reply."
+              variant="panel"
+            />
           ) : isThreadLoading ? (
             <div className="grid gap-3">
               <Skeleton className="h-8 w-2/3" />

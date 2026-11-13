@@ -53,6 +53,7 @@ import {
   pendingSaveSearch,
   type PendingAuthAction,
 } from "@/lib/authContinuation";
+import { EmptyState } from "@/components/ui/empty-state";
 
 // === Types
 
@@ -1801,34 +1802,29 @@ export default function TenantBrowsePage({
             ))}
           </div>
         ) : properties.length === 0 ? (
-          <div className="flex min-h-72 flex-col items-center justify-center rounded-xl bg-bg px-6 py-12 text-center shadow-sm">
-            <span className="flex h-[6.5rem] w-[6.5rem] items-center justify-center rounded-full bg-surface-soft text-primary">
-              <SearchX size={48} aria-hidden="true" />
-            </span>
-            <h3 className="mt-5 font-display text-2xl font-bold text-primary">
-              No matching homes
-            </h3>
-            <p className="mt-2 max-w-md font-body text-sm leading-6 text-muted">
-              Try a nearby area or remove a filter to see more available
-              rentals.
-            </p>
-            {appliedFilters.length > 0 ? (
-              <button
-                type="button"
-                onClick={() => {
-                  if (onlyQueryApplied) {
-                    setQueryInput("");
-                    setSearchQuery("");
-                  } else {
-                    clearDetailedFilters();
+          <EmptyState
+            icon={SearchX}
+            title="No matching homes"
+            description="Try a nearby area or remove a filter to see more available rentals."
+            action={
+              appliedFilters.length > 0
+                ? {
+                    label: onlyQueryApplied
+                      ? "View all homes"
+                      : "Clear filters",
+                    onClick: () => {
+                      if (onlyQueryApplied) {
+                        setQueryInput("");
+                        setSearchQuery("");
+                      } else {
+                        clearDetailedFilters();
+                      }
+                    },
                   }
-                }}
-                className="mt-5 rounded-full bg-primary px-5 py-3 font-body text-sm font-bold text-white hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-              >
-                {onlyQueryApplied ? "View all homes" : "Clear filters"}
-              </button>
-            ) : null}
-          </div>
+                : undefined
+            }
+            className="min-h-72 content-center"
+          />
         ) : (
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
             {properties.map((property) => (

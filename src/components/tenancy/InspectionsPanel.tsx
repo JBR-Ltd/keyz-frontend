@@ -1,6 +1,14 @@
 "use client";
 
-import { Camera, Loader2, Plus, ShieldAlert, ShieldCheck, Trash2 } from "lucide-react";
+import {
+  Camera,
+  Loader2,
+  Plus,
+  ShieldAlert,
+  ShieldCheck,
+  Trash2,
+  ClipboardCheck,
+} from "lucide-react";
 import { useEffect, useRef, useState, type ReactElement } from "react";
 import { Select } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
@@ -18,6 +26,7 @@ import {
   type InspectionStatus,
   type ItemCondition,
 } from "@/lib/tenancyRecords";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface InspectionsPanelProps {
   bookingId: number;
@@ -46,10 +55,25 @@ const CONDITION_OPTIONS: { label: string; value: ItemCondition }[] = [
 
 /** Rooms most Nigerian flats have, so a report starts with something to fill in. */
 const STARTER_ITEMS: InspectionItem[] = [
-  { room: "Living room", item: "Walls and paint", condition: "GOOD", note: null },
+  {
+    room: "Living room",
+    item: "Walls and paint",
+    condition: "GOOD",
+    note: null,
+  },
   { room: "Kitchen", item: "Sink and taps", condition: "GOOD", note: null },
-  { room: "Bathroom", item: "Toilet, shower and tiles", condition: "GOOD", note: null },
-  { room: "Bedroom", item: "Doors, locks and windows", condition: "GOOD", note: null },
+  {
+    room: "Bathroom",
+    item: "Toilet, shower and tiles",
+    condition: "GOOD",
+    note: null,
+  },
+  {
+    room: "Bedroom",
+    item: "Doors, locks and windows",
+    condition: "GOOD",
+    note: null,
+  },
 ];
 
 // === Editor for the viewer's own draft
@@ -73,18 +97,36 @@ function DraftEditor({
   const [busy, setBusy] = useState<"" | "save" | "photo" | "submit">("");
 
   const update = (index: number, patch: Partial<InspectionItem>): void => {
-    setItems((current) => current.map((item, position) => (position === index ? { ...item, ...patch } : item)));
+    setItems((current) =>
+      current.map((item, position) =>
+        position === index ? { ...item, ...patch } : item,
+      ),
+    );
   };
 
   const fail = (message: string | undefined): void => {
-    notify({ title: "That did not work", description: message ?? "Try again in a moment.", variant: "error" });
+    notify({
+      title: "That did not work",
+      description: message ?? "Try again in a moment.",
+      variant: "error",
+    });
   };
 
   const save = async (): Promise<Inspection | null> => {
     const cleaned = items
-      .map((item) => ({ ...item, room: item.room.trim(), item: item.item.trim(), note: item.note?.trim() || null }))
+      .map((item) => ({
+        ...item,
+        room: item.room.trim(),
+        item: item.item.trim(),
+        note: item.note?.trim() || null,
+      }))
       .filter((item) => item.room && item.item);
-    const result = await saveInspectionItems(bookingId, inspection.id, note.trim(), cleaned);
+    const result = await saveInspectionItems(
+      bookingId,
+      inspection.id,
+      note.trim(),
+      cleaned,
+    );
 
     if (!result.data) {
       fail(result.message);
@@ -111,7 +153,13 @@ function DraftEditor({
     }
 
     setBusy("photo");
-    const result = await addInspectionPhoto(bookingId, inspection.id, file, photoRoom.trim(), "");
+    const result = await addInspectionPhoto(
+      bookingId,
+      inspection.id,
+      file,
+      photoRoom.trim(),
+      "",
+    );
     setBusy("");
 
     if (fileRef.current) {
@@ -127,7 +175,11 @@ function DraftEditor({
   };
 
   const removePhoto = async (photoId: number): Promise<void> => {
-    const result = await removeInspectionPhoto(bookingId, inspection.id, photoId);
+    const result = await removeInspectionPhoto(
+      bookingId,
+      inspection.id,
+      photoId,
+    );
 
     if (result.data) {
       onChange(result.data);
@@ -137,7 +189,11 @@ function DraftEditor({
   };
 
   const submit = async (): Promise<void> => {
-    if (!window.confirm("Submit this report? It cannot be changed afterwards, and the other side is asked to answer it.")) {
+    if (
+      !window.confirm(
+        "Submit this report? It cannot be changed afterwards, and the other side is asked to answer it.",
+      )
+    ) {
       return;
     }
 
@@ -158,7 +214,11 @@ function DraftEditor({
     }
 
     onChange(result.data);
-    notify({ title: "Report submitted", description: "The other side has been asked to acknowledge it.", variant: "success" });
+    notify({
+      title: "Report submitted",
+      description: "The other side has been asked to acknowledge it.",
+      variant: "success",
+    });
   };
 
   return (
@@ -190,13 +250,19 @@ function DraftEditor({
             <Select
               ariaLabel="Condition"
               value={item.condition}
-              onValueChange={(value) => update(index, { condition: value as ItemCondition })}
+              onValueChange={(value) =>
+                update(index, { condition: value as ItemCondition })
+              }
               options={CONDITION_OPTIONS}
               className="min-h-10 w-full rounded-md border border-border bg-bg px-3 font-body text-sm text-primary"
             />
             <button
               type="button"
-              onClick={() => setItems((current) => current.filter((_, position) => position !== index))}
+              onClick={() =>
+                setItems((current) =>
+                  current.filter((_, position) => position !== index),
+                )
+              }
               aria-label={`Remove ${item.item || "this line"}`}
               className="flex h-10 w-10 items-center justify-center rounded-md text-muted hover:bg-primary/5 hover:text-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             >
@@ -208,7 +274,9 @@ function DraftEditor({
                 aria-label="What is wrong"
                 value={item.note ?? ""}
                 maxLength={1000}
-                onChange={(event) => update(index, { note: event.target.value })}
+                onChange={(event) =>
+                  update(index, { note: event.target.value })
+                }
                 placeholder="Describe the damage or what is missing"
                 className="min-h-10 rounded-md border border-border bg-bg px-3 font-body text-sm text-primary outline-none focus:border-accent sm:col-span-4"
               />
@@ -217,7 +285,12 @@ function DraftEditor({
         ))}
         <button
           type="button"
-          onClick={() => setItems((current) => [...current, { room: "", item: "", condition: "GOOD", note: null }])}
+          onClick={() =>
+            setItems((current) => [
+              ...current,
+              { room: "", item: "", condition: "GOOD", note: null },
+            ])
+          }
           className="inline-flex w-fit items-center gap-2 font-body text-sm font-bold text-accent-alt hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         >
           <Plus size={15} aria-hidden="true" />
@@ -225,7 +298,10 @@ function DraftEditor({
         </button>
       </div>
 
-      <label htmlFor={`inspection-${inspection.id}-general`} className="font-body text-sm font-bold text-primary">
+      <label
+        htmlFor={`inspection-${inspection.id}-general`}
+        className="font-body text-sm font-bold text-primary"
+      >
         General note
         <textarea
           id={`inspection-${inspection.id}-general`}
@@ -239,7 +315,9 @@ function DraftEditor({
       </label>
 
       <div className="grid gap-3 rounded-lg border border-dashed border-border p-3">
-        <p className="font-body text-sm font-bold text-primary">Photos ({inspection.photos.length} of 80)</p>
+        <p className="font-body text-sm font-bold text-primary">
+          Photos ({inspection.photos.length} of 80)
+        </p>
         <div className="flex flex-wrap items-center gap-2">
           <input
             id={`inspection-${inspection.id}-photo-room`}
@@ -251,7 +329,11 @@ function DraftEditor({
             className="min-h-10 flex-1 rounded-md border border-border bg-bg px-3 font-body text-sm text-primary outline-none focus:border-accent"
           />
           <label className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-full bg-primary px-4 font-body text-xs font-bold text-white hover:bg-accent hover:text-primary focus-within:ring-2 focus-within:ring-accent">
-            {busy === "photo" ? <Loader2 size={14} className="animate-spin" /> : <Camera size={14} aria-hidden="true" />}
+            {busy === "photo" ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <Camera size={14} aria-hidden="true" />
+            )}
             Add photo
             <input
               ref={fileRef}
@@ -268,7 +350,11 @@ function DraftEditor({
             {inspection.photos.map((photo) => (
               <li key={photo.id} className="relative">
                 {/* eslint-disable-next-line @next/next/no-img-element -- uploaded evidence from storage, not a static asset */}
-                <img src={photo.url} alt={photo.room ?? "Condition photo"} className="aspect-square w-full rounded-md object-cover" />
+                <img
+                  src={photo.url}
+                  alt={photo.room ?? "Condition photo"}
+                  className="aspect-square w-full rounded-md object-cover"
+                />
                 <button
                   type="button"
                   onClick={() => void removePhoto(photo.id)}
@@ -290,7 +376,9 @@ function DraftEditor({
           disabled={busy !== ""}
           className="inline-flex min-h-11 items-center gap-2 rounded-full border border-primary/20 px-5 font-body text-sm font-bold text-primary hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60"
         >
-          {busy === "save" ? <Loader2 size={15} className="animate-spin" /> : null}
+          {busy === "save" ? (
+            <Loader2 size={15} className="animate-spin" />
+          ) : null}
           Save draft
         </button>
         <button
@@ -299,7 +387,9 @@ function DraftEditor({
           disabled={busy !== ""}
           className="inline-flex min-h-11 items-center gap-2 rounded-full bg-primary px-5 font-body text-sm font-bold text-white hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60"
         >
-          {busy === "submit" ? <Loader2 size={15} className="animate-spin" /> : null}
+          {busy === "submit" ? (
+            <Loader2 size={15} className="animate-spin" />
+          ) : null}
           Submit report
         </button>
       </div>
@@ -325,11 +415,20 @@ function SubmittedReport({
 
   const answer = async (agree: boolean): Promise<void> => {
     setBusy(true);
-    const result = await respondToInspection(bookingId, inspection.id, agree, note.trim());
+    const result = await respondToInspection(
+      bookingId,
+      inspection.id,
+      agree,
+      note.trim(),
+    );
     setBusy(false);
 
     if (!result.data) {
-      notify({ title: "Answer not saved", description: result.message ?? "Try again in a moment.", variant: "error" });
+      notify({
+        title: "Answer not saved",
+        description: result.message ?? "Try again in a moment.",
+        variant: "error",
+      });
       return;
     }
 
@@ -360,8 +459,14 @@ function SubmittedReport({
               <tr key={`${item.room}-${item.item}-${index}`}>
                 <td className="px-3 py-2">{item.room}</td>
                 <td className="px-3 py-2">{item.item}</td>
-                <td className={`px-3 py-2 font-bold ${item.condition === "GOOD" || item.condition === "FAIR" ? "" : "text-red-700"}`}>
-                  {CONDITION_OPTIONS.find((option) => option.value === item.condition)?.label}
+                <td
+                  className={`px-3 py-2 font-bold ${item.condition === "GOOD" || item.condition === "FAIR" ? "" : "text-red-700"}`}
+                >
+                  {
+                    CONDITION_OPTIONS.find(
+                      (option) => option.value === item.condition,
+                    )?.label
+                  }
                 </td>
                 <td className="px-3 py-2 text-muted">{item.note ?? ""}</td>
               </tr>
@@ -370,15 +475,28 @@ function SubmittedReport({
         </table>
       </div>
 
-      {inspection.note ? <p className="font-body text-sm leading-6 text-muted">{inspection.note}</p> : null}
+      {inspection.note ? (
+        <p className="font-body text-sm leading-6 text-muted">
+          {inspection.note}
+        </p>
+      ) : null}
 
       {inspection.photos.length > 0 ? (
         <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4">
           {inspection.photos.map((photo) => (
             <li key={photo.id}>
-              <a href={photo.url} target="_blank" rel="noopener noreferrer" className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
+              <a
+                href={photo.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
                 {/* eslint-disable-next-line @next/next/no-img-element -- uploaded evidence from storage, not a static asset */}
-                <img src={photo.url} alt={photo.room ?? "Condition photo"} className="aspect-square w-full rounded-md object-cover" />
+                <img
+                  src={photo.url}
+                  alt={photo.room ?? "Condition photo"}
+                  className="aspect-square w-full rounded-md object-cover"
+                />
               </a>
             </li>
           ))}
@@ -387,16 +505,24 @@ function SubmittedReport({
 
       {inspection.responseNote ? (
         <p className="rounded-lg border-l-2 border-accent bg-accent/10 p-3 font-body text-sm leading-6 text-primary">
-          <span className="font-bold">{inspection.status === "CONTESTED" ? "Contested: " : "Note: "}</span>
+          <span className="font-bold">
+            {inspection.status === "CONTESTED" ? "Contested: " : "Note: "}
+          </span>
           {inspection.responseNote}
         </p>
       ) : null}
 
       {canAnswer ? (
         <div className="grid gap-3 rounded-lg bg-surface-soft p-3">
-          <label htmlFor={`inspection-${inspection.id}-answer`} className="font-body text-sm font-bold text-primary">
+          <label
+            htmlFor={`inspection-${inspection.id}-answer`}
+            className="font-body text-sm font-bold text-primary"
+          >
             Does this match what you saw?
-            <span className="block font-normal text-muted">Deposit claims are decided from these reports, so answer while it is fresh.</span>
+            <span className="block font-normal text-muted">
+              Deposit claims are decided from these reports, so answer while it
+              is fresh.
+            </span>
           </label>
           <textarea
             id={`inspection-${inspection.id}-answer`}
@@ -433,7 +559,10 @@ function SubmittedReport({
 
 // === Panel
 
-export default function InspectionsPanel({ bookingId, viewer }: InspectionsPanelProps): ReactElement {
+export default function InspectionsPanel({
+  bookingId,
+  viewer,
+}: InspectionsPanelProps): ReactElement {
   const { notify } = useToast();
   const [inspections, setInspections] = useState<Inspection[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -472,7 +601,11 @@ export default function InspectionsPanel({ bookingId, viewer }: InspectionsPanel
     setStarting(null);
 
     if (!result.data) {
-      notify({ title: "Report not started", description: result.message ?? "Try again in a moment.", variant: "error" });
+      notify({
+        title: "Report not started",
+        description: result.message ?? "Try again in a moment.",
+        variant: "error",
+      });
       return;
     }
 
@@ -488,17 +621,21 @@ export default function InspectionsPanel({ bookingId, viewer }: InspectionsPanel
     );
   }
 
-  const mineByKind = (kind: InspectionKind): boolean => inspections.some((item) => item.mine && item.kind === kind);
+  const mineByKind = (kind: InspectionKind): boolean =>
+    inspections.some((item) => item.mine && item.kind === kind);
 
   return (
     <div className="grid gap-5">
       <p className="rounded-xl bg-surface-soft p-4 font-body text-sm leading-6 text-muted">
-        Walk through the home room by room and photograph anything that is not perfect.
-        Once submitted, a report cannot be changed and {viewer === "tenant" ? "your host" : "your tenant"} is asked to
+        Walk through the home room by room and photograph anything that is not
+        perfect. Once submitted, a report cannot be changed and{" "}
+        {viewer === "tenant" ? "your host" : "your tenant"} is asked to
         acknowledge or contest it. It is what a deposit claim is decided from.
       </p>
 
-      {loadError ? <p className="font-body text-sm text-red-700">{loadError}</p> : null}
+      {loadError ? (
+        <p className="font-body text-sm text-red-700">{loadError}</p>
+      ) : null}
 
       <div className="flex flex-wrap gap-3">
         {(["MOVE_IN", "MOVE_OUT"] as InspectionKind[])
@@ -511,24 +648,39 @@ export default function InspectionsPanel({ bookingId, viewer }: InspectionsPanel
               disabled={starting !== null}
               className="inline-flex min-h-11 items-center gap-2 rounded-full border border-primary/20 px-5 font-body text-sm font-bold text-primary hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60"
             >
-              {starting === kind ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} aria-hidden="true" />}
+              {starting === kind ? (
+                <Loader2 size={15} className="animate-spin" />
+              ) : (
+                <Plus size={15} aria-hidden="true" />
+              )}
               Start {KIND_LABELS[kind].toLowerCase()}
             </button>
           ))}
       </div>
 
       {inspections.length === 0 ? (
-        <p className="font-body text-sm text-muted">No condition reports on this booking yet.</p>
+        <EmptyState
+          icon={ClipboardCheck}
+          title="No condition reports yet"
+          description="Record the home's condition at move-in and move-out, so a deposit claim has evidence on both sides."
+          variant="compact"
+        />
       ) : (
         <ul className="grid gap-4">
           {inspections.map((inspection) => (
-            <li key={inspection.id} className="rounded-xl border border-border p-4">
+            <li
+              key={inspection.id}
+              className="rounded-xl border border-border p-4"
+            >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <p className="font-body text-base font-bold text-primary">
-                    {KIND_LABELS[inspection.kind]} by {inspection.mine ? "you" : inspection.authorName}
+                    {KIND_LABELS[inspection.kind]} by{" "}
+                    {inspection.mine ? "you" : inspection.authorName}
                   </p>
-                  <p className="mt-1 font-body text-xs text-muted">{STATUS_LABELS[inspection.status]}</p>
+                  <p className="mt-1 font-body text-xs text-muted">
+                    {STATUS_LABELS[inspection.status]}
+                  </p>
                 </div>
                 {inspection.intact === true ? (
                   <span className="inline-flex items-center gap-1 font-body text-xs font-bold text-emerald-700">
@@ -543,9 +695,17 @@ export default function InspectionsPanel({ bookingId, viewer }: InspectionsPanel
                 ) : null}
               </div>
               {inspection.status === "DRAFT" && inspection.mine ? (
-                <DraftEditor bookingId={bookingId} inspection={inspection} onChange={replace} />
+                <DraftEditor
+                  bookingId={bookingId}
+                  inspection={inspection}
+                  onChange={replace}
+                />
               ) : (
-                <SubmittedReport bookingId={bookingId} inspection={inspection} onChange={replace} />
+                <SubmittedReport
+                  bookingId={bookingId}
+                  inspection={inspection}
+                  onChange={replace}
+                />
               )}
             </li>
           ))}

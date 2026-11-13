@@ -6,6 +6,7 @@ import {
   LifeBuoy,
   Paperclip,
   Plus,
+  MessagesSquare,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -25,6 +26,7 @@ import {
   type SupportThread,
   type SupportTicket,
 } from "@/lib/support";
+import { EmptyState } from "@/components/ui/empty-state";
 
 function formatDay(value: string): string {
   return new Intl.DateTimeFormat("en-NG", {
@@ -212,18 +214,11 @@ export default function SupportCenter(): ReactElement {
           {listError}
         </p>
       ) : tickets.length === 0 ? (
-        <div className="grid justify-items-center gap-3 rounded-2xl border border-dashed border-primary/20 bg-bg px-6 py-10 text-center">
-          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-surface-soft text-primary">
-            <LifeBuoy size={26} strokeWidth={1.6} aria-hidden="true" />
-          </span>
-          <h2 className="font-body text-base font-bold text-primary">
-            No conversations yet
-          </h2>
-          <p className="max-w-xs font-body text-sm leading-6 text-muted">
-            Questions about a booking, a payment or your account? Send us a
-            message and a person from Rello will reply.
-          </p>
-        </div>
+        <EmptyState
+          icon={LifeBuoy}
+          title="No conversations yet"
+          description="Questions about a booking, a payment or your account? Send us a message and a person from Rello will reply."
+        />
       ) : (
         <ul className="grid gap-2">
           {tickets.map((ticket) => (
@@ -324,12 +319,13 @@ export default function SupportCenter(): ReactElement {
         </p>
       )
     ) : (
-      <div className="hidden h-full min-h-64 place-items-center rounded-2xl border border-dashed border-primary/20 bg-bg p-8 text-center lg:grid">
-        <p className="max-w-xs font-body text-sm leading-6 text-muted">
-          Choose a conversation, or start a new one. We usually reply within a
-          working day.
-        </p>
-      </div>
+      <EmptyState
+        icon={MessagesSquare}
+        title="Pick a conversation"
+        description="Choose one, or start a new one. We usually reply within a working day."
+        variant="panel"
+        className="hidden lg:grid"
+      />
     );
 
   return (

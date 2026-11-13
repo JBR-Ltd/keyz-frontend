@@ -27,6 +27,7 @@ import {
   type EscrowEntry,
   type EscrowStatus,
 } from "@/lib/escrow";
+import { EmptyState } from "@/components/ui/empty-state";
 
 // === Types
 
@@ -393,22 +394,14 @@ export default function EscrowLedger({
         </div>
 
         {activeEntries.length === 0 ? (
-          <div className="mt-5 border-y border-primary/10 py-7 text-center">
-            <Landmark className="mx-auto text-accent-alt" size={24} />
-            <p className="mt-3 font-body text-sm font-bold text-primary">
-              No active payouts
-            </p>
-            <p className="mx-auto mt-1 max-w-lg font-body text-sm text-muted">
-              Funded tenancies will appear here while payment or release is in
-              progress.
-            </p>
-            <Link
-              href={`/${role}/bookings`}
-              className="mt-4 inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-primary/20 px-4 font-body text-sm font-bold text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            >
-              View tenancies <ArrowRight size={16} />
-            </Link>
-          </div>
+          <EmptyState
+            icon={Landmark}
+            title="No active payouts"
+            description="Funded tenancies will appear here while payment or release is in progress."
+            action={{ label: "View tenancies", href: `/${role}/bookings` }}
+            variant="panel"
+            className="mt-5 border-y border-primary/10"
+          />
         ) : (
           <div className="mt-5 divide-y divide-primary/10 border-y border-primary/15">
             {activeEntries.map((entry) => {
@@ -513,35 +506,26 @@ export default function EscrowLedger({
         </div>
 
         {filteredEntries.length === 0 ? (
-          <div className="mt-6 border-y border-primary/10 py-8 text-center">
-            <ReceiptText className="mx-auto text-accent-alt" size={24} />
-            <p className="mt-3 font-body text-sm font-bold text-primary">
-              {entries.length === 0
+          <EmptyState
+            icon={ReceiptText}
+            title={
+              entries.length === 0
                 ? "No escrow activity yet"
-                : "No records match this filter"}
-            </p>
-            <p className="mx-auto mt-1 max-w-lg font-body text-sm text-muted">
-              {entries.length === 0
+                : "No records match this filter"
+            }
+            description={
+              entries.length === 0
                 ? "Payments will appear here after a tenant funds an accepted tenancy."
-                : "Choose All to see your complete escrow history."}
-            </p>
-            {entries.length === 0 ? (
-              <Link
-                href={`/${role}/bookings`}
-                className="mt-4 inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-primary/20 px-4 font-body text-sm font-bold text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-              >
-                View tenancies <ArrowRight size={16} />
-              </Link>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setFilter("all")}
-                className="mt-4 inline-flex min-h-11 items-center justify-center rounded-full border border-primary/20 px-4 font-body text-sm font-bold text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-              >
-                Clear filters
-              </button>
-            )}
-          </div>
+                : "Choose All to see your complete escrow history."
+            }
+            action={
+              entries.length === 0
+                ? { label: "View tenancies", href: `/${role}/bookings` }
+                : { label: "Clear filters", onClick: () => setFilter("all") }
+            }
+            variant="panel"
+            className="mt-6 border-y border-primary/10"
+          />
         ) : (
           <>
             <div className="mt-6 hidden overflow-x-auto border-y border-primary/15 lg:block">
