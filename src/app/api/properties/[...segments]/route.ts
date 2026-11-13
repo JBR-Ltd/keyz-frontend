@@ -99,7 +99,10 @@ function isAllowedRequest(method: PropertyMethod, segments: string[]): boolean {
       (segments.length === 3 &&
         isNumericId(segments[0]) &&
         segments[1] === "availability" &&
-        segments[2] === "blocks")
+        segments[2] === "blocks") ||
+      (segments.length === 2 &&
+        isNumericId(segments[0]) &&
+        segments[1] === "archive")
     );
   }
 
@@ -118,6 +121,10 @@ function isAllowedRequest(method: PropertyMethod, segments: string[]): boolean {
 
   if (method === "DELETE") {
     return (
+      (segments.length === 1 && isNumericId(segments[0])) ||
+      (segments.length === 2 &&
+        isNumericId(segments[0]) &&
+        segments[1] === "archive") ||
       (segments.length === 3 &&
         isNumericId(segments[0]) &&
         segments[1] === "images" &&

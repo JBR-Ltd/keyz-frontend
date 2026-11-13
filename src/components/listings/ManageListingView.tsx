@@ -48,6 +48,7 @@ import {
 } from "@/lib/availability";
 import {
   archiveHostListing,
+  deleteHostListing,
   getManagedBackendPropertyById,
   restoreHostListing,
   type BackendProperty,
@@ -196,7 +197,7 @@ export default function ManageListingView({
   const [verificationError, setVerificationError] = useState("");
   const [pageReloadKey, setPageReloadKey] = useState(0);
   const [listingAction, setListingAction] = useState<
-    "archive" | "restore" | null
+    "archive" | "delete" | "restore" | null
   >(null);
   const [listingActionPending, setListingActionPending] = useState(false);
 
@@ -554,8 +555,31 @@ export default function ManageListingView({
     );
   };
 
+  const deleteListing = async (): Promise<void> => {
+    setListingActionPending(true);
+    const result = await deleteHostListing(numericId);
+    setListingActionPending(false);
+
+    if (!result.data) {
+      notify({
+        title: "Listing not deleted",
+        description: result.message ?? "Try again in a moment.",
+        variant: "error",
+      });
+      return;
+    }
+
+    setListingAction(null);
+    notify({ title: "Listing deleted", variant: "success" });
+    router.replace(`/${role}/saved-listings`);
+  };
+
   const updateArchiveState = async (): Promise<void> => {
     if (!listingAction) return;
+    if (listingAction === "delete") {
+      await deleteListing();
+      return;
+    }
 
     setListingActionPending(true);
     const result =
@@ -743,6 +767,14 @@ export default function ManageListingView({
               )}
               {property.archived ? "Restore listing" : "Archive listing"}
             </button>
+            <button
+              type="button"
+              onClick={() => setListingAction("delete")}
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-red-700/25 px-5 font-body text-sm font-bold text-red-700 transition-colors hover:bg-red-700/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            >
+              <Trash2 size={16} aria-hidden="true" />
+              Delete listing
+            </button>
           </div>
         </header>
 
@@ -896,20 +928,30 @@ export default function ManageListingView({
         title={
           listingAction === "restore"
             ? "Restore this listing?"
-            : "Archive this listing?"
+            : listingAction === "delete"
+              ? "Delete this listing for good?"
+              : "Archive this listing?"
         }
         description={
           listingAction === "restore"
             ? "The listing will return to the status allowed by its current verification and management state."
-            : "The home will leave the marketplace and stop accepting new activity. Existing requests, bookings, tenancies, payments, and disputes will continue."
+            : listingAction === "delete"
+              ? "This removes the listing, its photos and its tour permanently. It is only possible if nobody has ever requested, booked, viewed, made an offer on, reviewed or reported it. Otherwise, archive it instead."
+              : "The home will leave the marketplace and stop accepting new activity. You can only archive it once there are no unanswered requests, current or upcoming stays, viewings, open offers or open disputes."
         }
         confirmLabel={
-          listingAction === "restore" ? "Restore listing" : "Archive listing"
+          listingAction === "restore"
+            ? "Restore listing"
+            : listingAction === "delete"
+              ? "Delete permanently"
+              : "Archive listing"
         }
         pendingLabel={
           listingAction === "restore"
             ? "Restoring listing..."
-            : "Archiving listing..."
+            : listingAction === "delete"
+              ? "Deleting listing..."
+              : "Archiving listing..."
         }
         isLoading={listingActionPending}
         onCancel={() => setListingAction(null)}
