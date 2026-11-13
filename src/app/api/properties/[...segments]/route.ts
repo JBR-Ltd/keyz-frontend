@@ -102,7 +102,8 @@ function isAllowedRequest(method: PropertyMethod, segments: string[]): boolean {
         segments[2] === "blocks") ||
       (segments.length === 2 &&
         isNumericId(segments[0]) &&
-        segments[1] === "archive")
+        segments[1] === "archive") ||
+      isListingViewRequest(segments)
     );
   }
 
@@ -140,7 +141,21 @@ function isAllowedRequest(method: PropertyMethod, segments: string[]): boolean {
   return method === "PUT" && segments.length === 1 && isNumericId(segments[0]);
 }
 
+/** The listing page counts a visit for the host's weekly summary, signed in or not. */
+function isListingViewRequest(segments: string[]): boolean {
+  return (
+    segments.length === 3 &&
+    segments[0] === "public" &&
+    isPublicPropertyId(segments[1]) &&
+    segments[2] === "views"
+  );
+}
+
 function isPublicRequest(method: PropertyMethod, segments: string[]): boolean {
+  if (method === "POST") {
+    return isListingViewRequest(segments);
+  }
+
   if (method !== "GET") {
     return false;
   }

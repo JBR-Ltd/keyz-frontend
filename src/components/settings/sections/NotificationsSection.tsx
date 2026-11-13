@@ -20,12 +20,6 @@ const INITIAL_PREFERENCES = [
     defaultOn: true,
   },
   {
-    id: "offers",
-    label: "Offer updates",
-    description: "Immediate changes to offers you have sent or received.",
-    defaultOn: true,
-  },
-  {
     id: "editorial",
     label: "Rello editorial",
     description: "Occasional market notes, neighbourhood stories, and guides.",

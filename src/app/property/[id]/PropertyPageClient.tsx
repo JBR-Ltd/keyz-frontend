@@ -42,6 +42,7 @@ import MessageHostButton from "@/components/property/MessageHostButton";
 import ResilientPropertyImage from "@/components/property/ResilientPropertyImage";
 import { AsyncButtonContent } from "@/components/ui/async-button-content";
 import ReportDialog from "@/components/reports/ReportDialog";
+import { recordListingView } from "@/lib/listingViews";
 import PropertyPrice from "@/components/property/PropertyPrice";
 import PropertyTourEmbed from "@/components/property/PropertyTourEmbed";
 import TenantVerificationGate from "@/components/tenant/TenantVerificationGate";
@@ -422,6 +423,14 @@ export default function PropertyPageClient({
       active = false;
     };
   }, [id, router]);
+
+  // Counts toward the host's weekly listing summary
+  const viewedPublicId = property?.publicId;
+  useEffect(() => {
+    if (viewedPublicId) {
+      recordListingView(viewedPublicId);
+    }
+  }, [viewedPublicId]);
 
   useEffect(() => {
     if (authentication.status === "checking") {
