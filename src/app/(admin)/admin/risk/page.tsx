@@ -2,6 +2,7 @@
 
 import { AlertTriangle, Scale, ShieldCheck } from "lucide-react";
 import { useEffect, useRef, useState, type ReactElement } from "react";
+import IdentityChecksPanel from "@/components/admin/IdentityChecksPanel";
 import PropertyPrice from "@/components/property/PropertyPrice";
 import { AsyncButtonContent } from "@/components/ui/async-button-content";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -33,6 +34,7 @@ const TYPE_LABELS: Record<string, string> = {
   DUE_DILIGENCE_INCOMPLETE: "Due diligence missing",
   REPEATED_REPORTS: "Reported by several people",
   SANCTIONS_PEP_MATCH: "Possible sanctions or PEP match",
+  REPEATED_IDENTITY_FAILURES: "Several failed identity checks",
   MANUAL: "Raised by an admin",
 };
 
@@ -71,6 +73,7 @@ export default function AdminRiskPage(): ReactElement {
   const [flags, setFlags] = useState<RiskFlag[]>([]);
   const [claims, setClaims] = useState<EscrowEntry[]>([]);
   const [notes, setNotes] = useState<Record<number, string>>({});
+  const [checksOpenFor, setChecksOpenFor] = useState<number | null>(null);
   const [splits, setSplits] = useState<Record<number, string>>({});
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -401,6 +404,22 @@ export default function AdminRiskPage(): ReactElement {
                       {flag.propertyTitle ? ` · ${flag.propertyTitle}` : ""}
                       {flag.bookingId ? ` · booking ${flag.bookingId}` : ""}
                     </p>
+                    {flag.userId !== null ? (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setChecksOpenFor((current) =>
+                            current === flag.id ? null : flag.id,
+                          )
+                        }
+                        aria-expanded={checksOpenFor === flag.id}
+                        className="mt-3 inline-flex min-h-9 items-center rounded-full border border-primary/15 px-3 font-body text-xs font-bold text-primary hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                      >
+                        {checksOpenFor === flag.id
+                          ? "Hide identity checks"
+                          : "Show identity checks"}
+                      </button>
+                    ) : null}
                   </div>
                   {flag.amount ? (
                     <p className="font-display text-xl font-bold text-primary">
@@ -408,6 +427,12 @@ export default function AdminRiskPage(): ReactElement {
                     </p>
                   ) : null}
                 </div>
+
+                {checksOpenFor === flag.id && flag.userId !== null ? (
+                  <div className="mt-4">
+                    <IdentityChecksPanel userId={flag.userId} />
+                  </div>
+                ) : null}
 
                 {flag.status === "OPEN" ? (
                   <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-center">
