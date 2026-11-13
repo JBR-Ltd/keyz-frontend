@@ -987,7 +987,7 @@ export default function LandlordDashboardPage(): ReactElement {
             : summaryError || "Your landlord dashboard could not be loaded."
         }
         firstName={user?.firstName}
-        identityVerified={false}
+        identityVerified={verified}
         onRetry={() => window.location.reload()}
         properties={[]}
         summary={null}
