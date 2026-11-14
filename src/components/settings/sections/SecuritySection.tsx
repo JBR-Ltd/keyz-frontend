@@ -431,7 +431,7 @@ export default function SecuritySection(): ReactElement {
                     setCode("");
                   }}
                   disabled={Boolean(twoFactorBusy)}
-                  className="justify-self-start font-body text-sm font-medium text-muted transition-colors hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  className="justify-self-center font-body text-sm font-medium text-muted transition-colors hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent sm:justify-self-start"
                 >
                   Cancel
                 </button>

@@ -61,7 +61,7 @@ export async function POST(request: Request): Promise<Response> {
 
   if (!backendUrl) {
     return Response.json(
-      { success: false, message: "API_BASE_URL is not configured.", data: null },
+      { success: false, message: "Network error. Please try again later.", data: null },
       { status: 500 },
     );
   }
@@ -94,7 +94,7 @@ export async function POST(request: Request): Promise<Response> {
     console.error("Properties proxy request could not reach backend", { backendUrl, error });
 
     return Response.json(
-      { success: false, message: "Unable to reach the backend server right now.", data: null },
+      { success: false, message: "Network error. Please try again later.", data: null },
       { status: 502 },
     );
   } finally {

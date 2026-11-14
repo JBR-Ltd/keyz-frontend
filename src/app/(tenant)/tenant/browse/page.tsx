@@ -1906,22 +1906,40 @@ export default function TenantBrowsePage({
                   transition={{ duration: 0.25, ease: "easeOut" }}
                 >
                   <div className="mx-auto mt-3 h-1 w-10 rounded-full bg-border md:hidden" />
-                  <div className="flex items-center justify-between border-b border-border px-5 py-4">
-                    <h2 className="font-display text-xl font-bold text-primary">
-                      Search and filter
-                    </h2>
-                    <button
-                      type="button"
-                      onClick={closeSearchSheet}
-                      className="flex h-9 w-9 items-center justify-center rounded-full text-muted hover:bg-primary/10 hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                      aria-label="Close search"
-                    >
-                      <X size={18} aria-hidden="true" />
-                    </button>
+                  <div className="flex items-start justify-between gap-3 border-b border-border px-5 py-4">
+                    <div className="min-w-0">
+                      <h2 className="font-display text-xl font-bold text-primary">
+                        Search and filter
+                      </h2>
+                      <p className="mt-0.5 font-body text-xs text-muted">
+                        {resultLabel}
+                      </p>
+                    </div>
+                    {/* Clear sits here rather than beside Apply, where a thumb finds it by accident */}
+                    <div className="flex shrink-0 items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={clearFilterDraft}
+                        className="min-h-9 rounded-full px-3 font-body text-sm font-bold text-muted hover:bg-surface-soft hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                      >
+                        Clear
+                      </button>
+                      <button
+                        type="button"
+                        onClick={closeSearchSheet}
+                        className="flex h-9 w-9 items-center justify-center rounded-full text-muted hover:bg-primary/10 hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                        aria-label="Close search"
+                      >
+                        <X size={18} aria-hidden="true" />
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-5">
-                    <div>
+                  <div className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-surface-soft/50 px-4 py-4">
+                    <section className="rounded-2xl border border-border/70 bg-bg p-4">
+                      <h3 className="mb-3 font-display text-base font-bold text-primary">
+                        Where and what
+                      </h3>
                       <label
                         htmlFor="mobile-browse-query"
                         className="mb-2 block font-body text-xs font-bold uppercase tracking-[0.14em] text-muted"
@@ -1956,10 +1974,8 @@ export default function TenantBrowsePage({
                           </button>
                         ) : null}
                       </div>
-                    </div>
 
-                    <>
-                      <div>
+                      <div className="mt-4">
                         <span className="mb-2 block font-body text-xs font-bold uppercase tracking-[0.14em] text-muted">
                           Kind of stay
                         </span>
@@ -1999,7 +2015,7 @@ export default function TenantBrowsePage({
                       </div>
 
                       {filterDraft.stayMode === "long" ? (
-                        <div>
+                        <div className="mt-4">
                           <span className="mb-2 block font-body text-xs font-bold uppercase tracking-[0.14em] text-muted">
                             Rental period
                           </span>
@@ -2043,7 +2059,12 @@ export default function TenantBrowsePage({
                           </div>
                         </div>
                       ) : null}
+                    </section>
 
+                    <section className="rounded-2xl border border-border/70 bg-bg p-4">
+                      <h3 className="mb-3 font-display text-base font-bold text-primary">
+                        Budget
+                      </h3>
                       <fieldset>
                         <legend className="mb-2 font-body text-xs font-bold uppercase tracking-[0.14em] text-muted">
                           {draftPriceControlLabel}
@@ -2097,7 +2118,7 @@ export default function TenantBrowsePage({
                       {!draftRentalMode ? (
                         <p
                           id="mobile-budget-feedback"
-                          className="font-body text-xs leading-5 text-muted"
+                          className="mt-2 font-body text-xs leading-5 text-muted"
                           role="status"
                         >
                           {filterDraft.stayMode === "long"
@@ -2107,7 +2128,7 @@ export default function TenantBrowsePage({
                       ) : draftBudgetError ? (
                         <p
                           id="mobile-budget-feedback"
-                          className="font-body text-xs font-semibold text-red-700"
+                          className="mt-2 font-body text-xs font-semibold text-red-700"
                           role="alert"
                         >
                           {draftBudgetError}
@@ -2117,7 +2138,12 @@ export default function TenantBrowsePage({
                           Enter an optional minimum or maximum budget.
                         </span>
                       )}
+                    </section>
 
+                    <section className="space-y-4 rounded-2xl border border-border/70 bg-bg p-4">
+                      <h3 className="font-display text-base font-bold text-primary">
+                        The home
+                      </h3>
                       {[
                         {
                           label: "Bedrooms",
@@ -2188,7 +2214,12 @@ export default function TenantBrowsePage({
                           })}
                         </div>
                       </fieldset>
+                    </section>
 
+                    <section className="rounded-2xl border border-border/70 bg-bg p-4">
+                      <h3 className="mb-3 font-display text-base font-bold text-primary">
+                        Order
+                      </h3>
                       <label className="block">
                         <span className="mb-2 block font-body text-xs font-bold uppercase tracking-[0.14em] text-muted">
                           Sort by
@@ -2207,17 +2238,10 @@ export default function TenantBrowsePage({
                           />
                         </div>
                       </label>
-                    </>
+                    </section>
                   </div>
 
-                  <div className="grid grid-cols-[auto_1fr] gap-3 border-t border-border bg-bg px-5 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-                    <button
-                      type="button"
-                      onClick={clearFilterDraft}
-                      className="rounded-full px-4 py-3 font-body text-sm font-bold text-muted hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                    >
-                      Clear
-                    </button>
+                  <div className="border-t border-border bg-bg px-5 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
                     <button
                       type="button"
                       onClick={applySearchSheet}
@@ -2226,7 +2250,7 @@ export default function TenantBrowsePage({
                         Boolean(draftBudgetError) ||
                         draftNeedsPeriod
                       }
-                      className="flex items-center justify-center gap-2 rounded-full bg-accent px-6 py-3 font-body text-sm font-bold text-primary hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                      className="flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-accent px-6 font-body text-sm font-bold text-primary hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {isSubmittingSearch ? (
                         <Loader2

@@ -15,7 +15,7 @@ export async function GET(): Promise<Response> {
 
   if (!API_BASE_URL) {
     return Response.json(
-      { authenticated: false, message: "API_BASE_URL is not configured.", user: null },
+      { authenticated: false, message: "Network error. Please try again later.", user: null },
       { status: 500, headers },
     );
   }
@@ -43,7 +43,7 @@ export async function GET(): Promise<Response> {
       return Response.json(
         {
           authenticated: false,
-          message: "Your session could not be checked.",
+          message: "Network error. Please try again later.",
           user: null,
         },
         { status: response.status, headers },
@@ -59,7 +59,7 @@ export async function GET(): Promise<Response> {
       return Response.json(
         {
           authenticated: false,
-          message: "The authentication server returned invalid account details.",
+          message: "Network error. Please try again later.",
           user: null,
         },
         { status: 502, headers },
@@ -82,7 +82,7 @@ export async function GET(): Promise<Response> {
     return Response.json(
       {
         authenticated: false,
-        message: "Unable to reach the authentication server right now.",
+        message: "Network error. Please try again later.",
         user: null,
       },
       { status: 502, headers },

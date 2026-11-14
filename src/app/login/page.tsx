@@ -394,7 +394,8 @@ export default function LoginPage() {
                     maxLength={isUsingRecoveryCode ? 9 : 6}
                     placeholder={isUsingRecoveryCode ? "XXXX-XXXX" : "000000"}
                     autoFocus
-                    className="mt-2 min-h-14 w-full rounded-lg border border-border bg-bg px-4 font-body text-lg tracking-[0.5em] text-primary outline-none focus:border-accent focus:ring-2 focus:ring-accent/30"
+                    // The indent cancels the trailing letter space, so the digits sit centred
+                    className="mt-2 min-h-14 w-full rounded-lg border border-border bg-bg px-4 text-center indent-[0.5em] font-body text-lg tracking-[0.5em] text-primary outline-none focus:border-accent focus:ring-2 focus:ring-accent/30"
                   />
                 </label>
 
