@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import LoadingScreen from "./LoadingScreen";
 
 interface LoadingScreenGateProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 export function LoadingScreenGate({ children }: LoadingScreenGateProps) {

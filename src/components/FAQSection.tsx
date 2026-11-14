@@ -36,7 +36,7 @@ function FAQItem({ number, question }: { number: number; question: string }) {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="premium-hover border border-gray-100 rounded-2xl overflow-hidden bg-white/[0.85] backdrop-blur">
+    <div className="premium-hover border border-gray-100 rounded-2xl overflow-hidden bg-white">
       <button
         onClick={() => setOpen((o) => !o)}
         className="w-full flex items-center gap-4 p-5 text-left hover:bg-gray-50 transition-all duration-200 ease-in-out"

@@ -1,5 +1,7 @@
+import { clientAddressHeaders } from "@/app/api/_clientAddress";
+
 const API_BASE_URL = process.env.API_BASE_URL;
-const AUTH_REQUEST_TIMEOUT_MS = 45000;
+const AUTH_REQUEST_TIMEOUT_MS = 90000;
 
 interface TimeoutSignal {
   signal: AbortSignal;
@@ -40,7 +42,7 @@ async function proxyJsonResponse(
       return Response.json(
         {
           success: false,
-          message: "Authentication server returned an empty error response.",
+          message: "Network error. Please try again later.",
           data: null,
         },
         { status: response.status },
@@ -51,7 +53,7 @@ async function proxyJsonResponse(
       return Response.json(
         {
           success: false,
-          message: body,
+          message: "Network error. Please try again later.",
           data: null,
         },
         { status: response.status },
@@ -72,7 +74,7 @@ export async function POST(request: Request): Promise<Response> {
 
   if (!backendUrl) {
     return Response.json(
-      { success: false, message: "API_BASE_URL is not configured.", data: null },
+      { success: false, message: "Network error. Please try again later.", data: null },
       { status: 500 },
     );
   }
@@ -87,6 +89,7 @@ export async function POST(request: Request): Promise<Response> {
       headers: {
         "Content-Type": "application/json",
         "X-Device-Fingerprint": fingerprint,
+        ...clientAddressHeaders(request),
       },
       signal: timeout.signal,
       body,
@@ -114,7 +117,7 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json(
       {
         success: false,
-        message: "Unable to reach the authentication server right now.",
+        message: "Network error. Please try again later.",
         data: null,
       },
       { status: 502 },

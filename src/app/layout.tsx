@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
+import { Suspense, type ReactNode } from "react";
 import { DM_Sans, Fraunces, Syne } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
+import InternalNavigationTracker from "@/components/navigation/InternalNavigationTracker";
 import { ToastProvider } from "@/components/ui/toast";
-import { LoadingScreenGate } from "@/components/LoadingScreenGate";
 import { Analytics } from "@vercel/analytics/next";
+import { AuthProvider } from "@/components/auth/AuthProvider";
+import { getSiteEnvironment } from "@/lib/siteEnvironment";
 
 const dmSans = DM_Sans({
   subsets: ["latin"],
@@ -23,35 +26,51 @@ const syne = Syne({
   weight: ["500", "600", "700", "800"],
 });
 
+const site = getSiteEnvironment();
+
 export const metadata: Metadata = {
-  title: "Rello Estate",
+  metadataBase: new URL(site.url),
+  title: {
+    default: "Rello",
+    template: "%s | Rello",
+  },
   description:
-    "Luxury property marketing and waitlist access for premium listings.",
+    "Find verified rentals and shortlets, compare clear terms, and manage your move with Rello.",
+  icons: {
+    apple: "/apple-icon",
+    icon: "/icon.svg",
+  },
+  manifest: "/manifest.webmanifest",
+  robots: site.indexable
+    ? { follow: true, index: true }
+    : { follow: false, index: false },
   openGraph: {
-    title: "Rello Estate",
+    title: "Rello",
     description:
-      "Luxury property marketing and waitlist access for premium listings.",
+      "Find verified rentals and shortlets, compare clear terms, and manage your move with Rello.",
     type: "website",
+    images: ["/opengraph-image"],
+    url: site.url,
   },
   twitter: {
     card: "summary_large_image",
-    title: "Rello Estate",
+    title: "Rello",
     description:
-      "Luxury property marketing and waitlist access for premium listings.",
+      "Find verified rentals and shortlets, compare clear terms, and manage your move with Rello.",
+    images: ["/opengraph-image"],
   },
 };
 
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode;
+  children: ReactNode;
 }>) {
   return (
     <html
       lang="en"
       suppressHydrationWarning
       data-scroll-behavior="smooth"
-      style={{ visibility: "hidden", overflow: "hidden" }}
       className={cn(
         "h-full",
         "antialiased",
@@ -61,10 +80,18 @@ export default function RootLayout({
         "font-body",
       )}
     >
-      <body className="min-h-full flex flex-col">
-        <LoadingScreenGate>
+      {/*
+        Extensions such as Grammarly add their own attributes to body before
+        React hydrates, which React reports as a mismatch it cannot patch. The
+        markup we render is identical either way.
+      */}
+      <body className="min-h-full flex flex-col" suppressHydrationWarning>
+        <Suspense fallback={null}>
+          <InternalNavigationTracker />
+        </Suspense>
+        <AuthProvider>
           <ToastProvider>{children}</ToastProvider>
-        </LoadingScreenGate>
+        </AuthProvider>
         <Analytics />
       </body>
     </html>

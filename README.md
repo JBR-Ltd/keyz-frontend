@@ -56,11 +56,25 @@ Look at the main entry at [src/app/page.tsx](src/app/page.tsx) and the component
 
 Deploy to Vercel or any platform that supports Next.js. See Next.js docs for deployment options: https://nextjs.org/docs/app/building-your-application/deploying
 
----
+### Required site configuration
 
-If you'd like, I can also:
+Every environment must set both values:
 
-- add a short CONTRIBUTING section
-- add a `README` badge for CI or Vercel
-- include basic environment variable examples
-  Tell me which you'd like next.
+```text
+RELLO_SITE_ENVIRONMENT=local|staging|production
+NEXT_PUBLIC_SITE_URL=https://the-public-origin.example
+```
+
+- Local development uses `local` and `http://localhost:3000`.
+- Staging uses `staging` and its public HTTPS origin. Staging responses include `X-Robots-Tag: noindex, nofollow`, its robots file blocks all crawlers, and its sitemap is empty.
+- Production uses `production` and exactly `https://www.rello.online`. The build fails when another production origin is configured.
+- Keep the hosting-level permanent redirect from `https://rello.online` to `https://www.rello.online`.
+
+### Search release checklist
+
+- Confirm `https://www.rello.online/robots.txt` and `/sitemap.xml` return successful responses.
+- Confirm staging source and response headers contain no-index directives.
+- Verify the `rello.online` domain property in Google Search Console and Bing Webmaster Tools.
+- Submit `https://www.rello.online/sitemap.xml` after production deployment.
+- Inspect the homepage, Browse, one city, one property, and one public host URL before requesting indexing.
+- Validate the deployed structured data with Google Rich Results Test and Schema.org Validator.
