@@ -25,7 +25,7 @@ export async function proxyAuthenticatedRequest({
     return Response.json(
       {
         success: false,
-        message: "API_BASE_URL is not configured.",
+        message: "Network error. Please try again later.",
         data: null,
       },
       { status: 500 },
@@ -93,7 +93,7 @@ export async function proxyAuthenticatedRequest({
       let message =
         response.status === 401 || response.status === 403
           ? "Your session has expired. Log in again."
-          : "The account request failed.";
+          : "Network error. Please try again later.";
       // The client keys its copy off this, and drops back to a generic line without it
       let code: string | null = null;
       // A rejected field carries its reason here, and "Validation failed" alone does not
@@ -152,7 +152,7 @@ export async function proxyAuthenticatedRequest({
       return Response.json(
         {
           success: false,
-          message: "The account server timed out. Please try again.",
+          message: "Network error. Please try again later.",
           data: null,
         },
         { status: 504 },
@@ -167,7 +167,7 @@ export async function proxyAuthenticatedRequest({
     return Response.json(
       {
         success: false,
-        message: "Unable to reach the account server right now.",
+        message: "Network error. Please try again later.",
         data: null,
       },
       { status: 502 },
