@@ -17,6 +17,7 @@ import ReportDialog from "@/components/reports/ReportDialog";
 import { getHostListings, type HostProfile } from "@/lib/hosts";
 import type { BackendPage, BackendProperty } from "@/lib/hostListings";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface HostProfileClientProps {
   hostId: string;
@@ -323,21 +324,12 @@ export default function HostProfileClient({
               </button>
             </div>
           ) : listings.length === 0 ? (
-            <div className="mt-8 flex flex-col items-center rounded-3xl border border-dashed border-border px-6 py-14 text-center">
-              <Building2
-                size={64}
-                strokeWidth={1.35}
-                className="text-accent-alt"
-                aria-hidden="true"
-              />
-              <h3 className="mt-5 font-display text-2xl font-bold text-primary">
-                No verified homes yet
-              </h3>
-              <p className="mt-2 max-w-md font-body text-sm leading-6 text-muted">
-                Verified homes from this {roleLabel.toLowerCase()} will appear
-                here when they become available.
-              </p>
-            </div>
+            <EmptyState
+              icon={Building2}
+              title="No verified homes yet"
+              description={`Verified homes from this ${roleLabel.toLowerCase()} will appear here when they become available.`}
+              className="mt-8"
+            />
           ) : (
             <>
               <div

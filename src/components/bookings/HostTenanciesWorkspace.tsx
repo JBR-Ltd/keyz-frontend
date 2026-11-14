@@ -24,6 +24,7 @@ import {
   UserRound,
   WalletCards,
   X,
+  SearchX,
 } from "lucide-react";
 import ChatThread from "@/components/chat/ChatThread";
 import OverlayPortal from "@/components/ui/OverlayPortal";
@@ -31,7 +32,6 @@ import PropertyPrice from "@/components/property/PropertyPrice";
 import ResilientPropertyImage from "@/components/property/ResilientPropertyImage";
 import TenancyDocumentsDialog from "@/components/tenant/TenancyDocumentsDialog";
 import TenancyRecordsDialog from "@/components/tenancy/TenancyRecordsDialog";
-import { IconTile } from "@/components/ui/icon-tile";
 import {
   StatusBadge,
   type StatusBadgeProps,
@@ -55,6 +55,7 @@ import {
   stageFromLifecycle,
 } from "@/lib/bookingPayments";
 import { useDialogFocus } from "@/lib/useDialogFocus";
+import { EmptyState } from "@/components/ui/empty-state";
 
 // === Types
 
@@ -160,7 +161,9 @@ function formatPaymentDetail(booking: Booking): string {
   const details = [formatRentalPeriod(booking)];
 
   if (booking.guestCount) {
-    details.push(`${booking.guestCount} ${booking.guestCount === 1 ? "guest" : "guests"}`);
+    details.push(
+      `${booking.guestCount} ${booking.guestCount === 1 ? "guest" : "guests"}`,
+    );
   }
 
   if (booking.instalmentCount && booking.instalmentCount > 1) {
@@ -220,9 +223,7 @@ function matchesSearch(booking: Booking, query: string): boolean {
   ].some((value) => value.toLowerCase().includes(normalizedQuery));
 }
 
-function BookingCover({
-  booking,
-}: BookingCoverProps): ReactElement {
+function BookingCover({ booking }: BookingCoverProps): ReactElement {
   return (
     <ResilientPropertyImage
       src={booking.propertyImageUrl}
@@ -831,44 +832,35 @@ export default function HostTenanciesWorkspace({
             ))}
           </div>
         ) : visibleBookings.length === 0 ? (
-          <div className="grid min-h-[24rem] place-items-center rounded-xl border border-border/70 bg-bg px-6 py-14 text-center">
-            <div className="max-w-md">
-              <IconTile
-                size="lg"
-                shape="circle"
-                tone="accent"
-                className="mx-auto h-20 w-20"
-              >
-                {query.trim() ? <Search size={52} /> : <FileCheck2 size={56} />}
-              </IconTile>
-              <h2 className="mt-6 font-display text-3xl font-bold text-primary">
-                {query.trim()
-                  ? "No matching tenancies"
-                  : activeTab === "request"
-                    ? "No requests waiting"
-                    : "Nothing here yet"}
-              </h2>
-              <p className="mx-auto mt-3 font-body text-sm leading-6 text-muted">
-                {query.trim()
-                  ? "Try another tenant name, property, or location."
-                  : activeTab === "request"
-                    ? "New tenant requests will appear here when they arrive."
-                    : "Tenancies in this stage will appear here automatically."}
-              </p>
-              {query.trim() || activeTab !== "all" ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setQuery("");
-                    setActiveTab("all");
-                  }}
-                  className="mt-5 inline-flex min-h-11 items-center justify-center rounded-full border border-primary/15 px-5 font-body text-sm font-bold text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                >
-                  {query.trim() ? "Clear search" : "View overview"}
-                </button>
-              ) : null}
-            </div>
-          </div>
+          <EmptyState
+            icon={query.trim() ? SearchX : FileCheck2}
+            title={
+              query.trim()
+                ? "No matching tenancies"
+                : activeTab === "request"
+                  ? "No requests waiting"
+                  : "Nothing here yet"
+            }
+            description={
+              query.trim()
+                ? "Try another tenant name, property, or location."
+                : activeTab === "request"
+                  ? "New tenant requests will appear here when they arrive."
+                  : "Tenancies in this stage will appear here automatically."
+            }
+            action={
+              query.trim() || activeTab !== "all"
+                ? {
+                    label: query.trim() ? "Clear search" : "View overview",
+                    onClick: () => {
+                      setQuery("");
+                      setActiveTab("all");
+                    },
+                  }
+                : undefined
+            }
+            className="min-h-[24rem] content-center"
+          />
         ) : (
           <div className="overflow-hidden rounded-xl border border-border/70 bg-bg shadow-sm">
             <div className="hidden border-b border-border/70 bg-surface-soft/55 px-5 py-3 font-body text-[11px] font-bold uppercase tracking-[0.14em] text-muted xl:grid xl:grid-cols-[minmax(18rem,1.45fr)_minmax(10rem,0.75fr)_minmax(11rem,0.85fr)_minmax(10rem,0.7fr)_minmax(8rem,auto)] xl:gap-5 xl:px-6">

@@ -26,6 +26,7 @@ import {
   ShieldQuestion,
   Star,
   Trash2,
+  CalendarX2,
 } from "lucide-react";
 import PropertyPrice from "@/components/property/PropertyPrice";
 import ResilientPropertyImage from "@/components/property/ResilientPropertyImage";
@@ -48,6 +49,7 @@ import {
 } from "@/lib/availability";
 import {
   archiveHostListing,
+  deleteHostListing,
   getManagedBackendPropertyById,
   restoreHostListing,
   type BackendProperty,
@@ -71,6 +73,7 @@ import {
   type PropertyVerificationState,
 } from "@/lib/propertyVerification";
 import type { TourSummary } from "@/lib/types/tour";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface ManageListingViewProps {
   propertyId: string;
@@ -196,7 +199,7 @@ export default function ManageListingView({
   const [verificationError, setVerificationError] = useState("");
   const [pageReloadKey, setPageReloadKey] = useState(0);
   const [listingAction, setListingAction] = useState<
-    "archive" | "restore" | null
+    "archive" | "delete" | "restore" | null
   >(null);
   const [listingActionPending, setListingActionPending] = useState(false);
 
@@ -554,8 +557,31 @@ export default function ManageListingView({
     );
   };
 
+  const deleteListing = async (): Promise<void> => {
+    setListingActionPending(true);
+    const result = await deleteHostListing(numericId);
+    setListingActionPending(false);
+
+    if (!result.data) {
+      notify({
+        title: "Listing not deleted",
+        description: result.message ?? "Try again in a moment.",
+        variant: "error",
+      });
+      return;
+    }
+
+    setListingAction(null);
+    notify({ title: "Listing deleted", variant: "success" });
+    router.replace(`/${role}/saved-listings`);
+  };
+
   const updateArchiveState = async (): Promise<void> => {
     if (!listingAction) return;
+    if (listingAction === "delete") {
+      await deleteListing();
+      return;
+    }
 
     setListingActionPending(true);
     const result =
@@ -743,6 +769,14 @@ export default function ManageListingView({
               )}
               {property.archived ? "Restore listing" : "Archive listing"}
             </button>
+            <button
+              type="button"
+              onClick={() => setListingAction("delete")}
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-red-700/25 px-5 font-body text-sm font-bold text-red-700 transition-colors hover:bg-red-700/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            >
+              <Trash2 size={16} aria-hidden="true" />
+              Delete listing
+            </button>
           </div>
         </header>
 
@@ -896,20 +930,30 @@ export default function ManageListingView({
         title={
           listingAction === "restore"
             ? "Restore this listing?"
-            : "Archive this listing?"
+            : listingAction === "delete"
+              ? "Delete this listing for good?"
+              : "Archive this listing?"
         }
         description={
           listingAction === "restore"
             ? "The listing will return to the status allowed by its current verification and management state."
-            : "The home will leave the marketplace and stop accepting new activity. Existing requests, bookings, tenancies, payments, and disputes will continue."
+            : listingAction === "delete"
+              ? "This removes the listing, its photos and its tour permanently. It is only possible if nobody has ever requested, booked, viewed, made an offer on, reviewed or reported it. Otherwise, archive it instead."
+              : "The home will leave the marketplace and stop accepting new activity. You can only archive it once there are no unanswered requests, current or upcoming stays, viewings, open offers or open disputes."
         }
         confirmLabel={
-          listingAction === "restore" ? "Restore listing" : "Archive listing"
+          listingAction === "restore"
+            ? "Restore listing"
+            : listingAction === "delete"
+              ? "Delete permanently"
+              : "Archive listing"
         }
         pendingLabel={
           listingAction === "restore"
             ? "Restoring listing..."
-            : "Archiving listing..."
+            : listingAction === "delete"
+              ? "Deleting listing..."
+              : "Archiving listing..."
         }
         isLoading={listingActionPending}
         onCancel={() => setListingAction(null)}
@@ -1193,7 +1237,12 @@ function DateRangeList({
         {title}
       </h3>
       {ranges.length === 0 ? (
-        <p className="mt-3 font-body text-sm text-muted">{emptyMessage}</p>
+        <EmptyState
+          icon={CalendarX2}
+          title={emptyMessage}
+          variant="compact"
+          className="mt-3"
+        />
       ) : (
         <ul className="mt-3 grid gap-3">
           {ranges.map((range) => (
@@ -1338,16 +1387,13 @@ function PhotosPanel({
       ) : null}
 
       {status === "ready" && photos.length === 0 ? (
-        <div className="mt-6 flex min-h-64 flex-col items-center justify-center border-y border-border px-6 text-center">
-          <ImagePlus size={30} className="text-primary" aria-hidden="true" />
-          <h3 className="mt-4 font-display text-xl font-bold text-primary">
-            Add your first photo
-          </h3>
-          <p className="mt-2 max-w-md font-body text-sm leading-6 text-muted">
-            Clear, well-lit images help renters understand the home before they
-            request it.
-          </p>
-        </div>
+        <EmptyState
+          icon={ImagePlus}
+          title="Add your first photo"
+          description="Clear, well-lit images help renters understand the home before they request it."
+          variant="panel"
+          className="mt-6 min-h-64 content-center border-y border-border"
+        />
       ) : null}
 
       {status === "ready" && photos.length > 0 ? (

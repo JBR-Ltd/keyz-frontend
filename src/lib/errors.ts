@@ -20,6 +20,8 @@ export type ApiErrorCode =
   | "NIN_CHECK_FAILED"
   | "BVN_CHECK_FAILED"
   | "SELFIE_CHECK_FAILED"
+  | "FACE_MATCH_FAILED"
+  | "UNDERAGE"
   | "PAYOUT_NAME_MISMATCH"
   | "PAYOUT_CODES_INVALID"
   | "LISTING_ROLE_MISMATCH"
@@ -72,6 +74,8 @@ const ERROR_COPY: Record<ApiErrorCode, string> = {
   NIN_CHECK_FAILED: "We could not verify that NIN. Check the number and try again.",
   BVN_CHECK_FAILED: "We could not verify that BVN. Check the number and try again.",
   SELFIE_CHECK_FAILED: "That selfie did not pass the liveness check. Try again in good lighting.",
+  FACE_MATCH_FAILED: "That selfie does not match the photo on your NIN record.",
+  UNDERAGE: "You need to be 18 or older to use Rello.",
   PAYOUT_NAME_MISMATCH: "The name on that bank account does not match your verified name.",
   PAYOUT_CODES_INVALID: "Those amounts do not match the deposits we sent. Check your statement.",
 

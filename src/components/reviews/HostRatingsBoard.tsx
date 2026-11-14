@@ -24,6 +24,7 @@ import {
   submitReview,
   type Review,
 } from "@/lib/reviews";
+import { EmptyState } from "@/components/ui/empty-state";
 
 const TENANT_PROMPTS = [
   "Did they treat the property well?",
@@ -358,11 +359,18 @@ export default function HostRatingsBoard(): ReactElement {
 
       <section className="mt-8 grid gap-5 md:grid-cols-3">
         {reviews.length === 0 ? (
-          <p className="font-body text-sm text-muted">
-            {isLoading
-              ? "Loading your reviews..."
-              : "Reviews about you will appear here."}
-          </p>
+          isLoading ? (
+            <p className="font-body text-sm text-muted">
+              Loading your reviews...
+            </p>
+          ) : (
+            <EmptyState
+              icon={Star}
+              title="No reviews yet"
+              description="Tenants can review you after a stay ends. Their reviews appear here, and on your public profile."
+              className="md:col-span-3"
+            />
+          )
         ) : (
           reviews.map((review) => (
             <article

@@ -15,10 +15,11 @@ export default function SettingsSectionHeader({
     <header className="border-b border-border px-5 py-5 sm:px-6 sm:py-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="font-display text-2xl font-bold leading-tight text-primary sm:text-3xl">
+          {/* On a phone the screen's own title already names the section */}
+          <h2 className="hidden font-display text-3xl font-bold leading-tight text-primary lg:block">
             {title}
           </h2>
-          <p className="mt-2 max-w-2xl font-body text-sm leading-6 text-muted">
+          <p className="max-w-2xl font-body text-sm leading-6 text-muted lg:mt-2">
             {description}
           </p>
         </div>

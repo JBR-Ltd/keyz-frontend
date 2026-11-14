@@ -8,12 +8,17 @@ import SettingsSectionHeader from "@/components/settings/SettingsSectionHeader";
 import PropertyPrice from "@/components/property/PropertyPrice";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getAllMyEscrow, type EscrowEntry, type EscrowStatus } from "@/lib/escrow";
+import {
+  getAllMyEscrow,
+  type EscrowEntry,
+  type EscrowStatus,
+} from "@/lib/escrow";
 import {
   getBankName,
   maskAccountNumber,
   useHostVerification,
 } from "@/lib/hostVerification";
+import { EmptyState } from "@/components/ui/empty-state";
 
 const STATUS_LABELS: Record<EscrowStatus, string> = {
   AWAITING_PAYMENT: "Awaiting payment",
@@ -181,13 +186,13 @@ export default function PaymentsSection(): ReactElement {
             <span className="sr-only">Loading payment history</span>
           </div>
         ) : entries.length === 0 ? (
-          <div className="mt-5 rounded-lg bg-surface-soft p-8 text-center">
-            <ReceiptText size={22} className="mx-auto text-accent-alt" />
-            <p className="mt-3 font-body text-sm leading-6 text-muted">
-              Nothing yet. Payments appear here as soon as a booking is paid
-              for.
-            </p>
-          </div>
+          <EmptyState
+            icon={ReceiptText}
+            title="No payments yet"
+            description="Payments appear here as soon as a booking is paid for."
+            variant="compact"
+            className="mt-5"
+          />
         ) : (
           <ul className="mt-5 grid gap-3">
             {entries.map((entry) => (

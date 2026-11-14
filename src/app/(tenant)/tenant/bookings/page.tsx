@@ -46,6 +46,7 @@ import {
   getConversationId,
   getCurrentChatUser,
 } from "@/lib/chat/chatStorage";
+import { EmptyState } from "@/components/ui/empty-state";
 
 // === Types
 
@@ -424,25 +425,13 @@ export default function TenantBookingsPage(): ReactElement {
             </button>
           </section>
         ) : !primaryBooking ? (
-          <section className="flex min-h-[28rem] flex-col items-center justify-center px-6 py-12 text-center">
-            <span className="flex h-16 w-16 items-center justify-center rounded-full bg-accent/15 text-primary">
-              <House size={28} aria-hidden="true" />
-            </span>
-            <h2 className="mt-6 font-display text-3xl font-bold text-primary">
-              Your next home will appear here
-            </h2>
-            <p className="mt-3 max-w-md font-body text-sm leading-6 text-muted">
-              Once a property request is made, you can follow its progress and
-              manage your tenancy from this page.
-            </p>
-            <Link
-              href="/browse"
-              className="mt-7 inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-accent px-6 py-3 font-body text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            >
-              Browse homes
-              <ChevronRight size={16} aria-hidden="true" />
-            </Link>
-          </section>
+          <EmptyState
+            icon={House}
+            title="Your next home will appear here"
+            description="Once you request a home, you can follow its progress and manage your tenancy from this page."
+            action={{ label: "Browse homes", href: "/browse" }}
+            className="min-h-[28rem] content-center"
+          />
         ) : (
           <>
             <section className="grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(20rem,0.75fr)]">
@@ -601,14 +590,13 @@ export default function TenantBookingsPage(): ReactElement {
                     {formatStayDates(primaryBooking)}
                   </p>
                   {documents.length === 0 ? (
-                    <div className="mt-5 rounded-xl bg-surface-soft p-4">
-                      <p className="font-body text-sm font-bold text-primary">
-                        No documents yet
-                      </p>
-                      <p className="mt-1 font-body text-xs leading-5 text-muted">
-                        {hostName} adds the agreement and any reports here.
-                      </p>
-                    </div>
+                    <EmptyState
+                      icon={FileText}
+                      title="No documents yet"
+                      description={`${hostName} adds the agreement and any reports here.`}
+                      variant="compact"
+                      className="mt-5"
+                    />
                   ) : (
                     <ul className="mt-5 space-y-2">
                       {documents.slice(0, 4).map((document) => (
@@ -665,15 +653,13 @@ export default function TenantBookingsPage(): ReactElement {
                   </button>
                 </div>
                 {openRepairs.length === 0 ? (
-                  <div className="mt-6 rounded-xl bg-surface-soft px-5 py-6">
-                    <p className="font-body text-sm font-bold text-primary">
-                      Nothing outstanding
-                    </p>
-                    <p className="mt-2 font-body text-sm leading-6 text-muted">
-                      Report anything that needs fixing and {hostName} is told
-                      straight away.
-                    </p>
-                  </div>
+                  <EmptyState
+                    icon={Wrench}
+                    title="Nothing outstanding"
+                    description={`Report anything that needs fixing and ${hostName} is told straight away.`}
+                    variant="compact"
+                    className="mt-6"
+                  />
                 ) : (
                   <ul className="mt-6 space-y-3">
                     {openRepairs.slice(0, 3).map((repair) => (

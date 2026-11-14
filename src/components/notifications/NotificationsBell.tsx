@@ -20,6 +20,7 @@ import {
   markNotificationRead,
   type AppNotification,
 } from "@/lib/notifications";
+import { EmptyState } from "@/components/ui/empty-state";
 
 /** The badge refreshes on this cadence; an open panel refreshes on open. */
 const UNREAD_POLL_MS = 30000;
@@ -31,32 +32,51 @@ interface NotificationPanelPosition {
   width: number;
 }
 
+const clockTime = new Intl.DateTimeFormat("en-NG", {
+  hour: "numeric",
+  minute: "2-digit",
+});
+
 function formatWhen(value: string, now: number): string {
-  const minutes = Math.max(
-    1,
-    Math.round((now - new Date(value).getTime()) / 60000),
-  );
+  const moment = new Date(value);
+  // Floor, never round: 50 minutes is "50 min ago", not "1 hr"
+  const minutes = Math.max(0, Math.floor((now - moment.getTime()) / 60000));
+
+  if (minutes < 1) {
+    return "Just now";
+  }
 
   if (minutes < 60) {
-    return `${minutes}m`;
+    return `${minutes} min ago`;
   }
 
-  const hours = Math.round(minutes / 60);
+  if (minutes < 6 * 60) {
+    const hours = Math.floor(minutes / 60);
+    const rest = minutes % 60;
 
-  if (hours < 24) {
-    return `${hours}h`;
+    return rest === 0 ? `${hours} hr ago` : `${hours} hr ${rest} min ago`;
   }
 
-  const days = Math.round(hours / 24);
+  const today = new Date(now);
+  const yesterday = new Date(now - 86_400_000);
 
-  if (days < 7) {
-    return `${days}d`;
+  if (moment.toDateString() === today.toDateString()) {
+    return `Today, ${clockTime.format(moment)}`;
+  }
+
+  if (moment.toDateString() === yesterday.toDateString()) {
+    return `Yesterday, ${clockTime.format(moment)}`;
   }
 
   return new Intl.DateTimeFormat("en-NG", {
-    month: "short",
     day: "numeric",
-  }).format(new Date(value));
+    month: "short",
+    hour: "numeric",
+    minute: "2-digit",
+    ...(moment.getFullYear() === today.getFullYear()
+      ? {}
+      : { year: "numeric" }),
+  }).format(moment);
 }
 
 export default function NotificationsBell(): ReactElement {
@@ -183,6 +203,9 @@ export default function NotificationsBell(): ReactElement {
       setIsLoading(false);
     });
 
+    // Keeps "Just now" and "5 min ago" true while the panel stays open
+    const clock = window.setInterval(() => setNow(Date.now()), 60_000);
+
     const closeOnOutside = (event: PointerEvent): void => {
       const target = event.target;
 
@@ -209,6 +232,7 @@ export default function NotificationsBell(): ReactElement {
     window.visualViewport?.addEventListener("resize", updatePanelPosition);
 
     return () => {
+      window.clearInterval(clock);
       controller.abort();
       olderRequestRef.current?.abort();
       olderRequestRef.current = null;
@@ -430,12 +454,15 @@ export default function NotificationsBell(): ReactElement {
               </button>
             </div>
           ) : items.length === 0 ? (
-            <p className="px-5 py-10 text-center font-body text-sm text-muted">
-              Nothing yet. Booking updates, payments and reminders show up here.
-            </p>
+            <EmptyState
+              icon={Bell}
+              title="You are all caught up"
+              description="Booking updates, payments and reminders show up here."
+              variant="panel"
+            />
           ) : (
             <div className="min-h-0 flex-1 overscroll-contain overflow-y-auto sm:max-h-[26rem] sm:flex-none">
-              <ul className="divide-y divide-border">
+              <ul className="divide-y divide-[var(--color-border)]">
                 {items.map((item) => (
                   <li key={item.id}>
                     <button
@@ -477,7 +504,16 @@ export default function NotificationsBell(): ReactElement {
                         ) : null}
                       </span>
                       <span className="whitespace-nowrap pt-0.5 font-body text-[11px] font-semibold text-muted">
-                        {now ? formatWhen(item.createdAt, now) : ""}
+                        {now ? (
+                          <time
+                            dateTime={item.createdAt}
+                            title={new Date(item.createdAt).toLocaleString(
+                              "en-NG",
+                            )}
+                          >
+                            {formatWhen(item.createdAt, now)}
+                          </time>
+                        ) : null}
                         {item.read ? null : (
                           <span className="sr-only"> unread</span>
                         )}

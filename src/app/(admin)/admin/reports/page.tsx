@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
+import { Loader2, Flag } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState, type ReactElement } from "react";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -12,6 +12,7 @@ import {
   type AdminReport,
   type ReportReason,
 } from "@/lib/marketplace";
+import { EmptyState } from "@/components/ui/empty-state";
 
 const REASON_LABELS: Record<ReportReason, string> = {
   FAKE_LISTING: "Fake or not theirs",
@@ -185,9 +186,12 @@ export default function AdminReportsPage(): ReactElement {
           </button>
         </div>
       ) : reports.length === 0 ? (
-        <p className="mt-8 rounded-lg bg-surface-soft p-8 text-center font-body text-sm text-muted">
-          No reports here.
-        </p>
+        <EmptyState
+          icon={Flag}
+          title="No reports here"
+          description="Reports people send about listings and accounts land here."
+          className="mt-8"
+        />
       ) : (
         <ul className="mt-8 grid gap-4">
           {reports.map((report) => (

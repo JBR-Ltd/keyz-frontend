@@ -12,6 +12,7 @@ import {
   getSessions,
   type LoginSession,
 } from "@/lib/account";
+import { EmptyState } from "@/components/ui/empty-state";
 
 function formatMoment(value: string): string {
   return new Date(value).toLocaleString("en-NG", {
@@ -145,10 +146,12 @@ export default function LoginSessionsPanel(): ReactElement {
           <span className="sr-only">Loading sessions</span>
         </div>
       ) : sessions.length === 0 ? (
-        <p className="font-body text-sm text-muted">
-          Nothing to show. Sessions started before this feature existed are not
-          listed, and they expire on their own within a day.
-        </p>
+        <EmptyState
+          icon={MonitorSmartphone}
+          title="No other sessions"
+          description="Sessions started before this feature existed are not listed, and they expire on their own within a day."
+          variant="compact"
+        />
       ) : (
         <ul className="grid gap-3">
           {sessions.map((session) => (

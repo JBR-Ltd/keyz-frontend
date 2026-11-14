@@ -13,6 +13,7 @@ import {
   type Viewing,
   type ViewingStatus,
 } from "@/lib/viewings";
+import { EmptyState } from "@/components/ui/empty-state";
 
 const STATUS_LABELS: Record<ViewingStatus, string> = {
   PENDING: "Waiting on you",
@@ -148,15 +149,11 @@ export default function HostViewingsView(): ReactElement {
       {isLoading ? (
         <CardListSkeleton count={3} label="Loading viewings" />
       ) : viewings.length === 0 ? (
-        <div className="rounded-lg bg-surface-soft p-10 text-center shadow-sm">
-          <CalendarClock size={26} className="mx-auto text-accent-alt" />
-          <h2 className="mt-4 font-display text-3xl font-bold text-primary">
-            No one has asked yet
-          </h2>
-          <p className="mx-auto mt-3 max-w-md font-body text-base leading-7 text-muted">
-            Requests to view your listings will land here.
-          </p>
-        </div>
+        <EmptyState
+          icon={CalendarClock}
+          title="No one has asked yet"
+          description="Requests to view your listings will land here."
+        />
       ) : (
         <div className="grid gap-8">
           {[

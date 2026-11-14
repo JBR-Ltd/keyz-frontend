@@ -12,6 +12,7 @@ import {
   type ChatThread as ChatThreadSummary,
 } from "@/lib/chat/chatClient";
 import { getInitials } from "@/lib/utils";
+import { EmptyState } from "@/components/ui/empty-state";
 
 function toDisplayRole(role: string): ChatPartyRole {
   if (role === "LANDLORD") return "Landlord";
@@ -188,11 +189,12 @@ export default function MessagesDropdown(): ReactElement {
               <p className="font-body text-sm text-red-700">{loadError}</p>
             </div>
           ) : conversations.length === 0 ? (
-            <div className="px-5 py-10 text-center">
-              <p className="font-body text-sm text-muted">
-                No conversations yet
-              </p>
-            </div>
+            <EmptyState
+              icon={MessageCircle}
+              title="No conversations yet"
+              description="Message a host from any listing, or reply to a tenant, and it shows up here."
+              variant="panel"
+            />
           ) : (
             <div className="max-h-[22rem] overflow-y-auto py-1">
               {conversations.map((conversation) => (
