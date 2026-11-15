@@ -289,7 +289,10 @@ export default function IdentityVerificationFlow({
         });
       }
 
-      if (identity.status === "approved") {
+      const tenantSelfieComplete =
+        !isTenant || identity.completed.includes("SELFIE");
+
+      if (identity.status === "approved" && tenantSelfieComplete) {
         setIdentityDone(true);
 
         if (!isAgent || kyb.status === "approved") {
@@ -314,7 +317,10 @@ export default function IdentityVerificationFlow({
         identity.outstanding.includes("BVN")
       ) {
         setPersonalStep("numbers");
-      } else if (!isTenant && identity.outstanding.includes("SELFIE")) {
+      } else if (
+        identity.outstanding.includes("SELFIE") ||
+        (isTenant && !identity.completed.includes("SELFIE"))
+      ) {
         setPersonalStep("selfie");
       } else {
         setPersonalStep("review");
@@ -479,36 +485,73 @@ export default function IdentityVerificationFlow({
   const submitPersonalIdentity = async (): Promise<void> => {
     setFormError("");
 
-    if (!ninReady || !bvnReady || (!isTenant && !selfieReady)) {
+    if (!ninReady || !bvnReady || !selfieReady) {
       setFormError("Complete each identity step before verification.");
       return;
     }
 
     if (isTenant) {
-      setProcessingStage("identity");
-      const result = await submitTenantVerification(nin, bvn);
+      const newlyCompleted = new Set(completedChecks);
 
-      if (!result.data) {
-        setProcessingStage(null);
-        setFormError(
-          result.message ??
-            "Verification did not pass. Review your details and try again.",
-        );
-        return;
+      if (needsNin || needsBvn) {
+        setProcessingStage("identity");
+        const result = await submitTenantVerification(nin, bvn);
+
+        if (!result.data) {
+          setProcessingStage(null);
+          setFormError(
+            result.message ??
+              "Verification did not pass. Review your details and try again.",
+          );
+          return;
+        }
+
+        newlyCompleted.add("NIN");
+        newlyCompleted.add("BVN");
+        setCompletedChecks(Array.from(newlyCompleted));
+        saveTenantVerificationState({
+          nin: "verified",
+          bvn: "verified",
+          selfie: newlyCompleted.has("SELFIE") ? "verified" : "not_started",
+        });
+        setNin("");
+        setBvn("");
       }
 
-      setCompletedChecks(["NIN", "BVN"]);
-      // The selfie is its own step and is not finished by the number checks
+      if (needsSelfie) {
+        setProcessingStage("selfie");
+        const result = await verifySelfie(selfiePreview);
+
+        if (!result.data) {
+          setCompletedChecks(Array.from(newlyCompleted));
+          saveTenantVerificationState({
+            nin: newlyCompleted.has("NIN") ? "verified" : "not_started",
+            bvn: newlyCompleted.has("BVN") ? "verified" : "not_started",
+            selfie: "failed",
+          });
+          setProcessingStage(null);
+          setFormError(
+            result.message ?? "Your live selfie could not be confirmed.",
+          );
+          setSelfiePreview("");
+          setCameraState("idle");
+          setPersonalStep("selfie");
+          return;
+        }
+
+        newlyCompleted.add("SELFIE");
+      }
+
+      setCompletedChecks(Array.from(newlyCompleted));
       saveTenantVerificationState({
         nin: "verified",
         bvn: "verified",
-        selfie: "not_started",
+        selfie: "verified",
       });
       forgetAccountDetails();
       setIdentityDone(true);
       setProcessingStage(null);
-      setNin("");
-      setBvn("");
+      setSelfiePreview("");
       setScreen("complete");
       return;
     }
