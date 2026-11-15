@@ -11,6 +11,7 @@ import {
   LoaderCircle,
   LogOut,
   Menu,
+  MessageCircle,
   Search,
   Settings,
   IdCard,
@@ -33,6 +34,7 @@ import relloLogoMark from "../../../public/rello-logo-cropped.svg";
 const TENANT_NAV_ITEMS = [
   { label: "Browse", href: "/browse", icon: Search },
   { label: "My Home", href: "/tenant/bookings", icon: House },
+  { label: "Messages", href: "/tenant/messages", icon: MessageCircle },
 ];
 
 const TENANT_ACCOUNT_ITEMS = [

@@ -403,7 +403,9 @@ function NumberStepper({
   return (
     <div>
       <span className="font-body text-sm font-bold text-primary">{label}</span>
-      <div className="mt-2 grid min-h-12 grid-cols-[3rem_1fr_3rem] overflow-hidden rounded-lg border border-border bg-bg focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/30">
+      {/* minmax(0,1fr), not 1fr: a grid track's minimum is its content, so a plain
+          1fr cannot shrink and pushes the row wider than the screen */}
+      <div className="mt-2 grid min-h-12 grid-cols-[3rem_minmax(0,1fr)_3rem] overflow-hidden rounded-lg border border-border bg-bg focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/30">
         <button
           type="button"
           onClick={() => onChange(Math.max(0, value - 1))}
@@ -1221,10 +1223,11 @@ export default function CreateListingForm({
 
     setIsSubmitting(true);
     const result = await submitHostListing(buildListingInput());
-    setIsSubmitting(false);
     setStorageUnavailable(result.unavailable);
 
     if (!result.data) {
+      // Only released on a failure, where pressing again is the right thing to do
+      setIsSubmitting(false);
       notify({
         title: "Listing could not be saved",
         description: result.message ?? "The property server is unavailable.",
@@ -1232,6 +1235,11 @@ export default function CreateListingForm({
       });
       return;
     }
+
+    // Stays held from here on. The listing exists, and the proof upload and the
+    // navigation that follow took long enough that the button went idle again,
+    // which read as "nothing happened" and invited a second press. A second press
+    // created a second listing.
 
     setIsDirty(false);
 

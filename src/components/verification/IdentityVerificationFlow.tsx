@@ -724,9 +724,7 @@ export default function IdentityVerificationFlow({
               <p className="font-body text-sm font-bold text-primary">
                 {label}
               </p>
-              <p className="mt-1 font-body text-sm text-muted">
-                Confirmed
-              </p>
+              <p className="mt-1 font-body text-sm text-muted">Confirmed</p>
             </div>
           </div>
         </div>
@@ -966,8 +964,13 @@ export default function IdentityVerificationFlow({
         </div>
         {cameraState === "ready" ? (
           <div className="flex items-center justify-between gap-4 border-t border-border bg-bg px-5 py-4">
+            {/* The camera button is the only way forward, and people were not
+                reading the circle as something to press. The instruction says so. */}
             <p className="font-body text-sm text-muted">
-              Center your face inside the guide.
+              <span className="block font-bold text-primary">
+                Tap the camera button to take your selfie
+              </span>
+              Center your face inside the guide first.
             </p>
             <button
               type="button"
