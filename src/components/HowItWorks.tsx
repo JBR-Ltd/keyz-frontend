@@ -38,7 +38,7 @@ export default function HowItWorks(): ReactElement {
     <section
       id="how-it-works"
       aria-labelledby="how-it-works-heading"
-      className="scroll-mt-16 overflow-hidden bg-primary px-5 py-14 text-white sm:px-8 sm:py-16 lg:px-10 lg:py-20"
+      className="scroll-mt-14 overflow-hidden bg-primary px-5 py-14 text-white sm:px-8 sm:py-16 lg:px-10 lg:py-20"
     >
       <div className="mx-auto max-w-7xl">
         <motion.div

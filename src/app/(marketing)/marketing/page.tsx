@@ -182,7 +182,7 @@ export default async function MarketingLandingPage(): Promise<ReactElement> {
 
       <section
         id="for-hosts"
-        className="scroll-mt-16 px-5 py-14 sm:px-8 sm:py-16 lg:px-10 lg:py-20"
+        className="scroll-mt-14 px-5 py-14 sm:px-8 sm:py-16 lg:px-10 lg:py-20"
       >
         <div className="mx-auto grid max-w-7xl overflow-hidden rounded-[1.5rem] bg-primary lg:grid-cols-[1.1fr_0.9fr]">
           <div className="relative min-h-[18rem] sm:min-h-[24rem] lg:min-h-[26rem]">
