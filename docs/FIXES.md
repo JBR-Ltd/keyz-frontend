@@ -1315,3 +1315,19 @@ Existing rental catalogue and saved-search contracts remain unchanged.
 - Built links from canonical public paths and the configured deployment origin so query strings, hashes, and compatibility identifiers are not shared.
 - Added the shared experience to properties, virtual tours, and public host profiles without authentication requirements.
 - Added property-backed Open Graph and Twitter metadata to public virtual tours while preserving the existing crawl rules.
+
+## Mobile listing creation flow
+
+### What was there before
+
+- The mobile listing footer stayed over the form and obscured active fields, validation messages, photos, and review content.
+- The full page introduction repeated on every step, leaving little room for the current task above the fold.
+- Amenities and review details produced unnecessarily long pages, while narrow action labels wrapped at 320px.
+- Photo controls used undersized touch targets and the verification step offered two competing ways to continue.
+
+### How it was fixed
+
+- Replaced the attached footer on phones with a compact inset action bar that respects safe areas and reserves matching page space.
+- Kept the complete introduction on the first step and switched later steps to a focused step header with managed focus.
+- Compacted amenities and review details while preserving every field, edit path, preview, and validation rule.
+- Added mobile-specific photo guidance, larger photo controls, and one clear Continue action for optional property verification.
