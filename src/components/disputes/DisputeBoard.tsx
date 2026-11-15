@@ -10,6 +10,8 @@ import {
   Paperclip,
   Scale,
   ShieldAlert,
+  CircleCheck,
+  CalendarX2,
 } from "lucide-react";
 import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -23,7 +25,12 @@ import {
   type Dispute,
   type DisputeStatus,
 } from "@/lib/disputes";
-import { getAllHostBookings, getAllMyBookings, type Booking } from "@/lib/bookings";
+import {
+  getAllHostBookings,
+  getAllMyBookings,
+  type Booking,
+} from "@/lib/bookings";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface DisputeBoardProps {
   /** Whose bookings to offer when opening a case. */
@@ -206,7 +213,10 @@ export default function DisputeBoard({
     });
   };
 
-  const uploadEvidence = async (dispute: Dispute, file: File | undefined): Promise<void> => {
+  const uploadEvidence = async (
+    dispute: Dispute,
+    file: File | undefined,
+  ): Promise<void> => {
     if (!file) {
       return;
     }
@@ -300,7 +310,11 @@ export default function DisputeBoard({
                     </div>
                   ))
                 ) : lanes[lane].length === 0 ? (
-                  <p className="font-body text-sm text-muted">Nothing here.</p>
+                  <EmptyState
+                    icon={CircleCheck}
+                    title="Nothing here"
+                    variant="compact"
+                  />
                 ) : (
                   lanes[lane].map((dispute) => (
                     <button
@@ -366,7 +380,11 @@ export default function DisputeBoard({
                           rel="noopener noreferrer"
                           className="flex items-center gap-2 font-body text-sm text-primary underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                         >
-                          <FileText size={14} aria-hidden="true" className="text-accent-alt" />
+                          <FileText
+                            size={14}
+                            aria-hidden="true"
+                            className="text-accent-alt"
+                          />
                           File {index + 1}
                         </a>
                       </li>
@@ -374,19 +392,29 @@ export default function DisputeBoard({
                   </ul>
                 ) : (
                   <p className="mt-2 font-body text-xs leading-5 text-muted">
-                    Photos of the problem, messages, receipts or a condition report make a case far easier to decide.
+                    Photos of the problem, messages, receipts or a condition
+                    report make a case far easier to decide.
                   </p>
                 )}
-                {selected.status === "OPEN" || selected.status === "UNDER_REVIEW" ? (
+                {selected.status === "OPEN" ||
+                selected.status === "UNDER_REVIEW" ? (
                   <label className="mt-3 inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-full border border-primary/20 px-4 font-body text-xs font-bold text-primary hover:bg-primary/5 focus-within:ring-2 focus-within:ring-accent">
-                    {isUploading ? <Loader2 size={14} className="animate-spin" /> : <Paperclip size={14} aria-hidden="true" />}
+                    {isUploading ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                      <Paperclip size={14} aria-hidden="true" />
+                    )}
                     Add a photo or PDF
                     <input
                       ref={evidenceInputRef}
                       type="file"
                       accept="image/jpeg,image/png,image/webp,application/pdf"
-                      disabled={isUploading || selected.evidenceUrls.length >= 10}
-                      onChange={(event) => void uploadEvidence(selected, event.target.files?.[0])}
+                      disabled={
+                        isUploading || selected.evidenceUrls.length >= 10
+                      }
+                      onChange={(event) =>
+                        void uploadEvidence(selected, event.target.files?.[0])
+                      }
                       className="sr-only"
                     />
                   </label>
@@ -460,9 +488,13 @@ export default function DisputeBoard({
                   <span className="sr-only">Loading eligible bookings</span>
                 </div>
               ) : (
-                <p className="mt-3 font-body text-sm leading-6 text-muted">
-                  No bookings are eligible for a dispute right now.
-                </p>
+                <EmptyState
+                  icon={CalendarX2}
+                  title="No bookings to dispute"
+                  description="A dispute can be opened on a paid booking while the money is still held."
+                  variant="compact"
+                  className="mt-3"
+                />
               )
             ) : (
               <div className="mt-4 grid gap-4">

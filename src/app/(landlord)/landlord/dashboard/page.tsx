@@ -49,6 +49,7 @@ import {
 import { getDrafts, type PropertyDraft } from "@/lib/propertyDrafts";
 import { useAuthenticatedUser } from "@/lib/account";
 import { useHostVerification } from "@/lib/hostVerification";
+import { EmptyState } from "@/components/ui/empty-state";
 
 // === Types
 
@@ -262,8 +263,11 @@ function mapDashboardProperty(
 ): DashboardProperty {
   const tenancyStatus = getTenancyStatus(property.id, bookings, now);
   const needsAttention = !property.verified || !property.imageUrl;
-  const actionHref =
-    tenancyStatus === "Available"
+  // The public page serves live listings only, so sending an unverified one there
+  // is a 404. Anything still needing work goes to the host's own page instead.
+  const actionHref = needsAttention
+    ? `/landlord/listings/${property.id}`
+    : tenancyStatus === "Available"
       ? propertyPath(property)
       : "/landlord/bookings";
 
@@ -446,9 +450,7 @@ function getUpcomingBookings(bookings: Booking[], now: number): Booking[] {
 function DashboardClassificationSkeleton({
   animate,
 }: DashboardSkeletonProps): ReactElement {
-  const pulseClass = animate
-    ? "animate-pulse motion-reduce:animate-none"
-    : "";
+  const pulseClass = animate ? "animate-pulse motion-reduce:animate-none" : "";
 
   return (
     <main
@@ -987,7 +989,7 @@ export default function LandlordDashboardPage(): ReactElement {
             : summaryError || "Your landlord dashboard could not be loaded."
         }
         firstName={user?.firstName}
-        identityVerified={false}
+        identityVerified={verified}
         onRetry={() => window.location.reload()}
         properties={[]}
         summary={null}
@@ -1142,7 +1144,7 @@ export default function LandlordDashboardPage(): ReactElement {
               <p className="font-accent text-xs font-bold uppercase tracking-[0.22em] text-accent-alt">
                 Action centre
               </p>
-              <h2 className="mt-2 font-display text-3xl font-bold text-primary">
+              <h2 className="mt-2 font-display text-2xl font-bold text-primary sm:text-3xl">
                 Needs attention
               </h2>
             </div>
@@ -1240,7 +1242,7 @@ export default function LandlordDashboardPage(): ReactElement {
           <p className="font-accent text-xs font-bold uppercase tracking-[0.22em] text-primary">
             Portfolio
           </p>
-          <h2 className="mt-2 font-display text-3xl font-bold text-primary">
+          <h2 className="mt-2 font-display text-2xl font-bold text-primary sm:text-3xl">
             Your properties
           </h2>
         </div>
@@ -1359,15 +1361,16 @@ export default function LandlordDashboardPage(): ReactElement {
             ))}
           </div>
         ) : (
-          <div className="px-5 py-12 text-center sm:px-6">
-            <Building2 size={28} className="mx-auto text-primary/35" />
-            <p className="mt-4 font-body text-sm font-bold text-primary">
-              No properties yet
-            </p>
-            <p className="mt-2 font-body text-sm text-muted">
-              Add a property to begin building your portfolio.
-            </p>
-          </div>
+          <EmptyState
+            icon={Building2}
+            title="No properties yet"
+            description="Add your first property. Once it is verified, tenants can find and book it."
+            action={{
+              label: "Add a listing",
+              href: "/landlord/listings/create",
+            }}
+            variant="panel"
+          />
         )}
       </section>
 
@@ -1376,18 +1379,18 @@ export default function LandlordDashboardPage(): ReactElement {
           className="overflow-hidden rounded-lg bg-bg shadow-sm"
           aria-busy={bookingsBusy}
         >
-          <div className="flex items-end justify-between gap-4 border-b border-primary/10 px-5 py-5 sm:px-6">
-            <div>
+          <div className="flex items-start justify-between gap-4 border-b border-primary/10 px-5 py-5 sm:items-end sm:px-6">
+            <div className="min-w-0">
               <p className="font-accent text-xs font-bold uppercase tracking-[0.22em] text-primary">
                 Tenancies
               </p>
-              <h2 className="mt-2 font-display text-3xl font-bold text-primary">
+              <h2 className="mt-2 font-display text-2xl font-bold text-primary sm:text-3xl">
                 Upcoming tenancies
               </h2>
             </div>
             <Link
               href="/landlord/bookings"
-              className="font-body text-sm font-bold text-primary hover:text-accent-alt focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              className="shrink-0 whitespace-nowrap font-body text-sm font-bold text-primary hover:text-accent-alt focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             >
               View all
             </Link>
@@ -1454,15 +1457,12 @@ export default function LandlordDashboardPage(): ReactElement {
               ))}
             </div>
           ) : (
-            <div className="px-5 py-12 text-center sm:px-6">
-              <CalendarCheck2 size={28} className="mx-auto text-primary/35" />
-              <p className="mt-4 font-body text-sm font-bold text-primary">
-                No upcoming tenancies
-              </p>
-              <p className="mt-2 font-body text-sm text-muted">
-                Confirmed tenancies and new requests will appear here.
-              </p>
-            </div>
+            <EmptyState
+              icon={CalendarCheck2}
+              title="No upcoming tenancies"
+              description="Confirmed tenancies and new requests will appear here."
+              variant="panel"
+            />
           )}
         </section>
 
@@ -1567,15 +1567,13 @@ export default function LandlordDashboardPage(): ReactElement {
               ))}
             </div>
           ) : (
-            <div className="px-5 py-12 text-center sm:px-6">
-              <WalletCards size={28} className="mx-auto text-white/35" />
-              <p className="mt-4 font-body text-sm font-bold">
-                No payment activity
-              </p>
-              <p className="mt-2 font-body text-sm text-white/60">
-                Escrow records will appear after a tenant starts payment.
-              </p>
-            </div>
+            <EmptyState
+              icon={WalletCards}
+              title="No payment activity"
+              description="Escrow records will appear after a tenant starts payment."
+              variant="panel"
+              tone="dark"
+            />
           )}
           <Link
             href="/landlord/escrow"

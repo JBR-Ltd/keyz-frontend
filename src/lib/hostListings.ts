@@ -587,6 +587,27 @@ export async function archiveHostListing(
   }
 }
 
+/** Permanent. The backend refuses it for any listing that has ever had activity. */
+export async function deleteHostListing(
+  propertyId: number,
+): Promise<HostListingStorageResult<boolean>> {
+  try {
+    const response = await apiRequest(`/api/properties/${propertyId}`, {
+      method: "DELETE",
+    });
+    await parseApiResponse(response);
+    publishStorageChange();
+    return { data: true, unavailable: false };
+  } catch (error) {
+    return {
+      data: false,
+      message:
+        error instanceof Error ? error.message : "Listing could not be deleted.",
+      unavailable: false,
+    };
+  }
+}
+
 export async function restoreHostListing(
   propertyId: number,
 ): Promise<HostListingStorageResult<boolean>> {

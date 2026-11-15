@@ -42,6 +42,7 @@ import MessageHostButton from "@/components/property/MessageHostButton";
 import ResilientPropertyImage from "@/components/property/ResilientPropertyImage";
 import { AsyncButtonContent } from "@/components/ui/async-button-content";
 import ReportDialog from "@/components/reports/ReportDialog";
+import { recordListingView } from "@/lib/listingViews";
 import PropertyPrice from "@/components/property/PropertyPrice";
 import PropertyTourEmbed from "@/components/property/PropertyTourEmbed";
 import TenantVerificationGate from "@/components/tenant/TenantVerificationGate";
@@ -67,6 +68,7 @@ import {
   isTenantVerified,
   useTenantVerificationSnapshot,
 } from "@/lib/tenantVerification";
+import { EmptyState } from "@/components/ui/empty-state";
 
 const BookingRequestDialog = dynamic(
   () => import("@/components/property/BookingRequestDialog"),
@@ -422,6 +424,14 @@ export default function PropertyPageClient({
       active = false;
     };
   }, [id, router]);
+
+  // Counts toward the host's weekly listing summary
+  const viewedPublicId = property?.publicId;
+  useEffect(() => {
+    if (viewedPublicId) {
+      recordListingView(viewedPublicId);
+    }
+  }, [viewedPublicId]);
 
   useEffect(() => {
     if (authentication.status === "checking") {
@@ -1609,7 +1619,7 @@ export default function PropertyPageClient({
                 ) : null}
               </div>
               {property.reviews.count > 0 ? (
-                <div className="mt-4 divide-y divide-border">
+                <div className="mt-4 divide-y divide-[var(--color-border)]">
                   {property.reviews.items.map((review) => (
                     <article
                       key={review.id}
@@ -1650,9 +1660,13 @@ export default function PropertyPageClient({
                   ))}
                 </div>
               ) : (
-                <p className="mt-3 font-body text-sm text-muted">
-                  No reviews yet.
-                </p>
+                <EmptyState
+                  icon={Star}
+                  title="No reviews yet"
+                  description="Reviews come from tenants after a completed stay."
+                  variant="compact"
+                  className="mt-3"
+                />
               )}
             </section>
 

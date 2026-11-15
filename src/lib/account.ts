@@ -275,6 +275,17 @@ export function useAuthenticatedUser(): AuthenticatedUserState {
   return state;
 }
 
+/**
+ * Drops the cached account so the next screen fetches it again. Called after anything
+ * that changes the account on the server without returning it, such as passing
+ * identity verification, which otherwise kept "Verify identity" on screen.
+ */
+export function forgetAccountDetails(): void {
+  userVersion += 1;
+  userRequest = null;
+  cachedUser = null;
+}
+
 function cacheUser(value: unknown): AuthenticatedUser {
   if (!isAuthenticatedUser(value)) {
     throw new Error("The account server returned invalid user details.");

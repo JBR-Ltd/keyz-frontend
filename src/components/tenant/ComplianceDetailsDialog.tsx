@@ -7,7 +7,7 @@ import OverlayPortal from "@/components/ui/OverlayPortal";
 import { AsyncButtonContent } from "@/components/ui/async-button-content";
 import { DatePicker } from "@/components/ui/date-picker";
 import { useToast } from "@/components/ui/toast";
-import { saveComplianceProfile } from "@/lib/compliance";
+import { getComplianceProfile, saveComplianceProfile } from "@/lib/compliance";
 import { useDialogFocus } from "@/lib/useDialogFocus";
 
 interface ComplianceDetailsDialogProps {
@@ -38,6 +38,24 @@ export default function ComplianceDetailsDialog({
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  // Verified tenants already have it from their NIN or BVN record
+  const [hasDateOfBirth, setHasDateOfBirth] = useState(false);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    let active = true;
+
+    void getComplianceProfile().then((result) => {
+      if (active) setHasDateOfBirth(Boolean(result.data?.dateOfBirth));
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open) {
@@ -184,21 +202,23 @@ export default function ComplianceDetailsDialog({
                 />
               </label>
 
-              <div className="mt-4">
-                <label
-                  htmlFor="compliance-date-of-birth"
-                  className="font-body text-sm font-bold text-primary"
-                >
-                  Date of birth (optional)
-                </label>
-                <DatePicker
-                  id="compliance-date-of-birth"
-                  ariaLabel="Date of birth"
-                  className="mt-2"
-                  value={dateOfBirth}
-                  onChange={setDateOfBirth}
-                />
-              </div>
+              {hasDateOfBirth ? null : (
+                <div className="mt-4">
+                  <label
+                    htmlFor="compliance-date-of-birth"
+                    className="font-body text-sm font-bold text-primary"
+                  >
+                    Date of birth (optional)
+                  </label>
+                  <DatePicker
+                    id="compliance-date-of-birth"
+                    ariaLabel="Date of birth"
+                    className="mt-2"
+                    value={dateOfBirth}
+                    onChange={setDateOfBirth}
+                  />
+                </div>
+              )}
 
               {error ? (
                 <p

@@ -16,6 +16,9 @@ import {
   ShieldCheck,
   UsersRound,
   type LucideIcon,
+  CircleCheck,
+  CalendarClock,
+  ClipboardList,
 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState, type ReactElement } from "react";
@@ -43,6 +46,7 @@ import {
   type HostDashboardSummary,
 } from "@/lib/dashboard";
 import { getHostViewings, type Viewing } from "@/lib/viewings";
+import { EmptyState } from "@/components/ui/empty-state";
 
 // === Types
 
@@ -713,9 +717,13 @@ function AttentionPanel({
       </div>
 
       {items.length === 0 && !isLoading && errors.length === 0 ? (
-        <p className="mt-6 font-body text-sm leading-6 text-muted">
-          Nothing needs you right now. New tenancy requests will appear here.
-        </p>
+        <EmptyState
+          icon={CircleCheck}
+          title="Nothing needs you right now"
+          description="New tenancy requests will appear here."
+          variant="compact"
+          className="mt-6"
+        />
       ) : (
         <div className="mt-5 divide-y divide-primary/10">
           {items.map((item) => {
@@ -787,9 +795,13 @@ function UpcomingPanel({
       </div>
 
       {items.length === 0 && !isLoading && errors.length === 0 ? (
-        <p className="mt-6 font-body text-sm leading-6 text-muted">
-          Nothing scheduled. Confirmed viewings and move-ins show up here.
-        </p>
+        <EmptyState
+          icon={CalendarClock}
+          title="Nothing scheduled"
+          description="Confirmed viewings and move-ins show up here."
+          variant="compact"
+          className="mt-6"
+        />
       ) : (
         <ol className="mt-6 space-y-5">
           {items.map((activity) => (
@@ -903,9 +915,13 @@ function PropertiesPanel({
           />
         </div>
       ) : properties.length === 0 ? (
-        <p className="p-5 font-body text-sm leading-6 text-muted sm:p-6">
-          No properties added yet.
-        </p>
+        <EmptyState
+          icon={Building2}
+          title="No properties yet"
+          description="List a home you manage. Once it is verified, tenants can find and book it."
+          action={{ label: "Add a listing", href: "/agent/listings/create" }}
+          variant="panel"
+        />
       ) : (
         <div className="divide-y divide-primary/10">
           {properties.map((property) => (
@@ -1053,9 +1069,13 @@ function BookingsPanel({
           />
         </div>
       ) : bookings.length === 0 ? (
-        <p className="mt-6 font-body text-sm leading-6 text-muted">
-          No tenancy requests yet. They appear here as tenants apply.
-        </p>
+        <EmptyState
+          icon={ClipboardList}
+          title="No tenancy requests yet"
+          description="They appear here as tenants apply."
+          variant="compact"
+          className="mt-6"
+        />
       ) : (
         <div className="mt-5 grid gap-3 lg:grid-cols-3">
           {bookings.map((booking) => (

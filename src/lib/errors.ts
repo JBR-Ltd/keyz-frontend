@@ -20,6 +20,8 @@ export type ApiErrorCode =
   | "NIN_CHECK_FAILED"
   | "BVN_CHECK_FAILED"
   | "SELFIE_CHECK_FAILED"
+  | "FACE_MATCH_FAILED"
+  | "UNDERAGE"
   | "PAYOUT_NAME_MISMATCH"
   | "PAYOUT_CODES_INVALID"
   | "LISTING_ROLE_MISMATCH"
@@ -56,7 +58,15 @@ export interface ApiErrorPayload {
 
 // === Copy
 
-const GENERIC_MESSAGE = "Something went wrong. Try again in a moment.";
+/**
+ * Shown whenever the reason belongs to us rather than to the person reading it.
+ * A failure on our side, a proxy that cannot reach the API and an unrecognised
+ * payload all read the same, because none of them are theirs to act on beyond
+ * trying again.
+ */
+export const NETWORK_MESSAGE = "Network error. Please try again later.";
+
+const GENERIC_MESSAGE = NETWORK_MESSAGE;
 
 const ERROR_COPY: Record<ApiErrorCode, string> = {
   INVALID_CREDENTIALS: "Incorrect login credentials. Check your email and password and try again.",
@@ -72,6 +82,8 @@ const ERROR_COPY: Record<ApiErrorCode, string> = {
   NIN_CHECK_FAILED: "We could not verify that NIN. Check the number and try again.",
   BVN_CHECK_FAILED: "We could not verify that BVN. Check the number and try again.",
   SELFIE_CHECK_FAILED: "That selfie did not pass the liveness check. Try again in good lighting.",
+  FACE_MATCH_FAILED: "That selfie does not match the photo on your NIN record.",
+  UNDERAGE: "You need to be 18 or older to use Rello.",
   PAYOUT_NAME_MISMATCH: "The name on that bank account does not match your verified name.",
   PAYOUT_CODES_INVALID: "Those amounts do not match the deposits we sent. Check your statement.",
 
@@ -116,8 +128,8 @@ export function isApiErrorPayload(value: unknown): value is ApiErrorPayload {
  * Turns whatever the API returned into a sentence worth showing someone.
  * Prefers the backend message when it carries a known code, because those
  * are already written for humans and may include a computed detail. Anything
- * without a recognised code is treated as untrusted internal text and never
- * shown.
+ * without a recognised code, and anything that failed on our side, is treated
+ * as internal text and never shown.
  */
 export function resolveApiError(
   payload: unknown,
@@ -129,13 +141,15 @@ export function resolveApiError(
 
   const code = "code" in payload ? payload.code : undefined;
 
+  // Without a recognised code there is no way to tell our own wording from a
+  // stack trace, a proxy failure or a provider's text, so none of it is shown.
   if (!isApiErrorCode(code)) {
-    // No code but a message: use it only if it looks user-facing.
-    const message = "message" in payload ? payload.message : undefined;
-    if (typeof message === "string" && message.trim() && message.length < 300) {
-      return message;
-    }
     return fallback;
+  }
+
+  // A failure on our side describes our problem, not theirs, whatever it says
+  if (code === "INTERNAL_ERROR") {
+    return NETWORK_MESSAGE;
   }
 
   const fieldReasons = collectFieldReasons(

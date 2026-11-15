@@ -14,6 +14,7 @@ import {
   type TenancyDocument,
   type TenancyDocumentType,
 } from "@/lib/tenancy";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface TenancyDocumentsDialogProps {
   bookingId: number;
@@ -230,10 +231,12 @@ export default function TenancyDocumentsDialog({
                   <span className="sr-only">Loading tenancy documents</span>
                 </div>
               ) : documents.length === 0 ? (
-                <p className="rounded-lg bg-surface-soft p-6 text-center font-body text-sm text-muted">
-                  Nothing here yet. The signed agreement is the one document
-                  every tenancy should carry.
-                </p>
+                <EmptyState
+                  icon={FileText}
+                  title="No documents yet"
+                  description="The signed agreement is the one document every tenancy should carry."
+                  variant="compact"
+                />
               ) : (
                 <ul className="grid gap-3">
                   {documents.map((document) => (

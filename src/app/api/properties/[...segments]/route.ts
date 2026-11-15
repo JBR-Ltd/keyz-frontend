@@ -99,7 +99,11 @@ function isAllowedRequest(method: PropertyMethod, segments: string[]): boolean {
       (segments.length === 3 &&
         isNumericId(segments[0]) &&
         segments[1] === "availability" &&
-        segments[2] === "blocks")
+        segments[2] === "blocks") ||
+      (segments.length === 2 &&
+        isNumericId(segments[0]) &&
+        segments[1] === "archive") ||
+      isListingViewRequest(segments)
     );
   }
 
@@ -118,6 +122,10 @@ function isAllowedRequest(method: PropertyMethod, segments: string[]): boolean {
 
   if (method === "DELETE") {
     return (
+      (segments.length === 1 && isNumericId(segments[0])) ||
+      (segments.length === 2 &&
+        isNumericId(segments[0]) &&
+        segments[1] === "archive") ||
       (segments.length === 3 &&
         isNumericId(segments[0]) &&
         segments[1] === "images" &&
@@ -133,7 +141,21 @@ function isAllowedRequest(method: PropertyMethod, segments: string[]): boolean {
   return method === "PUT" && segments.length === 1 && isNumericId(segments[0]);
 }
 
+/** The listing page counts a visit for the host's weekly summary, signed in or not. */
+function isListingViewRequest(segments: string[]): boolean {
+  return (
+    segments.length === 3 &&
+    segments[0] === "public" &&
+    isPublicPropertyId(segments[1]) &&
+    segments[2] === "views"
+  );
+}
+
 function isPublicRequest(method: PropertyMethod, segments: string[]): boolean {
+  if (method === "POST") {
+    return isListingViewRequest(segments);
+  }
+
   if (method !== "GET") {
     return false;
   }
@@ -218,7 +240,7 @@ async function buildCreateBody(
     return Response.json(
       {
         success: false,
-        message: "API_BASE_URL is not configured.",
+        message: "Network error. Please try again later.",
         data: null,
       },
       { status: 500 },
@@ -243,7 +265,7 @@ async function buildCreateBody(
     return Response.json(
       {
         success: false,
-        message: "Unable to identify the authenticated property seller.",
+        message: "Network error. Please try again later.",
         data: null,
       },
       { status: 502 },
@@ -291,7 +313,7 @@ async function handlePropertyRequest(
     return Response.json(
       {
         success: false,
-        message: "API_BASE_URL is not configured.",
+        message: "Network error. Please try again later.",
         data: null,
       },
       { status: 500 },
@@ -359,7 +381,7 @@ async function handlePropertyRequest(
       return Response.json(
         {
           success: false,
-          message: "The property server timed out. Please try again.",
+          message: "Network error. Please try again later.",
           data: null,
         },
         { status: 504 },
@@ -374,7 +396,7 @@ async function handlePropertyRequest(
     return Response.json(
       {
         success: false,
-        message: "Unable to reach the property server right now.",
+        message: "Network error. Please try again later.",
         data: null,
       },
       { status: 502 },

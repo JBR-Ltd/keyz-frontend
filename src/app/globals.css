@@ -21,6 +21,20 @@
   --color-skeleton-strong: #cbd3d6;
 }
 
+/* Registers the brand colours with Tailwind so opacity variants such as
+   border-primary/20, bg-accent/10 and ring-accent/30 resolve. Without this they
+   fell back to the text colour or to nothing. Values mirror :root above. */
+@theme {
+  --color-primary: #04344c;
+  --color-accent: #c9913a;
+  --color-accent-alt: #b57e2e;
+  --color-bg: #fafaf8;
+  --color-surface: #04344c;
+  --color-surface-soft: #faf8f5;
+  --color-border: #e5e7eb;
+  --color-muted: #6b7280;
+}
+
 @layer base {
   * {
     box-sizing: border-box;

@@ -15,7 +15,7 @@ export async function POST(request: Request): Promise<Response> {
 
   if (!API_BASE_URL) {
     return Response.json(
-      { success: false, message: "API_BASE_URL is not configured.", data: null },
+      { success: false, message: "Network error. Please try again later.", data: null },
       { status: 500 },
     );
   }
@@ -55,7 +55,7 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json(
       {
         success: false,
-        message: "Unable to reach the authentication server right now.",
+        message: "Network error. Please try again later.",
         data: null,
       },
       { status: 502 },

@@ -63,7 +63,7 @@ export default function FloorPlanReview({
         first.
       </p>
 
-      <ul className="mt-6 divide-y divide-border rounded-lg border border-border">
+      <ul className="mt-6 divide-y divide-[var(--color-border)] rounded-lg border border-border">
         {rooms.map((room, index) => {
           const isReady = room.status === "ready";
           return (

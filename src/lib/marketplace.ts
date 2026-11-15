@@ -251,6 +251,38 @@ export async function reviewReport(
   };
 }
 
+// === Announcements
+
+export type AnnouncementAudience = "TENANTS" | "HOSTS" | "EVERYONE";
+
+export interface AnnouncementInput {
+  audience: AnnouncementAudience;
+  subject: string;
+  message: string;
+  actionLabel?: string;
+  actionUrl?: string;
+}
+
+/** Emails only the people in the audience who turned Rello updates on. */
+export async function sendAnnouncement(
+  input: AnnouncementInput,
+): Promise<MarketResult<number | null>> {
+  const result = await send(
+    "/api/admin/announcements",
+    { method: "POST", body: JSON.stringify(input) },
+    "The announcement could not be sent.",
+  );
+  const recipients =
+    isRecord(result.data) && typeof result.data.recipients === "number"
+      ? result.data.recipients
+      : null;
+
+  return {
+    data: result.ok ? recipients : null,
+    message: result.message,
+  };
+}
+
 // === Saved searches
 
 export async function getSavedSearches(): Promise<MarketResult<SavedSearch[]>> {

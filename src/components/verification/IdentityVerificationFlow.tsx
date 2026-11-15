@@ -47,6 +47,7 @@ import {
   HostVerificationRole,
   submitKybDocuments,
 } from "@/lib/hostVerification";
+import { forgetAccountDetails } from "@/lib/account";
 import { saveTenantVerificationState } from "@/lib/tenantVerification";
 import { cn } from "@/lib/utils";
 
@@ -500,6 +501,7 @@ export default function IdentityVerificationFlow({
         nin: "verified",
         bvn: "verified",
       });
+      forgetAccountDetails();
       setIdentityDone(true);
       setProcessingStage(null);
       setNin("");
@@ -522,6 +524,7 @@ export default function IdentityVerificationFlow({
       }
 
       setCompletedChecks(["NIN", "BVN", "SELFIE"]);
+      forgetAccountDetails();
       setIdentityDone(true);
       setProcessingStage(null);
       setBusinessStep("registration");
@@ -575,6 +578,7 @@ export default function IdentityVerificationFlow({
     }
 
     setProcessingStage(null);
+    forgetAccountDetails();
     setIdentityDone(true);
     setScreen("complete");
   };

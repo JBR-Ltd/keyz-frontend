@@ -8,6 +8,7 @@ import { useToast } from "@/components/ui/toast";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getDisputeQueue, resolveDispute, type AdminResult } from "@/lib/admin";
 import type { Dispute } from "@/lib/disputes";
+import { EmptyState } from "@/components/ui/empty-state";
 
 type Outcome = "RESOLVED_FOR_TENANT" | "RESOLVED_FOR_HOST";
 
@@ -89,15 +90,11 @@ export default function AdminDisputesPage(): ReactElement {
       {isLoading ? (
         <CardListSkeleton count={4} label="Loading dispute queue" />
       ) : queue.length === 0 ? (
-        <div className="rounded-lg bg-surface-soft p-10 text-center shadow-sm">
-          <ShieldCheck size={26} className="mx-auto text-accent-alt" />
-          <h2 className="mt-4 font-display text-3xl font-bold text-primary">
-            Queue is clear
-          </h2>
-          <p className="mx-auto mt-3 max-w-md font-body text-base leading-7 text-muted">
-            Nothing is waiting on a decision.
-          </p>
-        </div>
+        <EmptyState
+          icon={ShieldCheck}
+          title="Queue is clear"
+          description="Disputes that automation could not settle land here for a decision."
+        />
       ) : (
         <div className="grid gap-6">
           {queue.map((dispute) => (

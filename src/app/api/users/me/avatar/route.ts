@@ -15,7 +15,7 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json(
       {
         success: false,
-        message: "API_BASE_URL is not configured.",
+        message: "Network error. Please try again later.",
         data: null,
       },
       { status: 500 },

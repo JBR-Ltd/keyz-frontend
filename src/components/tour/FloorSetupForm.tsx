@@ -11,6 +11,7 @@ import {
   updateFloor,
 } from "@/lib/api/tours/floors";
 import type { Floor } from "@/lib/types/tour";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface FloorSetupFormProps {
   propertyId: number;
@@ -190,8 +191,8 @@ export default function FloorSetupForm({
       </div>
 
       <p className="mt-2 font-body text-sm leading-6 text-muted">
-        Every room you capture next will belong to the floor you pick here.
-        Add as many floors as the property has.
+        Every room you capture next will belong to the floor you pick here. Add
+        as many floors as the property has.
       </p>
 
       <div className="mt-6">
@@ -201,9 +202,12 @@ export default function FloorSetupForm({
             Loading floors...
           </p>
         ) : floors.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-border bg-surface-soft/40 px-4 py-6 text-center font-body text-sm text-muted">
-            No floors yet. Add the first one below.
-          </p>
+          <EmptyState
+            icon={Layers}
+            title="No floors yet"
+            description="Add the first one below."
+            variant="compact"
+          />
         ) : (
           <ul className="grid gap-2">
             {floors.map((floor) => {
@@ -324,10 +328,10 @@ export default function FloorSetupForm({
         )}
       </div>
 
-     <div
-  data-tour="floor-add-form"
-  className="mt-6 rounded-lg border border-border bg-surface-soft/40 p-5"
->
+      <div
+        data-tour="floor-add-form"
+        className="mt-6 rounded-lg border border-border bg-surface-soft/40 p-5"
+      >
         <p className="font-body text-sm font-bold text-primary">Add a floor</p>
         <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
           <label>
@@ -371,23 +375,23 @@ export default function FloorSetupForm({
         </button>
       </div>
 
-    <button
-  type="button"
-  data-tour="floor-continue"
-  onClick={handleContinue}
-  disabled={selectedId === null}
-  className="mt-6 inline-flex min-h-12 w-full items-center justify-center rounded-full bg-accent px-7 py-3 font-body text-sm font-bold text-primary transition-all duration-200 hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-50"
->
-  Continue to capture
-</button>
+      <button
+        type="button"
+        data-tour="floor-continue"
+        onClick={handleContinue}
+        disabled={selectedId === null}
+        className="mt-6 inline-flex min-h-12 w-full items-center justify-center rounded-full bg-accent px-7 py-3 font-body text-sm font-bold text-primary transition-all duration-200 hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        Continue to capture
+      </button>
 
       <ConfirmDialog
         open={pendingDelete !== null}
         title={`Delete "${pendingDelete?.name ?? "this floor"}"?`}
         description={
           <>
-            This will also remove every room, panorama, door pin, and
-            staircase attached to it.{" "}
+            This will also remove every room, panorama, door pin, and staircase
+            attached to it.{" "}
             <strong className="text-primary">This cannot be undone.</strong>
           </>
         }

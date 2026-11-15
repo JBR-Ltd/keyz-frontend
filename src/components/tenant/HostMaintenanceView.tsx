@@ -13,6 +13,7 @@ import {
   type MaintenanceRequest,
   type MaintenanceStatus,
 } from "@/lib/tenancy";
+import { EmptyState } from "@/components/ui/empty-state";
 
 const STATUS_LABELS: Record<MaintenanceStatus, string> = {
   OPEN: "Reported",
@@ -173,15 +174,11 @@ export default function HostMaintenanceView(): ReactElement {
       {isLoading ? (
         <CardListSkeleton count={3} label="Loading repair requests" />
       ) : requests.length === 0 ? (
-        <div className="rounded-lg bg-surface-soft p-10 text-center shadow-sm">
-          <Wrench size={26} className="mx-auto text-accent-alt" />
-          <h2 className="mt-4 font-display text-3xl font-bold text-primary">
-            Nothing is broken
-          </h2>
-          <p className="mx-auto mt-3 max-w-md font-body text-base leading-7 text-muted">
-            Repairs your tenants report will land here.
-          </p>
-        </div>
+        <EmptyState
+          icon={Wrench}
+          title="Nothing is broken"
+          description="Repairs your tenants report will land here."
+        />
       ) : (
         <div className="grid gap-4">
           {requests.map((request) => {

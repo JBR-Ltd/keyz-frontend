@@ -58,7 +58,8 @@ async function readResponseBody(response: Response): Promise<unknown> {
   try {
     return JSON.parse(text);
   } catch {
-    return { message: text };
+    // Not JSON, so it is a proxy or gateway page rather than anything to read out
+    return null;
   }
 }
 
@@ -101,7 +102,7 @@ export async function POST(request: Request): Promise<Response> {
     const data = await readResponseBody(response);
 
     if (!response.ok) {
-      let errorMessage = "Unable to join the waitlist right now.";
+      let errorMessage = "Network error. Please try again later.";
       if (data && typeof data === "object") {
         if ("error" in data && typeof data.error === "string") {
           errorMessage = data.error;
@@ -119,7 +120,7 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json(data ?? { message: "Joined waitlist successfully." });
   } catch {
     return Response.json(
-      { message: "Unable to reach the waitlist server right now." },
+      { message: "Network error. Please try again later." },
       { status: 502 },
     );
   }

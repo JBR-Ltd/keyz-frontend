@@ -1,6 +1,12 @@
 "use client";
 
-import { Handshake, Loader2 } from "lucide-react";
+import {
+  Handshake,
+  Loader2,
+  FileSignature,
+  Building2,
+  CalendarCheck2,
+} from "lucide-react";
 import { useEffect, useState, type FormEvent, type ReactElement } from "react";
 import PropertyPrice from "@/components/property/PropertyPrice";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -17,6 +23,7 @@ import {
   type Mandate,
   type MandateOverview,
 } from "@/lib/marketplace";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface MandatesViewProps {
   role: "agent" | "landlord";
@@ -33,7 +40,9 @@ const STATUS_LABELS: Record<Mandate["status"], string> = {
  * Agents managing homes for landlords. The agent invites; the landlord accepts; rent
  * for managed listings goes to the landlord and the agreed fee to the agent.
  */
-export default function MandatesView({ role }: MandatesViewProps): ReactElement {
+export default function MandatesView({
+  role,
+}: MandatesViewProps): ReactElement {
   const { notify } = useToast();
   const [mandates, setMandates] = useState<Mandate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -83,9 +92,17 @@ export default function MandatesView({ role }: MandatesViewProps): ReactElement 
     };
   }, [openId]);
 
-  const replace = (updated: Mandate | null, message: string | undefined, success: string): boolean => {
+  const replace = (
+    updated: Mandate | null,
+    message: string | undefined,
+    success: string,
+  ): boolean => {
     if (!updated) {
-      notify({ title: "That did not work", description: message ?? "Try again in a moment.", variant: "error" });
+      notify({
+        title: "That did not work",
+        description: message ?? "Try again in a moment.",
+        variant: "error",
+      });
       return false;
     }
 
@@ -94,7 +111,11 @@ export default function MandatesView({ role }: MandatesViewProps): ReactElement 
         ? current.map((item) => (item.id === updated.id ? updated : item))
         : [updated, ...current],
     );
-    setOverview((current) => (current && current.mandate.id === updated.id ? { ...current, mandate: updated } : current));
+    setOverview((current) =>
+      current && current.mandate.id === updated.id
+        ? { ...current, mandate: updated }
+        : current,
+    );
     notify({ title: success, variant: "success" });
     return true;
   };
@@ -132,7 +153,9 @@ export default function MandatesView({ role }: MandatesViewProps): ReactElement 
 
   return (
     <main className="min-h-screen overflow-x-hidden px-5 py-10 sm:px-8 lg:px-10 lg:py-14 xl:px-14">
-      <p className="font-accent text-xs font-bold uppercase tracking-[0.3em] text-accent-alt">Management</p>
+      <p className="font-accent text-xs font-bold uppercase tracking-[0.3em] text-accent-alt">
+        Management
+      </p>
       <h1 className="mt-4 font-display text-4xl font-bold text-primary sm:text-5xl">
         {role === "agent" ? "Mandates" : "Agent mandates"}
       </h1>
@@ -143,8 +166,14 @@ export default function MandatesView({ role }: MandatesViewProps): ReactElement 
       </p>
 
       {role === "agent" ? (
-        <form onSubmit={(event) => void invite(event)} className="mt-8 grid max-w-2xl gap-3 rounded-lg bg-bg p-5 shadow-sm sm:grid-cols-[1fr_8rem]">
-          <label htmlFor="mandate-email" className="font-body text-sm font-bold text-primary">
+        <form
+          onSubmit={(event) => void invite(event)}
+          className="mt-8 grid max-w-2xl gap-3 rounded-lg bg-bg p-5 shadow-sm sm:grid-cols-[1fr_8rem]"
+        >
+          <label
+            htmlFor="mandate-email"
+            className="font-body text-sm font-bold text-primary"
+          >
             Landlord email
             <input
               id="mandate-email"
@@ -155,7 +184,10 @@ export default function MandatesView({ role }: MandatesViewProps): ReactElement 
               className="mt-2 min-h-11 w-full rounded-lg border border-border bg-bg px-3 font-body text-sm font-normal text-primary outline-none focus:border-accent"
             />
           </label>
-          <label htmlFor="mandate-fee" className="font-body text-sm font-bold text-primary">
+          <label
+            htmlFor="mandate-fee"
+            className="font-body text-sm font-bold text-primary"
+          >
             Your fee (%)
             <input
               id="mandate-fee"
@@ -169,7 +201,10 @@ export default function MandatesView({ role }: MandatesViewProps): ReactElement 
               className="mt-2 min-h-11 w-full rounded-lg border border-border bg-bg px-3 font-body text-sm font-normal text-primary outline-none focus:border-accent"
             />
           </label>
-          <label htmlFor="mandate-note" className="font-body text-sm font-bold text-primary sm:col-span-2">
+          <label
+            htmlFor="mandate-note"
+            className="font-body text-sm font-bold text-primary sm:col-span-2"
+          >
             Note to the landlord (optional)
             <input
               id="mandate-note"
@@ -184,7 +219,11 @@ export default function MandatesView({ role }: MandatesViewProps): ReactElement 
             disabled={busy !== ""}
             className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-primary px-5 font-body text-sm font-bold text-white hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60 sm:col-span-2 sm:w-fit"
           >
-            {busy === "invite" ? <Loader2 size={15} className="animate-spin" /> : <Handshake size={15} aria-hidden="true" />}
+            {busy === "invite" ? (
+              <Loader2 size={15} className="animate-spin" />
+            ) : (
+              <Handshake size={15} aria-hidden="true" />
+            )}
             Send invitation
           </button>
         </form>
@@ -198,7 +237,12 @@ export default function MandatesView({ role }: MandatesViewProps): ReactElement 
       ) : error ? (
         <p className="mt-8 font-body text-sm text-red-700">{error}</p>
       ) : mandates.length === 0 ? (
-        <p className="mt-8 rounded-lg bg-surface-soft p-8 text-center font-body text-sm text-muted">No mandates yet.</p>
+        <EmptyState
+          icon={FileSignature}
+          title="No mandates yet"
+          description="A mandate is the landlord's written permission for an agent to list and let their home."
+          className="mt-8"
+        />
       ) : (
         <section className="mt-8 grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
           <ul className="grid content-start gap-3">
@@ -212,19 +256,33 @@ export default function MandatesView({ role }: MandatesViewProps): ReactElement 
                   }}
                   aria-pressed={openId === mandate.id}
                   className={`w-full rounded-lg p-4 text-left shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
-                    openId === mandate.id ? "bg-primary/5 ring-1 ring-primary/20" : "bg-bg hover:bg-primary/5"
+                    openId === mandate.id
+                      ? "bg-primary/5 ring-1 ring-primary/20"
+                      : "bg-bg hover:bg-primary/5"
                   }`}
                 >
                   <span className="flex flex-wrap items-center justify-between gap-2">
                     <span className="font-body text-base font-bold text-primary">
-                      {role === "agent" ? mandate.landlordName ?? mandate.landlordEmail : mandate.agentName}
+                      {role === "agent"
+                        ? (mandate.landlordName ?? mandate.landlordEmail)
+                        : mandate.agentName}
                     </span>
-                    <StatusBadge tone={mandate.status === "ACTIVE" ? "primary" : mandate.status === "INVITED" ? "accent" : "neutral"}>
+                    <StatusBadge
+                      tone={
+                        mandate.status === "ACTIVE"
+                          ? "primary"
+                          : mandate.status === "INVITED"
+                            ? "accent"
+                            : "neutral"
+                      }
+                    >
                       {STATUS_LABELS[mandate.status]}
                     </StatusBadge>
                   </span>
                   <span className="mt-1 block font-body text-sm text-muted">
-                    {mandate.agentFeePercent}% agent fee · {mandate.propertyCount} listing{mandate.propertyCount === 1 ? "" : "s"}
+                    {mandate.agentFeePercent}% agent fee ·{" "}
+                    {mandate.propertyCount} listing
+                    {mandate.propertyCount === 1 ? "" : "s"}
                   </span>
                 </button>
               </li>
@@ -234,9 +292,15 @@ export default function MandatesView({ role }: MandatesViewProps): ReactElement 
           {selected ? (
             <article className="rounded-lg bg-bg p-5 shadow-sm">
               <h2 className="font-display text-2xl font-bold text-primary">
-                {role === "agent" ? selected.landlordName ?? selected.landlordEmail : selected.agentName}
+                {role === "agent"
+                  ? (selected.landlordName ?? selected.landlordEmail)
+                  : selected.agentName}
               </h2>
-              {selected.note ? <p className="mt-2 font-body text-sm text-muted">“{selected.note}”</p> : null}
+              {selected.note ? (
+                <p className="mt-2 font-body text-sm text-muted">
+                  “{selected.note}”
+                </p>
+              ) : null}
               {selected.endReason ? (
                 <p className="mt-2 font-body text-sm text-muted">
                   <span className="font-bold text-primary">Reason: </span>
@@ -244,11 +308,18 @@ export default function MandatesView({ role }: MandatesViewProps): ReactElement 
                 </p>
               ) : null}
 
-              {selected.viewerRole === "LANDLORD" && selected.status === "INVITED" ? (
+              {selected.viewerRole === "LANDLORD" &&
+              selected.status === "INVITED" ? (
                 <div className="mt-5 grid gap-3">
                   <button
                     type="button"
-                    onClick={() => void act("accept", acceptMandate(selected.id), "Mandate accepted")}
+                    onClick={() =>
+                      void act(
+                        "accept",
+                        acceptMandate(selected.id),
+                        "Mandate accepted",
+                      )
+                    }
                     disabled={busy !== ""}
                     className="min-h-11 rounded-full bg-primary px-5 font-body text-sm font-bold text-white hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60"
                   >
@@ -256,7 +327,13 @@ export default function MandatesView({ role }: MandatesViewProps): ReactElement 
                   </button>
                   <button
                     type="button"
-                    onClick={() => void act("decline", declineMandate(selected.id, reason.trim()), "Mandate declined")}
+                    onClick={() =>
+                      void act(
+                        "decline",
+                        declineMandate(selected.id, reason.trim()),
+                        "Mandate declined",
+                      )
+                    }
                     disabled={busy !== ""}
                     className="min-h-11 rounded-full border border-primary/20 px-5 font-body text-sm font-bold text-primary hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60"
                   >
@@ -268,21 +345,45 @@ export default function MandatesView({ role }: MandatesViewProps): ReactElement 
               {overview && overview.mandate.id === selected.id ? (
                 <div className="mt-6 grid gap-5">
                   <div>
-                    <h3 className="font-body text-sm font-bold uppercase tracking-[0.12em] text-muted">Listings</h3>
+                    <h3 className="font-body text-sm font-bold uppercase tracking-[0.12em] text-muted">
+                      Listings
+                    </h3>
                     {overview.properties.length === 0 ? (
-                      <p className="mt-2 font-body text-sm text-muted">No listings under this mandate yet.</p>
+                      <EmptyState
+                        icon={Building2}
+                        title="No listings under this mandate yet"
+                        variant="compact"
+                        className="mt-2"
+                      />
                     ) : (
                       <ul className="mt-2 grid gap-2">
                         {overview.properties.map((property) => (
-                          <li key={property.id} className="flex items-center justify-between gap-3 rounded-lg bg-surface-soft px-3 py-2">
+                          <li
+                            key={property.id}
+                            className="flex items-center justify-between gap-3 rounded-lg bg-surface-soft px-3 py-2"
+                          >
                             <span className="min-w-0">
-                              <span className="block truncate font-body text-sm font-bold text-primary">{property.title}</span>
-                              <span className="block truncate font-body text-xs text-muted">{property.address}</span>
+                              <span className="block truncate font-body text-sm font-bold text-primary">
+                                {property.title}
+                              </span>
+                              <span className="block truncate font-body text-xs text-muted">
+                                {property.address}
+                              </span>
                             </span>
-                            {selected.viewerRole === "AGENT" && selected.status === "ACTIVE" ? (
+                            {selected.viewerRole === "AGENT" &&
+                            selected.status === "ACTIVE" ? (
                               <button
                                 type="button"
-                                onClick={() => void act(`detach-${property.id}`, detachListing(selected.id, property.publicId), "Listing removed")}
+                                onClick={() =>
+                                  void act(
+                                    `detach-${property.id}`,
+                                    detachListing(
+                                      selected.id,
+                                      property.publicId,
+                                    ),
+                                    "Listing removed",
+                                  )
+                                }
                                 disabled={busy !== ""}
                                 className="shrink-0 font-body text-xs font-bold text-muted hover:text-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                               >
@@ -293,7 +394,8 @@ export default function MandatesView({ role }: MandatesViewProps): ReactElement 
                         ))}
                       </ul>
                     )}
-                    {selected.viewerRole === "AGENT" && selected.status === "ACTIVE" ? (
+                    {selected.viewerRole === "AGENT" &&
+                    selected.status === "ACTIVE" ? (
                       <div className="mt-3 flex flex-wrap gap-2">
                         <label htmlFor="mandate-listing" className="sr-only">
                           Listing id
@@ -301,13 +403,21 @@ export default function MandatesView({ role }: MandatesViewProps): ReactElement 
                         <input
                           id="mandate-listing"
                           value={listingRef}
-                          onChange={(event) => setListingRef(event.target.value)}
+                          onChange={(event) =>
+                            setListingRef(event.target.value)
+                          }
                           placeholder="Listing id, such as p_8f3k2"
                           className="min-h-10 flex-1 rounded-lg border border-border bg-bg px-3 font-body text-sm text-primary outline-none focus:border-accent"
                         />
                         <button
                           type="button"
-                          onClick={() => void act("attach", attachListing(selected.id, listingRef.trim()), "Listing added")}
+                          onClick={() =>
+                            void act(
+                              "attach",
+                              attachListing(selected.id, listingRef.trim()),
+                              "Listing added",
+                            )
+                          }
                           disabled={busy !== "" || !listingRef.trim()}
                           className="min-h-10 rounded-full bg-primary px-4 font-body text-sm font-bold text-white hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60"
                         >
@@ -318,17 +428,30 @@ export default function MandatesView({ role }: MandatesViewProps): ReactElement 
                   </div>
 
                   <div>
-                    <h3 className="font-body text-sm font-bold uppercase tracking-[0.12em] text-muted">Bookings</h3>
+                    <h3 className="font-body text-sm font-bold uppercase tracking-[0.12em] text-muted">
+                      Bookings
+                    </h3>
                     {overview.bookings.length === 0 ? (
-                      <p className="mt-2 font-body text-sm text-muted">No bookings on these listings yet.</p>
+                      <EmptyState
+                        icon={CalendarCheck2}
+                        title="No bookings on these listings yet"
+                        variant="compact"
+                        className="mt-2"
+                      />
                     ) : (
                       <ul className="mt-2 grid gap-2">
                         {overview.bookings.map((booking) => (
-                          <li key={booking.id} className="flex items-center justify-between gap-3 rounded-lg bg-surface-soft px-3 py-2 font-body text-sm">
+                          <li
+                            key={booking.id}
+                            className="flex items-center justify-between gap-3 rounded-lg bg-surface-soft px-3 py-2 font-body text-sm"
+                          >
                             <span className="min-w-0">
-                              <span className="block truncate font-bold text-primary">{booking.propertyTitle}</span>
+                              <span className="block truncate font-bold text-primary">
+                                {booking.propertyTitle}
+                              </span>
                               <span className="block text-xs text-muted">
-                                {booking.tenantName} · {booking.status.toLowerCase()}
+                                {booking.tenantName} ·{" "}
+                                {booking.status.toLowerCase()}
                               </span>
                             </span>
                             <span className="shrink-0 font-bold text-primary">
@@ -342,12 +465,18 @@ export default function MandatesView({ role }: MandatesViewProps): ReactElement 
 
                   {overview.agentFees.length > 0 ? (
                     <div>
-                      <h3 className="font-body text-sm font-bold uppercase tracking-[0.12em] text-muted">Agent fees</h3>
+                      <h3 className="font-body text-sm font-bold uppercase tracking-[0.12em] text-muted">
+                        Agent fees
+                      </h3>
                       <ul className="mt-2 grid gap-2">
                         {overview.agentFees.map((feeRow) => (
-                          <li key={feeRow.id} className="flex items-center justify-between gap-3 rounded-lg bg-surface-soft px-3 py-2 font-body text-sm">
+                          <li
+                            key={feeRow.id}
+                            className="flex items-center justify-between gap-3 rounded-lg bg-surface-soft px-3 py-2 font-body text-sm"
+                          >
                             <span className="text-muted">
-                              Booking {feeRow.bookingId} · {feeRow.status.toLowerCase().replace(/_/g, " ")}
+                              Booking {feeRow.bookingId} ·{" "}
+                              {feeRow.status.toLowerCase().replace(/_/g, " ")}
                             </span>
                             <span className="font-bold text-primary">
                               <PropertyPrice value={feeRow.amount} />
@@ -365,10 +494,17 @@ export default function MandatesView({ role }: MandatesViewProps): ReactElement 
                 </div>
               ) : null}
 
-              {selected.status === "ACTIVE" || (selected.status === "INVITED" && selected.viewerRole === "AGENT") ? (
+              {selected.status === "ACTIVE" ||
+              (selected.status === "INVITED" &&
+                selected.viewerRole === "AGENT") ? (
                 <div className="mt-6 grid gap-2 border-t border-border pt-5">
-                  <label htmlFor="mandate-reason" className="font-body text-sm font-bold text-primary">
-                    {selected.status === "INVITED" ? "Withdraw the invitation" : "End this mandate"}
+                  <label
+                    htmlFor="mandate-reason"
+                    className="font-body text-sm font-bold text-primary"
+                  >
+                    {selected.status === "INVITED"
+                      ? "Withdraw the invitation"
+                      : "End this mandate"}
                   </label>
                   <input
                     id="mandate-reason"
@@ -379,11 +515,18 @@ export default function MandatesView({ role }: MandatesViewProps): ReactElement 
                     className="min-h-10 rounded-lg border border-border bg-bg px-3 font-body text-sm text-primary outline-none focus:border-accent"
                   />
                   <p className="font-body text-xs leading-5 text-muted">
-                    Its listings stop taking new bookings. Rent on bookings already made still goes to the landlord.
+                    Its listings stop taking new bookings. Rent on bookings
+                    already made still goes to the landlord.
                   </p>
                   <button
                     type="button"
-                    onClick={() => void act("end", endMandate(selected.id, reason.trim()), "Mandate ended")}
+                    onClick={() =>
+                      void act(
+                        "end",
+                        endMandate(selected.id, reason.trim()),
+                        "Mandate ended",
+                      )
+                    }
                     disabled={busy !== "" || !reason.trim()}
                     className="min-h-10 w-fit rounded-full border border-red-700/40 px-4 font-body text-sm font-bold text-red-700 hover:bg-red-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60"
                   >

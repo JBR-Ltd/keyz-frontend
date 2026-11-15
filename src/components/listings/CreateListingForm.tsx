@@ -210,6 +210,44 @@ const INITIAL_VALUES: ListingFormValues = {
 const INPUT_CLASS_NAME =
   "mt-2 min-h-12 w-full rounded-lg border border-border bg-bg px-4 py-3 font-body text-base text-primary outline-none transition-all duration-200 ease-in-out placeholder:text-muted focus:border-accent focus:ring-2 focus:ring-accent/30";
 
+/** What the backend will store. Anything else has to become one of these first. */
+const UPLOADABLE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
+function isHeic(file: File): boolean {
+  const extension = file.name.split(".").pop()?.toLowerCase();
+
+  return (
+    file.type === "image/heic" ||
+    file.type === "image/heif" ||
+    extension === "heic" ||
+    extension === "heif"
+  );
+}
+
+/**
+ * Turns an iPhone photo into a JPEG the backend accepts.
+ *
+ * HEIC is the default camera format on iOS and no browser outside Safari can decode
+ * it, so the conversion is done here rather than left to the canvas. The library is
+ * loaded only when a HEIC file actually arrives, because it carries a WASM decoder.
+ */
+async function toUploadableFile(file: File): Promise<File> {
+  if (!isHeic(file)) {
+    return file;
+  }
+
+  const { default: heic2any } = await import("heic2any");
+  const converted = await heic2any({
+    blob: file,
+    toType: "image/jpeg",
+    quality: 0.9,
+  });
+  const blob = Array.isArray(converted) ? converted[0] : converted;
+  const name = file.name.replace(/\.(heic|heif)$/i, "") + ".jpg";
+
+  return new File([blob], name, { type: "image/jpeg" });
+}
+
 function createPhotoId(): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return crypto.randomUUID();
@@ -513,6 +551,8 @@ export default function CreateListingForm({
   const { notify } = useToast();
   const [values, setValues] = useState<ListingFormValues>(INITIAL_VALUES);
   const [photos, setPhotos] = useState<EditablePhoto[]>([]);
+  /** Converting an iPhone photo takes a moment, so the step says so rather than freezing. */
+  const [isConvertingPhotos, setIsConvertingPhotos] = useState(false);
   const [errors, setErrors] = useState<ListingFormErrors>({});
   const [draftId, setDraftId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -922,27 +962,40 @@ export default function CreateListingForm({
       });
     }
 
+    setIsConvertingPhotos(imageFiles.some(isHeic));
+
     try {
       const nextPhotos = await Promise.all(
-        imageFiles.map(
-          async (file): Promise<EditablePhoto> => ({
+        imageFiles.map(async (file): Promise<EditablePhoto> => {
+          const uploadable = await toUploadableFile(file);
+
+          if (!UPLOADABLE_TYPES.includes(uploadable.type)) {
+            throw new Error(`${file.name} is not a JPEG, PNG or WebP.`);
+          }
+
+          return {
             id: createPhotoId(),
-            dataUrl: await readFileAsDataUrl(file),
-            name: file.name,
-            type: file.type,
+            dataUrl: await readFileAsDataUrl(uploadable),
+            name: uploadable.name,
+            type: uploadable.type,
             uploading: false,
-          }),
-        ),
+          };
+        }),
       );
 
       setPhotos((current) => [...current, ...nextPhotos]);
       setIsDirty(true);
       setErrors((current) => ({ ...current, photos: undefined }));
-    } catch {
+    } catch (error) {
       setErrors((current) => ({
         ...current,
-        photos: "One or more photos could not be read.",
+        photos:
+          error instanceof Error && error.message
+            ? error.message
+            : "One or more photos could not be read.",
       }));
+    } finally {
+      setIsConvertingPhotos(false);
     }
   };
 
@@ -1106,7 +1159,25 @@ export default function CreateListingForm({
     }
 
     setDraftId(result.data.id);
+    // Adopt the saved photos, which now carry their stored urls. Without this the
+    // local copies keep their data: urls, the next save offers them again, and the
+    // server rejects them as photos the draft already holds.
+    setPhotos(
+      result.data.photos.map((photo) => ({ ...photo, uploading: false })),
+    );
     setIsDirty(false);
+
+    // A photo that failed to upload still returns a saved draft, so saying "saved"
+    // here is how a draft came back later with an empty gallery and no warning
+    if (result.message) {
+      notify({
+        title: "Draft saved without every photo",
+        description: result.message,
+        variant: "error",
+      });
+      return;
+    }
+
     notify({ title: "Draft saved", variant: "success" });
   };
 
@@ -1769,6 +1840,15 @@ export default function CreateListingForm({
                         onChange={handleFileInput}
                       />
                     </label>
+
+                    {isConvertingPhotos ? (
+                      <p
+                        className="mt-3 font-body text-sm text-muted"
+                        role="status"
+                      >
+                        Converting iPhone photos...
+                      </p>
+                    ) : null}
 
                     {errors.photos ? (
                       <p className="mt-3 font-body text-sm font-medium text-red-700">
@@ -2593,6 +2673,12 @@ export default function CreateListingForm({
               <p className="mt-3 font-body text-xs text-muted">
                 Add at least one photo to continue.
               </p>
+              {isConvertingPhotos ? (
+                <p className="mt-2 font-body text-sm text-muted" role="status">
+                  Converting iPhone photos...
+                </p>
+              ) : null}
+
               {errors.photos ? (
                 <p className="mt-2 font-body text-sm font-medium text-red-700">
                   {errors.photos}

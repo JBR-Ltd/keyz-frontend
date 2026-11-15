@@ -23,13 +23,20 @@ import {
   Plus,
   Sparkles,
   X,
+  Layers,
+  DoorOpen,
 } from "lucide-react";
 import RoomTile from "@/components/tour/RoomTile";
 import { useToast } from "@/components/ui/toast";
 import { getFloorsForProperty } from "@/lib/api/tours/floors";
-import { deleteRoom, getRoomsForFloor, updateRoom } from "@/lib/api/tours/rooms";
+import {
+  deleteRoom,
+  getRoomsForFloor,
+  updateRoom,
+} from "@/lib/api/tours/rooms";
 import { ROOM_TYPES, SIZE_OPTIONS } from "@/lib/tourConstants";
 import type { Floor, Room, SizeBucket } from "@/lib/types/tour";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface RoomBoardPageProps {
   propertyId: number;
@@ -120,9 +127,7 @@ export default function RoomBoardPage({
   };
 
   const handleOpenFloorPlan = (floor: Floor): void => {
-    router.push(
-      `/${role}/listings/${propertyId}/floor-plan?floor=${floor.id}`,
-    );
+    router.push(`/${role}/listings/${propertyId}/floor-plan?floor=${floor.id}`);
   };
 
   const handleDelete = useCallback(
@@ -260,7 +265,11 @@ export default function RoomBoardPage({
               value={String(summary.pending)}
               tone="accent"
             />
-            <Stat label="Retakes" value={String(summary.retake)} tone="danger" />
+            <Stat
+              label="Retakes"
+              value={String(summary.retake)}
+              tone="danger"
+            />
           </div>
 
           <div className="mt-5 h-2 overflow-hidden rounded-full bg-border">
@@ -277,22 +286,16 @@ export default function RoomBoardPage({
         </section>
 
         {state.floors.length === 0 ? (
-          <section className="mt-10 rounded-xl border border-dashed border-primary/20 bg-surface-soft/40 p-12 text-center">
-            <p className="font-display text-xl font-bold text-primary">
-              No floors yet
-            </p>
-            <p className="mx-auto mt-2 max-w-md font-body text-sm text-muted">
-              Start the virtual tour to add your first floor, then capture its
-              rooms one by one.
-            </p>
-            <Link
-              href={`/${role}/listings/${propertyId}/tour`}
-              className="mt-6 inline-flex min-h-11 items-center gap-2 rounded-full bg-accent px-6 font-body text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-white"
-            >
-              <Sparkles size={15} aria-hidden="true" />
-              Set up your tour
-            </Link>
-          </section>
+          <EmptyState
+            icon={Layers}
+            title="No floors yet"
+            description="Start the virtual tour to add your first floor, then capture its rooms one by one."
+            action={{
+              label: "Set up your tour",
+              href: `/${role}/listings/${propertyId}/tour`,
+            }}
+            className="mt-10"
+          />
         ) : (
           <div className="mt-10 space-y-10">
             {state.floors.map(({ floor, rooms }) => (
@@ -427,23 +430,12 @@ function FloorSection({
 
       <div className="p-5">
         {rooms.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-primary/20 bg-surface-soft/40 px-6 py-10 text-center">
-            <p className="font-body text-sm font-bold text-primary">
-              No rooms on this floor yet
-            </p>
-            <p className="mx-auto mt-1 max-w-md font-body text-xs text-muted">
-              Add the first room to start capturing. Each room gets its own
-              panorama, door pins, and status.
-            </p>
-            <button
-              type="button"
-              onClick={onAddRoom}
-              className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-full bg-accent px-5 font-body text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-white"
-            >
-              <Plus size={14} aria-hidden="true" />
-              Add the first room
-            </button>
-          </div>
+          <EmptyState
+            icon={DoorOpen}
+            title="No rooms on this floor yet"
+            description="Add the first room to start capturing. Each room gets its own panorama, door pins, and status."
+            action={{ label: "Add the first room", onClick: onAddRoom }}
+          />
         ) : (
           <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {rooms.map((room) => (
@@ -656,7 +648,11 @@ function EditRoomDialog({
           >
             {isSaving ? (
               <>
-                <Loader2 size={14} className="animate-spin" aria-hidden="true" />
+                <Loader2
+                  size={14}
+                  className="animate-spin"
+                  aria-hidden="true"
+                />
                 Saving…
               </>
             ) : (

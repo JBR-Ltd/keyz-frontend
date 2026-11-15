@@ -15,6 +15,7 @@ import { useToast } from "@/components/ui/toast";
 import RatingsPageSkeleton from "@/components/reviews/RatingsPageSkeleton";
 import { getAllMyBookings, type Booking } from "@/lib/bookings";
 import { getReviewsIWrote, submitReview, type Review } from "@/lib/reviews";
+import { EmptyState } from "@/components/ui/empty-state";
 
 const PROMPTS = [
   "Was the listing accurate?",
@@ -198,110 +199,133 @@ export default function TenantRatingsPage(): ReactElement {
           </div>
         </aside>
 
-        <section className="rounded-lg bg-[var(--color-bg)] p-6 shadow-sm sm:p-8">
-          <div className="flex flex-wrap items-start justify-between gap-5">
-            <div>
-              <p className="font-accent text-xs font-bold uppercase tracking-[0.25em] text-primary">
-                Pending review
-              </p>
-              <h1 className="mt-3 font-display text-4xl font-bold leading-[0.95] text-primary sm:text-5xl">
-                {isLoading
-                  ? "Loading your stays."
-                  : reviewableStay
-                    ? `Rate your stay at ${reviewableStay.propertyTitle}.`
-                    : "Nothing to review right now."}
-              </h1>
-            </div>
-            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-accent/10 text-accent-alt shadow-sm">
-              <PenLine size={22} />
-            </span>
-          </div>
-
-          {reviewableStay ? (
-            <>
-              <div className="mt-8 rounded-lg bg-surface-soft p-5 shadow-sm">
-                <p className="font-body text-sm font-bold text-primary">
-                  Tap a score
+        {!isLoading && !reviewableStay ? (
+          <section className="grid content-center rounded-lg bg-[var(--color-bg)] p-6 shadow-sm sm:p-8">
+            <p className="text-center font-accent text-xs font-bold uppercase tracking-[0.25em] text-primary">
+              Pending review
+            </p>
+            <EmptyState
+              icon={PenLine}
+              title="Nothing to review right now"
+              description={
+                reviews.length === 0
+                  ? "Once a stay ends you can rate the home and the host here. Your review helps the next renter choose well."
+                  : "You are up to date. Your next stay will be ready to review here once it ends."
+              }
+              action={
+                reviews.length === 0
+                  ? { label: "Find a home", href: "/browse" }
+                  : undefined
+              }
+              variant="panel"
+            />
+          </section>
+        ) : (
+          <section className="rounded-lg bg-[var(--color-bg)] p-6 shadow-sm sm:p-8">
+            <div className="flex flex-wrap items-start justify-between gap-5">
+              <div>
+                <p className="font-accent text-xs font-bold uppercase tracking-[0.25em] text-primary">
+                  Pending review
                 </p>
-                <div className="mt-4 grid grid-cols-5 gap-3">
-                  {[1, 2, 3, 4, 5].map((value) => (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() => setScore(value)}
-                      aria-pressed={score === value}
-                      className={`rounded-lg border px-3 py-5 font-display text-3xl font-bold transition-all duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
-                        score === value
-                          ? "border-transparent bg-accent/10 text-primary shadow-sm"
-                          : "border-transparent bg-[var(--color-bg)] text-primary shadow-sm hover:bg-primary/5"
-                      }`}
+                <h1 className="mt-3 font-display text-4xl font-bold leading-[0.95] text-primary sm:text-5xl">
+                  {isLoading
+                    ? "Loading your stays."
+                    : reviewableStay
+                      ? `Rate your stay at ${reviewableStay.propertyTitle}.`
+                      : "Nothing to review right now."}
+                </h1>
+              </div>
+              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-accent/10 text-accent-alt shadow-sm">
+                <PenLine size={22} />
+              </span>
+            </div>
+
+            {reviewableStay ? (
+              <>
+                <div className="mt-8 rounded-lg bg-surface-soft p-5 shadow-sm">
+                  <p className="font-body text-sm font-bold text-primary">
+                    Tap a score
+                  </p>
+                  <div className="mt-4 grid grid-cols-5 gap-3">
+                    {[1, 2, 3, 4, 5].map((value) => (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => setScore(value)}
+                        aria-pressed={score === value}
+                        className={`rounded-lg border px-3 py-5 font-display text-3xl font-bold transition-all duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                          score === value
+                            ? "border-transparent bg-accent/10 text-primary shadow-sm"
+                            : "border-transparent bg-[var(--color-bg)] text-primary shadow-sm hover:bg-primary/5"
+                        }`}
+                      >
+                        {value}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mt-6 grid gap-4 md:grid-cols-3">
+                  {PROMPTS.map((prompt) => (
+                    <div
+                      key={prompt}
+                      className="rounded-lg bg-[var(--color-bg)] p-5 shadow-sm"
                     >
-                      {value}
-                    </button>
+                      <Sparkles size={18} className="text-primary" />
+                      <p className="mt-4 font-body text-sm font-bold leading-6 text-primary">
+                        {prompt}
+                      </p>
+                    </div>
                   ))}
                 </div>
-              </div>
 
-              <div className="mt-6 grid gap-4 md:grid-cols-3">
-                {PROMPTS.map((prompt) => (
-                  <div
-                    key={prompt}
-                    className="rounded-lg bg-[var(--color-bg)] p-5 shadow-sm"
-                  >
-                    <Sparkles size={18} className="text-primary" />
-                    <p className="mt-4 font-body text-sm font-bold leading-6 text-primary">
-                      {prompt}
-                    </p>
-                  </div>
-                ))}
-              </div>
+                <label className="mt-6 block">
+                  <span className="font-body text-sm font-bold text-primary">
+                    Your review
+                  </span>
+                  <textarea
+                    value={comment}
+                    onChange={(event) => setComment(event.target.value)}
+                    rows={4}
+                    placeholder="What should the next renter know?"
+                    className="mt-2 w-full rounded-lg border border-border bg-bg px-4 py-3 font-body text-base text-primary outline-none transition-all duration-200 ease-in-out placeholder:text-muted focus:border-accent focus:ring-2 focus:ring-accent/30"
+                  />
+                </label>
 
-              <label className="mt-6 block">
-                <span className="font-body text-sm font-bold text-primary">
-                  Your review
-                </span>
-                <textarea
-                  value={comment}
-                  onChange={(event) => setComment(event.target.value)}
-                  rows={4}
-                  placeholder="What should the next renter know?"
-                  className="mt-2 w-full rounded-lg border border-border bg-bg px-4 py-3 font-body text-base text-primary outline-none transition-all duration-200 ease-in-out placeholder:text-muted focus:border-accent focus:ring-2 focus:ring-accent/30"
-                />
-              </label>
-
-              <button
-                type="button"
-                onClick={() => void handleSubmit()}
-                disabled={isSending}
-                className="mt-8 flex w-full items-center justify-center gap-2 rounded bg-primary px-5 py-4 font-accent text-xs font-bold uppercase tracking-[0.16em] text-white transition-all duration-200 ease-in-out hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-70"
-                aria-busy={isSending}
-              >
-                <AsyncButtonContent
-                  isPending={isSending}
-                  pendingLabel="Submitting review…"
+                <button
+                  type="button"
+                  onClick={() => void handleSubmit()}
+                  disabled={isSending}
+                  className="mt-8 flex w-full items-center justify-center gap-2 rounded bg-primary px-5 py-4 font-accent text-xs font-bold uppercase tracking-[0.16em] text-white transition-all duration-200 ease-in-out hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-70"
+                  aria-busy={isSending}
                 >
-                  <Send size={16} />
-                  Submit review
-                </AsyncButtonContent>
-              </button>
-            </>
-          ) : (
-            <p className="mt-8 font-body text-base leading-7 text-muted">
-              {isLoading
-                ? "Checking which stays are ready to review."
-                : "Once a stay is complete you can rate it here."}
-            </p>
-          )}
-        </section>
+                  <AsyncButtonContent
+                    isPending={isSending}
+                    pendingLabel="Submitting review…"
+                  >
+                    <Send size={16} />
+                    Submit review
+                  </AsyncButtonContent>
+                </button>
+              </>
+            ) : (
+              <p className="mt-8 font-body text-base leading-7 text-muted">
+                {isLoading
+                  ? "Checking which stays are ready to review."
+                  : "Once a stay is complete you can rate it here."}
+              </p>
+            )}
+          </section>
+        )}
       </section>
 
       <section className="mt-8 grid gap-5 md:grid-cols-3">
         {reviews.length === 0 ? (
-          <p className="font-body text-sm text-muted">
-            {isLoading
-              ? "Loading your reviews..."
-              : "Reviews you write will appear here."}
-          </p>
+          isLoading ? (
+            <p className="font-body text-sm text-muted">
+              Loading your reviews...
+            </p>
+          ) : null
         ) : (
           reviews.map((review) => (
             <article

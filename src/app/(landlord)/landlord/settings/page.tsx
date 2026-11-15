@@ -11,5 +11,10 @@ export default async function LandlordSettingsPage({
 }: LandlordSettingsPageProps): Promise<ReactElement> {
   const { section } = await searchParams;
 
-  return <SettingsView activeSection={resolveSettingsSection(section)} />;
+  return (
+    <SettingsView
+      activeSection={resolveSettingsSection(section)}
+      hasChosenSection={section !== undefined}
+    />
+  );
 }

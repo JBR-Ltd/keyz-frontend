@@ -2,7 +2,6 @@
 
 import { useEffect, useState, type ReactElement } from "react";
 import {
-  ArrowUpRight,
   BedDouble,
   CalendarDays,
   Heart,
@@ -22,6 +21,7 @@ import {
   removeSavedListing,
   type SavedProperty,
 } from "@/lib/savedListings";
+import { EmptyState } from "@/components/ui/empty-state";
 export default function TenantSavedListingsPage(): ReactElement {
   const { notify } = useToast();
   const [listings, setListings] = useState<SavedProperty[]>([]);
@@ -125,23 +125,12 @@ export default function TenantSavedListingsPage(): ReactElement {
           <span className="sr-only">Loading saved listings</span>
         </section>
       ) : listings.length === 0 ? (
-        <div className="rounded-lg bg-surface-soft p-10 text-center shadow-sm">
-          <Heart size={26} className="mx-auto text-primary" />
-          <h2 className="mt-4 font-display text-3xl font-bold text-primary">
-            Nothing saved yet
-          </h2>
-          <p className="mx-auto mt-3 max-w-md font-body text-base leading-7 text-muted">
-            Save homes while you browse and they collect here so you can compare
-            them side by side.
-          </p>
-          <Link
-            href="/browse"
-            className="mt-6 inline-flex items-center gap-2 rounded bg-primary px-5 py-3 font-accent text-xs font-bold uppercase tracking-[0.16em] text-white transition-all duration-200 ease-in-out hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-          >
-            Browse verified homes
-            <ArrowUpRight size={16} />
-          </Link>
-        </div>
+        <EmptyState
+          icon={Heart}
+          title="Nothing saved yet"
+          description="Tap the heart on any home while you browse and it collects here, so you can compare them side by side."
+          action={{ label: "Browse verified homes", href: "/browse" }}
+        />
       ) : (
         <section className="grid gap-6 xl:grid-cols-[1fr_22rem]">
           <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">

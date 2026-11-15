@@ -178,7 +178,7 @@ export default function DashboardShell({
             isCollapsed={isCollapsed}
             onCollapseToggle={toggleSidebar}
           />
-          <div className="fixed right-5 top-24 z-40 sm:right-8 lg:right-10 lg:top-5 xl:right-14">
+          <div className="fixed right-[4.25rem] top-[1.125rem] z-50 lg:right-10 lg:top-5 xl:right-14">
             {headerActions}
           </div>
         </>

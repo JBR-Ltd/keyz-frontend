@@ -31,6 +31,25 @@ export interface RiskFlag {
   userName: string | null;
 }
 
+export type IdentityCheckType = "BVN" | "FACE_MATCH" | "NIN" | "SELFIE";
+
+/** One identity check as the backend kept it. Only the last four digits of a number come back. */
+export interface IdentityCheck {
+  checkedAt: string;
+  faceMatchConfidence: number | null;
+  failureReason: string | null;
+  hasSelfie: boolean;
+  id: number;
+  livenessScore: number | null;
+  numberLast4: string | null;
+  passed: boolean;
+  provider: string;
+  retainUntil: string | null;
+  returnedDateOfBirth: string | null;
+  returnedName: string | null;
+  type: IdentityCheckType;
+}
+
 export interface AdminRiskResult<TValue> {
   data: TValue;
   message?: string;
@@ -47,6 +66,17 @@ function isRiskFlag(value: unknown): value is RiskFlag {
     typeof value.id === "number" &&
     "type" in value &&
     typeof value.type === "string"
+  );
+}
+
+function isIdentityCheck(value: unknown): value is IdentityCheck {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    "id" in value &&
+    typeof value.id === "number" &&
+    "passed" in value &&
+    typeof value.passed === "boolean"
   );
 }
 
@@ -234,4 +264,43 @@ export async function settleDeposit(
   } catch {
     return { data: null, message: "That deposit could not be settled." };
   }
+}
+
+export async function getIdentityChecks(
+  userId: number,
+): Promise<AdminRiskResult<IdentityCheck[]>> {
+  if (!getSessionMarker()) {
+    return { data: [], message: "Log in as an admin to see this." };
+  }
+
+  try {
+    const response = await apiRequest(
+      `/api/admin/users/${userId}/identity-checks`,
+      { headers: {} },
+    );
+    const payload: unknown = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      return {
+        data: [],
+        message: resolveApiError(
+          payload,
+          "Identity checks could not be loaded.",
+        ),
+      };
+    }
+
+    const data = unwrap(payload);
+
+    return Array.isArray(data) && data.every(isIdentityCheck)
+      ? { data }
+      : { data: [], message: "Identity checks could not be loaded." };
+  } catch {
+    return { data: [], message: "Identity checks could not be loaded." };
+  }
+}
+
+/** Opens through the admin proxy, which forwards the file as it is. */
+export function identityCheckSelfieUrl(checkId: number): string {
+  return `/api/admin/identity-checks/${checkId}/selfie`;
 }
