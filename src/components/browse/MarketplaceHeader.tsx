@@ -22,22 +22,22 @@ export default function MarketplaceHeader({
 }: MarketplaceHeaderProps): ReactElement {
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-bg">
-      <div className="relative mx-auto flex h-20 max-w-7xl items-center gap-4 px-5 sm:px-8 lg:px-10">
+      <div className="relative mx-auto flex h-14 max-w-7xl items-center gap-4 px-5 sm:px-8 lg:px-10">
         <Link
           href="/"
           aria-label="Rello home"
           className="flex shrink-0 items-center gap-3 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         >
-          <span className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-lg bg-primary">
+          <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg bg-primary">
             <Image
               src={relloLogoMark}
               alt=""
               aria-hidden="true"
-              className="h-9 w-9 object-contain"
+              className="h-7 w-7 object-contain"
               priority
             />
           </span>
-          <span className="hidden font-display text-2xl font-bold leading-none text-primary sm:block">
+          <span className="hidden font-display text-xl font-bold leading-none text-primary sm:block">
             Rello
           </span>
         </Link>

@@ -14,6 +14,7 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { useRef, useState, type ReactElement } from "react";
+import AvatarCropDialog from "@/components/settings/AvatarCropDialog";
 import SettingsSectionHeader from "@/components/settings/SettingsSectionHeader";
 import { useToast } from "@/components/ui/toast";
 import { AsyncButtonContent } from "@/components/ui/async-button-content";
@@ -142,6 +143,7 @@ export default function ProfileSection({
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [draft, setDraft] = useState<ProfileDraft>(draftFrom(null));
 
   const user = savedUser ?? loadedUser;
@@ -214,18 +216,29 @@ export default function ProfileSection({
     notify({ title: "Profile updated", variant: "success" });
   };
 
-  const changePhoto = async (file: File | undefined): Promise<void> => {
+  const resetPhotoInput = (): void => {
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const changePhoto = (file: File | undefined): void => {
     if (!file) {
       return;
     }
 
+    setAvatarFile(file);
+  };
+
+  const cancelPhotoChange = (): void => {
+    setAvatarFile(null);
+    resetPhotoInput();
+  };
+
+  const savePhoto = async (file: File): Promise<boolean> => {
     setIsUploading(true);
     const result = await uploadAvatar(file);
     setIsUploading(false);
-
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
 
     if (!result.success) {
       notify({
@@ -233,11 +246,14 @@ export default function ProfileSection({
         description: result.message,
         variant: "error",
       });
-      return;
+      return false;
     }
 
     setSavedUser(result.user);
+    setAvatarFile(null);
+    resetPhotoInput();
     notify({ title: "Photo updated", variant: "success" });
+    return true;
   };
 
   const details = [
@@ -372,7 +388,7 @@ export default function ProfileSection({
               type="file"
               accept="image/jpeg,image/png,image/webp"
               disabled={isUploading}
-              onChange={(event) => void changePhoto(event.target.files?.[0])}
+              onChange={(event) => changePhoto(event.target.files?.[0])}
               className="sr-only"
             />
           </label>
@@ -562,6 +578,14 @@ export default function ProfileSection({
           ) : null}
         </div>
       </div>
+      {avatarFile ? (
+        <AvatarCropDialog
+          file={avatarFile}
+          isSaving={isUploading}
+          onCancel={cancelPhotoChange}
+          onSave={savePhoto}
+        />
+      ) : null}
     </section>
   );
 }

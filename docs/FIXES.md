@@ -1300,3 +1300,18 @@ Existing rental catalogue and saved-search contracts remain unchanged.
 - Kept back-control content stable while navigation is pending and retained disabled and busy states to prevent repeated actions.
 - Preserved explicit pending copy for flows that intentionally provide it, such as leaving the tour editor.
 - Added a read-only destination resolver so safe internal routes, saved queries, and role fallbacks can be prefetched without consuming navigation history.
+
+## Public sharing experience
+
+### What was there before
+
+- Property sharing opened the native device sheet when available and otherwise copied the current browser URL without showing what would be shared.
+- Public tours and host profiles had no visible sharing action.
+- Tour pages did not provide their own property-backed social metadata.
+
+### How it was fixed
+
+- Added one adaptive Rello share surface with a mobile bottom sheet, desktop dialog, real preview content, direct sharing channels, and an optional native share action.
+- Built links from canonical public paths and the configured deployment origin so query strings, hashes, and compatibility identifiers are not shared.
+- Added the shared experience to properties, virtual tours, and public host profiles without authentication requirements.
+- Added property-backed Open Graph and Twitter metadata to public virtual tours while preserving the existing crawl rules.

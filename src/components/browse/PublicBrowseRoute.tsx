@@ -14,9 +14,9 @@ interface PublicBrowseRouteProps {
 function BrowseHeaderSkeleton(): ReactElement {
   return (
     <div role="status" aria-label="Loading account navigation">
-      <div className="h-20 border-b border-border px-5 py-4 sm:px-8 lg:px-10">
+      <div className="h-14 border-b border-border px-5 py-1.5 sm:px-8 lg:px-10">
         <div className="mx-auto flex max-w-7xl items-center justify-between">
-          <div className="h-11 w-40 animate-pulse rounded-lg bg-skeleton motion-reduce:animate-none" />
+          <div className="h-9 w-36 animate-pulse rounded-lg bg-skeleton motion-reduce:animate-none" />
           <div className="h-11 w-32 animate-pulse rounded-full bg-skeleton motion-reduce:animate-none" />
         </div>
       </div>

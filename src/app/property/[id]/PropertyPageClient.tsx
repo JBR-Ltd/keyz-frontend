@@ -40,6 +40,7 @@ import BackButton from "@/components/navigation/BackButton";
 import OverlayPortal from "@/components/ui/OverlayPortal";
 import MessageHostButton from "@/components/property/MessageHostButton";
 import ResilientPropertyImage from "@/components/property/ResilientPropertyImage";
+import ShareDialog from "@/components/public/ShareDialog";
 import { AsyncButtonContent } from "@/components/ui/async-button-content";
 import ReportDialog from "@/components/reports/ReportDialog";
 import { recordListingView } from "@/lib/listingViews";
@@ -47,7 +48,7 @@ import PropertyPrice from "@/components/property/PropertyPrice";
 import PropertyTourEmbed from "@/components/property/PropertyTourEmbed";
 import TenantVerificationGate from "@/components/tenant/TenantVerificationGate";
 import VerifiedBadge from "@/components/ui/VerifiedBadge";
-import { canonicalSegment, hostPath } from "@/lib/publicIds";
+import { canonicalSegment, hostPath, propertyPath } from "@/lib/publicIds";
 import { getPropertyById, PropertyDetail } from "@/lib/propertyDetails";
 import { getPropertyReviews } from "@/lib/reviews";
 import {
@@ -69,6 +70,7 @@ import {
   useTenantVerificationSnapshot,
 } from "@/lib/tenantVerification";
 import { EmptyState } from "@/components/ui/empty-state";
+import { buildPublicShareUrl, formatSharePrice } from "@/lib/share";
 
 const BookingRequestDialog = dynamic(
   () => import("@/components/property/BookingRequestDialog"),
@@ -326,6 +328,7 @@ export default function PropertyPageClient({
   >(null);
   const [rentalRequestRetryKey, setRentalRequestRetryKey] = useState(0);
   const [isReporting, setIsReporting] = useState(false);
+  const [isShareOpen, setIsShareOpen] = useState(false);
   const [viewingDialogState, setViewingDialogState] = useState<
     "idle" | "open" | "closed"
   >("idle");
@@ -681,34 +684,8 @@ export default function PropertyPageClient({
     setIsBookingOpen(true);
   };
 
-  const handleShare = async (): Promise<void> => {
-    const shareData = {
-      title: property?.title ?? "Rello property",
-      text: property
-        ? `Take a look at ${property.title} on Rello.`
-        : "Take a look at this property on Rello.",
-      url: window.location.href,
-    };
-
-    try {
-      if (navigator.share) {
-        await navigator.share(shareData);
-        return;
-      }
-
-      await navigator.clipboard.writeText(shareData.url);
-      notify({ title: "Link copied", variant: "success" });
-    } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") {
-        return;
-      }
-
-      notify({
-        title: "This listing could not be shared",
-        description: "Copy the page link and try again.",
-        variant: "error",
-      });
-    }
+  const handleShare = (): void => {
+    setIsShareOpen(true);
   };
 
   const handleSaveToggle = async (): Promise<void> => {
@@ -808,6 +785,17 @@ export default function PropertyPageClient({
   const showChargeReassurance =
     !shouldCheckRentalRequest ||
     (rentalRequestLoadState === "ready" && !currentOpenRentalRequest);
+  const shareContent = {
+    kind: "property" as const,
+    title: property.title,
+    description: `Take a look at ${property.title} on Rello.`,
+    url: buildPublicShareUrl(propertyPath(property)),
+    imageUrl: property.images[0] ?? null,
+    location: [property.location.area, property.location.city]
+      .filter(Boolean)
+      .join(", "),
+    price: formatSharePrice(property.price, property.rentalMode),
+  };
 
   const renderPrimaryAction = (className: string): ReactElement => {
     if (authentication.status === "unauthenticated") {
@@ -1809,6 +1797,11 @@ export default function PropertyPageClient({
           typeof window === "undefined" ? "/browse" : window.location.pathname
         }
         onClose={() => setGuestAction(null)}
+      />
+      <ShareDialog
+        open={isShareOpen}
+        content={shareContent}
+        onClose={() => setIsShareOpen(false)}
       />
     </main>
   );

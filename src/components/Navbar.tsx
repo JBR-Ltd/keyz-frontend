@@ -121,7 +121,7 @@ export default function Navbar(): ReactElement {
         }
       },
       {
-        rootMargin: "-64px 0px -45% 0px",
+        rootMargin: "-56px 0px -45% 0px",
         threshold: [0, 0.25, 0.5, 0.75],
       },
     );
@@ -139,23 +139,23 @@ export default function Navbar(): ReactElement {
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-bg shadow-[0_8px_24px_-24px_rgba(4,52,76,0.55)]">
-      <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-5 sm:px-8 lg:px-10">
+      <div className="mx-auto flex h-14 max-w-7xl items-center gap-4 px-5 sm:px-8 lg:px-10">
         <Link
           href="/"
           aria-label="Rello home"
           className="flex shrink-0 items-center gap-3 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           onClick={closeMenu}
         >
-          <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg bg-primary">
+          <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg bg-primary">
             <Image
               src={relloLogoMark}
               alt=""
               aria-hidden="true"
-              className="h-8 w-8 object-contain"
+              className="h-7 w-7 object-contain"
               priority
             />
           </span>
-          <span className="hidden font-display text-2xl font-bold leading-none text-primary sm:block">
+          <span className="hidden font-display text-xl font-bold leading-none text-primary sm:block">
             Rello
           </span>
         </Link>
