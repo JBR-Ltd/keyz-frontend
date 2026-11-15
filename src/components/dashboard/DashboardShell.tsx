@@ -92,6 +92,10 @@ export default function DashboardShell({
         saveTenantVerificationState({
           nin: result.data.ninVerified ? "verified" : "not_started",
           bvn: result.data.bvnVerified ? "verified" : "not_started",
+          // The gate has always asked for a selfie but never read whether one was
+          // taken, so it stayed not_started and a verified tenant was asked again
+          // on every reload.
+          selfie: result.data.selfieVerified ? "verified" : "not_started",
         });
       }
 

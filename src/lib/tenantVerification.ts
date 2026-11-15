@@ -11,6 +11,8 @@ export type VerificationStepStatus =
 export interface TenantVerificationState {
   nin: VerificationStepStatus;
   bvn: VerificationStepStatus;
+  /** A tenant now proves the face behind the booking, as a host already does. */
+  selfie: VerificationStepStatus;
 }
 
 export interface TenantVerificationSnapshot {
@@ -21,6 +23,7 @@ export interface TenantVerificationSnapshot {
 const DEFAULT_TENANT_VERIFICATION_STATE: TenantVerificationState = {
   nin: "not_started",
   bvn: "not_started",
+  selfie: "not_started",
 };
 
 const DEFAULT_TENANT_VERIFICATION_SNAPSHOT: TenantVerificationSnapshot = {
@@ -41,14 +44,19 @@ function subscribeToTenantVerification(callback: () => void): () => void {
 }
 
 export function isTenantVerified(state: TenantVerificationState): boolean {
-  return state.nin === "verified" && state.bvn === "verified";
+  return (
+    state.nin === "verified" &&
+    state.bvn === "verified" &&
+    state.selfie === "verified"
+  );
 }
 
 export function countVerifiedTenantSteps(
   state: TenantVerificationState,
 ): number {
-  return [state.nin, state.bvn].filter((status) => status === "verified")
-    .length;
+  return [state.nin, state.bvn, state.selfie].filter(
+    (status) => status === "verified",
+  ).length;
 }
 
 export function getTenantVerificationSnapshot(): TenantVerificationSnapshot {

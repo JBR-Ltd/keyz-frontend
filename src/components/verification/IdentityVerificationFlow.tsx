@@ -147,11 +147,7 @@ function getSafeReturnPath(value: string | null): string {
   return isAllowedPath && value ? value : "/tenant/settings";
 }
 
-function getPersonalStepNumber(step: PersonalStep, isTenant: boolean): number {
-  if (isTenant) {
-    return step === "numbers" ? 1 : 2;
-  }
-
+function getPersonalStepNumber(step: PersonalStep): number {
   return { numbers: 1, selfie: 2, review: 3 }[step];
 }
 
@@ -212,7 +208,9 @@ export default function IdentityVerificationFlow({
   const needsBvn = isTenant
     ? !tenantNumbersComplete
     : !completedChecks.includes("BVN");
-  const needsSelfie = !isTenant && !completedChecks.includes("SELFIE");
+  // A tenant used to skip this, so the face behind a booking was never checked
+  // against the identity behind it. Everyone takes it now.
+  const needsSelfie = !completedChecks.includes("SELFIE");
   const ninReady = !needsNin || isValidIdentityNumber(nin);
   const bvnReady = !needsBvn || isValidIdentityNumber(bvn);
   const selfieReady = !needsSelfie || Boolean(selfiePreview);
@@ -220,11 +218,11 @@ export default function IdentityVerificationFlow({
     nin || bvn || selfiePreview || documents.length,
   );
   const isBusinessPhase = isAgent && identityDone;
-  const personalStepCount = isTenant ? 2 : 3;
+  const personalStepCount = 3;
   const currentStepCount = isBusinessPhase ? 3 : personalStepCount;
   const currentStep = isBusinessPhase
     ? getBusinessStepNumber(businessStep)
-    : getPersonalStepNumber(personalStep, isTenant);
+    : getPersonalStepNumber(personalStep);
   const isProcessing = processingStage !== null;
 
   const stopCamera = useCallback((): void => {
@@ -285,6 +283,9 @@ export default function IdentityVerificationFlow({
         saveTenantVerificationState({
           nin: identity.completed.includes("NIN") ? "verified" : "not_started",
           bvn: identity.completed.includes("BVN") ? "verified" : "not_started",
+          selfie: identity.completed.includes("SELFIE")
+            ? "verified"
+            : "not_started",
         });
       }
 
@@ -461,7 +462,7 @@ export default function IdentityVerificationFlow({
     }
 
     setFormError("");
-    setPersonalStep(isTenant ? "review" : needsSelfie ? "selfie" : "review");
+    setPersonalStep(needsSelfie ? "selfie" : "review");
   };
 
   const continueFromSelfie = (): void => {
@@ -497,9 +498,11 @@ export default function IdentityVerificationFlow({
       }
 
       setCompletedChecks(["NIN", "BVN"]);
+      // The selfie is its own step and is not finished by the number checks
       saveTenantVerificationState({
         nin: "verified",
         bvn: "verified",
+        selfie: "not_started",
       });
       forgetAccountDetails();
       setIdentityDone(true);
@@ -1044,11 +1047,7 @@ export default function IdentityVerificationFlow({
     <div>
       <button
         type="button"
-        onClick={() =>
-          setPersonalStep(
-            isTenant ? "numbers" : needsSelfie ? "selfie" : "numbers",
-          )
-        }
+        onClick={() => setPersonalStep(needsSelfie ? "selfie" : "numbers")}
         disabled={isProcessing}
         className="mb-6 inline-flex min-h-11 items-center gap-2 rounded-full px-2 font-body text-sm font-bold text-primary hover:bg-primary/5 disabled:opacity-50"
       >
