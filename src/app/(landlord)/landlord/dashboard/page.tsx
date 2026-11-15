@@ -263,8 +263,11 @@ function mapDashboardProperty(
 ): DashboardProperty {
   const tenancyStatus = getTenancyStatus(property.id, bookings, now);
   const needsAttention = !property.verified || !property.imageUrl;
-  const actionHref =
-    tenancyStatus === "Available"
+  // The public page serves live listings only, so sending an unverified one there
+  // is a 404. Anything still needing work goes to the host's own page instead.
+  const actionHref = needsAttention
+    ? `/landlord/listings/${property.id}`
+    : tenancyStatus === "Available"
       ? propertyPath(property)
       : "/landlord/bookings";
 

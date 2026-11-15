@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { ReactNode, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { useAuthentication } from "@/components/auth/AuthProvider";
-import { type AccountRole } from "@/lib/authSession";
+import { refreshAuthentication, type AccountRole } from "@/lib/authSession";
 
 export { isAccountRole } from "@/lib/authSession";
 export type { AccountRole } from "@/lib/authSession";
@@ -42,6 +42,30 @@ export default function RoleGuard({ children, expectedRole }: RoleGuardProps) {
       router.replace(getRoleHomePath(role));
     }
   }, [authentication.status, expectedRole, role, router]);
+
+  // A check that could not complete leaves the status at "checking" for good, which
+  // used to be an endless spinner with nothing to act on and no way back.
+  if (!isAllowed && authentication.error && !authentication.user) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-bg px-6">
+        <div className="max-w-sm text-center">
+          <h1 className="font-display text-2xl font-bold text-primary">
+            We cannot reach Rello
+          </h1>
+          <p className="mt-3 font-body text-sm leading-6 text-muted">
+            Check your connection and try again. You are still signed in.
+          </p>
+          <button
+            type="button"
+            onClick={() => void refreshAuthentication()}
+            className="mt-6 min-h-12 rounded-full bg-primary px-6 font-body text-sm font-bold text-white transition-colors hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          >
+            Try again
+          </button>
+        </div>
+      </main>
+    );
+  }
 
   if (!isAllowed) {
     return (
