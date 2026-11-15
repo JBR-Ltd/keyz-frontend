@@ -203,10 +203,10 @@ export default function SavedSearchesPage(): ReactElement {
                   ? `Last alert ${new Date(search.lastAlertedAt).toLocaleDateString("en-NG", { dateStyle: "medium" })}`
                   : "No alerts sent yet"}
               </p>
-              <div className="mt-4 flex flex-wrap gap-2">
+              <div className="mt-4 grid grid-cols-2 gap-2 sm:flex">
                 <Link
                   href={`/browse?search=${search.id}`}
-                  className="inline-flex min-h-10 items-center gap-2 rounded-full bg-primary px-4 font-body text-sm font-bold text-white hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  className="inline-flex min-h-11 w-full items-center justify-center gap-2 whitespace-nowrap rounded-full bg-primary px-3 font-body text-sm font-bold text-white hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent sm:w-auto sm:px-4"
                 >
                   See homes
                 </Link>
@@ -216,15 +216,11 @@ export default function SavedSearchesPage(): ReactElement {
                   disabled={busyKey?.startsWith(`${search.id}:`) ?? false}
                   aria-busy={busyKey === `${search.id}:alerts`}
                   aria-pressed={search.alerts}
-                  className="inline-flex min-h-10 items-center gap-2 rounded-full border border-primary/20 px-4 font-body text-sm font-bold text-primary hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60"
+                  className="inline-flex min-h-11 w-full items-center justify-center gap-2 whitespace-nowrap rounded-full border border-primary/20 px-3 font-body text-sm font-bold text-primary hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60 sm:w-auto sm:px-4"
                 >
                   <AsyncButtonContent
                     isPending={busyKey === `${search.id}:alerts`}
-                    pendingLabel={
-                      search.alerts
-                        ? "Turning alerts off…"
-                        : "Turning alerts on…"
-                    }
+                    pendingLabel="Updating..."
                   >
                     {search.alerts ? (
                       <Bell size={14} aria-hidden="true" />
