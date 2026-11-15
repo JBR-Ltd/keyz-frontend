@@ -247,7 +247,7 @@ export default function AdminVerificationsPage(): ReactElement {
           Verifications
         </h1>
         <p className="mt-4 max-w-2xl font-body text-base leading-7 text-muted">
-          Identity checks run automatically through Dojah. Business documents
+          Identity checks run automatically. Business documents
           and listings the automated checks could not settle land here because a
           person has to read them.
         </p>

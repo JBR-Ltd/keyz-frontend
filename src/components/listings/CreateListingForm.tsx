@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import BackButton from "@/components/navigation/BackButton";
 import ConfirmActionModal from "@/components/settings/ConfirmActionModal";
 import { AsyncButtonContent } from "@/components/ui/async-button-content";
@@ -358,6 +358,10 @@ function formatPreviewPrice(value: string, rentalMode: RentalMode): string {
     : "Price not set";
 }
 
+function formatRoomCount(count: number, room: string): string {
+  return `${count} ${count === 1 ? room : `${room}s`}`;
+}
+
 function formatCurrencyInput(value: string): string {
   const amount = Number(value);
 
@@ -403,7 +407,9 @@ function NumberStepper({
   return (
     <div>
       <span className="font-body text-sm font-bold text-primary">{label}</span>
-      <div className="mt-2 grid min-h-12 grid-cols-[3rem_1fr_3rem] overflow-hidden rounded-lg border border-border bg-bg focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/30">
+      {/* minmax(0,1fr), not 1fr: a grid track's minimum is its content, so a plain
+          1fr cannot shrink and pushes the row wider than the screen */}
+      <div className="mt-2 grid min-h-12 grid-cols-[3rem_minmax(0,1fr)_3rem] overflow-hidden rounded-lg border border-border bg-bg focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/30">
         <button
           type="button"
           onClick={() => onChange(Math.max(0, value - 1))}
@@ -570,6 +576,8 @@ export default function CreateListingForm({
   const [isCapturing, setIsCapturing] = useState(false);
   const [mandates, setMandates] = useState<Mandate[]>([]);
   const [mandatesLoading, setMandatesLoading] = useState(role === "agent");
+  const stepHeadingRef = useRef<HTMLHeadingElement>(null);
+  const hasRenderedStep = useRef(false);
   // Rentals only for now, for landlords and agents alike. Sale reopens with the backend flag.
   const listingType: PropertyListingStatus = "FOR_RENT";
   const priceLabel = PRICE_LABELS[values.rentalMode];
@@ -610,6 +618,22 @@ export default function CreateListingForm({
     window.addEventListener("beforeunload", warnBeforeLeaving);
     return () => window.removeEventListener("beforeunload", warnBeforeLeaving);
   }, [isDirty, isSubmitting]);
+
+  useEffect(() => {
+    if (!hasRenderedStep.current) {
+      hasRenderedStep.current = true;
+      return;
+    }
+
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+
+    window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
+    requestAnimationFrame(() =>
+      stepHeadingRef.current?.focus({ preventScroll: true }),
+    );
+  }, [listingStep]);
 
   useEffect(() => {
     if (!initialListingId) {
@@ -1109,7 +1133,6 @@ export default function CreateListingForm({
   const moveToListingStep = (step: ListingStep): void => {
     setErrors({});
     setListingStep(step);
-    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleContinue = (): void => {
@@ -1221,10 +1244,11 @@ export default function CreateListingForm({
 
     setIsSubmitting(true);
     const result = await submitHostListing(buildListingInput());
-    setIsSubmitting(false);
     setStorageUnavailable(result.unavailable);
 
     if (!result.data) {
+      // Only released on a failure, where pressing again is the right thing to do
+      setIsSubmitting(false);
       notify({
         title: "Listing could not be saved",
         description: result.message ?? "The property server is unavailable.",
@@ -1232,6 +1256,11 @@ export default function CreateListingForm({
       });
       return;
     }
+
+    // Stays held from here on. The listing exists, and the proof upload and the
+    // navigation that follow took long enough that the button went idle again,
+    // which read as "nothing happened" and invited a second press. A second press
+    // created a second listing.
 
     setIsDirty(false);
 
@@ -1309,7 +1338,7 @@ export default function CreateListingForm({
 
   if (experience === "guided") {
     return (
-      <main className="min-h-screen overflow-x-clip px-5 pb-0 pt-8 sm:px-8 lg:px-10 lg:pt-10 xl:px-14">
+      <main className="min-h-screen overflow-x-clip px-5 pb-[calc(6.5rem+env(safe-area-inset-bottom))] pt-8 sm:px-8 sm:pb-0 lg:px-10 lg:pt-10 xl:px-14">
         <div className="mx-auto max-w-7xl">
           <header className="pb-4">
             {listingStepIndex > 0 ? (
@@ -1331,27 +1360,51 @@ export default function CreateListingForm({
               </BackButton>
             )}
 
-            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <p className="font-accent text-xs font-bold uppercase tracking-[0.3em] text-primary">
-                  {draftId ? "Editing Draft" : "New Listing"}
-                </p>
-                <h1 className="mt-3 font-display text-3xl font-bold leading-tight text-primary">
-                  {draftId ? "Continue your listing" : "Create your listing"}
-                </h1>
-                <p className="mt-2 max-w-2xl font-body text-base leading-7 text-muted">
-                  Build a complete rental listing one focused step at a time.
-                </p>
+            {listingStepIndex === 0 ? (
+              <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <p className="font-accent text-xs font-bold uppercase tracking-[0.3em] text-primary">
+                    {draftId ? "Editing Draft" : "New Listing"}
+                  </p>
+                  <h1
+                    ref={stepHeadingRef}
+                    tabIndex={-1}
+                    className="mt-3 font-display text-3xl font-bold leading-tight text-primary outline-none"
+                  >
+                    {draftId ? "Continue your listing" : "Create your listing"}
+                  </h1>
+                  <p className="mt-2 max-w-2xl font-body text-base leading-7 text-muted">
+                    Build a complete rental listing one focused step at a time.
+                  </p>
+                </div>
+                <div className="text-left sm:text-right lg:hidden">
+                  <p className="font-body text-sm font-bold text-primary">
+                    Basics
+                  </p>
+                  <p className="mt-1 font-body text-xs text-muted">
+                    Step 1 of {LISTING_STEPS.length}
+                  </p>
+                </div>
               </div>
-              <div className="text-left sm:text-right lg:hidden">
-                <p className="font-body text-sm font-bold text-primary">
-                  {LISTING_STEPS[listingStepIndex]?.label}
-                </p>
-                <p className="mt-1 font-body text-xs text-muted">
+            ) : (
+              <div className="mt-4 flex items-end justify-between gap-4">
+                <div>
+                  <p className="font-accent text-xs font-bold uppercase tracking-[0.24em] text-primary">
+                    {draftId ? "Editing Draft" : "New Listing"}
+                  </p>
+                  <h1
+                    ref={stepHeadingRef}
+                    tabIndex={-1}
+                    className="mt-2 font-display text-2xl font-bold leading-tight text-primary outline-none"
+                  >
+                    {LISTING_STEPS[listingStepIndex]?.label}
+                  </h1>
+                </div>
+                <p className="shrink-0 pb-1 font-body text-xs text-muted">
                   Step {listingStepIndex + 1} of {LISTING_STEPS.length}
                 </p>
               </div>
-            </div>
+            )}
             {canDeleteDraft ? (
               <button
                 type="button"
@@ -1460,7 +1513,7 @@ export default function CreateListingForm({
             >
               <div
                 key={listingStep}
-                className="animate-in fade-in-0 slide-in-from-bottom-2 rounded-t-2xl border border-b-0 border-border bg-bg p-5 pb-28 duration-300 motion-reduce:animate-none sm:p-8 sm:pb-8"
+                className="animate-in fade-in-0 slide-in-from-bottom-2 rounded-2xl border border-border bg-bg p-5 duration-300 motion-reduce:animate-none sm:rounded-b-none sm:border-b-0 sm:p-8 sm:pb-8"
               >
                 {listingStep === "basics" ? (
                   <section aria-labelledby="guided-listing-basics">
@@ -1682,7 +1735,7 @@ export default function CreateListingForm({
                       <span className="font-normal text-muted">(optional)</span>
                     </p>
 
-                    <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-3">
                       {LISTING_AMENITIES.map((amenity) => {
                         const selected = values.amenities.includes(amenity);
 
@@ -1692,7 +1745,7 @@ export default function CreateListingForm({
                             type="button"
                             onClick={() => toggleAmenity(amenity)}
                             className={cn(
-                              "flex min-h-12 items-center justify-between rounded-xl border bg-transparent px-4 py-3 text-left font-body text-sm font-medium text-primary transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+                              "flex min-h-12 items-center justify-between gap-2 rounded-xl border bg-transparent px-3 py-3 text-left font-body text-sm font-medium text-primary transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent sm:px-4",
                               selected
                                 ? "border-accent shadow-sm"
                                 : "border-primary/15 hover:border-accent/70",
@@ -1825,7 +1878,10 @@ export default function CreateListingForm({
                       </span>
                       <span>
                         <span className="block font-body text-sm font-bold text-primary">
-                          Drop photos here or click to upload
+                          <span className="sm:hidden">Tap to add photos</span>
+                          <span className="hidden sm:inline">
+                            Drop photos here or click to upload
+                          </span>
                         </span>
                         <span className="mt-1 block font-body text-xs text-muted">
                           JPG, PNG, WEBP, HEIC, or HEIF. Up to 20 photos, 10 MB
@@ -1889,7 +1945,7 @@ export default function CreateListingForm({
                           ) : null}
                         </div>
 
-                        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                           {photos.map((photo, index) => (
                             <div
                               key={photo.id}
@@ -1911,7 +1967,7 @@ export default function CreateListingForm({
                               <button
                                 type="button"
                                 onClick={() => removePhoto(photo.id)}
-                                className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full border border-white/30 bg-black/50 text-white shadow-sm transition-colors hover:bg-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                                className="absolute right-2 top-2 flex h-11 w-11 items-center justify-center rounded-full border border-white/30 bg-black/50 text-white shadow-sm transition-colors hover:bg-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                                 aria-label={`Remove ${photo.name}`}
                               >
                                 <X size={15} aria-hidden="true" />
@@ -1927,7 +1983,7 @@ export default function CreateListingForm({
                                 <button
                                   type="button"
                                   onClick={() => makeCover(photo.id)}
-                                  className="absolute bottom-2 left-2 rounded-full border border-primary/15 bg-bg px-3 py-1.5 font-body text-xs font-bold text-primary shadow-sm transition-colors hover:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                                  className="absolute left-2 top-2 inline-flex min-h-11 items-center rounded-full border border-primary/15 bg-bg px-3 font-body text-xs font-bold text-primary shadow-sm transition-colors hover:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                                 >
                                   Make Cover
                                 </button>
@@ -1938,7 +1994,7 @@ export default function CreateListingForm({
                                     type="button"
                                     onClick={() => movePhoto(photo.id, -1)}
                                     disabled={index === 0}
-                                    className="flex h-8 w-8 items-center justify-center text-primary hover:bg-surface-soft disabled:cursor-not-allowed disabled:opacity-30"
+                                    className="flex h-11 w-11 items-center justify-center text-primary hover:bg-surface-soft disabled:cursor-not-allowed disabled:opacity-30"
                                     aria-label={`Move ${photo.name} earlier`}
                                   >
                                     <ChevronLeft size={15} aria-hidden="true" />
@@ -1947,7 +2003,7 @@ export default function CreateListingForm({
                                     type="button"
                                     onClick={() => movePhoto(photo.id, 1)}
                                     disabled={index === photos.length - 1}
-                                    className="flex h-8 w-8 items-center justify-center border-l border-border text-primary hover:bg-surface-soft disabled:cursor-not-allowed disabled:opacity-30"
+                                    className="flex h-11 w-11 items-center justify-center border-l border-border text-primary hover:bg-surface-soft disabled:cursor-not-allowed disabled:opacity-30"
                                     aria-label={`Move ${photo.name} later`}
                                   >
                                     <ChevronRight
@@ -2058,18 +2114,6 @@ export default function CreateListingForm({
                         </span>
                       </div>
                     )}
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (proofCapture) setIsDirty(true);
-                        setProofCapture(null);
-                        handleContinue();
-                      }}
-                      className="mt-5 inline-flex min-h-11 items-center justify-center rounded-full border border-primary/20 px-5 font-body text-sm font-bold text-primary transition-colors hover:border-accent"
-                    >
-                      Verify later
-                    </button>
                   </section>
                 ) : null}
 
@@ -2088,7 +2132,7 @@ export default function CreateListingForm({
                       This is how the key information will appear to renters.
                     </p>
 
-                    <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                    <div className="mt-6 divide-y divide-border overflow-hidden rounded-xl border border-border">
                       {[
                         {
                           label: "Listing basics",
@@ -2105,7 +2149,7 @@ export default function CreateListingForm({
                         {
                           label: "Property details",
                           step: "details" as const,
-                          value: `${values.bedrooms} bedrooms, ${values.bathrooms} bathrooms`,
+                          value: `${formatRoomCount(values.bedrooms, "bedroom")}, ${formatRoomCount(values.bathrooms, "bathroom")}`,
                         },
                         {
                           label: "Pricing",
@@ -2130,7 +2174,7 @@ export default function CreateListingForm({
                       ].map((item) => (
                         <div
                           key={item.step}
-                          className="flex items-center gap-3 rounded-xl border border-border p-4"
+                          className="flex min-h-16 items-center gap-3 px-4 py-3"
                         >
                           <CircleCheck
                             className="shrink-0 text-accent-alt"
@@ -2141,7 +2185,7 @@ export default function CreateListingForm({
                             <p className="font-body text-xs font-bold text-primary">
                               {item.label}
                             </p>
-                            <p className="mt-1 truncate font-body text-xs text-muted">
+                            <p className="mt-0.5 truncate font-body text-xs text-muted">
                               {item.value || "Not added"}
                             </p>
                           </div>
@@ -2156,7 +2200,7 @@ export default function CreateListingForm({
                       ))}
                     </div>
 
-                    <article className="mt-6 overflow-hidden rounded-xl border border-border bg-bg shadow-sm">
+                    <article className="mt-5 overflow-hidden rounded-xl border border-border bg-bg shadow-sm">
                       <div className="relative aspect-video bg-surface-soft">
                         {coverPhoto ? (
                           <Image
@@ -2173,7 +2217,7 @@ export default function CreateListingForm({
                           </span>
                         )}
                       </div>
-                      <div className="p-5 sm:p-6">
+                      <div className="p-4 sm:p-6">
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                           <div className="min-w-0">
                             <h3 className="font-display text-2xl font-bold text-primary">
@@ -2194,8 +2238,12 @@ export default function CreateListingForm({
                         </div>
 
                         <div className="mt-5 flex flex-wrap gap-4 border-y border-border py-4 font-body text-sm text-primary">
-                          <span>{values.bedrooms} bedrooms</span>
-                          <span>{values.bathrooms} bathrooms</span>
+                          <span>
+                            {formatRoomCount(values.bedrooms, "bedroom")}
+                          </span>
+                          <span>
+                            {formatRoomCount(values.bathrooms, "bathroom")}
+                          </span>
                           {values.squareFootage ? (
                             <span>{values.squareFootage} sq ft</span>
                           ) : null}
@@ -2236,8 +2284,8 @@ export default function CreateListingForm({
                 ) : null}
               </div>
 
-              <footer className="sticky bottom-0 z-20 rounded-b-2xl border border-border bg-bg p-4 shadow-[0_-8px_24px_rgba(3,58,78,0.08)] sm:static sm:shadow-none">
-                <div className="flex items-center gap-3">
+              <footer className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 rounded-2xl border border-border/80 bg-bg/95 p-2.5 shadow-[0_14px_35px_-18px_rgba(1,57,81,0.65)] backdrop-blur-md sm:static sm:rounded-t-none sm:rounded-b-2xl sm:border-border sm:bg-bg sm:p-4 sm:shadow-none sm:backdrop-blur-none">
+                <div className="flex items-center gap-2 sm:gap-3">
                   <button
                     type="button"
                     onClick={handleBack}
@@ -2263,15 +2311,18 @@ export default function CreateListingForm({
                     onClick={() => void handleSaveDraft()}
                     disabled={isSavingDraft || isSubmitting}
                     aria-busy={isSavingDraft}
-                    className="inline-flex min-h-12 flex-1 items-center justify-center rounded-full border border-primary/20 bg-transparent px-4 py-3 font-body text-sm font-bold text-primary transition-all duration-200 hover:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none sm:px-6"
+                    className="inline-flex min-h-11 min-w-0 flex-1 items-center justify-center whitespace-nowrap rounded-full border border-primary/20 bg-transparent px-3 py-2.5 font-body text-xs font-bold text-primary transition-all duration-200 hover:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-12 sm:flex-none sm:px-6 sm:py-3 sm:text-sm"
                   >
                     <AsyncButtonContent
                       isPending={isSavingDraft}
-                      pendingLabel={
-                        draftId ? "Updating draft…" : "Saving draft…"
-                      }
+                      pendingLabel={draftId ? "Updating..." : "Saving..."}
                     >
-                      {draftId ? "Update Draft" : "Save as Draft"}
+                      <span className="sm:hidden">
+                        {draftId ? "Update draft" : "Save draft"}
+                      </span>
+                      <span className="hidden sm:inline">
+                        {draftId ? "Update Draft" : "Save as Draft"}
+                      </span>
                     </AsyncButtonContent>
                   </button>
 
@@ -2282,7 +2333,7 @@ export default function CreateListingForm({
                       disabled={isSubmitting}
                       aria-busy={isSubmitting}
                       className={cn(
-                        "inline-flex min-h-12 flex-1 items-center justify-center rounded-full px-5 py-3 font-body text-sm font-bold transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none sm:px-7",
+                        "inline-flex min-h-11 min-w-0 flex-1 items-center justify-center whitespace-nowrap rounded-full px-3 py-2.5 font-body text-xs font-bold transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-12 sm:flex-none sm:px-7 sm:py-3 sm:text-sm",
                         canSubmit
                           ? "bg-accent text-primary hover:bg-primary hover:text-white"
                           : "bg-border text-muted",
@@ -2299,7 +2350,7 @@ export default function CreateListingForm({
                     <button
                       type="button"
                       onClick={handleContinue}
-                      className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-full bg-accent px-5 py-3 font-body text-sm font-bold text-primary transition-all duration-200 hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent sm:flex-none sm:px-7"
+                      className="inline-flex min-h-11 min-w-0 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-accent px-3 py-2.5 font-body text-xs font-bold text-primary transition-all duration-200 hover:bg-primary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent sm:min-h-12 sm:flex-none sm:px-7 sm:py-3 sm:text-sm"
                     >
                       Continue
                       <ArrowRight size={17} aria-hidden="true" />

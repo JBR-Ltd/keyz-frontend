@@ -86,7 +86,10 @@ export function Select({
           position="popper"
           sideOffset={6}
           className={cn(
-            "z-[120] max-h-72 min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-xl bg-[var(--color-bg)] p-1.5 shadow-xl",
+            // Above every overlay in the app, which run as high as z-[170]. At
+            // z-[120] the list opened behind any dialog holding a select, so on
+            // the report form a tap simply appeared to do nothing.
+            "z-[200] max-h-72 min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-xl bg-[var(--color-bg)] p-1.5 shadow-xl",
             "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
             "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
             "motion-reduce:data-[state=open]:animate-none motion-reduce:data-[state=closed]:animate-none",

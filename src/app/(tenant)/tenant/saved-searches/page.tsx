@@ -144,9 +144,33 @@ export default function SavedSearchesPage(): ReactElement {
           {searches.map((search) => (
             <li
               key={search.id}
-              className="flex flex-col rounded-lg bg-bg p-5 shadow-sm"
+              className="relative flex flex-col rounded-lg bg-bg p-5 shadow-sm"
             >
-              <p className="font-body text-lg font-bold text-primary">
+              {/* Top right rather than stranded on its own line under the
+                  actions, where it wrapped on a phone */}
+              <button
+                type="button"
+                onClick={() => void remove(search)}
+                disabled={busyKey?.startsWith(`${search.id}:`) ?? false}
+                aria-busy={busyKey === `${search.id}:delete`}
+                aria-label={
+                  busyKey === `${search.id}:delete`
+                    ? `Deleting ${search.name}`
+                    : `Delete ${search.name}`
+                }
+                className="absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-full text-muted transition-colors hover:bg-red-700/5 hover:text-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60"
+              >
+                {busyKey === `${search.id}:delete` ? (
+                  <Loader2
+                    size={16}
+                    className="animate-spin"
+                    aria-hidden="true"
+                  />
+                ) : (
+                  <Trash2 size={16} aria-hidden="true" />
+                )}
+              </button>
+              <p className="pr-12 font-body text-lg font-bold text-primary">
                 {search.name}
               </p>
               <p className="mt-1 font-body text-sm text-muted">
@@ -179,10 +203,10 @@ export default function SavedSearchesPage(): ReactElement {
                   ? `Last alert ${new Date(search.lastAlertedAt).toLocaleDateString("en-NG", { dateStyle: "medium" })}`
                   : "No alerts sent yet"}
               </p>
-              <div className="mt-4 flex flex-wrap gap-2">
+              <div className="mt-4 grid grid-cols-2 gap-2 sm:flex">
                 <Link
                   href={`/browse?search=${search.id}`}
-                  className="inline-flex min-h-10 items-center gap-2 rounded-full bg-primary px-4 font-body text-sm font-bold text-white hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  className="inline-flex min-h-11 w-full items-center justify-center gap-2 whitespace-nowrap rounded-full bg-primary px-3 font-body text-sm font-bold text-white hover:bg-accent hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent sm:w-auto sm:px-4"
                 >
                   See homes
                 </Link>
@@ -192,15 +216,11 @@ export default function SavedSearchesPage(): ReactElement {
                   disabled={busyKey?.startsWith(`${search.id}:`) ?? false}
                   aria-busy={busyKey === `${search.id}:alerts`}
                   aria-pressed={search.alerts}
-                  className="inline-flex min-h-10 items-center gap-2 rounded-full border border-primary/20 px-4 font-body text-sm font-bold text-primary hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60"
+                  className="inline-flex min-h-11 w-full items-center justify-center gap-2 whitespace-nowrap rounded-full border border-primary/20 px-3 font-body text-sm font-bold text-primary hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60 sm:w-auto sm:px-4"
                 >
                   <AsyncButtonContent
                     isPending={busyKey === `${search.id}:alerts`}
-                    pendingLabel={
-                      search.alerts
-                        ? "Turning alerts off…"
-                        : "Turning alerts on…"
-                    }
+                    pendingLabel="Updating..."
                   >
                     {search.alerts ? (
                       <Bell size={14} aria-hidden="true" />
@@ -208,26 +228,6 @@ export default function SavedSearchesPage(): ReactElement {
                       <BellOff size={14} aria-hidden="true" />
                     )}
                     {search.alerts ? "Alerts on" : "Alerts off"}
-                  </AsyncButtonContent>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void remove(search)}
-                  disabled={busyKey?.startsWith(`${search.id}:`) ?? false}
-                  aria-busy={busyKey === `${search.id}:delete`}
-                  aria-label={
-                    busyKey === `${search.id}:delete`
-                      ? `Deleting ${search.name}`
-                      : `Delete ${search.name}`
-                  }
-                  className="inline-flex min-h-10 items-center gap-2 rounded-full px-3 font-body text-sm font-bold text-muted hover:text-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60"
-                >
-                  <AsyncButtonContent
-                    isPending={busyKey === `${search.id}:delete`}
-                    pendingLabel="Deleting saved search…"
-                  >
-                    <Trash2 size={14} aria-hidden="true" />
-                    Delete
                   </AsyncButtonContent>
                 </button>
               </div>

@@ -1315,3 +1315,34 @@ Existing rental catalogue and saved-search contracts remain unchanged.
 - Built links from canonical public paths and the configured deployment origin so query strings, hashes, and compatibility identifiers are not shared.
 - Added the shared experience to properties, virtual tours, and public host profiles without authentication requirements.
 - Added property-backed Open Graph and Twitter metadata to public virtual tours while preserving the existing crawl rules.
+
+## Mobile listing creation flow
+
+### What was there before
+
+- The mobile listing footer stayed over the form and obscured active fields, validation messages, photos, and review content.
+- The full page introduction repeated on every step, leaving little room for the current task above the fold.
+- Amenities and review details produced unnecessarily long pages, while narrow action labels wrapped at 320px.
+- Photo controls used undersized touch targets and the verification step offered two competing ways to continue.
+
+### How it was fixed
+
+- Replaced the attached footer on phones with a compact inset action bar that respects safe areas and reserves matching page space.
+- Kept the complete introduction on the first step and switched later steps to a focused step header with managed focus.
+- Compacted amenities and review details while preserving every field, edit path, preview, and validation rule.
+- Added mobile-specific photo guidance, larger photo controls, and one clear Continue action for optional property verification.
+
+## Tenant selfie liveness enforcement
+
+### What was there before
+
+- Tenants could capture a selfie in the identity journey, but the final tenant submission verified only NIN and BVN.
+- The flow then displayed completion without calling the existing selfie liveness and face-match endpoint.
+- Returning tenants with only the selfie outstanding could be sent directly to Review.
+
+### How it was fixed
+
+- Required a ready selfie before tenant identity submission can complete.
+- Submitted NIN and BVN first, then verified the captured selfie through the existing Dojah selfie endpoint.
+- Preserved successful number checks when liveness fails and returned the tenant to the selfie step for a focused retry.
+- Kept tenant verification incomplete until the server-backed SELFIE check is complete.

@@ -11,6 +11,7 @@ import {
   getUnreadCount,
   type ChatThread as ChatThreadSummary,
 } from "@/lib/chat/chatClient";
+import { millisecondsSince, parseServerTime } from "@/lib/serverTime";
 import { getInitials } from "@/lib/utils";
 import { EmptyState } from "@/components/ui/empty-state";
 
@@ -22,20 +23,31 @@ function toDisplayRole(role: string): ChatPartyRole {
 }
 
 function formatRelativeTimestamp(value: string): string {
-  const diffMs = Date.now() - new Date(value).getTime();
-  const diffMinutes = Math.max(1, Math.round(diffMs / 60000));
+  const diffMs = millisecondsSince(value);
+
+  if (Number.isNaN(diffMs)) {
+    return "";
+  }
+
+  // Rounding reported a 90 second old message as "2m" and a 36 hour old one as
+  // "2d". Elapsed time is counted, not rounded to the nearest unit.
+  const diffMinutes = Math.floor(diffMs / 60000);
+
+  if (diffMinutes < 1) {
+    return "now";
+  }
 
   if (diffMinutes < 60) {
     return `${diffMinutes}m`;
   }
 
-  const diffHours = Math.round(diffMinutes / 60);
+  const diffHours = Math.floor(diffMinutes / 60);
 
   if (diffHours < 24) {
     return `${diffHours}h`;
   }
 
-  const diffDays = Math.round(diffHours / 24);
+  const diffDays = Math.floor(diffHours / 24);
 
   if (diffDays < 7) {
     return `${diffDays}d`;
@@ -44,7 +56,7 @@ function formatRelativeTimestamp(value: string): string {
   return new Intl.DateTimeFormat("en-NG", {
     month: "short",
     day: "numeric",
-  }).format(new Date(value));
+  }).format(parseServerTime(value));
 }
 
 /**

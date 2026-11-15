@@ -448,7 +448,13 @@ export default function TenantBookingsPage(): ReactElement {
                   <div className="absolute inset-0 bg-gradient-to-t from-primary/90 via-primary/20 to-transparent" />
                   <div className="absolute inset-x-0 bottom-0 flex flex-wrap items-end justify-between gap-4 p-6 sm:p-8">
                     <div className="min-w-0 text-white">
-                      <StatusBadge tone={STATUS_TONES[primaryBooking.status]}>
+                      {/* The tones are tinted for light surfaces, which all but
+                          disappear over the photo. The text colour still carries
+                          the status; only the backing is made opaque. */}
+                      <StatusBadge
+                        tone={STATUS_TONES[primaryBooking.status]}
+                        className="bg-white/95"
+                      >
                         {STATUS_LABELS[primaryBooking.status]}
                       </StatusBadge>
                       <h2 className="mt-4 font-display text-3xl font-bold leading-tight sm:text-4xl">

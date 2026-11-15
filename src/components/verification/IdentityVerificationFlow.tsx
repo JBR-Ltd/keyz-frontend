@@ -115,7 +115,7 @@ function isValidIdentityNumber(value: string): boolean {
 }
 
 function maskIdentityNumber(value: string): string {
-  return value ? `•••••••${value.slice(-4)}` : "Confirmed by Dojah";
+  return value ? `•••••••${value.slice(-4)}` : "Confirmed";
 }
 
 function formatFileSize(bytes: number): string {
@@ -147,11 +147,7 @@ function getSafeReturnPath(value: string | null): string {
   return isAllowedPath && value ? value : "/tenant/settings";
 }
 
-function getPersonalStepNumber(step: PersonalStep, isTenant: boolean): number {
-  if (isTenant) {
-    return step === "numbers" ? 1 : 2;
-  }
-
+function getPersonalStepNumber(step: PersonalStep): number {
   return { numbers: 1, selfie: 2, review: 3 }[step];
 }
 
@@ -212,7 +208,9 @@ export default function IdentityVerificationFlow({
   const needsBvn = isTenant
     ? !tenantNumbersComplete
     : !completedChecks.includes("BVN");
-  const needsSelfie = !isTenant && !completedChecks.includes("SELFIE");
+  // A tenant used to skip this, so the face behind a booking was never checked
+  // against the identity behind it. Everyone takes it now.
+  const needsSelfie = !completedChecks.includes("SELFIE");
   const ninReady = !needsNin || isValidIdentityNumber(nin);
   const bvnReady = !needsBvn || isValidIdentityNumber(bvn);
   const selfieReady = !needsSelfie || Boolean(selfiePreview);
@@ -220,11 +218,11 @@ export default function IdentityVerificationFlow({
     nin || bvn || selfiePreview || documents.length,
   );
   const isBusinessPhase = isAgent && identityDone;
-  const personalStepCount = isTenant ? 2 : 3;
+  const personalStepCount = 3;
   const currentStepCount = isBusinessPhase ? 3 : personalStepCount;
   const currentStep = isBusinessPhase
     ? getBusinessStepNumber(businessStep)
-    : getPersonalStepNumber(personalStep, isTenant);
+    : getPersonalStepNumber(personalStep);
   const isProcessing = processingStage !== null;
 
   const stopCamera = useCallback((): void => {
@@ -285,10 +283,16 @@ export default function IdentityVerificationFlow({
         saveTenantVerificationState({
           nin: identity.completed.includes("NIN") ? "verified" : "not_started",
           bvn: identity.completed.includes("BVN") ? "verified" : "not_started",
+          selfie: identity.completed.includes("SELFIE")
+            ? "verified"
+            : "not_started",
         });
       }
 
-      if (identity.status === "approved") {
+      const tenantSelfieComplete =
+        !isTenant || identity.completed.includes("SELFIE");
+
+      if (identity.status === "approved" && tenantSelfieComplete) {
         setIdentityDone(true);
 
         if (!isAgent || kyb.status === "approved") {
@@ -313,7 +317,10 @@ export default function IdentityVerificationFlow({
         identity.outstanding.includes("BVN")
       ) {
         setPersonalStep("numbers");
-      } else if (!isTenant && identity.outstanding.includes("SELFIE")) {
+      } else if (
+        identity.outstanding.includes("SELFIE") ||
+        (isTenant && !identity.completed.includes("SELFIE"))
+      ) {
         setPersonalStep("selfie");
       } else {
         setPersonalStep("review");
@@ -461,7 +468,7 @@ export default function IdentityVerificationFlow({
     }
 
     setFormError("");
-    setPersonalStep(isTenant ? "review" : needsSelfie ? "selfie" : "review");
+    setPersonalStep(needsSelfie ? "selfie" : "review");
   };
 
   const continueFromSelfie = (): void => {
@@ -478,34 +485,73 @@ export default function IdentityVerificationFlow({
   const submitPersonalIdentity = async (): Promise<void> => {
     setFormError("");
 
-    if (!ninReady || !bvnReady || (!isTenant && !selfieReady)) {
+    if (!ninReady || !bvnReady || !selfieReady) {
       setFormError("Complete each identity step before verification.");
       return;
     }
 
     if (isTenant) {
-      setProcessingStage("identity");
-      const result = await submitTenantVerification(nin, bvn);
+      const newlyCompleted = new Set(completedChecks);
 
-      if (!result.data) {
-        setProcessingStage(null);
-        setFormError(
-          result.message ??
-            "Verification did not pass. Review your details and try again.",
-        );
-        return;
+      if (needsNin || needsBvn) {
+        setProcessingStage("identity");
+        const result = await submitTenantVerification(nin, bvn);
+
+        if (!result.data) {
+          setProcessingStage(null);
+          setFormError(
+            result.message ??
+              "Verification did not pass. Review your details and try again.",
+          );
+          return;
+        }
+
+        newlyCompleted.add("NIN");
+        newlyCompleted.add("BVN");
+        setCompletedChecks(Array.from(newlyCompleted));
+        saveTenantVerificationState({
+          nin: "verified",
+          bvn: "verified",
+          selfie: newlyCompleted.has("SELFIE") ? "verified" : "not_started",
+        });
+        setNin("");
+        setBvn("");
       }
 
-      setCompletedChecks(["NIN", "BVN"]);
+      if (needsSelfie) {
+        setProcessingStage("selfie");
+        const result = await verifySelfie(selfiePreview);
+
+        if (!result.data) {
+          setCompletedChecks(Array.from(newlyCompleted));
+          saveTenantVerificationState({
+            nin: newlyCompleted.has("NIN") ? "verified" : "not_started",
+            bvn: newlyCompleted.has("BVN") ? "verified" : "not_started",
+            selfie: "failed",
+          });
+          setProcessingStage(null);
+          setFormError(
+            result.message ?? "Your live selfie could not be confirmed.",
+          );
+          setSelfiePreview("");
+          setCameraState("idle");
+          setPersonalStep("selfie");
+          return;
+        }
+
+        newlyCompleted.add("SELFIE");
+      }
+
+      setCompletedChecks(Array.from(newlyCompleted));
       saveTenantVerificationState({
         nin: "verified",
         bvn: "verified",
+        selfie: "verified",
       });
       forgetAccountDetails();
       setIdentityDone(true);
       setProcessingStage(null);
-      setNin("");
-      setBvn("");
+      setSelfiePreview("");
       setScreen("complete");
       return;
     }
@@ -683,7 +729,7 @@ export default function IdentityVerificationFlow({
       </h2>
       <p className="mt-3 font-body text-sm leading-6 text-muted">
         We collect these details to confirm your identity and protect people
-        using Rello. Dojah securely performs the check, and your verification
+        using Rello. The check is performed securely, and your verification
         information is never shown publicly.
       </p>
       <Link
@@ -724,9 +770,7 @@ export default function IdentityVerificationFlow({
               <p className="font-body text-sm font-bold text-primary">
                 {label}
               </p>
-              <p className="mt-1 font-body text-sm text-muted">
-                Confirmed by Dojah
-              </p>
+              <p className="mt-1 font-body text-sm text-muted">Confirmed</p>
             </div>
           </div>
         </div>
@@ -966,8 +1010,13 @@ export default function IdentityVerificationFlow({
         </div>
         {cameraState === "ready" ? (
           <div className="flex items-center justify-between gap-4 border-t border-border bg-bg px-5 py-4">
+            {/* The camera button is the only way forward, and people were not
+                reading the circle as something to press. The instruction says so. */}
             <p className="font-body text-sm text-muted">
-              Center your face inside the guide.
+              <span className="block font-bold text-primary">
+                Tap the camera button to take your selfie
+              </span>
+              Center your face inside the guide first.
             </p>
             <button
               type="button"
@@ -1041,11 +1090,7 @@ export default function IdentityVerificationFlow({
     <div>
       <button
         type="button"
-        onClick={() =>
-          setPersonalStep(
-            isTenant ? "numbers" : needsSelfie ? "selfie" : "numbers",
-          )
-        }
+        onClick={() => setPersonalStep(needsSelfie ? "selfie" : "numbers")}
         disabled={isProcessing}
         className="mb-6 inline-flex min-h-11 items-center gap-2 rounded-full px-2 font-body text-sm font-bold text-primary hover:bg-primary/5 disabled:opacity-50"
       >
@@ -1062,7 +1107,7 @@ export default function IdentityVerificationFlow({
         Check your details
       </h1>
       <p className="mt-3 max-w-xl font-body text-base leading-7 text-muted">
-        Make sure everything is correct before we securely send it to Dojah.
+        Make sure everything is correct before we run the check.
       </p>
       <div className="mt-8 border-y border-border">
         {renderReviewRow(
@@ -1078,7 +1123,7 @@ export default function IdentityVerificationFlow({
         {!isTenant
           ? renderReviewRow(
               "Live selfie",
-              needsSelfie ? "Ready to check" : "Confirmed by Dojah",
+              needsSelfie ? "Ready to check" : "Confirmed",
               needsSelfie ? () => setPersonalStep("selfie") : undefined,
             )
           : null}

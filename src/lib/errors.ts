@@ -33,6 +33,7 @@ export type ApiErrorCode =
   | "LISTING_BILL_MISMATCH"
   | "BOOKING_DATES_INVALID"
   | "REVIEW_REQUIRES_COMPLETED_STAY"
+  | "VIDEO_CALLS_UNAVAILABLE"
   // Virtual tour
   | "TOUR_PANORAMA_REJECTED"
   | "TOUR_PANORAMA_TOO_LARGE"
@@ -69,43 +70,66 @@ export const NETWORK_MESSAGE = "Network error. Please try again later.";
 const GENERIC_MESSAGE = NETWORK_MESSAGE;
 
 const ERROR_COPY: Record<ApiErrorCode, string> = {
-  INVALID_CREDENTIALS: "Incorrect login credentials. Check your email and password and try again.",
-  EMAIL_NOT_VERIFIED: "Verify your email address before logging in. Check your inbox for the code.",
-  EMAIL_ALREADY_REGISTERED: "An account already uses that email. Log in instead.",
-  RESET_CODE_INVALID: "That reset code is wrong or has expired. Request a new one.",
-  VERIFICATION_CODE_INVALID: "That code is wrong or has expired. Request a new one.",
+  INVALID_CREDENTIALS:
+    "Incorrect login credentials. Check your email and password and try again.",
+  EMAIL_NOT_VERIFIED:
+    "Verify your email address before logging in. Check your inbox for the code.",
+  EMAIL_ALREADY_REGISTERED:
+    "An account already uses that email. Log in instead.",
+  RESET_CODE_INVALID:
+    "That reset code is wrong or has expired. Request a new one.",
+  VERIFICATION_CODE_INVALID:
+    "That code is wrong or has expired. Request a new one.",
   OLD_PASSWORD_INCORRECT: "Your current password is wrong. Try again.",
   SESSION_EXPIRED: "Your session ended. Log in again to continue.",
 
   IDENTITY_NOT_VERIFIED: "Finish your identity check before you can do this.",
-  IDENTITY_NAME_MISMATCH: "The name on that ID does not match your account name.",
-  NIN_CHECK_FAILED: "We could not verify that NIN. Check the number and try again.",
-  BVN_CHECK_FAILED: "We could not verify that BVN. Check the number and try again.",
-  SELFIE_CHECK_FAILED: "That selfie did not pass the liveness check. Try again in good lighting.",
+  IDENTITY_NAME_MISMATCH:
+    "The name on that ID does not match your account name.",
+  NIN_CHECK_FAILED:
+    "We could not verify that NIN. Check the number and try again.",
+  BVN_CHECK_FAILED:
+    "We could not verify that BVN. Check the number and try again.",
+  SELFIE_CHECK_FAILED:
+    "That selfie did not pass the liveness check. Try again in good lighting.",
   FACE_MATCH_FAILED: "That selfie does not match the photo on your NIN record.",
   UNDERAGE: "You need to be 18 or older to use Rello.",
-  PAYOUT_NAME_MISMATCH: "The name on that bank account does not match your verified name.",
-  PAYOUT_CODES_INVALID: "Those amounts do not match the deposits we sent. Check your statement.",
+  PAYOUT_NAME_MISMATCH:
+    "The name on that bank account does not match your verified name.",
+  PAYOUT_CODES_INVALID:
+    "Those amounts do not match the deposits we sent. Check your statement.",
 
   LISTING_ROLE_MISMATCH: "Your account cannot create this kind of listing.",
   LISTING_NOT_OWNED: "This listing belongs to someone else.",
-  LISTING_COORDINATES_MISSING: "Set the property location on the listing before verifying it.",
-  LISTING_PROOF_NO_GPS: "That photo has no location attached. Take it in the app with location turned on.",
+  LISTING_COORDINATES_MISSING:
+    "Set the property location on the listing before verifying it.",
+  LISTING_PROOF_NO_GPS:
+    "That photo has no location attached. Take it in the app with location turned on.",
   LISTING_PROOF_TOO_FAR: "Take the photo while standing at the property.",
-  LISTING_PHOTO_DUPLICATE: "This photo already appears on another listing. Upload photos you took yourself.",
-  LISTING_BILL_MISMATCH: "The name and address on that bill do not match this listing.",
+  LISTING_PHOTO_DUPLICATE:
+    "This photo already appears on another listing. Upload photos you took yourself.",
+  LISTING_BILL_MISMATCH:
+    "The name and address on that bill do not match this listing.",
 
   BOOKING_DATES_INVALID: "Choose an end date that comes after the start date.",
-  REVIEW_REQUIRES_COMPLETED_STAY: "You can review a property once your stay is complete.",
+  REVIEW_REQUIRES_COMPLETED_STAY:
+    "You can review a property once your stay is complete.",
+  VIDEO_CALLS_UNAVAILABLE:
+    "Video calls are not available right now. Send a message instead.",
 
-  TOUR_PANORAMA_REJECTED: "That photo was not accepted. Read the reason above and try again.",
-  TOUR_PANORAMA_TOO_LARGE: "That image is too large. Photos up to 25 MB are accepted.",
-  TOUR_VALIDATOR_UNAVAILABLE: "The image check is offline right now. Try again in a moment.",
+  TOUR_PANORAMA_REJECTED:
+    "That photo was not accepted. Read the reason above and try again.",
+  TOUR_PANORAMA_TOO_LARGE:
+    "That image is too large. Photos up to 25 MB are accepted.",
+  TOUR_VALIDATOR_UNAVAILABLE:
+    "The image check is offline right now. Try again in a moment.",
   TOUR_DOOR_FIXED: "The entry door cannot be moved, relinked or removed.",
   TOUR_DOOR_CROSS_FLOOR: "Doors can only link two rooms on the same floor.",
   TOUR_DOOR_DUPLICATE: "This room already has a door to that room.",
-  TOUR_PLAN_INVALID: "That floor plan is not valid. Check for overlapping or unplaced rooms.",
-  TOUR_NOT_PUBLISHABLE: "This tour is not ready to publish yet. Check the blockers above.",
+  TOUR_PLAN_INVALID:
+    "That floor plan is not valid. Check for overlapping or unplaced rooms.",
+  TOUR_NOT_PUBLISHABLE:
+    "This tour is not ready to publish yet. Check the blockers above.",
 
   NOT_FOUND: "We could not find that.",
   FORBIDDEN: "You do not have access to this.",
