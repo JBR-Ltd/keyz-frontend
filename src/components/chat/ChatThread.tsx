@@ -21,6 +21,7 @@ import type { ChatMessage, ChatPartyRole } from "@/lib/chat/chatStorage";
 import { startCall } from "@/lib/calls";
 import { useDialogFocus } from "@/lib/useDialogFocus";
 import { getInitials } from "@/lib/utils";
+import { parseServerTime } from "@/lib/serverTime";
 import { EmptyState } from "@/components/ui/empty-state";
 
 interface ChatThreadProps {
@@ -40,11 +41,11 @@ function formatMessageTime(value: string): string {
   return new Intl.DateTimeFormat("en-NG", {
     hour: "numeric",
     minute: "2-digit",
-  }).format(new Date(value));
+  }).format(parseServerTime(value));
 }
 
 function getDateLabel(value: string): string {
-  const messageDate = new Date(value);
+  const messageDate = parseServerTime(value);
   const today = new Date();
   const yesterday = new Date();
 

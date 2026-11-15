@@ -219,7 +219,7 @@ export default function AdminCompliancePage(): ReactElement {
           Screen a person now
         </h2>
         <p className="mt-2 font-body text-sm leading-6 text-muted">
-          Runs sanctions, PEP and adverse media screening through Dojah. A
+          Runs sanctions, PEP and adverse media screening. A
           possible match raises a risk flag for review.
         </p>
         <div className="mt-4 flex flex-wrap gap-2">

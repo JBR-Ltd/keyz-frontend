@@ -230,7 +230,7 @@ export default function BookingPaymentPanel({
               pendingLabel="Opening secure checkout…"
             >
               <LockKeyhole size={16} aria-hidden="true" />
-              Pay securely with Paystack
+              Pay securely
             </AsyncButtonContent>
           </button>
         ) : null}

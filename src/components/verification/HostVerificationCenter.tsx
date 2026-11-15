@@ -313,7 +313,7 @@ export default function HostVerificationCenter({
             aria-hidden="true"
           />
           <p className="max-w-2xl font-body text-sm leading-6">
-            Your identity information is securely checked through Dojah and is
+            Your identity information is checked securely and is
             not shown on your public profile.
           </p>
         </div>

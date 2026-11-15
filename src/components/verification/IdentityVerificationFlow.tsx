@@ -115,7 +115,7 @@ function isValidIdentityNumber(value: string): boolean {
 }
 
 function maskIdentityNumber(value: string): string {
-  return value ? `•••••••${value.slice(-4)}` : "Confirmed by Dojah";
+  return value ? `•••••••${value.slice(-4)}` : "Confirmed";
 }
 
 function formatFileSize(bytes: number): string {
@@ -683,7 +683,7 @@ export default function IdentityVerificationFlow({
       </h2>
       <p className="mt-3 font-body text-sm leading-6 text-muted">
         We collect these details to confirm your identity and protect people
-        using Rello. Dojah securely performs the check, and your verification
+        using Rello. The check is performed securely, and your verification
         information is never shown publicly.
       </p>
       <Link
@@ -725,7 +725,7 @@ export default function IdentityVerificationFlow({
                 {label}
               </p>
               <p className="mt-1 font-body text-sm text-muted">
-                Confirmed by Dojah
+                Confirmed
               </p>
             </div>
           </div>
@@ -1062,7 +1062,7 @@ export default function IdentityVerificationFlow({
         Check your details
       </h1>
       <p className="mt-3 max-w-xl font-body text-base leading-7 text-muted">
-        Make sure everything is correct before we securely send it to Dojah.
+        Make sure everything is correct before we run the check.
       </p>
       <div className="mt-8 border-y border-border">
         {renderReviewRow(
@@ -1078,7 +1078,7 @@ export default function IdentityVerificationFlow({
         {!isTenant
           ? renderReviewRow(
               "Live selfie",
-              needsSelfie ? "Ready to check" : "Confirmed by Dojah",
+              needsSelfie ? "Ready to check" : "Confirmed",
               needsSelfie ? () => setPersonalStep("selfie") : undefined,
             )
           : null}

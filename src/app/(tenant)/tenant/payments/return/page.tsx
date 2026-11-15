@@ -60,7 +60,7 @@ function Checking(): ReactElement {
           Confirming your payment
         </h1>
         <p className="mt-3 font-body text-sm leading-6 text-muted">
-          Checking with Paystack. This usually takes a few seconds.
+          Confirming your payment. This usually takes a few seconds.
         </p>
       </div>
     </Shell>
@@ -213,7 +213,7 @@ function PaymentReturn(): ReactElement {
               ? "This booking had already been cancelled, so your payment is going straight back to you."
               : "Rello is holding your payment. The host is paid a few days after you move in, and your receipt is on its way to your email."
             : phase === "pending"
-              ? "Paystack has not confirmed it yet. You do not need to pay again: as soon as it confirms, your booking updates and we email your receipt."
+              ? "Your payment has not been confirmed yet. You do not need to pay again: as soon as it is confirmed, your booking updates and we email your receipt."
               : phase === "not_completed"
                 ? "No money was taken. You can pay from your booking any time before the deadline."
                 : message}
