@@ -10,6 +10,11 @@ interface InternalNavigationEntry {
   visitedAt: number;
 }
 
+interface BackDestinationResolution {
+  destination: string;
+  history: InternalNavigationEntry[];
+}
+
 type DashboardRole = "admin" | "agent" | "landlord" | "tenant";
 
 function isInternalHref(value: unknown): value is string {
@@ -119,6 +124,35 @@ function isCompatibleDestination(
   return !(currentRole && isAuthenticationRoute(candidateHref));
 }
 
+function resolveInternalBackDestination(
+  currentHref: string,
+  fallbackHref: string,
+): BackDestinationResolution {
+  const history = readHistory();
+
+  while (
+    history.at(-1) &&
+    isSamePublicResource(currentHref, history.at(-1)?.href ?? "")
+  ) {
+    history.pop();
+  }
+
+  let destination = fallbackHref;
+
+  while (history.length > 0) {
+    const candidate = history.at(-1);
+
+    if (candidate && isCompatibleDestination(currentHref, candidate.href)) {
+      destination = candidate.href;
+      break;
+    }
+
+    history.pop();
+  }
+
+  return { destination, history };
+}
+
 export function recordInternalRoute(href: string): void {
   if (typeof window === "undefined" || !isInternalHref(href)) {
     return;
@@ -154,31 +188,25 @@ export function getInternalBackDestination(
     return fallbackHref;
   }
 
-  const history = readHistory();
-
-  while (
-    history.at(-1) &&
-    isSamePublicResource(currentHref, history.at(-1)?.href ?? "")
-  ) {
-    history.pop();
-  }
-
-  let destination = fallbackHref;
-
-  while (history.length > 0) {
-    const candidate = history.at(-1);
-
-    if (candidate && isCompatibleDestination(currentHref, candidate.href)) {
-      destination = candidate.href;
-      break;
-    }
-
-    history.pop();
-  }
+  const { destination, history } = resolveInternalBackDestination(
+    currentHref,
+    fallbackHref,
+  );
 
   writeHistory(history);
   window.sessionStorage.setItem(PENDING_DESTINATION_KEY, destination);
   return destination;
+}
+
+export function peekInternalBackDestination(
+  currentHref: string,
+  fallbackHref: string,
+): string {
+  if (typeof window === "undefined") {
+    return fallbackHref;
+  }
+
+  return resolveInternalBackDestination(currentHref, fallbackHref).destination;
 }
 
 export function clearInternalNavigationHistory(): void {

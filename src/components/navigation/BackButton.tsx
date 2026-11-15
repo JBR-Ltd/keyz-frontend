@@ -1,10 +1,13 @@
 "use client";
 
 import type { ButtonHTMLAttributes, ReactNode } from "react";
-import { useTransition } from "react";
+import { useCallback, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { AsyncButtonContent } from "@/components/ui/async-button-content";
-import { getInternalBackDestination } from "@/lib/internalNavigation";
+import {
+  getInternalBackDestination,
+  peekInternalBackDestination,
+} from "@/lib/internalNavigation";
 import { getAuthenticationSnapshot } from "@/lib/authSession";
 
 interface BackButtonProps extends Omit<
@@ -22,7 +25,7 @@ interface BackButtonProps extends Omit<
 export default function BackButton({
   children,
   fallbackHref,
-  pendingLabel = "Loading…",
+  pendingLabel,
   roleFallbacks,
   disabled,
   ...buttonProps
@@ -30,8 +33,7 @@ export default function BackButton({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  const handleClick = (): void => {
-    const currentHref = `${window.location.pathname}${window.location.search}`;
+  const getFallbackHref = useCallback((): string => {
     const role = getAuthenticationSnapshot().user?.role ?? null;
     const roleFallback =
       role === "ADMIN" ||
@@ -41,9 +43,23 @@ export default function BackButton({
         ? roleFallbacks?.[role]
         : undefined;
 
+    return roleFallback ?? fallbackHref;
+  }, [fallbackHref, roleFallbacks]);
+
+  useEffect(() => {
+    const currentHref = `${window.location.pathname}${window.location.search}`;
+
+    router.prefetch(
+      peekInternalBackDestination(currentHref, getFallbackHref()),
+    );
+  }, [getFallbackHref, router]);
+
+  const handleClick = (): void => {
+    const currentHref = `${window.location.pathname}${window.location.search}`;
+
     startTransition(() => {
       router.replace(
-        getInternalBackDestination(currentHref, roleFallback ?? fallbackHref),
+        getInternalBackDestination(currentHref, getFallbackHref()),
       );
     });
   };
@@ -56,9 +72,13 @@ export default function BackButton({
       aria-busy={isPending || undefined}
       {...buttonProps}
     >
-      <AsyncButtonContent isPending={isPending} pendingLabel={pendingLabel}>
-        {children}
-      </AsyncButtonContent>
+      {pendingLabel ? (
+        <AsyncButtonContent isPending={isPending} pendingLabel={pendingLabel}>
+          {children}
+        </AsyncButtonContent>
+      ) : (
+        children
+      )}
     </button>
   );
 }
