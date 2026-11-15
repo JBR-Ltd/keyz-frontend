@@ -1335,7 +1335,14 @@ export default function PropertyPageClient({
                   className="text-accent-alt"
                   aria-hidden="true"
                 />
-                {formatCount(property.bedrooms, "bedroom", "bedrooms")}
+                {/* "3 bedrooms" and "1 bathroom" crowd a phone, so the short
+                    forms are used there and the full words from sm up */}
+                <span className="sm:hidden">
+                  {formatCount(property.bedrooms, "bed", "beds")}
+                </span>
+                <span className="hidden sm:inline">
+                  {formatCount(property.bedrooms, "bedroom", "bedrooms")}
+                </span>
               </span>
               <span className="h-5 w-px bg-border" aria-hidden="true" />
               <span className="inline-flex min-h-11 items-center gap-2 px-4">
@@ -1344,7 +1351,12 @@ export default function PropertyPageClient({
                   className="text-accent-alt"
                   aria-hidden="true"
                 />
-                {formatCount(property.bathrooms, "bathroom", "bathrooms")}
+                <span className="sm:hidden">
+                  {formatCount(property.bathrooms, "bath", "baths")}
+                </span>
+                <span className="hidden sm:inline">
+                  {formatCount(property.bathrooms, "bathroom", "bathrooms")}
+                </span>
               </span>
               {property.rentalMode === "SHORT_STAY" &&
               property.maximumGuests ? (
