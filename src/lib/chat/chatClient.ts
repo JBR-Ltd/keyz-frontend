@@ -50,6 +50,8 @@ export interface ChatThread {
   otherUserId: number;
   otherUserName: string;
   otherUserRole: ChatPartyRole;
+  /** The listing this pair last spoke about. A call is placed against one. */
+  propertyId?: number | null;
 }
 
 export interface ChatResult<TValue> {

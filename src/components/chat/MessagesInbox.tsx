@@ -236,6 +236,7 @@ export default function MessagesInbox(): ReactElement {
         <ChatThread
           conversationId={String(active.otherUserId)}
           otherUserId={active.otherUserId}
+          propertyId={active.propertyId ?? undefined}
           otherPartyName={active.otherUserName}
           otherPartyAvatarUrl={active.otherUserAvatarUrl}
           otherPartyRole={ROLE_LABELS[active.otherUserRole]}
