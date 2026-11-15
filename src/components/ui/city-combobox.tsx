@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, Loader2, MapPin, RefreshCw } from "lucide-react";
+import { Loader2, MapPin, RefreshCw } from "lucide-react";
 import {
   useEffect,
   useId,
@@ -149,44 +149,36 @@ export function CityCombobox({
 
   return (
     <div ref={rootRef} className="relative">
-      <div className="relative">
-        <input
-          ref={inputRef}
-          id={id}
-          role="combobox"
-          aria-activedescendant={activeOptionId}
-          aria-autocomplete="list"
-          aria-controls={listboxId}
-          aria-describedby={describedBy}
-          aria-expanded={isOpen}
-          aria-invalid={invalid}
-          autoComplete="off"
-          className={cn(className, "pr-11")}
-          onChange={(event) => {
-            setDraftQuery(event.target.value);
-            onValueChange("");
-            setSuggestions([]);
-            setActiveIndex(-1);
-            setIsLoading(false);
-            setError("");
-            setIsOpen(true);
-          }}
-          onFocus={() => {
-            if (trimmedQuery.length >= 2 && query !== value) setIsOpen(true);
-          }}
-          onKeyDown={handleKeyDown}
-          placeholder="Start typing a Nigerian city"
-          spellCheck={false}
-          value={query}
-        />
-        <ChevronDown
-          aria-hidden="true"
-          className={cn(
-            "pointer-events-none absolute right-4 top-1/2 size-4 -translate-y-1/2 text-muted transition-transform",
-            isOpen && "rotate-180",
-          )}
-        />
-      </div>
+      {/* No chevron: there is no list to open, the suggestions come from typing */}
+      <input
+        ref={inputRef}
+        id={id}
+        role="combobox"
+        aria-activedescendant={activeOptionId}
+        aria-autocomplete="list"
+        aria-controls={listboxId}
+        aria-describedby={describedBy}
+        aria-expanded={isOpen}
+        aria-invalid={invalid}
+        autoComplete="off"
+        className={className}
+        onChange={(event) => {
+          setDraftQuery(event.target.value);
+          onValueChange("");
+          setSuggestions([]);
+          setActiveIndex(-1);
+          setIsLoading(false);
+          setError("");
+          setIsOpen(true);
+        }}
+        onFocus={() => {
+          if (trimmedQuery.length >= 2 && query !== value) setIsOpen(true);
+        }}
+        onKeyDown={handleKeyDown}
+        placeholder="Start typing a Nigerian city"
+        spellCheck={false}
+        value={query}
+      />
 
       {isOpen ? (
         <div className="absolute left-0 right-0 z-[80] mt-2 overflow-hidden rounded-xl border border-border bg-bg shadow-xl">

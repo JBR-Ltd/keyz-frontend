@@ -1141,7 +1141,7 @@ export default function LandlordDashboardPage(): ReactElement {
               <p className="font-accent text-xs font-bold uppercase tracking-[0.22em] text-accent-alt">
                 Action centre
               </p>
-              <h2 className="mt-2 font-display text-3xl font-bold text-primary">
+              <h2 className="mt-2 font-display text-2xl font-bold text-primary sm:text-3xl">
                 Needs attention
               </h2>
             </div>
@@ -1239,7 +1239,7 @@ export default function LandlordDashboardPage(): ReactElement {
           <p className="font-accent text-xs font-bold uppercase tracking-[0.22em] text-primary">
             Portfolio
           </p>
-          <h2 className="mt-2 font-display text-3xl font-bold text-primary">
+          <h2 className="mt-2 font-display text-2xl font-bold text-primary sm:text-3xl">
             Your properties
           </h2>
         </div>
@@ -1376,18 +1376,18 @@ export default function LandlordDashboardPage(): ReactElement {
           className="overflow-hidden rounded-lg bg-bg shadow-sm"
           aria-busy={bookingsBusy}
         >
-          <div className="flex items-end justify-between gap-4 border-b border-primary/10 px-5 py-5 sm:px-6">
-            <div>
+          <div className="flex items-start justify-between gap-4 border-b border-primary/10 px-5 py-5 sm:items-end sm:px-6">
+            <div className="min-w-0">
               <p className="font-accent text-xs font-bold uppercase tracking-[0.22em] text-primary">
                 Tenancies
               </p>
-              <h2 className="mt-2 font-display text-3xl font-bold text-primary">
+              <h2 className="mt-2 font-display text-2xl font-bold text-primary sm:text-3xl">
                 Upcoming tenancies
               </h2>
             </div>
             <Link
               href="/landlord/bookings"
-              className="font-body text-sm font-bold text-primary hover:text-accent-alt focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              className="shrink-0 whitespace-nowrap font-body text-sm font-bold text-primary hover:text-accent-alt focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             >
               View all
             </Link>
