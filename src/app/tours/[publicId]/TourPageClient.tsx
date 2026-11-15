@@ -7,9 +7,11 @@
 
 import { useEffect, useState, type ReactElement } from "react";
 import Link from "next/link";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, Share2 } from "lucide-react";
 import TourShell from "@/components/tour/TourShell";
+import ShareDialog from "@/components/public/ShareDialog";
 import { getPublicTour } from "@/lib/api/tours";
+import { buildPublicShareUrl } from "@/lib/share";
 import type { PublicTour } from "@/lib/types/tour";
 
 interface TourPageClientProps {
@@ -22,6 +24,7 @@ export default function TourPageClient({
   const [tour, setTour] = useState<PublicTour | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isShareOpen, setIsShareOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -71,18 +74,46 @@ export default function TourPageClient({
     );
   }
 
+  const previewImage = tour.floors
+    .flatMap((floor) => floor.rooms)
+    .find((room) => room.panorama !== null)?.panorama?.url;
+  const shareContent = {
+    kind: "tour" as const,
+    title: `Virtual tour of ${tour.propertyName}`,
+    description: `Explore ${tour.propertyName} with a virtual tour on Rello.`,
+    url: buildPublicShareUrl(
+      `/tours/${encodeURIComponent(tour.propertyPublicId)}`,
+    ),
+    imageUrl: previewImage,
+  };
+
   return (
     <main className="flex h-screen w-full flex-col overflow-hidden bg-[#0a1622]">
       <div className="relative flex-1">
         <TourShell tour={tour} />
-        <Link
-          href={`/property/${publicId}`}
-          aria-label="Back to listing"
-          className="absolute right-4 top-4 z-30 inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-primary/70 text-white backdrop-blur-md transition-colors hover:bg-primary"
-        >
-          <ArrowLeft size={17} />
-        </Link>
+        <div className="absolute right-4 top-4 z-30 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setIsShareOpen(true)}
+            aria-label="Share this virtual tour"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-primary/70 text-white backdrop-blur-md transition-colors hover:bg-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          >
+            <Share2 size={18} aria-hidden="true" />
+          </button>
+          <Link
+            href={`/property/${tour.propertyPublicId}`}
+            aria-label="Back to listing"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-primary/70 text-white backdrop-blur-md transition-colors hover:bg-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          >
+            <ArrowLeft size={17} aria-hidden="true" />
+          </Link>
+        </div>
       </div>
+      <ShareDialog
+        open={isShareOpen}
+        content={shareContent}
+        onClose={() => setIsShareOpen(false)}
+      />
     </main>
   );
 }

@@ -6,10 +6,12 @@ import {
   ChevronLeft,
   CircleAlert,
   Loader2,
+  Share2,
   Star,
 } from "lucide-react";
 import BackButton from "@/components/navigation/BackButton";
 import PropertyCard from "@/components/public/PropertyCard";
+import ShareDialog from "@/components/public/ShareDialog";
 import Link from "next/link";
 import VerifiedBadge from "@/components/ui/VerifiedBadge";
 import UserAvatar from "@/components/ui/user-avatar";
@@ -18,6 +20,8 @@ import { getHostListings, type HostProfile } from "@/lib/hosts";
 import type { BackendPage, BackendProperty } from "@/lib/hostListings";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
+import { hostPath } from "@/lib/publicIds";
+import { buildPublicShareUrl } from "@/lib/share";
 
 interface HostProfileClientProps {
   hostId: string;
@@ -80,6 +84,7 @@ export default function HostProfileClient({
 }: HostProfileClientProps): ReactElement {
   const id = hostId;
   const [isReporting, setIsReporting] = useState(false);
+  const [isShareOpen, setIsShareOpen] = useState(false);
   const [listings, setListings] = useState<BackendProperty[]>(
     initialListings.items,
   );
@@ -136,13 +141,22 @@ export default function HostProfileClient({
     setPage(0);
   };
 
-  const roleLabel = profile.role === "AGENT" ? "Property agent" : "Landlord";
+  const roleLabel: "Landlord" | "Property agent" =
+    profile.role === "AGENT" ? "Property agent" : "Landlord";
   const firstName = profile.name.split(" ")[0] || profile.name;
   const hasRating = profile.rating !== null && profile.reviewCount > 0;
   const profileSummary =
     profile.role === "AGENT"
       ? `Explore verified homes represented by ${firstName} on Rello.`
       : `Explore ${firstName}'s verified homes available on Rello.`;
+  const shareContent = {
+    kind: "host" as const,
+    title: profile.name,
+    description: `Explore available homes from ${profile.name} on Rello.`,
+    url: buildPublicShareUrl(hostPath(profile)),
+    imageUrl: profile.avatarUrl,
+    role: roleLabel,
+  };
 
   return (
     <main className="min-h-screen bg-bg px-5 pb-7 pt-4 sm:px-8 sm:pt-5 lg:px-10 lg:pb-9 lg:pt-5 xl:px-14">
@@ -252,13 +266,23 @@ export default function HostProfileClient({
                 </div>
               </dl>
 
-              <button
-                type="button"
-                onClick={() => setIsReporting(true)}
-                className="mt-7 inline-flex min-h-11 items-center rounded-lg px-1 font-body text-xs font-semibold text-muted underline-offset-4 hover:text-red-700 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-              >
-                Report this host
-              </button>
+              <div className="mt-7 flex flex-wrap items-center gap-4">
+                <button
+                  type="button"
+                  onClick={() => setIsShareOpen(true)}
+                  className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border bg-bg px-4 font-body text-sm font-bold text-primary transition-colors hover:border-primary/30 hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                >
+                  <Share2 size={16} aria-hidden="true" />
+                  Share profile
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsReporting(true)}
+                  className="inline-flex min-h-11 items-center rounded-lg px-1 font-body text-xs font-semibold text-muted underline-offset-4 hover:text-red-700 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                >
+                  Report this host
+                </button>
+              </div>
               <ReportDialog
                 open={isReporting}
                 onClose={() => setIsReporting(false)}
@@ -387,6 +411,11 @@ export default function HostProfileClient({
           )}
         </section>
       </div>
+      <ShareDialog
+        open={isShareOpen}
+        content={shareContent}
+        onClose={() => setIsShareOpen(false)}
+      />
     </main>
   );
 }
