@@ -734,7 +734,9 @@ export default function HostListingsView({
                   <div className="flex min-h-16 flex-wrap items-center gap-2 border-t border-border px-4 py-2.5">
                     <Link
                       href={primaryAction.href}
-                      className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-full bg-primary px-4 font-body text-xs font-bold text-white transition-colors hover:bg-primary/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                      // grow, not flex-1: a zero basis lets the pill shrink under its
+                      // own label, which is how "Manage listing" ended up on two lines
+                      className="inline-flex min-h-11 grow items-center justify-center gap-2 whitespace-nowrap rounded-full bg-primary px-4 font-body text-xs font-bold text-white transition-colors hover:bg-primary/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                     >
                       {primaryAction.label}
                       <ArrowRight size={15} aria-hidden="true" />
@@ -743,7 +745,7 @@ export default function HostListingsView({
                     {listing.reviewStatus === "LIVE" ? (
                       <Link
                         href={propertyPath(listing)}
-                        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-primary/15 px-4 font-body text-xs font-bold text-primary transition-colors hover:border-accent hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                        className="inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-primary/15 px-4 font-body text-xs font-bold text-primary transition-colors hover:border-accent hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                       >
                         <Eye size={18} aria-hidden="true" />
                         View live listing

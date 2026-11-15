@@ -1286,3 +1286,17 @@ Existing rental catalogue and saved-search contracts remain unchanged.
 - Removed artificial sitemap modification dates, added public hosts, and kept sitemap entries limited to canonical production destinations.
 - Redirected duplicate marketing paths and added no-index metadata to authentication, portal, and standalone tour routes.
 - Documented the required production and staging environment values plus the post-deployment Search Console and Bing verification steps.
+
+## Mobile back navigation feedback
+
+### What was there before
+
+- Shared back controls replaced their arrow or label with `Loading…` while the destination route loaded.
+- The compact property-page control exposed live mobile latency inside a button too small for the loading copy.
+- Back destinations were resolved only after a tap, so Next.js could not warm the safe internal route beforehand.
+
+### How it was fixed
+
+- Kept back-control content stable while navigation is pending and retained disabled and busy states to prevent repeated actions.
+- Preserved explicit pending copy for flows that intentionally provide it, such as leaving the tour editor.
+- Added a read-only destination resolver so safe internal routes, saved queries, and role fallbacks can be prefetched without consuming navigation history.
