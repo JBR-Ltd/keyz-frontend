@@ -304,9 +304,11 @@ function BookingDetailsDrawer({
                 >
                   <X size={20} aria-hidden="true" />
                 </button>
+                {/* Opaque backing: the tones are tinted for light surfaces and all
+                    but disappear over the photo and its gradient */}
                 <StatusBadge
                   tone={STATUS_TONES[booking.status]}
-                  className="absolute bottom-5 left-5"
+                  className="absolute bottom-5 left-5 bg-white/95"
                 >
                   {STATUS_LABELS[booking.status]}
                 </StatusBadge>
