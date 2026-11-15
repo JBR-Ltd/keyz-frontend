@@ -48,7 +48,9 @@ export default function TourSummaryPanel({
         </p>
       </div>
 
-      {status === "idle" || status === "loading" ? <TourSummarySkeleton /> : null}
+      {status === "idle" || status === "loading" ? (
+        <TourSummarySkeleton />
+      ) : null}
 
       {status === "error" ? (
         <div className="mt-6 border-l-2 border-red-700 pl-4" role="alert">
@@ -78,7 +80,7 @@ export default function TourSummaryPanel({
 function TourSummarySkeleton(): ReactElement {
   return (
     <div className="mt-6" role="status" aria-busy="true">
-      <div className="flex flex-col gap-5 border-y border-border py-5 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-5 border-y border-border py-5 items-start sm:flex-row sm:items-center sm:justify-between">
         <Skeleton className="h-6 w-20 rounded-full" />
 
         <dl className="grid flex-1 grid-cols-3 gap-4 sm:max-w-xl">
@@ -152,7 +154,7 @@ function ReadyState({
 
   return (
     <div className="mt-6">
-      <div className="flex flex-col gap-5 border-y border-border py-5 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-5 border-y border-border py-5 items-start sm:flex-row sm:items-center sm:justify-between">
         <StatusBadge
           tone={summary.isPublished ? "primary" : "neutral"}
           icon={
@@ -244,7 +246,8 @@ interface StatProps {
 
 function Stat({ icon, label, value }: StatProps): ReactElement {
   return (
-    <div className="flex min-w-0 items-center gap-3">
+    // Stacked on a phone: three labels beside their icons will not fit across 375px
+    <div className="flex min-w-0 flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-3">
       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-soft text-primary">
         {icon}
       </span>
