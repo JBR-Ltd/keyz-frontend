@@ -391,11 +391,13 @@ export default function ProfileSection({
               </h1>
               {isVerified ? (
                 <VerifiedBadge size="md" />
-              ) : (
+              ) : canVerifyIdentity ? (
+                // Only where there is a check to complete. An administrator never
+                // goes through NIN and BVN, so this read as a fault they could not fix.
                 <span className="inline-flex min-h-8 items-center rounded-full bg-bg px-3 py-1.5 font-body text-xs font-semibold text-muted">
                   Verification not completed
                 </span>
-              )}
+              ) : null}
             </div>
             <p
               className={`max-w-2xl font-body text-muted ${
