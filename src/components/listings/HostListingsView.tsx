@@ -554,7 +554,7 @@ export default function HostListingsView({
 
         {loading ? (
           <section
-            className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3"
+            className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3"
             aria-label="Loading listings"
             aria-busy="true"
           >
@@ -608,7 +608,7 @@ export default function HostListingsView({
           />
         ) : (
           <section
-            className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3"
+            className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3"
             aria-label="Your listings"
           >
             {visibleListings.map((listing) => {

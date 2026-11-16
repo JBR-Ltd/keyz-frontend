@@ -985,7 +985,7 @@ function UnitsPanel({
   if (status === "idle" || status === "loading") {
     return (
       <div
-        className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+        className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"
         aria-label="Loading units"
       >
         {[0, 1, 2].map((item) => (
@@ -1031,7 +1031,7 @@ function UnitsPanel({
   }
 
   return (
-    <ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    <ul className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {units.map((unit) => {
         const occupied = unit.status === "OCCUPIED";
         const available = unit.status === "AVAILABLE";
@@ -1175,7 +1175,7 @@ function BlockedDatesPanel({
 
       {status === "idle" || status === "loading" ? (
         <div
-          className="mt-6 grid gap-4 sm:grid-cols-2"
+          className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2"
           aria-label="Loading blocked dates"
         >
           <Skeleton className="h-24 w-full" />
@@ -1197,7 +1197,7 @@ function BlockedDatesPanel({
       ) : null}
 
       {status === "ready" ? (
-        <div className="mt-6 grid gap-8 sm:grid-cols-2">
+        <div className="mt-6 grid grid-cols-1 gap-8 sm:grid-cols-2">
           <DateRangeList
             title="Blocked by you"
             emptyMessage="You have not blocked any dates."
@@ -1364,7 +1364,7 @@ function PhotosPanel({
 
       {status === "idle" || status === "loading" ? (
         <div
-          className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3"
+          className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"
           aria-label="Loading photos"
         >
           {[0, 1, 2].map((item) => (
@@ -1397,7 +1397,7 @@ function PhotosPanel({
       ) : null}
 
       {status === "ready" && photos.length > 0 ? (
-        <ul className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {photos.map((photo) => (
             <li
               key={photo.id}
@@ -1502,7 +1502,7 @@ function ManagementPageSkeleton({
         <div className="pt-8" aria-hidden="true">
           <Skeleton className="h-8 w-40" />
           <Skeleton className="mt-3 h-4 w-96 max-w-full" />
-          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {[0, 1, 2].map((item) => (
               <Skeleton key={item} className="h-24 w-full" />
             ))}
