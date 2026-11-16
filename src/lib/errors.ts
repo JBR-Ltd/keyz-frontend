@@ -34,6 +34,7 @@ export type ApiErrorCode =
   | "BOOKING_DATES_INVALID"
   | "REVIEW_REQUIRES_COMPLETED_STAY"
   | "VIDEO_CALLS_UNAVAILABLE"
+  | "ACCOUNT_HAS_OBLIGATIONS"
   // Virtual tour
   | "TOUR_PANORAMA_REJECTED"
   | "TOUR_PANORAMA_TOO_LARGE"
@@ -116,6 +117,8 @@ const ERROR_COPY: Record<ApiErrorCode, string> = {
     "You can review a property once your stay is complete.",
   VIDEO_CALLS_UNAVAILABLE:
     "Video calls are not available right now. Send a message instead.",
+  ACCOUNT_HAS_OBLIGATIONS:
+    "This account still has something outstanding, so it cannot be deleted yet. Deactivate it instead.",
 
   TOUR_PANORAMA_REJECTED:
     "That photo was not accepted. Read the reason above and try again.",
