@@ -260,6 +260,7 @@ export default function MessagesDropdown(): ReactElement {
           activeConversation ? String(activeConversation.otherUserId) : null
         }
         otherUserId={activeConversation?.otherUserId ?? null}
+        propertyId={activeConversation?.propertyId ?? undefined}
         otherPartyName={activeConversation?.otherUserName ?? ""}
         otherPartyAvatarUrl={activeConversation?.otherUserAvatarUrl}
         otherPartyRole={toDisplayRole(

@@ -1320,7 +1320,7 @@ export default function CreateListingForm({
           <section className="mt-10 rounded-2xl border border-border bg-[var(--color-bg)] p-6 shadow-sm sm:p-8">
             <Skeleton className="h-8 w-44" />
             <Skeleton className="mt-4 h-5 w-3/4" />
-            <div className="mt-8 grid gap-5 sm:grid-cols-2">
+            <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2">
               <Skeleton className="h-14" />
               <Skeleton className="h-14" />
               <Skeleton className="h-14 sm:col-span-2" />
@@ -1530,7 +1530,7 @@ export default function CreateListingForm({
                       Give renters a clear first impression of the home.
                     </p>
 
-                    <div className="mt-6 grid gap-5 sm:grid-cols-2">
+                    <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2">
                       {renderListingPartiesAndUnits()}
 
                       <label className="sm:col-span-2">
@@ -1597,7 +1597,7 @@ export default function CreateListingForm({
                       Add the location renters will use to understand the area.
                     </p>
 
-                    <div className="mt-6 grid gap-5 sm:grid-cols-2">
+                    <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2">
                       <div>
                         <label
                           htmlFor="guided-listing-city"
@@ -1697,7 +1697,7 @@ export default function CreateListingForm({
                       Add the room count, size, and features included.
                     </p>
 
-                    <div className="mt-6 grid gap-5 sm:grid-cols-2">
+                    <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2">
                       <NumberStepper
                         label="Bedrooms"
                         value={values.bedrooms}
@@ -1781,7 +1781,7 @@ export default function CreateListingForm({
                       Choose how the home is let and enter the amount renters
                       will see.
                     </p>
-                    <div className="mt-6 grid gap-5 sm:grid-cols-2">
+                    <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2">
                       {renderRentalModeFields()}
                       <label className="sm:col-span-2">
                         <span className="flex items-center justify-between gap-4">
@@ -2453,7 +2453,7 @@ export default function CreateListingForm({
                 title="Basics"
                 description="Start with the information people use to understand the property."
               />
-              <div className="grid gap-5 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                 {renderListingPartiesAndUnits()}
 
                 <label className="sm:col-span-2">
@@ -2537,7 +2537,7 @@ export default function CreateListingForm({
                 title="Location"
                 description="Give interested parties enough context while keeping the exact address private."
               />
-              <div className="grid gap-5 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                 <div>
                   <label
                     htmlFor="classic-listing-city"
@@ -2621,7 +2621,7 @@ export default function CreateListingForm({
                 title="Details"
                 description="Add the core dimensions people need when comparing properties."
               />
-              <div className="grid gap-5 sm:grid-cols-3">
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
                 <NumberStepper
                   label="Bedrooms"
                   value={values.bedrooms}
