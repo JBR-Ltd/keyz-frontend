@@ -125,8 +125,14 @@ export async function addGalleryImage(
     return isGalleryImage(data)
       ? { data }
       : { data: null, message: "That photo was not added." };
-  } catch {
-    return { data: null, message: "That photo was not added." };
+  } catch (error) {
+    return {
+      data: null,
+      message:
+        error instanceof Error && error.message
+          ? error.message
+          : "That photo was not added.",
+    };
   }
 }
 

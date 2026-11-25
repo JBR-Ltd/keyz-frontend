@@ -578,6 +578,8 @@ export default function CreateListingForm({
   const [mandatesLoading, setMandatesLoading] = useState(role === "agent");
   const stepHeadingRef = useRef<HTMLHeadingElement>(null);
   const hasRenderedStep = useRef(false);
+  // isSubmitting only lands on the next render, so two quick taps both got past it
+  const submitLock = useRef(false);
   // Rentals only for now, for landlords and agents alike. Sale reopens with the backend flag.
   const listingType: PropertyListingStatus = "FOR_RENT";
   const priceLabel = PRICE_LABELS[values.rentalMode];
@@ -1230,6 +1232,7 @@ export default function CreateListingForm({
     event: FormEvent<HTMLFormElement>,
   ): Promise<void> => {
     event.preventDefault();
+    if (submitLock.current) return;
     const nextErrors = validateForm(values, photos, role);
     setErrors(nextErrors);
 
@@ -1242,12 +1245,14 @@ export default function CreateListingForm({
       return;
     }
 
+    submitLock.current = true;
     setIsSubmitting(true);
     const result = await submitHostListing(buildListingInput());
     setStorageUnavailable(result.unavailable);
 
     if (!result.data) {
       // Only released on a failure, where pressing again is the right thing to do
+      submitLock.current = false;
       setIsSubmitting(false);
       notify({
         title: "Listing could not be saved",

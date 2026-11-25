@@ -73,13 +73,15 @@ export async function uploadListingImage(
     return { direct: false, response: null };
   }
 
+  // A bucket missing this origin in its CORS rules rejects the PUT as a network
+  // error, so the photo goes through the API instead of failing outright
   const uploadResponse = await fetch(intent.uploadUrl, {
     method: "PUT",
     headers: intent.headers,
     body: file,
-  });
-  if (!uploadResponse.ok) {
-    throw new Error("The photo could not be transferred. Try again.");
+  }).catch(() => null);
+  if (!uploadResponse?.ok) {
+    return { direct: false, response: null };
   }
 
   const response = await apiRequest(finalizeUrl, {
